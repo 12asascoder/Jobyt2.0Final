@@ -1,0 +1,159 @@
+import pool from '../config/database';
+
+export type JobType = 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
+export type JobStatus = 'draft' | 'active' | 'closed';
+
+export interface Job {
+  id: string;
+  recruiter_id: string;
+  title: string;
+  location: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  type: JobType;
+  skills: string[];
+  description: string;
+  status: JobStatus;
+  is_boosted: boolean;
+  views_count: number;
+  deleted_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface JobFilters {
+  keyword?: string;
+  location?: string;
+  type?: JobType;
+  skills?: string[];
+  salary_min?: number;
+  salary_max?: number;
+  page?: number;
+  limit?: number;
+  sort?: 'relevance' | 'date' | 'salary';
+}
+
+export const JobModel = {
+  async findById(id: string): Promise<Job | null> {
+    const { rows } = await pool.query(
+      `SELECT * FROM jobs WHERE id = $1 AND deleted_at IS NULL`,
+      [id]
+    );
+    return rows[0] || null;
+  },
+
+  async create(data: {
+    recruiter_id: string;
+    title: string;
+    description: string;
+    type: JobType;
+    location?: string;
+    salary_min?: number;
+    salary_max?: number;
+    skills?: string[];
+    status?: JobStatus;
+  }): Promise<Job> {
+    const { rows } = await pool.query(
+      `INSERT INTO jobs (recruiter_id, title, description, type, location, salary_min, salary_max, skills, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [
+        data.recruiter_id,
+        data.title,
+        data.description,
+        data.type,
+        data.location || null,
+        data.salary_min || null,
+        data.salary_max || null,
+        data.skills || [],
+        data.status || 'draft',
+      ]
+    );
+    return rows[0];
+  },
+
+  async update(id: string, data: Partial<Omit<Job, 'id' | 'recruiter_id' | 'created_at' | 'updated_at' | 'deleted_at' | 'views_count'>>): Promise<Job> {
+    const fields = Object.keys(data);
+    const values = Object.values(data);
+    const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
+    const { rows } = await pool.query(
+      `UPDATE jobs SET ${setClause}, updated_at = NOW() WHERE id = $${fields.length + 1} AND deleted_at IS NULL RETURNING *`,
+      [...values, id]
+    );
+    return rows[0];
+  },
+
+  async softDelete(id: string): Promise<void> {
+    await pool.query(`UPDATE jobs SET deleted_at = NOW() WHERE id = $1`, [id]);
+  },
+
+  async incrementViews(id: string): Promise<void> {
+    await pool.query(`UPDATE jobs SET views_count = views_count + 1 WHERE id = $1`, [id]);
+  },
+
+  async search(filters: JobFilters): Promise<{ jobs: Job[]; total: number }> {
+    const limit = filters.limit || 20;
+    const page = filters.page || 1;
+    const offset = (page - 1) * limit;
+
+    const conditions: string[] = [`j.status = 'active'`, `j.deleted_at IS NULL`];
+    const params: unknown[] = [];
+    let idx = 1;
+
+    if (filters.keyword) {
+      conditions.push(`j.search_vector @@ plainto_tsquery('english', $${idx})`);
+      params.push(filters.keyword);
+      idx++;
+    }
+    if (filters.location) {
+      conditions.push(`j.location ILIKE $${idx}`);
+      params.push(`%${filters.location}%`);
+      idx++;
+    }
+    if (filters.type) {
+      conditions.push(`j.type = $${idx}`);
+      params.push(filters.type);
+      idx++;
+    }
+    if (filters.salary_min) {
+      conditions.push(`j.salary_max >= $${idx}`);
+      params.push(filters.salary_min);
+      idx++;
+    }
+    if (filters.salary_max) {
+      conditions.push(`j.salary_min <= $${idx}`);
+      params.push(filters.salary_max);
+      idx++;
+    }
+    if (filters.skills?.length) {
+      conditions.push(`j.skills && $${idx}`);
+      params.push(filters.skills);
+      idx++;
+    }
+
+    const where = conditions.join(' AND ');
+    const orderBy =
+      filters.sort === 'salary' ? 'j.salary_max DESC NULLS LAST' :
+      filters.sort === 'relevance' && filters.keyword ? `ts_rank(j.search_vector, plainto_tsquery('english', $1)) DESC` :
+      'j.created_at DESC';
+
+    const countQuery = `SELECT COUNT(*) FROM jobs j WHERE ${where}`;
+    const dataQuery = `SELECT j.*, rp.company_name FROM jobs j
+      LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
+      WHERE ${where} ORDER BY ${orderBy} LIMIT $${idx} OFFSET $${idx + 1}`;
+
+    const [countResult, dataResult] = await Promise.all([
+      pool.query(countQuery, params),
+      pool.query(dataQuery, [...params, limit, offset]),
+    ]);
+
+    return { jobs: dataResult.rows, total: parseInt(countResult.rows[0].count) };
+  },
+
+  async findByRecruiter(recruiterId: string): Promise<Job[]> {
+    const { rows } = await pool.query(
+      `SELECT * FROM jobs WHERE recruiter_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC`,
+      [recruiterId]
+    );
+    return rows;
+  },
+};
