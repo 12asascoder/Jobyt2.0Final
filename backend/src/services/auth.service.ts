@@ -67,6 +67,8 @@ export const AuthService = {
     if (!user) throw Object.assign(new Error('Invalid credentials'), { statusCode: 401 });
     if (!user.is_verified) throw Object.assign(new Error('Please verify your email first'), { statusCode: 403 });
 
+    if (user.banned_at) throw Object.assign(new Error('Your account has been suspended. Please contact support.'), { statusCode: 403 });
+
     const valid = await comparePassword(password, user.password_hash);
     if (!valid) throw Object.assign(new Error('Invalid credentials'), { statusCode: 401 });
 

@@ -12,6 +12,7 @@ export interface User {
   reset_token_expires_at: Date | null;
   referral_code: string;
   credit_balance: number;
+  banned_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -84,5 +85,77 @@ export const UserModel = {
   async updateCreditBalance(id: string, newBalance: number, client?: typeof pool): Promise<void> {
     const db = client || pool;
     await db.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, id]);
+  },
+
+  async ban(id: string): Promise<void> {
+    await pool.query(`UPDATE users SET banned_at = NOW(), updated_at = NOW() WHERE id = $1`, [id]);
+  },
+
+  async unban(id: string): Promise<void> {
+    await pool.query(`UPDATE users SET banned_at = NULL, updated_at = NOW() WHERE id = $1`, [id]);
+  },
+
+  async adminList(filters: {
+    search?: string;
+    role?: UserRole;
+    page: number;
+    limit: number;
+  }): Promise<{ users: User[]; total: number }> {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    let idx = 1;
+
+    if (filters.search) {
+      conditions.push(`email ILIKE $${idx}`);
+      params.push(`%${filters.search}%`);
+      idx++;
+    }
+    if (filters.role) {
+      conditions.push(`role = $${idx}`);
+      params.push(filters.role);
+      idx++;
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const offset = (filters.page - 1) * filters.limit;
+
+    const [countRes, dataRes] = await Promise.all([
+      pool.query(`SELECT COUNT(*) FROM users ${where}`, params),
+      pool.query(
+        `SELECT id, email, role, is_verified, credit_balance, banned_at, created_at FROM users ${where}
+         ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
+        [...params, filters.limit, offset]
+      ),
+    ]);
+
+    return { users: dataRes.rows, total: parseInt(countRes.rows[0].count) };
+  },
+
+  async adminAdjustCredits(userId: string, newBalance: number): Promise<void> {
+    await pool.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, userId]);
+  },
+
+  async getPlatformMetrics(): Promise<{
+    totalUsers: number;
+    totalApplicants: number;
+    totalRecruiters: number;
+    totalJobs: number;
+    totalApplications: number;
+    totalRevenue: number;
+    newUsersToday: number;
+    activeJobsCount: number;
+  }> {
+    const { rows } = await pool.query(`
+      SELECT
+        (SELECT COUNT(*) FROM users)::int AS "totalUsers",
+        (SELECT COUNT(*) FROM users WHERE role = 'applicant')::int AS "totalApplicants",
+        (SELECT COUNT(*) FROM users WHERE role = 'recruiter')::int AS "totalRecruiters",
+        (SELECT COUNT(*) FROM jobs WHERE deleted_at IS NULL)::int AS "totalJobs",
+        (SELECT COUNT(*) FROM jobs WHERE status = 'active' AND deleted_at IS NULL)::int AS "activeJobsCount",
+        (SELECT COUNT(*) FROM applications)::int AS "totalApplications",
+        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success') AS "totalRevenue",
+        (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 day')::int AS "newUsersToday"
+    `);
+    return rows[0];
   },
 };

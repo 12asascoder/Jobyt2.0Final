@@ -151,9 +151,83 @@ export const JobModel = {
 
   async findByRecruiter(recruiterId: string): Promise<Job[]> {
     const { rows } = await pool.query(
-      `SELECT * FROM jobs WHERE recruiter_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC`,
+      `SELECT j.*,
+        (SELECT COUNT(*) FROM applications a WHERE a.job_id = j.id)::int AS application_count
+       FROM jobs j
+       WHERE j.recruiter_id = $1 AND j.deleted_at IS NULL ORDER BY j.created_at DESC`,
       [recruiterId]
     );
     return rows;
+  },
+
+  // ── Saved Jobs ──────────────────────────────────────────────────────────────
+
+  async saveJob(applicantId: string, jobId: string): Promise<void> {
+    await pool.query(
+      `INSERT INTO saved_jobs (applicant_id, job_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [applicantId, jobId]
+    );
+  },
+
+  async unsaveJob(applicantId: string, jobId: string): Promise<void> {
+    await pool.query(
+      `DELETE FROM saved_jobs WHERE applicant_id = $1 AND job_id = $2`,
+      [applicantId, jobId]
+    );
+  },
+
+  async getSavedJobs(applicantId: string): Promise<Job[]> {
+    const { rows } = await pool.query(
+      `SELECT j.*, rp.company_name, sj.saved_at
+       FROM saved_jobs sj
+       JOIN jobs j ON j.id = sj.job_id
+       LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
+       WHERE sj.applicant_id = $1 AND j.deleted_at IS NULL
+       ORDER BY sj.saved_at DESC`,
+      [applicantId]
+    );
+    return rows;
+  },
+
+  async isSaved(applicantId: string, jobId: string): Promise<boolean> {
+    const { rows } = await pool.query(
+      `SELECT 1 FROM saved_jobs WHERE applicant_id = $1 AND job_id = $2`,
+      [applicantId, jobId]
+    );
+    return rows.length > 0;
+  },
+
+  // ── Admin ───────────────────────────────────────────────────────────────────
+
+  async adminList(filters: { status?: string; search?: string; page: number; limit: number }): Promise<{ jobs: Job[]; total: number }> {
+    const conditions: string[] = ['j.deleted_at IS NULL'];
+    const params: unknown[] = [];
+    let idx = 1;
+
+    if (filters.status) {
+      conditions.push(`j.status = $${idx}`);
+      params.push(filters.status);
+      idx++;
+    }
+    if (filters.search) {
+      conditions.push(`j.title ILIKE $${idx}`);
+      params.push(`%${filters.search}%`);
+      idx++;
+    }
+
+    const where = conditions.join(' AND ');
+    const offset = (filters.page - 1) * filters.limit;
+
+    const [countRes, dataRes] = await Promise.all([
+      pool.query(`SELECT COUNT(*) FROM jobs j WHERE ${where}`, params),
+      pool.query(
+        `SELECT j.*, rp.company_name FROM jobs j
+         LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
+         WHERE ${where} ORDER BY j.created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
+        [...params, filters.limit, offset]
+      ),
+    ]);
+
+    return { jobs: dataRes.rows, total: parseInt(countRes.rows[0].count) };
   },
 };

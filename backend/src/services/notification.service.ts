@@ -1,4 +1,5 @@
 import { NotificationModel, NotificationType } from '../models/notification.model';
+import { emitNotification } from '../config/socket';
 
 export const NotificationService = {
   async getNotifications(userId: string, page: number, limit: number) {
@@ -14,6 +15,8 @@ export const NotificationService = {
   },
 
   async send(userId: string, type: NotificationType, title: string, body: string, actionUrl?: string) {
-    return NotificationModel.create({ user_id: userId, type, title, body, action_url: actionUrl });
+    const notification = await NotificationModel.create({ user_id: userId, type, title, body, action_url: actionUrl });
+    emitNotification(userId, notification);
+    return notification;
   },
 };

@@ -1,28 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
+import { AppError } from '../utils/appError';
 
-export interface AppError extends Error {
-  statusCode?: number;
-  isOperational?: boolean;
-}
+type AnyError = AppError | (Error & { statusCode?: number; isOperational?: boolean });
 
 export const errorHandler = (
-  err: AppError,
+  err: AnyError,
   _req: Request,
   res: Response,
   _next: NextFunction
 ): void => {
-  const statusCode = err.statusCode || 500;
-  const message = err.isOperational ? err.message : 'Internal server error';
+  const statusCode = err instanceof AppError ? err.statusCode : (err.statusCode ?? 500);
+  const isOperational = err instanceof AppError ? err.isOperational : !!err.isOperational;
+  const message = isOperational ? err.message : 'Internal server error';
 
-  if (process.env.NODE_ENV === 'development') {
-    console.error('[Error]', err);
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('[Error]', err.message, err.stack);
   }
 
-  res.status(statusCode).json({
-    success: false,
-    message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  });
+  const body: Record<string, unknown> = { success: false, message };
+  if (process.env.NODE_ENV === 'development') body.stack = err.stack;
+
+  res.status(statusCode).json(body);
 };
 
 export const notFound = (_req: Request, res: Response): void => {

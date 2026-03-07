@@ -19,13 +19,9 @@ export const PaymentController = {
 
   async stripeWebhook(req: Request, res: Response, next: NextFunction) {
     try {
-      // TODO: verify Stripe signature
-      const event = req.body;
-      if (event.type === 'checkout.session.completed') {
-        await PaymentService.handleWebhookSuccess(event.data.object.id);
-      } else if (event.type === 'checkout.session.expired') {
-        await PaymentService.handleWebhookFailure(event.data.object.id);
-      }
+      const signature = req.headers['stripe-signature'] as string;
+      // req.body is the raw Buffer when using express.raw() on this route
+      await PaymentService.handleStripeWebhook(req.body as Buffer, signature);
       res.json({ received: true });
     } catch (err) { next(err); }
   },

@@ -16,12 +16,15 @@ app.use(cors({
 
 // Rate limiting
 app.use('/api', rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100,
   message: { success: false, message: 'Too many requests, please try again later.' },
 }));
 
-// Body parsing
+// Stripe webhook needs raw body — must come BEFORE express.json()
+app.use('/api/v1/payments/webhook/stripe', express.raw({ type: 'application/json' }));
+
+// Body parsing for everything else
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
