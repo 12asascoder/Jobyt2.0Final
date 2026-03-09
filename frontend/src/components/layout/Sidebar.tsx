@@ -15,6 +15,7 @@ const applicantNav: NavItem[] = [
   { label: 'Saved Jobs', href: ROUTES.savedJobs, icon: '🔖' },
   { label: 'Messages', href: ROUTES.messages, icon: '💬' },
   { label: 'Credits', href: ROUTES.credits, icon: '💳' },
+  { label: 'Referrals', href: ROUTES.referral, icon: '🎁' },
   { label: 'Profile', href: ROUTES.profile, icon: '👤' },
 ];
 

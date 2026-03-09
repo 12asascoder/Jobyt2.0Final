@@ -64,4 +64,13 @@ export const UserController = {
       sendSuccess(res, data);
     } catch (err) { next(err); }
   },
+
+  async parseResume(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) throw new Error('No file uploaded');
+      const { parseResume } = await import('../utils/resumeParser');
+      const parsed = await parseResume(req.file.buffer);
+      sendSuccess(res, parsed, 'Resume parsed successfully');
+    } catch (err) { next(err); }
+  },
 };

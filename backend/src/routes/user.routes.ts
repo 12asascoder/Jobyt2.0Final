@@ -33,6 +33,12 @@ router.post('/me/resume',
   UserController.uploadResume
 );
 
+router.post('/me/resume-parse',
+  authorize('applicant'),
+  uploadResume.single('resume'),
+  UserController.parseResume
+);
+
 router.post('/me/photo',
   uploadImage.single('photo'),
   UserController.uploadPhoto

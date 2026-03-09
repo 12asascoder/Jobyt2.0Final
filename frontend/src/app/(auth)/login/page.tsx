@@ -20,8 +20,12 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     try {
-      await login(email, password);
-      router.push(ROUTES.dashboard);
+      const user = await login(email, password);
+      const dest =
+        user.role === 'recruiter' ? ROUTES.recruiterDashboard :
+        user.role === 'admin' ? ROUTES.adminDashboard :
+        ROUTES.dashboard;
+      router.push(dest);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Login failed');
     }

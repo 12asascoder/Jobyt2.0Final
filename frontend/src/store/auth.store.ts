@@ -10,7 +10,7 @@ interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
 
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
   initialize: () => void;
 }
@@ -41,6 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       );
       authStorage.saveTokens({ accessToken: res.data.accessToken, refreshToken: res.data.refreshToken });
       set({ user: res.data.user, isAuthenticated: true });
+      return res.data.user;
     } finally {
       set({ isLoading: false });
     }
@@ -49,5 +50,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     authStorage.clearTokens();
     set({ user: null, isAuthenticated: false });
+    if (typeof window !== 'undefined') window.location.href = '/login';
   },
 }));

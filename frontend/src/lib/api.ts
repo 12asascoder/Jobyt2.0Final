@@ -50,6 +50,7 @@ export const api = {
     request<ApiResponse<T>>(path, { method: 'PUT', body: JSON.stringify(body) }),
   patch: <T>(path: string, body?: unknown) =>
     request<ApiResponse<T>>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(path: string) => request<ApiResponse<T>>(path, { method: 'DELETE' }),
+  delete: <T>(path: string, body?: unknown) =>
+    request<ApiResponse<T>>(path, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }),
   getPaginated: <T>(path: string) => request<PaginatedResponse<T>>(path),
 };

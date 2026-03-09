@@ -14,7 +14,13 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
   // sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
   // await sgMail.send({ from: process.env.EMAIL_FROM!, ...options });
 
-  console.log(`[Email] To: ${options.to} | Subject: ${options.subject}`);
+  console.log(`\n📧 [DEV EMAIL] ─────────────────────────────────`);
+  console.log(`   To:      ${options.to}`);
+  console.log(`   Subject: ${options.subject}`);
+  // Extract any href links from html so the dev can click them
+  const links = options.html.match(/href="([^"]+)"/g);
+  if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
+  console.log(`────────────────────────────────────────────────\n`);
 };
 
 export const verificationEmailHtml = (name: string, token: string): string => `

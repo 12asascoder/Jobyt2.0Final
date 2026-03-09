@@ -43,6 +43,7 @@ export const ROUTES = {
   savedJobs: '/saved-jobs',
   credits: '/credits',
   notifications: '/notifications',
+  referral: '/referral',
   messages: '/messages',
   messageThread: (id: string) => `/messages/${id}`,
   // Recruiter
