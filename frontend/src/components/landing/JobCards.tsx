@@ -68,7 +68,7 @@ const jobs: JobCardData[] = [
     },
     {
         id: '4',
-        badge: { text: 'Urgent', color: 'bg-orange-100/80 text-brand-orange border-orange-200' },
+        badge: { text: 'Urgent', color: 'bg-brand-primary/20 text-slate-800 border-brand-primary' },
         companyLogo: 'https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png',
         title: 'Product Analyst',
         company: 'Uber',
@@ -203,7 +203,7 @@ export function JobCards() {
                 </div>
                 <a
                     href="#"
-                    className="hidden md:flex text-slate-900 font-bold hover:text-brand-orange transition-colors items-center gap-2 group mt-4 md:mt-0 shadow-sm border border-slate-200 px-5 py-2.5 rounded-xl bg-white hover:border-brand-orange"
+                    className="hidden md:flex text-slate-900 font-bold hover:text-brand-primary transition-colors items-center gap-2 group mt-4 md:mt-0 shadow-sm border border-slate-200 px-5 py-2.5 rounded-xl bg-white hover:border-brand-primary"
                 >
                     View all{' '}
                     <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
@@ -215,7 +215,7 @@ export function JobCards() {
                 {jobs.map((job, i) => (
                     <div
                         key={job.id}
-                        className={`job-card bg-white rounded-2xl p-5 md:p-6 border border-slate-100 relative group cursor-pointer flex flex-col h-full reveal reveal-delay-${(i % 4) + 1} ${i >= 6 ? 'hidden md:flex' : ''}`}
+                        className={`job-card bg-white rounded-2xl p-5 md:p-6 border border-slate-100 hover:border-brand-primary relative group cursor-pointer flex flex-col h-full reveal reveal-delay-${(i % 4) + 1} ${i >= 6 ? 'hidden md:flex' : ''}`}
                     >
                         {job.badge && (
                             <div
@@ -241,7 +241,7 @@ export function JobCards() {
                             </div>
                             <div>
                                 {/* Smaller font size for title */}
-                                <h3 className="text-[17px] md:text-lg font-bold text-slate-900 leading-tight group-hover:text-brand-orange transition-colors line-clamp-2">
+                                <h3 className="text-[17px] md:text-lg font-bold text-slate-900 leading-tight transition-colors line-clamp-2">
                                     {job.title}
                                 </h3>
                                 {/* Much smaller subtitle font */}
@@ -258,7 +258,7 @@ export function JobCards() {
                             {job.stats.map((stat) => (
                                 <div
                                     key={stat.label}
-                                    className="bg-slate-50 group-hover:bg-orange-50/50 transition-colors p-3 rounded-xl border border-slate-100/60"
+                                    className="bg-slate-50 group-hover:bg-brand-primary/10 transition-colors p-3 rounded-xl border border-slate-100/60"
                                 >
                                     <div className="flex items-center gap-1.5 text-slate-400 text-[10px] uppercase font-extrabold tracking-wider mb-1">
                                         {stat.icon} {stat.label}
@@ -286,7 +286,7 @@ export function JobCards() {
             </div>
 
             <div className="mt-10 text-center md:hidden">
-                <button className="bg-white border-2 border-slate-200 text-slate-900 font-bold px-8 py-3 rounded-xl shadow-sm hover:border-brand-orange hover:text-brand-orange w-full transition-all text-sm">
+                <button className="bg-white border-2 border-slate-200 text-slate-900 font-bold px-8 py-3 rounded-xl shadow-sm hover:border-brand-primary hover:text-brand-primary w-full transition-all text-sm">
                     View all opportunities
                 </button>
             </div>

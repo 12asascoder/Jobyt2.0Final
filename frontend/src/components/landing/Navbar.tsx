@@ -27,28 +27,30 @@ export function Navbar() {
                     {/* Logo */}
                     <Link href="/" className="shrink-0 flex items-center cursor-pointer group">
                         <div className="relative w-6 h-6 mr-2 transition-transform duration-500 group-hover:rotate-180">
-                            <div className="absolute inset-0 border-[5px] border-brand-orange rounded-full border-t-transparent -rotate-45" />
+                            <div className="absolute inset-0 border-[5px] border-brand-primary rounded-full border-t-transparent -rotate-45" />
                         </div>
                         <span className="font-extrabold text-2xl tracking-tight text-slate-900">
-                            jobyt<span className="text-brand-orange">.</span>
+                            jobyt<span className="text-brand-primary">.</span>
                         </span>
                     </Link>
-
                     {/* Desktop Menu */}
                     <div className="hidden lg:flex items-center space-x-10">
-                        <Link href="#" className="text-slate-600 hover:text-brand-orange font-semibold transition-colors">
+                        <Link href="#" className="relative text-slate-600 font-semibold transition-colors group">
                             Internships
+                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-primary transition-all duration-300 group-hover:w-[70%]"></span>
                         </Link>
-                        <Link href="#" className="text-slate-600 hover:text-brand-orange font-semibold transition-colors">
+                        <Link href="#" className="relative text-slate-600 font-semibold transition-colors group">
                             Jobs
+                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-primary transition-all duration-300 group-hover:w-[70%]"></span>
                         </Link>
-                        <Link href="#" className="text-slate-600 hover:text-brand-orange font-semibold transition-colors">
+                        <Link href="#" className="relative text-slate-600 font-semibold transition-colors group">
                             Mentorship
+                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-primary transition-all duration-300 group-hover:w-[70%]"></span>
                         </Link>
 
                         {/* Notification Bell */}
                         <button
-                            className="relative text-slate-600 hover:text-brand-orange transition-colors"
+                            className="relative inline-block text-slate-600 hover:scale-110 transition-transform"
                             onClick={() => setHasNotification(false)}
                             aria-label="Notifications"
                         >
@@ -59,12 +61,12 @@ export function Navbar() {
                         </button>
 
                         <div className="h-6 w-px bg-slate-200" />
-                        <Link href={ROUTES.login} className="text-slate-800 font-bold hover:text-brand-orange transition-colors">
+                        <Link href={ROUTES.login} className="text-slate-800 font-bold inline-block hover:scale-105 transition-transform">
                             Log in
                         </Link>
                         <Link
                             href={ROUTES.register}
-                            className="bg-slate-900 text-white px-6 py-2.5 rounded-full font-semibold hover:bg-brand-orange hover:shadow-lg hover:shadow-orange-500/30 transition-all active:scale-95 duration-300"
+                            className="bg-slate-900 text-white px-6 py-2.5 rounded-full font-semibold hover:bg-brand-primary hover:text-slate-900 hover:shadow-lg hover:shadow-brand-primary/30 transition-all active:scale-95 duration-300"
                         >
                             Sign up
                         </Link>
@@ -74,7 +76,7 @@ export function Navbar() {
                     <div className="lg:hidden flex items-center">
                         <button
                             onClick={() => setMobileOpen((v) => !v)}
-                            className="text-slate-600 hover:text-brand-orange focus:outline-none p-2 transition-colors"
+                            className="text-slate-600 hover:text-brand-primary focus:outline-none p-2 transition-colors"
                         >
                             {mobileOpen ? <FaXmark className="text-2xl" /> : <FaBars className="text-2xl" />}
                         </button>
@@ -86,13 +88,13 @@ export function Navbar() {
             {mobileOpen && (
                 <div className="lg:hidden bg-white/95 backdrop-blur-xl border-t border-slate-100 absolute w-full shadow-2xl transition-all duration-300">
                     <div className="px-6 pt-4 pb-8 space-y-3">
-                        <Link href="#" className="block px-4 py-3 text-lg font-semibold text-slate-700 hover:text-brand-orange hover:bg-orange-50 rounded-xl transition-colors">
+                        <Link href="#" className="block px-4 py-3 text-lg font-semibold text-slate-700 hover:bg-brand-primary/20 rounded-xl transition-colors">
                             Internships
                         </Link>
-                        <Link href="#" className="block px-4 py-3 text-lg font-semibold text-slate-700 hover:text-brand-orange hover:bg-orange-50 rounded-xl transition-colors">
+                        <Link href="#" className="block px-4 py-3 text-lg font-semibold text-slate-700 hover:bg-brand-primary/20 rounded-xl transition-colors">
                             Jobs
                         </Link>
-                        <Link href="#" className="block px-4 py-3 text-lg font-semibold text-slate-700 hover:text-brand-orange hover:bg-orange-50 rounded-xl transition-colors">
+                        <Link href="#" className="block px-4 py-3 text-lg font-semibold text-slate-700 hover:bg-brand-primary/20 rounded-xl transition-colors">
                             Mentorship
                         </Link>
                         <div className="border-t border-slate-100 mt-4 pt-4 space-y-3">
@@ -104,7 +106,7 @@ export function Navbar() {
                             </Link>
                             <Link
                                 href={ROUTES.register}
-                                className="block w-full text-center bg-slate-900 text-white px-4 py-3 rounded-xl font-bold hover:bg-brand-orange transition-colors shadow-lg"
+                                className="block w-full text-center bg-slate-900 text-white px-4 py-3 rounded-xl font-bold hover:bg-brand-primary hover:text-slate-900 transition-colors shadow-lg"
                             >
                                 Sign up
                             </Link>

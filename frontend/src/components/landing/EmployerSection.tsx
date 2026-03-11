@@ -13,7 +13,7 @@ export function EmployerSection() {
         <section className="bg-slate-900 text-white py-24 relative overflow-hidden">
             {/* Abstract Background */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-                <div className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] bg-brand-orange/20 rounded-full blur-[120px]" />
+                <div className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] bg-brand-primary/20 rounded-full blur-[120px]" />
                 <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] bg-brand-blue/20 rounded-full blur-[120px]" />
                 <svg
                     className="absolute top-1/2 left-0 w-full opacity-20"
@@ -34,12 +34,12 @@ export function EmployerSection() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                     {/* Left Content */}
                     <div className="reveal">
-                        <span className="text-brand-orange font-extrabold uppercase tracking-widest text-sm mb-4 block">
+                        <span className="text-brand-primary font-extrabold uppercase tracking-widest text-sm mb-4 block">
                             For Employers
                         </span>
                         <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.1]">
                             Hire the top{' '}
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-orange to-yellow-400">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-yellow-400">
                                 1% talent.
                             </span>
                         </h2>
@@ -51,7 +51,7 @@ export function EmployerSection() {
                         <ul className="space-y-6 mb-10">
                             <li className="flex items-center gap-4 text-lg font-semibold text-white">
                                 <div className="bg-white/10 p-3 rounded-xl border border-white/5">
-                                    <FaWandMagicSparkles className="text-brand-orange" />
+                                    <FaWandMagicSparkles className="text-brand-primary" />
                                 </div>
                                 Smart AI Candidate Matching
                             </li>
@@ -69,7 +69,7 @@ export function EmployerSection() {
                             </li>
                         </ul>
 
-                        <button className="bg-brand-orange text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-orange-600 transition-all shadow-[0_10px_25px_rgba(255,107,0,0.3)] hover:shadow-[0_15px_35px_rgba(255,107,0,0.4)] hover:-translate-y-1">
+                        <button className="bg-brand-primary text-slate-900 px-8 py-4 rounded-2xl font-bold text-lg hover:brightness-95 transition-all shadow-[0_10px_25px_rgba(195,255,61,0.3)] hover:shadow-[0_15px_35px_rgba(195,255,61,0.4)] hover:-translate-y-1">
                             Post a Job for Free
                         </button>
                     </div>
@@ -80,7 +80,7 @@ export function EmployerSection() {
                             {/* Header */}
                             <div className="flex items-center justify-between border-b border-white/10 pb-6 mb-6">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-4 h-4 rounded-full bg-brand-orange animate-pulse" />
+                                    <div className="w-4 h-4 rounded-full bg-brand-primary animate-pulse" />
                                     <div className="text-white font-bold text-lg tracking-wide">Live Applicants</div>
                                 </div>
                                 <div className="flex gap-2">
@@ -99,7 +99,7 @@ export function EmployerSection() {
                                             alt="Priya Sharma"
                                             width={56}
                                             height={56}
-                                            className="w-14 h-14 rounded-full border-2 border-brand-orange object-cover"
+                                            className="w-14 h-14 rounded-full border-2 border-brand-primary object-cover"
                                             unoptimized
                                         />
                                         <div className="absolute -bottom-0.5 -right-0.5 bg-green-500 w-3.5 h-3.5 border-2 border-slate-900 rounded-full" />

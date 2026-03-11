@@ -59,10 +59,10 @@ export function Footer() {
                     <div className="col-span-1 lg:col-span-2">
                         <Link href="/" className="flex items-center cursor-pointer mb-6">
                             <div className="relative w-6 h-6 mr-2">
-                                <div className="absolute inset-0 border-[5px] border-brand-orange rounded-full border-t-transparent -rotate-45" />
+                                <div className="absolute inset-0 border-[5px] border-brand-primary rounded-full border-t-transparent -rotate-45" />
                             </div>
                             <span className="font-extrabold text-3xl tracking-tight text-white">
-                                jobyt<span className="text-brand-orange">.</span>
+                                jobyt<span className="text-brand-primary">.</span>
                             </span>
                         </Link>
                         <p className="text-slate-400 max-w-sm mb-8 leading-relaxed font-medium">
@@ -74,7 +74,7 @@ export function Footer() {
                                 <a
                                     key={i}
                                     href={s.href}
-                                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-300 hover:bg-brand-orange hover:text-white transition-all"
+                                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-300 hover:bg-brand-primary hover:text-slate-900 transition-all"
                                 >
                                     {s.icon}
                                 </a>
@@ -91,7 +91,7 @@ export function Footer() {
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                     <p className="text-slate-500 font-medium text-sm">© 2026 Jobyt. All rights reserved.</p>
                     <div className="flex items-center gap-2 text-sm text-slate-400 font-medium">
-                        Crafted with <FaHeart className="text-brand-orange animate-pulse" /> for the future of India.
+                        Crafted with <FaHeart className="text-brand-primary animate-pulse" /> for the future of India.
                     </div>
                 </div>
             </div>

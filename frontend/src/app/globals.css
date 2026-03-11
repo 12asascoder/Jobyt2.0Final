@@ -6,7 +6,7 @@
   --font-sans: var(--font-jakarta);
 
   /* Brand Colors */
-  --color-brand-orange: #ff6b00;
+  --color-brand-primary: #C3FF3D;
   --color-brand-coral: #ff6b6b;
   --color-brand-dark: #0b1120;
   --color-brand-light: #f4f7ff;
@@ -84,7 +84,6 @@ body {
 .job-card:hover {
   transform: translateY(-8px) scale(1.01);
   box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.08), 0 15px 15px -5px rgba(0, 0, 0, 0.04);
-  border-color: #dbeafe;
 }
 
 /* Marquee */

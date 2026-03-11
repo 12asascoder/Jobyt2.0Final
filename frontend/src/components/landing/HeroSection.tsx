@@ -26,7 +26,7 @@ export function HeroSection() {
             </div>
 
             {/* Decorative Sparkles */}
-            <div className="absolute top-40 left-10 md:left-20 text-brand-orange text-2xl animate-pulse hidden sm:block">
+            <div className="absolute top-40 left-10 md:left-20 text-brand-primary text-2xl animate-pulse hidden sm:block">
                 ✦
             </div>
             <div
@@ -50,10 +50,10 @@ export function HeroSection() {
                     <h1 className="text-[2.75rem] leading-[1.1] md:text-6xl lg:text-[5rem] font-extrabold text-slate-900 tracking-tight mb-6">
                         Launch your career <br className="hidden sm:block" />
                         with the{' '}
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-orange to-brand-coral relative">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-brand-coral relative">
                             perfect role.
                             <svg
-                                className="absolute w-full h-4 -bottom-2 left-0 text-brand-orange opacity-60"
+                                className="absolute w-full h-4 -bottom-2 left-0 text-brand-primary opacity-60"
                                 viewBox="0 0 200 12"
                                 fill="none"
                                 preserveAspectRatio="none"
@@ -74,7 +74,7 @@ export function HeroSection() {
                 </div>
 
                 {/* Search Bar */}
-                <div className="w-full max-w-4xl bg-white/90 backdrop-blur-md rounded-3xl md:rounded-full p-2 md:p-3 flex flex-col md:flex-row items-center shadow-[0_20px_50px_rgb(0,0,0,0.08)] border border-white mb-10 gap-2 md:gap-0 relative z-30 reveal reveal-delay-1 transition-all hover:shadow-[0_20px_50px_rgb(0,0,0,0.12)] hover:border-brand-orange/30">
+                <div className="w-full max-w-4xl bg-white/90 backdrop-blur-md rounded-3xl md:rounded-full p-2 md:p-3 flex flex-col md:flex-row items-center shadow-[0_20px_50px_rgb(0,0,0,0.08)] border border-white mb-10 gap-2 md:gap-0 relative z-30 reveal reveal-delay-1 transition-all hover:shadow-[0_20px_50px_rgb(0,0,0,0.12)] hover:border-brand-primary/30">
                     <div className="flex-1 flex items-center px-4 md:px-6 py-3 border-b md:border-b-0 md:border-r border-slate-200 w-full">
                         <FaMagnifyingGlass className="text-slate-400 mr-3 text-lg" />
                         <input
@@ -91,7 +91,7 @@ export function HeroSection() {
                             className="w-full focus:outline-none text-slate-800 placeholder-slate-400 text-base md:text-lg font-medium bg-transparent"
                         />
                     </div>
-                    <button className="w-full md:w-auto md:ml-2 bg-slate-900 text-white rounded-2xl md:rounded-full px-8 py-4 font-bold text-lg hover:bg-brand-orange transition-colors shadow-md flex items-center justify-center gap-2 shrink-0 group mt-2 md:mt-0">
+                    <button className="w-full md:w-auto md:ml-2 bg-slate-900 text-white rounded-2xl md:rounded-full px-8 py-4 font-bold text-lg hover:bg-brand-primary hover:text-slate-900 transition-colors shadow-md flex items-center justify-center gap-2 shrink-0 group mt-2 md:mt-0">
                         Search{' '}
                         <FaArrowRight className="-rotate-45 group-hover:rotate-0 transition-transform" />
                     </button>
@@ -102,19 +102,19 @@ export function HeroSection() {
                     <span className="mr-2">Trending:</span>
                     <a
                         href="#"
-                        className="px-4 py-2 rounded-full bg-white/60 border border-slate-200 hover:border-brand-orange hover:text-brand-orange hover:bg-white transition-all shadow-sm"
+                        className="px-4 py-2 rounded-full bg-white/60 border border-slate-200 hover:border-brand-primary hover:text-brand-primary hover:bg-white transition-all shadow-sm"
                     >
                         💻 Work from Home
                     </a>
                     <a
                         href="#"
-                        className="px-4 py-2 rounded-full bg-white/60 border border-slate-200 hover:border-brand-orange hover:text-brand-orange hover:bg-white transition-all shadow-sm"
+                        className="px-4 py-2 rounded-full bg-white/60 border border-slate-200 hover:border-brand-primary hover:text-brand-primary hover:bg-white transition-all shadow-sm"
                     >
                         🎨 UI/UX Design
                     </a>
                     <a
                         href="#"
-                        className="px-4 py-2 rounded-full bg-white/60 border border-slate-200 hover:border-brand-orange hover:text-brand-orange hover:bg-white transition-all shadow-sm"
+                        className="px-4 py-2 rounded-full bg-white/60 border border-slate-200 hover:border-brand-primary hover:text-brand-primary hover:bg-white transition-all shadow-sm"
                     >
                         📊 Data Science
                     </a>
@@ -160,7 +160,7 @@ export function HeroSection() {
                             <div className="w-1/4 bg-gradient-to-t from-blue-200 to-brand-blue rounded-md h-[60%] shadow-sm" />
                             <div className="w-1/4 bg-gradient-to-t from-pink-200 to-pink-500 rounded-md h-[80%] shadow-sm" />
                             <div className="w-1/4 bg-gradient-to-t from-purple-200 to-purple-500 rounded-md h-[40%] shadow-sm" />
-                            <div className="w-1/4 bg-gradient-to-t from-orange-200 to-brand-orange rounded-md h-[100%] shadow-sm relative">
+                            <div className="w-1/4 bg-gradient-to-t from-orange-200 to-brand-primary rounded-md h-[100%] shadow-sm relative">
                                 <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-1.5 py-0.5 rounded font-bold">
                                     +24%
                                 </div>

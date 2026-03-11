@@ -70,7 +70,7 @@ export function Testimonials() {
         <section className="py-24 bg-white overflow-hidden">
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-12 mb-16">
                 <div className="text-center max-w-2xl mx-auto reveal">
-                    <span className="text-brand-orange font-extrabold uppercase tracking-widest text-sm mb-3 block">
+                    <span className="text-brand-primary font-extrabold uppercase tracking-widest text-sm mb-3 block">
                         User Stories
                     </span>
                     <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">
@@ -96,9 +96,9 @@ export function Testimonials() {
                             {testimonials.map((t, i) => (
                                 <div
                                     key={`t1-${t.name}-${i}`}
-                                    className="bg-slate-50 border border-slate-100/60 rounded-3xl p-6 md:p-8 relative shrink-0 w-[300px] md:w-[400px] snap-center hover:bg-white hover:border-brand-orange/40 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group"
+                                    className="bg-slate-50 border border-slate-100/60 rounded-3xl p-6 md:p-8 relative shrink-0 w-[300px] md:w-[400px] snap-center hover:bg-white hover:border-brand-primary/40 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group"
                                 >
-                                    <FaQuoteLeft className="text-3xl text-slate-200 absolute top-6 right-6 group-hover:text-brand-orange/20 transition-colors" />
+                                    <FaQuoteLeft className="text-3xl text-slate-200 absolute top-6 right-6 group-hover:text-brand-primary/20 transition-colors" />
                                     <StarRating count={t.stars} halfStar={t.halfStar} />
                                     <p className="text-slate-700 font-medium text-base md:text-lg leading-relaxed mb-6 md:mb-8 relative z-10 h-[100px] md:h-[120px] overflow-hidden line-clamp-4">
                                         {t.text}
@@ -126,9 +126,9 @@ export function Testimonials() {
                             {testimonials.map((t, i) => (
                                 <div
                                     key={`t2-${t.name}-${i}`}
-                                    className="bg-slate-50 border border-slate-100/60 rounded-3xl p-6 md:p-8 relative shrink-0 w-[300px] md:w-[400px] hover:bg-white hover:border-brand-orange/40 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group"
+                                    className="bg-slate-50 border border-slate-100/60 rounded-3xl p-6 md:p-8 relative shrink-0 w-[300px] md:w-[400px] hover:bg-white hover:border-brand-primary/40 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group"
                                 >
-                                    <FaQuoteLeft className="text-3xl text-slate-200 absolute top-6 right-6 group-hover:text-brand-orange/20 transition-colors" />
+                                    <FaQuoteLeft className="text-3xl text-slate-200 absolute top-6 right-6 group-hover:text-brand-primary/20 transition-colors" />
                                     <StarRating count={t.stars} halfStar={t.halfStar} />
                                     <p className="text-slate-700 font-medium text-base md:text-lg leading-relaxed mb-6 md:mb-8 relative z-10 h-[100px] md:h-[120px] overflow-hidden line-clamp-4">
                                         {t.text}
