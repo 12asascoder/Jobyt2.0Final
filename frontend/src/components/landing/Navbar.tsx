@@ -43,10 +43,6 @@ export function Navbar() {
                             Jobs
                             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-primary transition-all duration-300 group-hover:w-[70%]"></span>
                         </Link>
-                        <Link href="#" className="relative text-slate-600 font-semibold transition-colors group">
-                            Mentorship
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-primary transition-all duration-300 group-hover:w-[70%]"></span>
-                        </Link>
 
                         {/* Notification Bell */}
                         <button
@@ -93,9 +89,6 @@ export function Navbar() {
                         </Link>
                         <Link href="#" className="block px-4 py-3 text-lg font-semibold text-slate-700 hover:bg-brand-primary/20 rounded-xl transition-colors">
                             Jobs
-                        </Link>
-                        <Link href="#" className="block px-4 py-3 text-lg font-semibold text-slate-700 hover:bg-brand-primary/20 rounded-xl transition-colors">
-                            Mentorship
                         </Link>
                         <div className="border-t border-slate-100 mt-4 pt-4 space-y-3">
                             <Link
