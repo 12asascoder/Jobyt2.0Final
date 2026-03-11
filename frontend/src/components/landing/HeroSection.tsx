@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import {
     FaMagnifyingGlass,
     FaLocationDot,
@@ -10,6 +12,17 @@ import {
 } from 'react-icons/fa6';
 
 export function HeroSection() {
+    const router = useRouter();
+    const [keyword, setKeyword] = useState('');
+    const [location, setLocation] = useState('');
+
+    const handleSearch = () => {
+        const params = new URLSearchParams();
+        if (keyword.trim()) params.set('keyword', keyword.trim());
+        if (location.trim()) params.set('location', location.trim());
+        router.push(`/jobs?${params.toString()}`);
+    };
+
     return (
         <main className="relative pt-32 pb-16 lg:pt-40 lg:pb-24 overflow-hidden flex flex-col items-center min-h-screen justify-center">
             {/* Animated Background Blobs */}
@@ -79,6 +92,9 @@ export function HeroSection() {
                         <FaMagnifyingGlass className="text-slate-400 mr-3 text-lg" />
                         <input
                             type="text"
+                            value={keyword}
+                            onChange={(e) => setKeyword(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                             placeholder="Job title, keywords, or company"
                             className="w-full focus:outline-none text-slate-800 placeholder-slate-400 text-base md:text-lg font-medium bg-transparent"
                         />
@@ -87,11 +103,17 @@ export function HeroSection() {
                         <FaLocationDot className="text-slate-400 mr-3 text-lg shrink-0" />
                         <input
                             type="text"
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                             placeholder="City, state, or remote"
                             className="w-full focus:outline-none text-slate-800 placeholder-slate-400 text-base md:text-lg font-medium bg-transparent"
                         />
                     </div>
-                    <button className="w-full md:w-auto md:ml-2 bg-slate-900 text-white rounded-2xl md:rounded-full px-8 py-4 font-bold text-lg hover:bg-brand-primary hover:text-slate-900 transition-colors shadow-md flex items-center justify-center gap-2 shrink-0 group mt-2 md:mt-0">
+                    <button
+                        onClick={handleSearch}
+                        className="w-full md:w-auto md:ml-2 bg-slate-900 text-white rounded-2xl md:rounded-full px-8 py-4 font-bold text-lg hover:bg-brand-primary hover:text-slate-900 transition-colors shadow-md flex items-center justify-center gap-2 shrink-0 group mt-2 md:mt-0"
+                    >
                         Search{' '}
                         <FaArrowRight className="-rotate-45 group-hover:rotate-0 transition-transform" />
                     </button>

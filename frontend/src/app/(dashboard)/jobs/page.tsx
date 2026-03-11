@@ -1,41 +1,61 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobFilters } from '@/components/jobs/JobFilters';
 import { Spinner, Button } from '@/components/ui';
 import { useJobs } from '@/hooks/useJobs';
+import { FaMagnifyingGlass } from 'react-icons/fa6';
+
+function JobsContent() {
+    const searchParams = useSearchParams();
+    const { jobs, total, isLoading, searchJobs } = useJobs();
+
+    useEffect(() => {
+        const keyword = searchParams.get('keyword') || undefined;
+        const type = searchParams.get('type') || undefined;
+        searchJobs({ keyword, type });
+    }, [searchParams, searchJobs]);
+
+    return (
+        <div className="flex gap-6">
+            <div className="w-64 shrink-0">
+                <JobFilters
+                    onApply={searchJobs}
+                    initialKeyword={searchParams.get('keyword') || ''}
+                    initialType={searchParams.get('type') || ''}
+                />
+            </div>
+
+            <div className="flex-1">
+                <div className="mb-4 flex items-center justify-between">
+                    <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        <FaMagnifyingGlass className="text-brand-primary" />
+                        {total > 0 ? `${total} jobs found` : 'Find Jobs'}
+                    </h1>
+                </div>
+
+                {isLoading && <div className="flex justify-center py-12"><Spinner size="lg" /></div>}
+
+                {!isLoading && jobs.length === 0 && (
+                    <div className="py-12 text-center text-slate-400">No jobs match your search.</div>
+                )}
+
+                <div className="flex flex-col gap-3">
+                    {jobs.map((job) => (
+                        <JobCard key={job.id} job={job} actions={<Button size="sm">Apply Now</Button>} />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function JobsPage() {
-  const { jobs, total, isLoading, searchJobs } = useJobs();
-
-  useEffect(() => { searchJobs(); }, [searchJobs]);
-
-  return (
-    <div className="flex gap-6">
-      <div className="w-64 shrink-0">
-        <JobFilters onApply={searchJobs} />
-      </div>
-
-      <div className="flex-1">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">
-            {total > 0 ? `${total} jobs found` : 'Find Jobs'}
-          </h1>
-        </div>
-
-        {isLoading && <div className="flex justify-center py-12"><Spinner size="lg" /></div>}
-
-        {!isLoading && jobs.length === 0 && (
-          <div className="py-12 text-center text-gray-400">No jobs match your search.</div>
-        )}
-
-        <div className="flex flex-col gap-3">
-          {jobs.map((job) => (
-            <JobCard key={job.id} job={job} actions={<Button size="sm">Apply Now</Button>} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+    return (
+        <Suspense fallback={<div className="flex justify-center py-20"><Spinner size="lg" /></div>}>
+            <JobsContent />
+        </Suspense>
+    );
 }
