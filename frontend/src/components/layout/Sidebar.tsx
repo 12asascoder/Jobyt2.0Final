@@ -5,64 +5,120 @@ import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { ROUTES } from '@/constants';
 import { cn } from '@/lib/utils';
+import {
+    FaHouse,
+    FaMagnifyingGlass,
+    FaFileLines,
+    FaBookmark,
+    FaComments,
+    FaCreditCard,
+    FaGift,
+    FaCircleUser,
+    FaBriefcase,
+    FaPlus,
+    FaChartLine,
+    FaUsers,
+    FaCoins,
+} from 'react-icons/fa6';
+import { IconType } from 'react-icons';
 
-interface NavItem { label: string; href: string; icon: string; }
+interface NavItem { label: string; href: string; icon: IconType; }
 
 const applicantNav: NavItem[] = [
-  { label: 'Dashboard', href: ROUTES.dashboard, icon: '🏠' },
-  { label: 'Find Jobs', href: ROUTES.jobs, icon: '🔍' },
-  { label: 'Applications', href: ROUTES.applications, icon: '📋' },
-  { label: 'Saved Jobs', href: ROUTES.savedJobs, icon: '🔖' },
-  { label: 'Messages', href: ROUTES.messages, icon: '💬' },
-  { label: 'Credits', href: ROUTES.credits, icon: '💳' },
-  { label: 'Referrals', href: ROUTES.referral, icon: '🎁' },
-  { label: 'Profile', href: ROUTES.profile, icon: '👤' },
+    { label: 'Dashboard', href: ROUTES.dashboard, icon: FaHouse },
+    { label: 'Find Jobs', href: ROUTES.jobs, icon: FaMagnifyingGlass },
+    { label: 'Applications', href: ROUTES.applications, icon: FaFileLines },
+    { label: 'Saved Jobs', href: ROUTES.savedJobs, icon: FaBookmark },
+    { label: 'Messages', href: ROUTES.messages, icon: FaComments },
+    { label: 'Credits', href: ROUTES.credits, icon: FaCreditCard },
+    { label: 'Referrals', href: ROUTES.referral, icon: FaGift },
+    { label: 'Profile', href: ROUTES.profile, icon: FaCircleUser },
 ];
 
 const recruiterNav: NavItem[] = [
-  { label: 'Dashboard', href: ROUTES.recruiterDashboard, icon: '🏠' },
-  { label: 'My Jobs', href: ROUTES.recruiterJobs, icon: '📌' },
-  { label: 'Post a Job', href: ROUTES.recruiterNewJob, icon: '➕' },
-  { label: 'Messages', href: ROUTES.messages, icon: '💬' },
-  { label: 'Analytics', href: ROUTES.recruiterAnalytics, icon: '📊' },
-  { label: 'Credits', href: ROUTES.recruiterCredits, icon: '💳' },
+    { label: 'Dashboard', href: ROUTES.recruiterDashboard, icon: FaHouse },
+    { label: 'My Jobs', href: ROUTES.recruiterJobs, icon: FaBriefcase },
+    { label: 'Post a Job', href: ROUTES.recruiterNewJob, icon: FaPlus },
+    { label: 'Messages', href: ROUTES.messages, icon: FaComments },
+    { label: 'Analytics', href: ROUTES.recruiterAnalytics, icon: FaChartLine },
+    { label: 'Credits', href: ROUTES.recruiterCredits, icon: FaCreditCard },
 ];
 
 const adminNav: NavItem[] = [
-  { label: 'Dashboard', href: ROUTES.adminDashboard, icon: '🏠' },
-  { label: 'Users', href: ROUTES.adminUsers, icon: '👥' },
-  { label: 'Jobs', href: ROUTES.adminJobs, icon: '📌' },
-  { label: 'Credits', href: ROUTES.adminCredits, icon: '💳' },
+    { label: 'Dashboard', href: ROUTES.adminDashboard, icon: FaHouse },
+    { label: 'Users', href: ROUTES.adminUsers, icon: FaUsers },
+    { label: 'Jobs', href: ROUTES.adminJobs, icon: FaBriefcase },
+    { label: 'Credits', href: ROUTES.adminCredits, icon: FaCoins },
 ];
 
 export const Sidebar = () => {
-  const { user } = useAuthStore();
-  const pathname = usePathname();
+    const { user } = useAuthStore();
+    const pathname = usePathname();
 
-  const nav =
-    user?.role === 'recruiter' ? recruiterNav :
-    user?.role === 'admin' ? adminNav :
-    applicantNav;
+    const nav =
+        user?.role === 'recruiter' ? recruiterNav :
+        user?.role === 'admin' ? adminNav :
+        applicantNav;
 
-  return (
-    <aside className="flex h-full w-56 flex-col border-r border-gray-200 bg-white px-3 py-6">
-      <nav className="flex flex-col gap-1">
-        {nav.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-              pathname === item.href
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-            )}
-          >
-            <span>{item.icon}</span>
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-    </aside>
-  );
+    const roleLabel =
+        user?.role === 'recruiter' ? 'Recruiter' :
+        user?.role === 'admin' ? 'Admin' :
+        'Applicant';
+
+    const roleBadgeColor =
+        user?.role === 'recruiter' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+        user?.role === 'admin' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+        'bg-brand-primary/20 text-brand-primary border-brand-primary/30';
+
+    return (
+        <aside className="flex h-full w-60 flex-col bg-slate-900 border-r border-slate-800 px-3 py-5 shrink-0">
+            {/* Role Badge */}
+            <div className="px-3 mb-6">
+                <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider border ${roleBadgeColor}`}>
+                    {roleLabel}
+                </span>
+            </div>
+
+            {/* Navigation */}
+            <nav className="flex flex-col gap-1 flex-1">
+                {nav.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href;
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className={cn(
+                                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 relative group',
+                                isActive
+                                    ? 'bg-brand-primary/15 text-brand-primary'
+                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                            )}
+                        >
+                            {isActive && (
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-brand-primary rounded-r-full" />
+                            )}
+                            <Icon className={cn(
+                                'text-base shrink-0 transition-transform duration-200 group-hover:scale-110',
+                                isActive ? 'text-brand-primary' : ''
+                            )} />
+                            <span>{item.label}</span>
+                        </Link>
+                    );
+                })}
+            </nav>
+
+            {/* Bottom Branding */}
+            <div className="mt-auto pt-4 border-t border-slate-800 px-3">
+                <div className="flex items-center gap-2 opacity-40">
+                    <div className="relative w-4 h-4">
+                        <div className="absolute inset-0 border-[3px] border-brand-primary rounded-full border-t-transparent -rotate-45" />
+                    </div>
+                    <span className="text-xs font-bold text-white tracking-tight">
+                        jobyt<span className="text-brand-primary">.</span>
+                    </span>
+                </div>
+            </div>
+        </aside>
+    );
 };

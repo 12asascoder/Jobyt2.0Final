@@ -7,6 +7,7 @@ import {
   CompanyMarquee,
   JobCards,
   EmployerSection,
+  PricingSection,
   Testimonials,
   Footer,
 } from '@/components/landing';
@@ -21,6 +22,7 @@ export default function LandingPage() {
       <CompanyMarquee />
       <JobCards />
       <EmployerSection />
+      <PricingSection />
       <Testimonials />
       <Footer />
     </>
