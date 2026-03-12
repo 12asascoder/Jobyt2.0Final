@@ -90,20 +90,185 @@ function CompanyAvatar({ name }: { name: string }) {
     );
 }
 
+const HARDCODED_JOBS: BackendJob[] = [
+    {
+        id: 'hc-1',
+        title: 'Software Development Engineer Intern',
+        company_name: 'SpazorLabs',
+        location: 'Remote',
+        type: 'internship',
+        salary_min: 15000,
+        salary_max: 30000,
+        skills: ['React', 'Next.js', 'TypeScript', 'Python'],
+        status: 'open',
+        is_boosted: true,
+        created_at: new Date().toISOString(),
+    },
+    {
+        id: 'hc-2',
+        title: 'Frontend Engineer',
+        company_name: 'TechCorp India',
+        location: 'Bangalore, India',
+        type: 'full-time',
+        salary_min: 800000,
+        salary_max: 1400000,
+        skills: ['React', 'Tailwind CSS', 'Redux', 'JavaScript'],
+        status: 'open',
+        is_boosted: false,
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    },
+    {
+        id: 'hc-3',
+        title: 'Backend Developer',
+        company_name: 'InnovateX Solutions',
+        location: 'Pune, India',
+        type: 'full-time',
+        salary_min: 1000000,
+        salary_max: 1800000,
+        skills: ['Node.js', 'Express', 'MongoDB', 'AWS'],
+        status: 'open',
+        is_boosted: true,
+        created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+    },
+    {
+        id: 'hc-4',
+        title: 'Product Designer (UI/UX)',
+        company_name: 'Designify Studios',
+        location: 'Remote',
+        type: 'contract',
+        salary_min: 50000,
+        salary_max: 90000,
+        skills: ['Figma', 'UI/UX', 'Prototyping', 'Adobe XD'],
+        status: 'open',
+        is_boosted: false,
+        created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
+    },
+    {
+        id: 'hc-5',
+        title: 'Data Scientist',
+        company_name: 'Analytics Pro',
+        location: 'Mumbai, India',
+        type: 'full-time',
+        salary_min: 1200000,
+        salary_max: 2000000,
+        skills: ['Python', 'Machine Learning', 'SQL', 'TensorFlow'],
+        status: 'open',
+        is_boosted: true,
+        created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    },
+    {
+        id: 'hc-6',
+        title: 'Marketing Manager',
+        company_name: 'GrowthHackers',
+        location: 'Remote',
+        type: 'full-time',
+        salary_min: 700000,
+        salary_max: 1200000,
+        skills: ['SEO', 'Content Strategy', 'Google Ads', 'Analytics'],
+        status: 'open',
+        is_boosted: false,
+        created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+    },
+    {
+        id: 'hc-7',
+        title: 'DevOps Engineer',
+        company_name: 'CloudScale',
+        location: 'Hyderabad, India',
+        type: 'contract',
+        salary_min: 1500000,
+        salary_max: 2500000,
+        skills: ['Kubernetes', 'Docker', 'AWS', 'CI/CD'],
+        status: 'open',
+        is_boosted: true,
+        created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
+    },
+    {
+        id: 'hc-8',
+        title: 'HR Business Partner',
+        company_name: 'PeopleFirst',
+        location: 'Bangalore, India',
+        type: 'full-time',
+        salary_min: 600000,
+        salary_max: 900000,
+        skills: ['Recruitment', 'Employee Relations', 'HR Policies'],
+        status: 'open',
+        is_boosted: false,
+        created_at: new Date(Date.now() - 86400000 * 6).toISOString(),
+    },
+    {
+        id: 'hc-9',
+        title: 'Mobile App Developer',
+        company_name: 'AppWorks',
+        location: 'Pune, India',
+        type: 'full-time',
+        salary_min: 900000,
+        salary_max: 1500000,
+        skills: ['Flutter', 'React Native', 'iOS', 'Android'],
+        status: 'open',
+        is_boosted: true,
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    },
+    {
+        id: 'hc-10',
+        title: 'Cybersecurity Analyst',
+        company_name: 'SecureNet',
+        location: 'Delhi, India',
+        type: 'full-time',
+        salary_min: 1100000,
+        salary_max: 1800000,
+        skills: ['Network Security', 'Penetration Testing', 'SIEM'],
+        status: 'open',
+        is_boosted: false,
+        created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+    },
+    {
+        id: 'hc-11',
+        title: 'Technical Writer',
+        company_name: 'DocuTech',
+        location: 'Remote',
+        type: 'part-time',
+        salary_min: 400000,
+        salary_max: 700000,
+        skills: ['API Documentation', 'Markdown', 'Git'],
+        status: 'open',
+        is_boosted: false,
+        created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+    },
+    {
+        id: 'hc-12',
+        title: 'Graphic Designer',
+        company_name: 'CreativeMinds',
+        location: 'Kolkata, India',
+        type: 'internship',
+        salary_min: 10000,
+        salary_max: 20000,
+        skills: ['Adobe Illustrator', 'Photoshop', 'Typography'],
+        status: 'open',
+        is_boosted: true,
+        created_at: new Date().toISOString(),
+    }
+];
+
 export function JobCards() {
     const [jobs, setJobs] = useState<BackendJob[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetch(`${API_BASE}/jobs?limit=12&sort=date`)
-            .then((res) => res.json())
+            .then(async (res) => {
+                if (!res.ok) throw new Error('API Error');
+                return res.json();
+            })
             .then((data) => {
-                if (data.success && data.data) {
+                if (data.success && data.data && data.data.length > 0) {
                     setJobs(data.data);
+                } else {
+                    setJobs(HARDCODED_JOBS);
                 }
             })
             .catch(() => {
-                // API unreachable — keep empty state
+                // API unreachable — use hardcoded state
+                setJobs(HARDCODED_JOBS);
             })
             .finally(() => setLoading(false));
     }, []);
@@ -122,8 +287,8 @@ export function JobCards() {
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 lg:gap-6">
-                    {Array.from({ length: 8 }).map((_, i) => (
-                        <div key={i} className="bg-white rounded-2xl p-5 md:p-6 border border-slate-100 animate-pulse h-[260px]">
+                    {Array.from({ length: 12 }).map((_, i) => (
+                        <div key={i} className={`bg-white rounded-2xl p-5 md:p-6 border border-slate-100 animate-pulse h-[260px] ${i >= 4 ? 'hidden md:flex' : ''}`}>
                             <div className="flex gap-4 mb-5 mt-2">
                                 <div className="w-12 h-12 rounded-xl bg-slate-200" />
                                 <div className="flex-1">
@@ -199,7 +364,7 @@ export function JobCards() {
                     return (
                         <div
                             key={job.id}
-                            className={`job-card bg-white rounded-2xl p-5 md:p-6 border border-slate-100 hover:border-brand-primary relative group cursor-pointer flex flex-col h-full ${i >= 8 ? 'hidden md:flex' : ''}`}
+                            className={`job-card bg-white rounded-2xl p-5 md:p-6 border border-slate-100 hover:border-brand-primary relative group cursor-pointer flex flex-col h-full ${i >= 4 ? 'hidden md:flex' : ''}`}
                             style={{
                                 animation: `fadeInUp 0.6s ease-out ${(i % 4) * 0.1}s both`,
                             }}
