@@ -7,9 +7,9 @@
     "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "db:init": "psql -U $DB_USER -d $DB_NAME -f src/config/schema.sql",
+    "db:init": "dotenv -e .env -- sh -c 'psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f src/config/schema.sql'",
     "type-check": "tsc --noEmit",
-    "db:seed": "ts-node src/config/seed.ts"
+    "db:seed": "dotenv -e .env -- ts-node src/config/seed.ts"
   },
   "keywords": [],
   "author": "Parth Nath Chauhan",
@@ -41,6 +41,7 @@
     "@types/node": "^25.3.5",
     "@types/pg": "^8.18.0",
     "@types/uuid": "^10.0.0",
+    "dotenv-cli": "^11.0.0",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
