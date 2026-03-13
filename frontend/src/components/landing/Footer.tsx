@@ -89,7 +89,21 @@ export function Footer() {
 
                 {/* Bottom */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                    <p className="text-slate-500 font-medium text-sm">© 2026 Jobyt. All rights reserved.</p>
+                    <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 text-slate-500 font-medium text-sm">
+                        <p>© 2026 Jobyt. All rights reserved.</p>
+                        <span className="hidden md:inline">|</span>
+                        <p>
+                            Powered by{' '}
+                            <Link 
+                                href="https://www.spazorlabs.com/" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-white hover:text-brand-primary transition-colors"
+                            >
+                                SpazorLabs
+                            </Link>
+                        </p>
+                    </div>
                     <div className="flex items-center gap-2 text-sm text-slate-400 font-medium">
                         Crafted with <FaHeart className="text-brand-primary animate-pulse" /> for the future of India.
                     </div>
