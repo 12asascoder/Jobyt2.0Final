@@ -91,4 +91,52 @@ export const ApplicationController = {
       next(err);
     }
   },
+
+  async recruiterApplications(req: Request, res: Response, next: NextFunction) {
+    try {
+      const page = Number.parseInt(req.query.page as string) || 1;
+      const limit = Number.parseInt(req.query.limit as string) || 20;
+      const { applications, total } = await ApplicationService.getRecruiterApplications(
+        req.user!.userId,
+        page,
+        limit,
+      );
+      sendPaginated(res, applications, total, page, limit);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async recruiterApplicationsFiltered(req: Request, res: Response, next: NextFunction) {
+    try {
+      const page = Number.parseInt(req.query.page as string) || 1;
+      const limit = Number.parseInt(req.query.limit as string) || 20;
+      const status = req.query.status as string | undefined;
+      const jobTitle = req.query.jobTitle as string | undefined;
+      const applicantName = req.query.applicantName as string | undefined;
+
+      const { applications, total } = await ApplicationService.getRecruiterApplicationsWithFilters(
+        req.user!.userId,
+        { status: status as any, jobTitle, applicantName },
+        page,
+        limit,
+      );
+      sendPaginated(res, applications, total, page, limit);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async recruiterApplicationsStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      const stats = await ApplicationService.getRecruiterApplicationsStatistics(req.user!.userId);
+      res.json({
+        success: true,
+        data: stats,
+        message: 'Recruiter applications statistics',
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
 };

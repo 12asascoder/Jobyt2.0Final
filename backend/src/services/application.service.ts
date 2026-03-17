@@ -79,4 +79,21 @@ export const ApplicationService = {
   async getApplicationStatistics(applicantId: string) {
     return ApplicationModel.getApplicationStats(applicantId);
   },
+
+  async getRecruiterApplications(recruiterId: string, page: number, limit: number) {
+    return ApplicationModel.findByRecruiter(recruiterId, page, limit);
+  },
+
+  async getRecruiterApplicationsWithFilters(
+    recruiterId: string,
+    filters: { status?: ApplicationStatus; jobTitle?: string; applicantName?: string },
+    page: number,
+    limit: number,
+  ) {
+    return ApplicationModel.findByRecruiterWithFilters(recruiterId, filters, page, limit);
+  },
+
+  async getRecruiterApplicationsStatistics(recruiterId: string) {
+    return ApplicationModel.getRecruiterApplicationStats(recruiterId);
+  },
 };
