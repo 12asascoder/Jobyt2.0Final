@@ -11,6 +11,12 @@ router.use(authenticate);
 // Applicant: view own applications
 router.get('/my', authorize('applicant'), ApplicationController.myApplications);
 
+// Applicant: view applications with filters (status, jobTitle)
+router.get('/my/filtered', authorize('applicant'), ApplicationController.myApplicationsFiltered);
+
+// Applicant: get application statistics
+router.get('/my/stats', authorize('applicant'), ApplicationController.getApplicationStats);
+
 // Applicant: apply to a job
 router.post(
   '/jobs/:jobId',

@@ -96,4 +96,84 @@ export const ApplicationModel = {
     ]);
     return { applications: dataRes.rows, total: parseInt(countRes.rows[0].count) };
   },
+
+  async findByApplicantWithFilters(
+    applicantId: string,
+    filters: { status?: ApplicationStatus; jobTitle?: string },
+    page = 1,
+    limit = 20,
+  ): Promise<{ applications: any[]; total: number }> {
+    const offset = (page - 1) * limit;
+    let query = `
+      SELECT a.*, j.title as job_title, j.location, j.type, j.salary_min, j.salary_max,
+             rp.company_name, rp.industry
+      FROM applications a
+      JOIN jobs j ON j.id = a.job_id
+      LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
+      WHERE a.applicant_id = $1
+    `;
+    const params: any[] = [applicantId];
+    let paramIndex = 2;
+
+    if (filters.status) {
+      query += ` AND a.status = $${paramIndex}`;
+      params.push(filters.status);
+      paramIndex++;
+    }
+
+    if (filters.jobTitle) {
+      query += ` AND j.title ILIKE $${paramIndex}`;
+      params.push(`%${filters.jobTitle}%`);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY a.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(limit, offset);
+
+    const countQuery = query.replace(/LIMIT \$\d+ OFFSET \$\d+$/, '');
+    const countSql = `SELECT COUNT(*) FROM (${countQuery}) as counted`;
+
+    const [countRes, dataRes] = await Promise.all([
+      pool.query(countSql, params.slice(-2)),
+      pool.query(query, params),
+    ]);
+
+    return { applications: dataRes.rows, total: Number.parseInt(countRes.rows[0].count) };
+  },
+
+  async getApplicationStats(applicantId: string): Promise<{
+    total: number;
+    applied: number;
+    in_review: number;
+    shortlisted: number;
+    interview: number;
+    offer: number;
+    hired: number;
+    rejected: number;
+  }> {
+    const { rows } = await pool.query(
+      `SELECT 
+         COUNT(*) as total,
+         SUM(CASE WHEN status = 'applied' THEN 1 ELSE 0 END) as applied,
+         SUM(CASE WHEN status = 'in_review' THEN 1 ELSE 0 END) as in_review,
+         SUM(CASE WHEN status = 'shortlisted' THEN 1 ELSE 0 END) as shortlisted,
+         SUM(CASE WHEN status = 'interview' THEN 1 ELSE 0 END) as interview,
+         SUM(CASE WHEN status = 'offer' THEN 1 ELSE 0 END) as offer,
+         SUM(CASE WHEN status = 'hired' THEN 1 ELSE 0 END) as hired,
+         SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
+       FROM applications
+       WHERE applicant_id = $1`,
+      [applicantId],
+    );
+    return {
+      total: Number.parseInt(rows[0].total || 0),
+      applied: Number.parseInt(rows[0].applied || 0),
+      in_review: Number.parseInt(rows[0].in_review || 0),
+      shortlisted: Number.parseInt(rows[0].shortlisted || 0),
+      interview: Number.parseInt(rows[0].interview || 0),
+      offer: Number.parseInt(rows[0].offer || 0),
+      hired: Number.parseInt(rows[0].hired || 0),
+      rejected: Number.parseInt(rows[0].rejected || 0),
+    };
+  },
 };

@@ -46,8 +46,8 @@ export const ApplicationController = {
 
   async jobApplications(req: Request, res: Response, next: NextFunction) {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
+      const page = Number.parseInt(req.query.page as string) || 1;
+      const limit = Number.parseInt(req.query.limit as string) || 20;
       const { applications, total } = await ApplicationService.getJobApplications(
         req.user!.userId,
         req.params.jobId as string,
@@ -55,6 +55,38 @@ export const ApplicationController = {
         limit,
       );
       sendPaginated(res, applications, total, page, limit);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async myApplicationsFiltered(req: Request, res: Response, next: NextFunction) {
+    try {
+      const page = Number.parseInt(req.query.page as string) || 1;
+      const limit = Number.parseInt(req.query.limit as string) || 20;
+      const status = req.query.status as string | undefined;
+      const jobTitle = req.query.jobTitle as string | undefined;
+
+      const { applications, total } = await ApplicationService.getMyApplicationsWithFilters(
+        req.user!.userId,
+        { status: status as any, jobTitle },
+        page,
+        limit,
+      );
+      sendPaginated(res, applications, total, page, limit);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getApplicationStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      const stats = await ApplicationService.getApplicationStatistics(req.user!.userId);
+      res.json({
+        success: true,
+        data: stats,
+        message: 'Application statistics',
+      });
     } catch (err) {
       next(err);
     }

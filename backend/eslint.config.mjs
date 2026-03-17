@@ -22,6 +22,7 @@ export default [
       'no-useless-assignment': 'off',
       'no-useless-escape': 'off',
       '@typescript-eslint/no-namespace': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
     },
   },
 ];

@@ -412,8 +412,54 @@ async function seed() {
       console.log(`  Job seeded: "${job.title}" at recruiter index ${job.recruiter_idx}`);
     }
 
+    // ── 6. Insert sample applications ───────────────────────────────────────────
+    console.log('Seeding sample applications...');
+
+    // Get all job IDs
+    const jobsRes = await client.query('SELECT id FROM jobs ORDER BY created_at ASC');
+    const jobIds = jobsRes.rows.map((r) => r.id);
+
+    // First applicant applies to some jobs
+    const johnId = (
+      await client.query('SELECT id FROM users WHERE email = $1', ['john@example.com'])
+    ).rows[0].id;
+    const janeId = (
+      await client.query('SELECT id FROM users WHERE email = $1', ['jane@example.com'])
+    ).rows[0].id;
+
+    const applications = [
+      // John's applications
+      { job_idx: 0, applicant_id: johnId, status: 'shortlisted' }, // Google - Senior SWE
+      { job_idx: 1, applicant_id: johnId, status: 'interview' }, // Google - ML Engineer
+      { job_idx: 5, applicant_id: johnId, status: 'applied' }, // Microsoft - Backend
+      { job_idx: 6, applicant_id: johnId, status: 'in_review' }, // Microsoft - Full Stack
+      { job_idx: 10, applicant_id: johnId, status: 'offer' }, // Amazon - SDE
+      // Jane's applications
+      { job_idx: 1, applicant_id: janeId, status: 'shortlisted' }, // Google - ML Engineer
+      { job_idx: 8, applicant_id: janeId, status: 'applied' }, // Microsoft - Data Scientist
+      { job_idx: 14, applicant_id: janeId, status: 'in_review' }, // Amazon - Data Engineer
+      { job_idx: 2, applicant_id: janeId, status: 'rejected' }, // Google - PM Search
+    ];
+
+    for (const app of applications) {
+      await client.query(
+        `
+        INSERT INTO applications (job_id, applicant_id, cover_letter, status, status_updated_at)
+        VALUES ($1, $2, $3, $4, NOW())
+        ON CONFLICT (job_id, applicant_id) DO NOTHING
+      `,
+        [
+          jobIds[app.job_idx],
+          app.applicant_id,
+          `I am very interested in this position and believe my skills are a great match.`,
+          app.status,
+        ],
+      );
+      console.log(`  Application seeded for applicant (status: ${app.status})`);
+    }
+
     console.log(`\nSeed complete. Summary:`);
-    console.log(`  1 admin, 3 recruiters (500 credits each), 2 applicants, ${jobs.length} jobs`);
+    console.log(`  1 admin, 3 recruiters (500 credits each), 2 applicants, ${jobs.length} jobs, 9 applications`);
   } catch (err) {
     console.error('Seed failed:', err);
     throw err;
@@ -424,6 +470,7 @@ async function seed() {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-floating-promises, prefer-top-level-await
 seed().catch((err) => {
   console.error(err);
   process.exit(1);
