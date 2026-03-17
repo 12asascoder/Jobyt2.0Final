@@ -12,11 +12,7 @@ router.get('/plans', PaymentController.getPlans);
 router.post('/webhook/stripe', PaymentController.stripeWebhook);
 
 router.use(authenticate);
-router.post('/checkout',
-  body('planId').isUUID(),
-  validate,
-  PaymentController.initiateCheckout
-);
+router.post('/checkout', body('planId').isUUID(), validate, PaymentController.initiateCheckout);
 router.get('/history', PaymentController.getHistory);
 
 export default router;

@@ -15,21 +15,23 @@ router.use(authenticate, authorize('recruiter', 'admin'));
 
 router.get('/my/listings', JobController.myJobs);
 
-router.post('/',
+router.post(
+  '/',
   body('title').notEmpty().trim(),
   body('description').notEmpty(),
   body('type').isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
   body('salary_min').optional().isInt({ min: 0 }),
   body('salary_max').optional().isInt({ min: 0 }),
   validate,
-  JobController.create
+  JobController.create,
 );
 
-router.put('/:id',
+router.put(
+  '/:id',
   body('title').optional().notEmpty().trim(),
   body('type').optional().isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
   validate,
-  JobController.update
+  JobController.update,
 );
 
 router.patch('/:id/publish', JobController.publish);

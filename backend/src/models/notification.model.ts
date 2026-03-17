@@ -1,9 +1,14 @@
 import pool from '../config/database';
 
 export type NotificationType =
-  | 'job_match' | 'application_status' | 'new_message'
-  | 'referral_joined' | 'low_credit' | 'payment_success'
-  | 'payment_failed' | 'application_submitted';
+  | 'job_match'
+  | 'application_status'
+  | 'new_message'
+  | 'referral_joined'
+  | 'low_credit'
+  | 'payment_success'
+  | 'payment_failed'
+  | 'application_submitted';
 
 export interface Notification {
   id: string;
@@ -27,19 +32,25 @@ export const NotificationModel = {
     const { rows } = await pool.query(
       `INSERT INTO notifications (user_id, type, title, body, action_url)
        VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [data.user_id, data.type, data.title, data.body, data.action_url || null]
+      [data.user_id, data.type, data.title, data.body, data.action_url || null],
     );
     return rows[0];
   },
 
-  async findByUser(userId: string, page = 1, limit = 20): Promise<{ notifications: Notification[]; total: number; unread: number }> {
+  async findByUser(
+    userId: string,
+    page = 1,
+    limit = 20,
+  ): Promise<{ notifications: Notification[]; total: number; unread: number }> {
     const offset = (page - 1) * limit;
     const [countRes, unreadRes, dataRes] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM notifications WHERE user_id = $1', [userId]),
-      pool.query('SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND read = FALSE', [userId]),
+      pool.query('SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND read = FALSE', [
+        userId,
+      ]),
       pool.query(
         `SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
-        [userId, limit, offset]
+        [userId, limit, offset],
       ),
     ]);
     return {
@@ -50,7 +61,10 @@ export const NotificationModel = {
   },
 
   async markRead(id: string, userId: string): Promise<void> {
-    await pool.query(`UPDATE notifications SET read = TRUE WHERE id = $1 AND user_id = $2`, [id, userId]);
+    await pool.query(`UPDATE notifications SET read = TRUE WHERE id = $1 AND user_id = $2`, [
+      id,
+      userId,
+    ]);
   },
 
   async markAllRead(userId: string): Promise<void> {

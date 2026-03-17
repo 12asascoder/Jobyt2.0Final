@@ -21,12 +21,22 @@ export const AnalyticsService = {
       `SELECT status, COUNT(*)::int AS count
        FROM applications WHERE job_id = $1
        GROUP BY status`,
-      [jobId]
+      [jobId],
     );
 
-    const statusOrder = ['applied', 'in_review', 'shortlisted', 'interview', 'offer', 'hired', 'rejected'];
+    const statusOrder = [
+      'applied',
+      'in_review',
+      'shortlisted',
+      'interview',
+      'offer',
+      'hired',
+      'rejected',
+    ];
     const map: Record<string, number> = {};
-    rows.forEach((r) => { map[r.status] = r.count; });
+    rows.forEach((r) => {
+      map[r.status] = r.count;
+    });
 
     return {
       job_id: jobId,
@@ -43,7 +53,7 @@ export const AnalyticsService = {
        WHERE j.recruiter_id = $1 AND a.created_at >= NOW() - INTERVAL '${days} days'
        GROUP BY DATE(a.created_at)
        ORDER BY date ASC`,
-      [recruiterId]
+      [recruiterId],
     );
     return rows;
   },
@@ -57,7 +67,7 @@ export const AnalyticsService = {
        WHERE j.recruiter_id = $1 AND a.status = 'hired'
        GROUP BY j.id, j.title
        ORDER BY avg_days_to_hire ASC`,
-      [recruiterId]
+      [recruiterId],
     );
     return rows;
   },
@@ -70,7 +80,7 @@ export const AnalyticsService = {
          AND created_at >= NOW() - INTERVAL '${days} days'
        GROUP BY DATE(created_at)
        ORDER BY date ASC`,
-      [recruiterId]
+      [recruiterId],
     );
     return rows;
   },
@@ -84,7 +94,7 @@ export const AnalyticsService = {
          (SELECT COUNT(*) FROM applications a JOIN jobs j ON j.id = a.job_id WHERE j.recruiter_id = $1 AND a.status = 'hired')::int AS total_hired,
          (SELECT SUM(views_count) FROM jobs WHERE recruiter_id = $1 AND deleted_at IS NULL)::int AS total_views
        FROM (SELECT 1) t`,
-      [recruiterId]
+      [recruiterId],
     );
     return rows[0];
   },
@@ -99,7 +109,7 @@ export const AnalyticsService = {
        GROUP BY j.id
        ORDER BY application_count DESC
        LIMIT 10`,
-      [recruiterId]
+      [recruiterId],
     );
     return rows;
   },

@@ -2,8 +2,15 @@ import multer from 'multer';
 
 const storage = multer.memoryStorage();
 
-const fileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowed = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+const fileFilter = (
+  _req: Express.Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+) => {
+  const allowed = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ];
   if (allowed.includes(file.mimetype)) {
     cb(null, true);
   } else {

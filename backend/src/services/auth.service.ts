@@ -19,7 +19,13 @@ export const AuthService = {
     const verify_token = randomBytes(32).toString('hex');
     const myReferralCode = generateReferralCode();
 
-    const user = await UserModel.create({ email, password_hash, role, verify_token, referral_code: myReferralCode });
+    const user = await UserModel.create({
+      email,
+      password_hash,
+      role,
+      verify_token,
+      referral_code: myReferralCode,
+    });
 
     // Create profile stub
     if (role === 'applicant') await ApplicantProfileModel.create(user.id);
@@ -45,7 +51,8 @@ export const AuthService = {
 
   async verifyEmail(token: string) {
     const user = await UserModel.findByVerifyToken(token);
-    if (!user) throw Object.assign(new Error('Invalid or expired verification token'), { statusCode: 400 });
+    if (!user)
+      throw Object.assign(new Error('Invalid or expired verification token'), { statusCode: 400 });
 
     await UserModel.verify(user.id);
 
@@ -65,9 +72,13 @@ export const AuthService = {
   async login(email: string, password: string) {
     const user = await UserModel.findByEmail(email);
     if (!user) throw Object.assign(new Error('Invalid credentials'), { statusCode: 401 });
-    if (!user.is_verified) throw Object.assign(new Error('Please verify your email first'), { statusCode: 403 });
+    if (!user.is_verified)
+      throw Object.assign(new Error('Please verify your email first'), { statusCode: 403 });
 
-    if (user.banned_at) throw Object.assign(new Error('Your account has been suspended. Please contact support.'), { statusCode: 403 });
+    if (user.banned_at)
+      throw Object.assign(new Error('Your account has been suspended. Please contact support.'), {
+        statusCode: 403,
+      });
 
     const valid = await comparePassword(password, user.password_hash);
     if (!valid) throw Object.assign(new Error('Invalid credentials'), { statusCode: 401 });
@@ -106,7 +117,8 @@ export const AuthService = {
 
   async resetPassword(token: string, newPassword: string) {
     const user = await UserModel.findByResetToken(token);
-    if (!user) throw Object.assign(new Error('Invalid or expired reset token'), { statusCode: 400 });
+    if (!user)
+      throw Object.assign(new Error('Invalid or expired reset token'), { statusCode: 400 });
 
     const password_hash = await hashPassword(newPassword);
     await UserModel.updatePassword(user.id, password_hash);

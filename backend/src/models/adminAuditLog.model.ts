@@ -21,7 +21,13 @@ export const AdminAuditLogModel = {
     const { rows } = await pool.query(
       `INSERT INTO admin_audit_log (admin_id, action, target_type, target_id, reason)
        VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [data.admin_id, data.action, data.target_type || null, data.target_id || null, data.reason || null]
+      [
+        data.admin_id,
+        data.action,
+        data.target_type || null,
+        data.target_id || null,
+        data.reason || null,
+      ],
     );
     return rows[0];
   },
@@ -35,7 +41,7 @@ export const AdminAuditLogModel = {
          FROM admin_audit_log l
          JOIN users u ON u.id = l.admin_id
          ORDER BY l.created_at DESC LIMIT $1 OFFSET $2`,
-        [limit, offset]
+        [limit, offset],
       ),
     ]);
     return { logs: dataRes.rows, total: parseInt(countRes.rows[0].count) };

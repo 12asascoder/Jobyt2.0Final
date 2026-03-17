@@ -12,22 +12,32 @@ router.use(authenticate);
 router.get('/my', authorize('applicant'), ApplicationController.myApplications);
 
 // Applicant: apply to a job
-router.post('/jobs/:jobId',
+router.post(
+  '/jobs/:jobId',
   authorize('applicant'),
   body('cover_letter').optional().isString(),
   validate,
-  ApplicationController.apply
+  ApplicationController.apply,
 );
 
 // Recruiter: view applications for a job
 router.get('/jobs/:jobId', authorize('recruiter', 'admin'), ApplicationController.jobApplications);
 
 // Recruiter: update application status
-router.patch('/:id/status',
+router.patch(
+  '/:id/status',
   authorize('recruiter', 'admin'),
-  body('status').isIn(['applied', 'in_review', 'shortlisted', 'interview', 'offer', 'hired', 'rejected']),
+  body('status').isIn([
+    'applied',
+    'in_review',
+    'shortlisted',
+    'interview',
+    'offer',
+    'hired',
+    'rejected',
+  ]),
   validate,
-  ApplicationController.updateStatus
+  ApplicationController.updateStatus,
 );
 
 export default router;

@@ -3,14 +3,24 @@ import { JobModel } from '../models/job.model';
 import { NotificationModel } from '../models/notification.model';
 
 export const ApplicationService = {
-  async apply(applicantId: string, jobId: string, data: { cover_letter?: string; resume_snapshot_url?: string }) {
+  async apply(
+    applicantId: string,
+    jobId: string,
+    data: { cover_letter?: string; resume_snapshot_url?: string },
+  ) {
     const job = await JobModel.findById(jobId);
-    if (!job || job.status !== 'active') throw Object.assign(new Error('Job not found or no longer active'), { statusCode: 404 });
+    if (!job || job.status !== 'active')
+      throw Object.assign(new Error('Job not found or no longer active'), { statusCode: 404 });
 
     const existing = await ApplicationModel.findByJobAndApplicant(jobId, applicantId);
-    if (existing) throw Object.assign(new Error('You have already applied to this job'), { statusCode: 409 });
+    if (existing)
+      throw Object.assign(new Error('You have already applied to this job'), { statusCode: 409 });
 
-    const application = await ApplicationModel.create({ job_id: jobId, applicant_id: applicantId, ...data });
+    const application = await ApplicationModel.create({
+      job_id: jobId,
+      applicant_id: applicantId,
+      ...data,
+    });
 
     // Notify recruiter
     await NotificationModel.create({
@@ -29,7 +39,8 @@ export const ApplicationService = {
     if (!application) throw Object.assign(new Error('Application not found'), { statusCode: 404 });
 
     const job = await JobModel.findById(application.job_id);
-    if (!job || job.recruiter_id !== recruiterId) throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+    if (!job || job.recruiter_id !== recruiterId)
+      throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
 
     const updated = await ApplicationModel.updateStatus(applicationId, status);
 
@@ -51,7 +62,8 @@ export const ApplicationService = {
 
   async getJobApplications(recruiterId: string, jobId: string, page: number, limit: number) {
     const job = await JobModel.findById(jobId);
-    if (!job || job.recruiter_id !== recruiterId) throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+    if (!job || job.recruiter_id !== recruiterId)
+      throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
     return ApplicationModel.findByJob(jobId, page, limit);
   },
 };

@@ -36,10 +36,49 @@ Hiring_platform/
 
 ```bash
 cd backend
-cp .env.example .env        # fill in your values
+npm install
+```
+
+Create `.env` from `.env.example` (pick the command for your shell/OS), then fill in your values:
+
+**macOS / Linux (bash/zsh):**
+
+```bash
+cp .env.example .env
+```
+
+**Windows PowerShell:**
+
+```powershell
+Copy-Item .env.example .env
+```
+
+**Windows CMD:**
+
+```bat
+copy .env.example .env
+```
+
+Then run:
+
+```bash
 npm run db:init             # run schema.sql against your DB
 npm run dev                 # starts on http://localhost:5000
 ```
+
+### Backend with Docker Compose (no local Node/Postgres/Redis required)
+
+From the repo root:
+
+```bash
+cd backend
+cp .env.example .env         # or Copy-Item .env.example .env on PowerShell
+docker-compose up --build
+```
+
+- Backend: http://localhost:5000
+- Postgres and Redis start automatically; backend uses `DB_HOST=postgres`, `REDIS_HOST=redis`.
+- Run `npm run db:init` once (with Node locally, or from a one-off container) to apply the schema, or add an init step to your workflow.
 
 ### Frontend
 

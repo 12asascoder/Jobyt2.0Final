@@ -19,48 +19,62 @@ export const JobController = {
       };
       const { jobs, total } = await JobService.searchJobs(filters);
       sendPaginated(res, jobs, total, filters.page!, filters.limit!);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const job = await JobService.getJobById(req.params.id as string);
       sendSuccess(res, job);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
       const job = await JobService.createJob(req.user!.userId, req.body);
       sendSuccess(res, job, 'Job created', 201);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const job = await JobService.updateJob(req.user!.userId, req.params.id as string, req.body);
       sendSuccess(res, job, 'Job updated');
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async publish(req: Request, res: Response, next: NextFunction) {
     try {
       const job = await JobService.publishJob(req.user!.userId, req.params.id as string);
       sendSuccess(res, job, 'Job published');
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
       await JobService.deleteJob(req.user!.userId, req.params.id as string);
       sendSuccess(res, null, 'Job deleted');
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async myJobs(req: Request, res: Response, next: NextFunction) {
     try {
       const jobs = await JobService.getRecruiterJobs(req.user!.userId);
       sendSuccess(res, jobs);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 };

@@ -19,15 +19,19 @@ export interface Message {
 }
 
 export const MessageModel = {
-  async findOrCreateConversation(recruiterId: string, applicantId: string, jobId?: string): Promise<Conversation> {
+  async findOrCreateConversation(
+    recruiterId: string,
+    applicantId: string,
+    jobId?: string,
+  ): Promise<Conversation> {
     const { rows: existing } = await pool.query(
       `SELECT * FROM conversations WHERE recruiter_id = $1 AND applicant_id = $2 AND job_id IS NOT DISTINCT FROM $3`,
-      [recruiterId, applicantId, jobId || null]
+      [recruiterId, applicantId, jobId || null],
     );
     if (existing[0]) return existing[0];
     const { rows } = await pool.query(
       `INSERT INTO conversations (recruiter_id, applicant_id, job_id) VALUES ($1,$2,$3) RETURNING *`,
-      [recruiterId, applicantId, jobId || null]
+      [recruiterId, applicantId, jobId || null],
     );
     return rows[0];
   },
@@ -41,7 +45,7 @@ export const MessageModel = {
        ) m ON TRUE
        WHERE c.recruiter_id = $1 OR c.applicant_id = $1
        ORDER BY c.last_message_at DESC`,
-      [userId]
+      [userId],
     );
     return rows;
   },
@@ -50,17 +54,23 @@ export const MessageModel = {
     const offset = (page - 1) * limit;
     const { rows } = await pool.query(
       `SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC LIMIT $2 OFFSET $3`,
-      [conversationId, limit, offset]
+      [conversationId, limit, offset],
     );
     return rows;
   },
 
-  async createMessage(data: { conversation_id: string; sender_id: string; body: string }): Promise<Message> {
+  async createMessage(data: {
+    conversation_id: string;
+    sender_id: string;
+    body: string;
+  }): Promise<Message> {
     const { rows } = await pool.query(
       `INSERT INTO messages (conversation_id, sender_id, body) VALUES ($1,$2,$3) RETURNING *`,
-      [data.conversation_id, data.sender_id, data.body]
+      [data.conversation_id, data.sender_id, data.body],
     );
-    await pool.query(`UPDATE conversations SET last_message_at = NOW() WHERE id = $1`, [data.conversation_id]);
+    await pool.query(`UPDATE conversations SET last_message_at = NOW() WHERE id = $1`, [
+      data.conversation_id,
+    ]);
     return rows[0];
   },
 };

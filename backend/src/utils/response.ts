@@ -1,6 +1,11 @@
 import { Response } from 'express';
 
-export const sendSuccess = (res: Response, data: unknown, message = 'Success', statusCode = 200) => {
+export const sendSuccess = (
+  res: Response,
+  data: unknown,
+  message = 'Success',
+  statusCode = 200,
+) => {
   res.status(statusCode).json({ success: true, message, data });
 };
 
@@ -16,7 +21,7 @@ export const sendPaginated = (
   total: number,
   page: number,
   limit: number,
-  message = 'Success'
+  message = 'Success',
 ) => {
   res.status(200).json({
     success: true,

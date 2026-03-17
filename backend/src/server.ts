@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import http from 'http';
 import app from './app';
-import pool from './config/database';
+import { connectDB } from './config/database';
 import redis from './config/redis';
 import { initSocket } from './config/socket';
 
@@ -9,13 +9,18 @@ const PORT = parseInt(process.env.PORT || '5000', 10);
 
 async function startServer() {
   try {
-    // Test DB connection
-    const client = await pool.connect();
-    client.release();
-    console.log('PostgreSQL connected');
+    await connectDB();
 
-    // Test Redis
-    await redis.ping();
+    // Test Redis (non-blocking for local Docker runs)
+    try {
+      // With lazyConnect enabled, connect explicitly.
+      await redis.connect();
+      await redis.ping();
+      console.log('Redis connected');
+    } catch (err) {
+      console.warn('Redis not available, continuing without Redis connection');
+      console.warn(err);
+    }
 
     // Create HTTP server (required for Socket.io)
     const httpServer = http.createServer(app);
@@ -25,7 +30,9 @@ async function startServer() {
     console.log('Socket.io initialised');
 
     httpServer.listen(PORT, () => {
-      console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+      console.log(
+        `Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`,
+      );
     });
   } catch (error) {
     console.error('Failed to start server:', error);

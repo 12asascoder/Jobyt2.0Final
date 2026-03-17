@@ -36,7 +36,7 @@ export const UserModel = {
   async findByResetToken(token: string): Promise<User | null> {
     const { rows } = await pool.query(
       'SELECT * FROM users WHERE reset_token = $1 AND reset_token_expires_at > NOW()',
-      [token]
+      [token],
     );
     return rows[0] || null;
   },
@@ -56,7 +56,7 @@ export const UserModel = {
     const { rows } = await pool.query(
       `INSERT INTO users (email, password_hash, role, verify_token, referral_code)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [data.email, data.password_hash, data.role, data.verify_token, data.referral_code]
+      [data.email, data.password_hash, data.role, data.verify_token, data.referral_code],
     );
     return rows[0];
   },
@@ -64,27 +64,30 @@ export const UserModel = {
   async verify(id: string): Promise<void> {
     await pool.query(
       `UPDATE users SET is_verified = TRUE, verify_token = NULL, updated_at = NOW() WHERE id = $1`,
-      [id]
+      [id],
     );
   },
 
   async setResetToken(id: string, token: string, expiresAt: Date): Promise<void> {
     await pool.query(
       `UPDATE users SET reset_token = $1, reset_token_expires_at = $2, updated_at = NOW() WHERE id = $3`,
-      [token, expiresAt, id]
+      [token, expiresAt, id],
     );
   },
 
   async updatePassword(id: string, password_hash: string): Promise<void> {
     await pool.query(
       `UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW() WHERE id = $2`,
-      [password_hash, id]
+      [password_hash, id],
     );
   },
 
   async updateCreditBalance(id: string, newBalance: number, client?: typeof pool): Promise<void> {
     const db = client || pool;
-    await db.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, id]);
+    await db.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [
+      newBalance,
+      id,
+    ]);
   },
 
   async ban(id: string): Promise<void> {
@@ -124,7 +127,7 @@ export const UserModel = {
       pool.query(
         `SELECT id, email, role, is_verified, credit_balance, banned_at, created_at FROM users ${where}
          ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
-        [...params, filters.limit, offset]
+        [...params, filters.limit, offset],
       ),
     ]);
 
@@ -132,7 +135,10 @@ export const UserModel = {
   },
 
   async adminAdjustCredits(userId: string, newBalance: number): Promise<void> {
-    await pool.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, userId]);
+    await pool.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [
+      newBalance,
+      userId,
+    ]);
   },
 
   async getPlatformMetrics(): Promise<{

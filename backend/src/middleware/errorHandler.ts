@@ -7,7 +7,7 @@ export const errorHandler = (
   err: AnyError,
   _req: Request,
   res: Response,
-  _next: NextFunction
+  _next: NextFunction,
 ): void => {
   const statusCode = err instanceof AppError ? err.statusCode : (err.statusCode ?? 500);
   const isOperational = err instanceof AppError ? err.isOperational : !!err.isOperational;

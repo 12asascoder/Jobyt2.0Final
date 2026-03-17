@@ -44,13 +44,27 @@ export const UserService = {
     if (role === 'applicant') {
       const profile = await ApplicantProfileModel.findByUserId(userId);
       const completeness = profile ? computeApplicantCompleteness(profile) : 0;
-      return { email: user.email, role: user.role, credit_balance: user.credit_balance, referral_code: user.referral_code, profile, completeness };
+      return {
+        email: user.email,
+        role: user.role,
+        credit_balance: user.credit_balance,
+        referral_code: user.referral_code,
+        profile,
+        completeness,
+      };
     }
 
     if (role === 'recruiter') {
       const profile = await RecruiterProfileModel.findByUserId(userId);
       const completeness = profile ? computeRecruiterCompleteness(profile) : 0;
-      return { email: user.email, role: user.role, credit_balance: user.credit_balance, referral_code: user.referral_code, profile, completeness };
+      return {
+        email: user.email,
+        role: user.role,
+        credit_balance: user.credit_balance,
+        referral_code: user.referral_code,
+        profile,
+        completeness,
+      };
     }
 
     return { email: user.email, role: user.role };
@@ -58,7 +72,7 @@ export const UserService = {
 
   async updateApplicantProfile(
     userId: string,
-    data: Partial<Omit<ApplicantProfile, 'user_id' | 'created_at' | 'updated_at'>>
+    data: Partial<Omit<ApplicantProfile, 'user_id' | 'created_at' | 'updated_at'>>,
   ) {
     let profile = await ApplicantProfileModel.findByUserId(userId);
     if (!profile) profile = await ApplicantProfileModel.create(userId);
@@ -68,7 +82,7 @@ export const UserService = {
 
   async updateRecruiterProfile(
     userId: string,
-    data: Partial<Omit<RecruiterProfile, 'user_id' | 'created_at' | 'updated_at'>>
+    data: Partial<Omit<RecruiterProfile, 'user_id' | 'created_at' | 'updated_at'>>,
   ) {
     let profile = await RecruiterProfileModel.findByUserId(userId);
     if (!profile) profile = await RecruiterProfileModel.create(userId);

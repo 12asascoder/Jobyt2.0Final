@@ -12,7 +12,8 @@ router.use(authenticate);
 // ── Own profile ────────────────────────────────────────────────────────────────
 router.get('/me', UserController.getMyProfile);
 
-router.put('/me',
+router.put(
+  '/me',
   body('name').optional().isString().trim(),
   body('phone').optional().isMobilePhone('any'),
   body('bio').optional().isString(),
@@ -23,26 +24,25 @@ router.put('/me',
   body('industry').optional().isString(),
   body('website').optional().isURL(),
   validate,
-  UserController.updateProfile
+  UserController.updateProfile,
 );
 
 // ── File uploads ───────────────────────────────────────────────────────────────
-router.post('/me/resume',
+router.post(
+  '/me/resume',
   authorize('applicant'),
   uploadResume.single('resume'),
-  UserController.uploadResume
+  UserController.uploadResume,
 );
 
-router.post('/me/resume-parse',
+router.post(
+  '/me/resume-parse',
   authorize('applicant'),
   uploadResume.single('resume'),
-  UserController.parseResume
+  UserController.parseResume,
 );
 
-router.post('/me/photo',
-  uploadImage.single('photo'),
-  UserController.uploadPhoto
-);
+router.post('/me/photo', uploadImage.single('photo'), UserController.uploadPhoto);
 
 // ── Saved Jobs (applicant only) ───────────────────────────────────────────────
 router.get('/me/saved-jobs', authorize('applicant'), UserController.getSavedJobs);

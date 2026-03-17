@@ -1,7 +1,13 @@
 import pool from '../config/database';
 
 export type ApplicationStatus =
-  | 'applied' | 'in_review' | 'shortlisted' | 'interview' | 'offer' | 'hired' | 'rejected';
+  | 'applied'
+  | 'in_review'
+  | 'shortlisted'
+  | 'interview'
+  | 'offer'
+  | 'hired'
+  | 'rejected';
 
 export interface Application {
   id: string;
@@ -23,7 +29,7 @@ export const ApplicationModel = {
   async findByJobAndApplicant(jobId: string, applicantId: string): Promise<Application | null> {
     const { rows } = await pool.query(
       'SELECT * FROM applications WHERE job_id = $1 AND applicant_id = $2',
-      [jobId, applicantId]
+      [jobId, applicantId],
     );
     return rows[0] || null;
   },
@@ -37,7 +43,7 @@ export const ApplicationModel = {
     const { rows } = await pool.query(
       `INSERT INTO applications (job_id, applicant_id, cover_letter, resume_snapshot_url)
        VALUES ($1,$2,$3,$4) RETURNING *`,
-      [data.job_id, data.applicant_id, data.cover_letter || null, data.resume_snapshot_url || null]
+      [data.job_id, data.applicant_id, data.cover_letter || null, data.resume_snapshot_url || null],
     );
     return rows[0];
   },
@@ -45,12 +51,16 @@ export const ApplicationModel = {
   async updateStatus(id: string, status: ApplicationStatus): Promise<Application> {
     const { rows } = await pool.query(
       `UPDATE applications SET status = $1, status_updated_at = NOW() WHERE id = $2 RETURNING *`,
-      [status, id]
+      [status, id],
     );
     return rows[0];
   },
 
-  async findByApplicant(applicantId: string, page = 1, limit = 20): Promise<{ applications: Application[]; total: number }> {
+  async findByApplicant(
+    applicantId: string,
+    page = 1,
+    limit = 20,
+  ): Promise<{ applications: Application[]; total: number }> {
     const offset = (page - 1) * limit;
     const [countRes, dataRes] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM applications WHERE applicant_id = $1', [applicantId]),
@@ -61,13 +71,17 @@ export const ApplicationModel = {
          LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
          WHERE a.applicant_id = $1
          ORDER BY a.created_at DESC LIMIT $2 OFFSET $3`,
-        [applicantId, limit, offset]
+        [applicantId, limit, offset],
       ),
     ]);
     return { applications: dataRes.rows, total: parseInt(countRes.rows[0].count) };
   },
 
-  async findByJob(jobId: string, page = 1, limit = 20): Promise<{ applications: Application[]; total: number }> {
+  async findByJob(
+    jobId: string,
+    page = 1,
+    limit = 20,
+  ): Promise<{ applications: Application[]; total: number }> {
     const offset = (page - 1) * limit;
     const [countRes, dataRes] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM applications WHERE job_id = $1', [jobId]),
@@ -77,7 +91,7 @@ export const ApplicationModel = {
          JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
          WHERE a.job_id = $1
          ORDER BY a.created_at DESC LIMIT $2 OFFSET $3`,
-        [jobId, limit, offset]
+        [jobId, limit, offset],
       ),
     ]);
     return { applications: dataRes.rows, total: parseInt(countRes.rows[0].count) };

@@ -7,14 +7,18 @@ export const PaymentController = {
     try {
       const plans = await PaymentService.getPlans();
       sendSuccess(res, plans);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async initiateCheckout(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await PaymentService.initiateCheckout(req.user!.userId, req.body.planId);
       sendSuccess(res, data, 'Checkout initiated', 201);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async stripeWebhook(req: Request, res: Response, next: NextFunction) {
@@ -23,7 +27,9 @@ export const PaymentController = {
       // req.body is the raw Buffer when using express.raw() on this route
       await PaymentService.handleStripeWebhook(req.body as Buffer, signature);
       res.json({ received: true });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async getHistory(req: Request, res: Response, next: NextFunction) {
@@ -32,6 +38,8 @@ export const PaymentController = {
       const limit = parseInt(req.query.limit as string) || 20;
       const { payments, total } = await PaymentService.getHistory(req.user!.userId, page, limit);
       sendPaginated(res, payments, total, page, limit);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 };

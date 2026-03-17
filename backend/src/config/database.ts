@@ -11,6 +11,23 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
+export const connectDB = async () => {
+  try {
+    const client = await pool.connect();
+    await client.query('SELECT 1');
+    client.release();
+    console.log('Postgres connected');
+  } catch (error) {
+    if (process.env.REQUIRE_DB === 'true') {
+      console.error('Database connection failed. Exiting...');
+      console.error(error);
+      process.exit(1);
+    } else {
+      console.warn('Postgres not available, continuing...');
+    }
+  }
+};
+
 pool.on('error', (err) => {
   console.error('Unexpected error on idle PostgreSQL client', err);
   process.exit(-1);

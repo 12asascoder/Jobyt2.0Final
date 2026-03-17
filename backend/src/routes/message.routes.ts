@@ -10,21 +10,23 @@ router.use(authenticate);
 
 router.get('/conversations', MessageController.getConversations);
 
-router.post('/conversations',
+router.post(
+  '/conversations',
   authorize('recruiter'),
   body('applicantId').isUUID(),
   body('jobId').optional().isUUID(),
   validate,
-  MessageController.startConversation
+  MessageController.startConversation,
 );
 
 router.get('/conversations/:conversationId', MessageController.getMessages);
 
-router.post('/conversations/:conversationId',
+router.post(
+  '/conversations/:conversationId',
   body('body').notEmpty(),
   body('recipientId').isUUID(),
   validate,
-  MessageController.sendMessage
+  MessageController.sendMessage,
 );
 
 export default router;

@@ -19,25 +19,30 @@ export interface ApplicantProfile {
 
 export const ApplicantProfileModel = {
   async findByUserId(userId: string): Promise<ApplicantProfile | null> {
-    const { rows } = await pool.query('SELECT * FROM applicant_profiles WHERE user_id = $1', [userId]);
+    const { rows } = await pool.query('SELECT * FROM applicant_profiles WHERE user_id = $1', [
+      userId,
+    ]);
     return rows[0] || null;
   },
 
   async create(userId: string): Promise<ApplicantProfile> {
     const { rows } = await pool.query(
       `INSERT INTO applicant_profiles (user_id) VALUES ($1) RETURNING *`,
-      [userId]
+      [userId],
     );
     return rows[0];
   },
 
-  async update(userId: string, data: Partial<Omit<ApplicantProfile, 'user_id' | 'created_at' | 'updated_at'>>): Promise<ApplicantProfile> {
+  async update(
+    userId: string,
+    data: Partial<Omit<ApplicantProfile, 'user_id' | 'created_at' | 'updated_at'>>,
+  ): Promise<ApplicantProfile> {
     const fields = Object.keys(data);
     const values = Object.values(data);
     const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
     const { rows } = await pool.query(
       `UPDATE applicant_profiles SET ${setClause}, updated_at = NOW() WHERE user_id = $${fields.length + 1} RETURNING *`,
-      [...values, userId]
+      [...values, userId],
     );
     return rows[0];
   },

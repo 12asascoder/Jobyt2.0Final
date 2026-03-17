@@ -32,7 +32,13 @@ export const AdminService = {
     if (user.banned_at) throw new AppError('User is already banned', 400);
 
     await UserModel.ban(userId);
-    await AdminAuditLogModel.create({ admin_id: adminId, action: 'BAN_USER', target_type: 'user', target_id: userId, reason });
+    await AdminAuditLogModel.create({
+      admin_id: adminId,
+      action: 'BAN_USER',
+      target_type: 'user',
+      target_id: userId,
+      reason,
+    });
   },
 
   async unbanUser(adminId: string, userId: string, reason?: string) {
@@ -41,7 +47,13 @@ export const AdminService = {
     if (!user.banned_at) throw new AppError('User is not banned', 400);
 
     await UserModel.unban(userId);
-    await AdminAuditLogModel.create({ admin_id: adminId, action: 'UNBAN_USER', target_type: 'user', target_id: userId, reason });
+    await AdminAuditLogModel.create({
+      admin_id: adminId,
+      action: 'UNBAN_USER',
+      target_type: 'user',
+      target_id: userId,
+      reason,
+    });
   },
 
   async deleteUser(adminId: string, userId: string, reason: string) {
@@ -49,7 +61,13 @@ export const AdminService = {
     if (!user) throw new AppError('User not found', 404);
 
     await pool.query('DELETE FROM users WHERE id = $1', [userId]);
-    await AdminAuditLogModel.create({ admin_id: adminId, action: 'DELETE_USER', target_type: 'user', target_id: userId, reason });
+    await AdminAuditLogModel.create({
+      admin_id: adminId,
+      action: 'DELETE_USER',
+      target_type: 'user',
+      target_id: userId,
+      reason,
+    });
   },
 
   // ── Jobs ─────────────────────────────────────────────────────────────────────
@@ -63,7 +81,13 @@ export const AdminService = {
     if (!job) throw new AppError('Job not found', 404);
 
     await JobModel.update(jobId, { status: 'closed' });
-    await AdminAuditLogModel.create({ admin_id: adminId, action: 'CLOSE_JOB', target_type: 'job', target_id: jobId, reason });
+    await AdminAuditLogModel.create({
+      admin_id: adminId,
+      action: 'CLOSE_JOB',
+      target_type: 'job',
+      target_id: jobId,
+      reason,
+    });
   },
 
   async deleteJob(adminId: string, jobId: string, reason: string) {
@@ -71,7 +95,13 @@ export const AdminService = {
     if (!job) throw new AppError('Job not found', 404);
 
     await JobModel.softDelete(jobId);
-    await AdminAuditLogModel.create({ admin_id: adminId, action: 'DELETE_JOB', target_type: 'job', target_id: jobId, reason });
+    await AdminAuditLogModel.create({
+      admin_id: adminId,
+      action: 'DELETE_JOB',
+      target_type: 'job',
+      target_id: jobId,
+      reason,
+    });
   },
 
   // ── Credits ──────────────────────────────────────────────────────────────────
@@ -84,7 +114,7 @@ export const AdminService = {
         `SELECT ct.*, u.email FROM credit_transactions ct
          JOIN users u ON u.id = ct.user_id
          ORDER BY ct.created_at DESC LIMIT $1 OFFSET $2`,
-        [limit, offset]
+        [limit, offset],
       ),
     ]);
     return { transactions: dataRes.rows, total: parseInt(countRes.rows[0].count) };
@@ -101,7 +131,10 @@ export const AdminService = {
     try {
       await client.query('BEGIN');
       const newBalance = user.credit_balance + amount;
-      await client.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, userId]);
+      await client.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [
+        newBalance,
+        userId,
+      ]);
       await CreditModel.record(client, {
         user_id: userId,
         type: amount > 0 ? 'credit' : 'debit',
@@ -150,7 +183,7 @@ export const AdminService = {
        FROM users
        WHERE created_at >= NOW() - INTERVAL '${days} days'
        GROUP BY DATE(created_at)
-       ORDER BY date ASC`
+       ORDER BY date ASC`,
     );
     return rows;
   },

@@ -14,8 +14,20 @@ export const NotificationService = {
     await NotificationModel.markAllRead(userId);
   },
 
-  async send(userId: string, type: NotificationType, title: string, body: string, actionUrl?: string) {
-    const notification = await NotificationModel.create({ user_id: userId, type, title, body, action_url: actionUrl });
+  async send(
+    userId: string,
+    type: NotificationType,
+    title: string,
+    body: string,
+    actionUrl?: string,
+  ) {
+    const notification = await NotificationModel.create({
+      user_id: userId,
+      type,
+      title,
+      body,
+      action_url: actionUrl,
+    });
     emitNotification(userId, notification);
     return notification;
   },

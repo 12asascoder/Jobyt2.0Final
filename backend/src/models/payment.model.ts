@@ -25,12 +25,16 @@ export interface Payment {
 
 export const PaymentModel = {
   async getActivePlans(): Promise<Plan[]> {
-    const { rows } = await pool.query(`SELECT * FROM plans WHERE is_active = TRUE ORDER BY price ASC`);
+    const { rows } = await pool.query(
+      `SELECT * FROM plans WHERE is_active = TRUE ORDER BY price ASC`,
+    );
     return rows;
   },
 
   async findPlanById(id: string): Promise<Plan | null> {
-    const { rows } = await pool.query('SELECT * FROM plans WHERE id = $1 AND is_active = TRUE', [id]);
+    const { rows } = await pool.query('SELECT * FROM plans WHERE id = $1 AND is_active = TRUE', [
+      id,
+    ]);
     return rows[0] || null;
   },
 
@@ -44,7 +48,7 @@ export const PaymentModel = {
     const { rows } = await pool.query(
       `INSERT INTO payments (user_id, plan_id, amount, currency, gateway_ref)
        VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [data.user_id, data.plan_id, data.amount, data.currency, data.gateway_ref || null]
+      [data.user_id, data.plan_id, data.amount, data.currency, data.gateway_ref || null],
     );
     return rows[0];
   },
@@ -52,7 +56,7 @@ export const PaymentModel = {
   async updateStatus(id: string, status: PaymentStatus, gatewayRef?: string): Promise<Payment> {
     const { rows } = await pool.query(
       `UPDATE payments SET status = $1, gateway_ref = COALESCE($2, gateway_ref) WHERE id = $3 RETURNING *`,
-      [status, gatewayRef || null, id]
+      [status, gatewayRef || null, id],
     );
     return rows[0];
   },
@@ -62,14 +66,18 @@ export const PaymentModel = {
     return rows[0] || null;
   },
 
-  async getHistory(userId: string, page = 1, limit = 20): Promise<{ payments: Payment[]; total: number }> {
+  async getHistory(
+    userId: string,
+    page = 1,
+    limit = 20,
+  ): Promise<{ payments: Payment[]; total: number }> {
     const offset = (page - 1) * limit;
     const [countRes, dataRes] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM payments WHERE user_id = $1', [userId]),
       pool.query(
         `SELECT p.*, pl.name as plan_name FROM payments p LEFT JOIN plans pl ON pl.id = p.plan_id
          WHERE p.user_id = $1 ORDER BY p.created_at DESC LIMIT $2 OFFSET $3`,
-        [userId, limit, offset]
+        [userId, limit, offset],
       ),
     ]);
     return { payments: dataRes.rows, total: parseInt(countRes.rows[0].count) };
