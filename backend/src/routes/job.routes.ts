@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import { JobController } from '../controllers/job.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
 
 const router = Router();
@@ -10,8 +11,12 @@ const router = Router();
 router.get('/', JobController.search);
 router.get('/:id', JobController.getById);
 
-// Recruiter
-router.use(authenticate, authorize('recruiter', 'admin'));
+// Recruiter-only management routes.
+// Order is important:
+// 1) authenticate: token must be valid
+// 2) authorize('recruiter'): role must be recruiter
+// 3) employerGuard: recruiter profile must exist in DB
+router.use(authenticate, authorize('recruiter'), employerGuard);
 
 router.get('/my/listings', JobController.myJobs);
 

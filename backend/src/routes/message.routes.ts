@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import { MessageController } from '../controllers/message.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
 
 const router = Router();
@@ -12,7 +13,9 @@ router.get('/conversations', MessageController.getConversations);
 
 router.post(
   '/conversations',
+  // Recruiter creates the conversation, so we enforce recruiter role + profile.
   authorize('recruiter'),
+  employerGuard,
   body('applicantId').isUUID(),
   body('jobId').optional().isUUID(),
   validate,
