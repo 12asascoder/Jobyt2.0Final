@@ -63,7 +63,7 @@ Then run:
 
 ```bash
 npm run db:init             # run schema.sql against your DB
-npm run dev                 # starts on http://localhost:5000
+npm run dev  pnpom               # starts on http://localhost:5000
 ```
 
 ### Backend with Docker Compose (no local Node/Postgres/Redis required)

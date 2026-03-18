@@ -66,4 +66,34 @@ export const ApplicationService = {
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
     return ApplicationModel.findByJob(jobId, page, limit);
   },
+
+  async getMyApplicationsWithFilters(
+    applicantId: string,
+    filters: { status?: ApplicationStatus; jobTitle?: string },
+    page: number,
+    limit: number,
+  ) {
+    return ApplicationModel.findByApplicantWithFilters(applicantId, filters, page, limit);
+  },
+
+  async getApplicationStatistics(applicantId: string) {
+    return ApplicationModel.getApplicationStats(applicantId);
+  },
+
+  async getRecruiterApplications(recruiterId: string, page: number, limit: number) {
+    return ApplicationModel.findByRecruiter(recruiterId, page, limit);
+  },
+
+  async getRecruiterApplicationsWithFilters(
+    recruiterId: string,
+    filters: { status?: ApplicationStatus; jobTitle?: string; applicantName?: string },
+    page: number,
+    limit: number,
+  ) {
+    return ApplicationModel.findByRecruiterWithFilters(recruiterId, filters, page, limit);
+  },
+
+  async getRecruiterApplicationsStatistics(recruiterId: string) {
+    return ApplicationModel.getRecruiterApplicationStats(recruiterId);
+  },
 };
