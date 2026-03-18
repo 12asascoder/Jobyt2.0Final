@@ -17,6 +17,8 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [creditError, setCreditError] = useState<{ required: number; available: number } | null>(null);
   const [coverLetter, setCoverLetter] = useState('');
   const [hasApplied, setHasApplied] = useState(false);
 
@@ -36,12 +38,22 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
   const handleApply = async () => {
     setApplying(true);
     try {
-      await api.post(`/applications/jobs/${params.id}`, { cover_letter: coverLetter });
-      toast.success('Application submitted!');
+      const res = await api.post<{ creditsRemaining?: number }>(`/applications/jobs/${params.id}`, { cover_letter: coverLetter });
+      const remaining = res.data?.creditsRemaining !== undefined ? ` (Credits remaining: ${res.data.creditsRemaining})` : '';
+      toast.success(`Application submitted successfully!${remaining}`);
       setHasApplied(true);
       setShowModal(false);
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Failed to apply');
+    } catch (err: any) {
+      if (err instanceof ApiError && err.status === 402) {
+         setCreditError({
+           required: err.data?.requiredCredits || 1,
+           available: err.data?.availableCredits || 0
+         });
+         setShowModal(false);
+         setShowCreditsModal(true);
+      } else {
+         toast.error(err instanceof ApiError ? err.message : 'Failed to apply');
+      }
     } finally {
       setApplying(false);
     }
@@ -92,7 +104,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
 
           <div className="mt-6 flex gap-3">
             <Button onClick={() => setShowModal(true)} disabled={hasApplied} className="flex-1">
-              {hasApplied ? 'Already Applied' : 'Apply Now'}
+              {hasApplied ? 'Already Applied' : 'Apply Now (1 Credit)'}
             </Button>
             <Button variant="outline" onClick={() => {
               api.post(`/users/me/saved-jobs/${job.id}`, {}).then(() => toast.success('Job saved!')).catch(() => toast.error('Already saved'));
@@ -104,6 +116,10 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Apply for this position">
         <div className="space-y-4">
           <p className="text-sm text-gray-600">Applying to: <strong>{job.title}</strong>{job.company_name ? ` at ${job.company_name}` : ''}</p>
+          <div className="bg-blue-50 text-blue-800 p-3 rounded-xl border border-blue-100 text-sm">
+            <p className="font-semibold mb-1">Applying will deduct 1 Credit</p>
+            <p className="opacity-90">Please ensure your profile is up to date before submitting.</p>
+          </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">Cover Letter <span className="text-gray-400">(optional)</span></label>
             <textarea
@@ -115,9 +131,25 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
             />
           </div>
           <div className="flex gap-3">
-            <Button onClick={handleApply} isLoading={applying} className="flex-1">Submit Application</Button>
-            <Button variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button onClick={handleApply} isLoading={applying} className="flex-1">Confirm & Submit (1 Credit)</Button>
+            <Button variant="outline" onClick={() => setShowModal(false)} disabled={applying}>Cancel</Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showCreditsModal} onClose={() => setShowCreditsModal(false)} title="Insufficient Credits">
+        <div className="space-y-5 text-center py-4">
+           <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">!</div>
+           <div>
+             <h3 className="text-lg font-bold text-gray-900 mb-2">You need more credits to apply</h3>
+             <p className="text-gray-600 text-sm">
+               This job application requires <strong>{creditError?.required || 1} credit</strong>, but you only have <strong>{creditError?.available || 0}</strong> available.
+             </p>
+           </div>
+           <div className="flex gap-3 pt-2">
+              <Button className="flex-1" onClick={() => router.push(ROUTES.credits)}>Buy Credits</Button>
+              <Button variant="outline" onClick={() => setShowCreditsModal(false)} className="flex-1">Cancel</Button>
+           </div>
         </div>
       </Modal>
     </div>

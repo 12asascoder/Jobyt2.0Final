@@ -25,7 +25,7 @@ async function request<T>(
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: 'Request failed' }));
-    throw new ApiError(error.message || 'Request failed', res.status, error.errors);
+    throw new ApiError(error.message || 'Request failed', res.status, error.errors, error);
   }
 
   return res.json();
@@ -35,7 +35,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public errors?: unknown
+    public errors?: unknown,
+    public data?: any
   ) {
     super(message);
     this.name = 'ApiError';

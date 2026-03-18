@@ -17,28 +17,86 @@ export const ApplicationService = {
     if (existing)
       throw Object.assign(new Error('You have already applied to this job'), { statusCode: 409 });
 
-    const application = await ApplicationModel.create({
-      job_id: jobId,
-      applicant_id: applicantId,
-      ...data,
-    });
+    const REQUIRED_CREDITS = 1;
 
-    await PipelineEventModel.create({
-      application_id: application.id,
-      new_status: 'APPLIED',
-      changed_by_id: applicantId,
-    });
+    // Use a top level import or require pool
+    const { default: dbPool } = await import('../config/database');
+    const client = await dbPool.connect();
+    
+    let application;
+    let creditsRemaining;
+    let creditTransactionId;
 
-    // Notify recruiter
-    await NotificationModel.create({
+    try {
+      await client.query('BEGIN');
+
+      // 1. Secure Credit Deduction (Atomic lock constraint)
+      const creditRes = await client.query(
+        `UPDATE users SET credit_balance = credit_balance - $1 WHERE id = $2 AND credit_balance >= $1 RETURNING credit_balance`,
+        [REQUIRED_CREDITS, applicantId]
+      );
+
+      if (!creditRes.rows.length) {
+        // Find actual balance to report
+        const userRes = await client.query(`SELECT credit_balance FROM users WHERE id = $1`, [applicantId]);
+        const available = userRes.rows[0]?.credit_balance || 0;
+        throw Object.assign(new Error('Insufficient credits to apply for this job'), { 
+          statusCode: 402, 
+          requiredCredits: REQUIRED_CREDITS, 
+          availableCredits: available 
+        });
+      }
+
+      creditsRemaining = creditRes.rows[0].credit_balance;
+
+      // 2. Create Application
+      const appRes = await client.query(
+        `INSERT INTO applications (job_id, applicant_id, cover_letter, resume_snapshot_url, status)
+         VALUES ($1, $2, $3, $4, 'APPLIED') RETURNING *`,
+        [jobId, applicantId, data.cover_letter || null, data.resume_snapshot_url || null]
+      );
+      application = appRes.rows[0];
+
+      // 3. Create Ledger Entry
+      const ledgerRes = await client.query(
+        `INSERT INTO credit_transactions (user_id, type, amount, balance_after, description, reference_id)
+         VALUES ($1, 'JOB_APPLY_DEBIT', $2, $3, $4, $5) RETURNING id`,
+        [applicantId, -REQUIRED_CREDITS, creditsRemaining, 'Applied for job', jobId]
+      );
+      creditTransactionId = ledgerRes.rows[0].id;
+
+      // 4. Create Pipeline Event
+      await client.query(
+        `INSERT INTO pipeline_events (application_id, new_status, changed_by_id)
+         VALUES ($1, 'APPLIED', $2)`,
+        [application.id, applicantId]
+      );
+
+      await client.query('COMMIT');
+    } catch (err: any) {
+      await client.query('ROLLBACK');
+      if (err.code === '23505') { // unique violation
+         throw Object.assign(new Error('You have already applied to this job'), { statusCode: 409 });
+      }
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    // Async webhooks
+    NotificationModel.create({
       user_id: job.recruiter_id,
       type: 'application_submitted',
       title: 'New application received',
       body: `A new applicant has applied to "${job.title}"`,
       action_url: `/recruiter/jobs/${jobId}/applications`,
-    });
+    }).catch(console.error);
 
-    return application;
+    return {
+      ...application,
+      creditsRemaining,
+      creditTransactionId
+    };
   },
 
   async checkApplied(applicantId: string, jobId: string) {
