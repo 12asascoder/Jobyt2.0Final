@@ -123,32 +123,11 @@ export const AdminService = {
   async adjustCredits(adminId: string, userId: string, amount: number, reason: string) {
     const user = await UserModel.findById(userId);
     if (!user) throw new AppError('User not found', 404);
-    if (amount < 0 && user.credit_balance + amount < 0) {
-      throw new AppError('Adjustment would result in negative balance', 400);
-    }
-
-    const client: PoolClient = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      const newBalance = user.credit_balance + amount;
-      await client.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [
-        newBalance,
-        userId,
-      ]);
-      await CreditModel.record(client, {
-        user_id: userId,
-        type: amount > 0 ? 'credit' : 'debit',
-        amount: Math.abs(amount),
-        balance_after: newBalance,
-        description: `Admin adjustment: ${reason}`,
-        reference_id: adminId,
-      });
-      await client.query('COMMIT');
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
+    const description = `Admin adjustment: ${reason}`;
+    if (amount > 0) {
+      await CreditService.addCredits(userId, amount, description, adminId);
+    } else {
+      await CreditService.deductCredits(userId, Math.abs(amount), description, adminId);
     }
 
     await AdminAuditLogModel.create({

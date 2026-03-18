@@ -17,15 +17,46 @@ export const AuthService = {
 
     const password_hash = await hashPassword(password);
     const verify_token = randomBytes(32).toString('hex');
-    const myReferralCode = generateReferralCode();
+    const MAX_REFERRAL_CODE_ATTEMPTS = 10;
+    let lastErr: unknown;
+    let user:
+      | Awaited<ReturnType<typeof UserModel.create>>
+      | null = null;
 
-    const user = await UserModel.create({
-      email,
-      password_hash,
-      role,
-      verify_token,
-      referral_code: myReferralCode,
-    });
+    for (let attempt = 0; attempt < MAX_REFERRAL_CODE_ATTEMPTS; attempt++) {
+      const myReferralCode = generateReferralCode();
+      try {
+        user = await UserModel.create({
+          email,
+          password_hash,
+          role,
+          verify_token,
+          referral_code: myReferralCode,
+        });
+        break;
+      } catch (err: unknown) {
+        lastErr = err;
+        const code = (err as { code?: string } | null)?.code;
+        // 23505 = unique_violation (email or referral_code)
+        if (code === '23505') {
+          // If the email is now taken (race condition), stop retrying and return a clear error.
+          const maybeEmailTaken = await UserModel.findByEmail(email);
+          if (maybeEmailTaken) {
+            throw Object.assign(new Error('Email already registered'), { statusCode: 409 });
+          }
+          // Otherwise assume referral_code collision and retry.
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!user) {
+      console.error('Failed to generate unique referral code after retries', lastErr);
+      throw Object.assign(new Error('Could not create account. Please try again.'), {
+        statusCode: 500,
+      });
+    }
 
     // Create profile stub
     if (role === 'applicant') await ApplicantProfileModel.create(user.id);

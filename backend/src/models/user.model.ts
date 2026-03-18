@@ -82,14 +82,6 @@ export const UserModel = {
     );
   },
 
-  async updateCreditBalance(id: string, newBalance: number, client?: typeof pool): Promise<void> {
-    const db = client || pool;
-    await db.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [
-      newBalance,
-      id,
-    ]);
-  },
-
   async ban(id: string): Promise<void> {
     await pool.query(`UPDATE users SET banned_at = NOW(), updated_at = NOW() WHERE id = $1`, [id]);
   },
@@ -132,13 +124,6 @@ export const UserModel = {
     ]);
 
     return { users: dataRes.rows, total: parseInt(countRes.rows[0].count) };
-  },
-
-  async adminAdjustCredits(userId: string, newBalance: number): Promise<void> {
-    await pool.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [
-      newBalance,
-      userId,
-    ]);
   },
 
   async getPlatformMetrics(): Promise<{
