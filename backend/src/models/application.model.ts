@@ -1,13 +1,13 @@
 import pool from '../config/database';
 
 export type ApplicationStatus =
-  | 'applied'
-  | 'in_review'
-  | 'shortlisted'
-  | 'interview'
-  | 'offer'
-  | 'hired'
-  | 'rejected';
+  | 'APPLIED'
+  | 'SCREENING'
+  | 'SHORTLISTED'
+  | 'INTERVIEW'
+  | 'SELECTED'
+  | 'HIRED'
+  | 'REJECTED';
 
 export interface Application {
   id: string;

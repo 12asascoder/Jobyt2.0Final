@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm"; -- for full-text similarity search
 CREATE TYPE user_role AS ENUM ('applicant', 'recruiter', 'admin');
 CREATE TYPE job_type AS ENUM ('full-time', 'part-time', 'contract', 'remote', 'internship');
 CREATE TYPE job_status AS ENUM ('draft', 'active', 'closed');
-CREATE TYPE application_status AS ENUM ('applied', 'in_review', 'shortlisted', 'interview', 'offer', 'hired', 'rejected');
+CREATE TYPE application_status AS ENUM ('APPLIED', 'SCREENING', 'SHORTLISTED', 'INTERVIEW', 'SELECTED', 'HIRED', 'REJECTED');
 CREATE TYPE credit_type AS ENUM ('credit', 'debit');
 CREATE TYPE payment_status AS ENUM ('pending', 'success', 'failed', 'refunded');
 CREATE TYPE notification_type AS ENUM (
@@ -98,10 +98,21 @@ CREATE TABLE applications (
   applicant_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   cover_letter        TEXT,
   resume_snapshot_url VARCHAR(500),
-  status              application_status DEFAULT 'applied',
+  status              application_status DEFAULT 'APPLIED',
   status_updated_at   TIMESTAMPTZ DEFAULT NOW(),
   created_at          TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (job_id, applicant_id)
+);
+
+-- Pipeline events
+CREATE TABLE pipeline_events (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  application_id  UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  previous_status application_status,
+  new_status      application_status NOT NULL,
+  changed_by_id   UUID REFERENCES users(id) ON DELETE SET NULL,
+  notes           TEXT,
+  created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Saved jobs

@@ -1,6 +1,7 @@
 import { ApplicationModel, ApplicationStatus } from '../models/application.model';
 import { JobModel } from '../models/job.model';
 import { NotificationModel } from '../models/notification.model';
+import { PipelineEventModel } from '../models/pipeline_event.model';
 
 export const ApplicationService = {
   async apply(
@@ -22,6 +23,12 @@ export const ApplicationService = {
       ...data,
     });
 
+    await PipelineEventModel.create({
+      application_id: application.id,
+      new_status: 'APPLIED',
+      changed_by_id: applicantId,
+    });
+
     // Notify recruiter
     await NotificationModel.create({
       user_id: job.recruiter_id,
@@ -34,15 +41,27 @@ export const ApplicationService = {
     return application;
   },
 
-  async updateStatus(recruiterId: string, applicationId: string, status: ApplicationStatus) {
+  async checkApplied(applicantId: string, jobId: string) {
+    const existing = await ApplicationModel.findByJobAndApplicant(jobId, applicantId);
+    return { hasApplied: !!existing };
+  },
+
+  async updateStatus(user: { userId: string; role: string }, applicationId: string, status: ApplicationStatus) {
     const application = await ApplicationModel.findById(applicationId);
     if (!application) throw Object.assign(new Error('Application not found'), { statusCode: 404 });
 
     const job = await JobModel.findById(application.job_id);
-    if (!job || job.recruiter_id !== recruiterId)
+    if (!job || (user.role !== 'admin' && job.recruiter_id !== user.userId))
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
 
     const updated = await ApplicationModel.updateStatus(applicationId, status);
+
+    await PipelineEventModel.create({
+      application_id: application.id,
+      previous_status: application.status,
+      new_status: status,
+      changed_by_id: user.userId,
+    });
 
     // Notify applicant
     await NotificationModel.create({
@@ -95,5 +114,23 @@ export const ApplicationService = {
 
   async getRecruiterApplicationsStatistics(recruiterId: string) {
     return ApplicationModel.getRecruiterApplicationStats(recruiterId);
+  },
+
+  async getEvents(user: { userId: string; role: string }, applicationId: string) {
+    const application = await ApplicationModel.findById(applicationId);
+    if (!application) throw Object.assign(new Error('Application not found'), { statusCode: 404 });
+
+    if (user.role === 'applicant' && application.applicant_id !== user.userId) {
+      throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+    }
+
+    if (user.role === 'recruiter') {
+      const job = await JobModel.findById(application.job_id);
+      if (!job || job.recruiter_id !== user.userId) {
+        throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+      }
+    }
+
+    return PipelineEventModel.findByApplication(applicationId);
   },
 };

@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { AuthUser } from '@/types';
 import { authStorage, decodeToken } from '@/lib/auth';
-import { api } from '@/lib/api';
+import { api, tokenStore } from '@/lib/api';
 
 interface AuthState {
   user: AuthUser | null;
@@ -26,6 +26,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const user = decodeToken(token);
       if (user) {
         set({ user, isAuthenticated: true });
+        tokenStore.set(token);
       } else {
         authStorage.clearTokens();
       }

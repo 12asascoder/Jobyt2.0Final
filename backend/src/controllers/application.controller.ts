@@ -16,10 +16,22 @@ export const ApplicationController = {
     }
   },
 
+  async checkApplication(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await ApplicationService.checkApplied(
+        req.user!.userId,
+        req.params.jobId as string,
+      );
+      sendSuccess(res, result, 'Application check completed');
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const application = await ApplicationService.updateStatus(
-        req.user!.userId,
+        req.user!,
         req.params.id as string,
         req.body.status,
       );
@@ -135,6 +147,15 @@ export const ApplicationController = {
         data: stats,
         message: 'Recruiter applications statistics',
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getEvents(req: Request, res: Response, next: NextFunction) {
+    try {
+      const events = await ApplicationService.getEvents(req.user!, req.params.id as string);
+      sendSuccess(res, events, 'Pipeline events retrieved');
     } catch (err) {
       next(err);
     }

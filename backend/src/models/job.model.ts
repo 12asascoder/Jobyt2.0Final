@@ -41,6 +41,14 @@ export const JobModel = {
     return rows[0] || null;
   },
 
+  async checkDuplicate(recruiterId: string, title: string): Promise<boolean> {
+    const { rows } = await pool.query(
+      `SELECT 1 FROM jobs WHERE recruiter_id = $1 AND title ILIKE $2 AND status IN ('active', 'draft') AND deleted_at IS NULL`,
+      [recruiterId, title]
+    );
+    return rows.length > 0;
+  },
+
   async create(data: {
     recruiter_id: string;
     title: string;

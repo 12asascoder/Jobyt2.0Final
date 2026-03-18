@@ -26,6 +26,9 @@ router.get('/recruiter/applicants/filtered', authorize('recruiter', 'admin'), Ap
 // Recruiter: get statistics for all applications
 router.get('/recruiter/applicants/stats', authorize('recruiter', 'admin'), ApplicationController.recruiterApplicationsStats);
 
+// Applicant: check if applied to a job
+router.get('/jobs/:jobId/check', authorize('applicant'), ApplicationController.checkApplication);
+
 // Applicant: apply to a job
 router.post(
   '/jobs/:jobId',
@@ -43,16 +46,23 @@ router.patch(
   '/:id/status',
   authorize('recruiter', 'admin'),
   body('status').isIn([
-    'applied',
-    'in_review',
-    'shortlisted',
-    'interview',
-    'offer',
-    'hired',
-    'rejected',
+    'APPLIED',
+    'SCREENING',
+    'SHORTLISTED',
+    'INTERVIEW',
+    'SELECTED',
+    'HIRED',
+    'REJECTED',
   ]),
   validate,
   ApplicationController.updateStatus,
+);
+
+// Any role: get pipeline events for an application
+router.get(
+  '/:id/events',
+  authorize('applicant', 'recruiter', 'admin'),
+  ApplicationController.getEvents,
 );
 
 export default router;

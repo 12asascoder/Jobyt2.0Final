@@ -18,10 +18,17 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
   const [applying, setApplying] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
+  const [hasApplied, setHasApplied] = useState(false);
 
   useEffect(() => {
-    api.get<Job>(`/jobs/${params.id}`)
-      .then((r) => setJob(r.data))
+    Promise.all([
+      api.get<Job>(`/jobs/${params.id}`),
+      api.get<{ hasApplied: boolean }>(`/applications/jobs/${params.id}/check`).catch(() => ({ data: { hasApplied: false } }))
+    ])
+      .then(([jobRes, checkRes]) => {
+        setJob(jobRes.data);
+        setHasApplied(checkRes.data.hasApplied);
+      })
       .catch(() => router.push(ROUTES.jobs))
       .finally(() => setLoading(false));
   }, [params.id, router]);
@@ -31,6 +38,7 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
     try {
       await api.post(`/applications/jobs/${params.id}`, { cover_letter: coverLetter });
       toast.success('Application submitted!');
+      setHasApplied(true);
       setShowModal(false);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Failed to apply');
@@ -83,7 +91,9 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
           </div>
 
           <div className="mt-6 flex gap-3">
-            <Button onClick={() => setShowModal(true)} className="flex-1">Apply Now</Button>
+            <Button onClick={() => setShowModal(true)} disabled={hasApplied} className="flex-1">
+              {hasApplied ? 'Already Applied' : 'Apply Now'}
+            </Button>
             <Button variant="outline" onClick={() => {
               api.post(`/users/me/saved-jobs/${job.id}`, {}).then(() => toast.success('Job saved!')).catch(() => toast.error('Already saved'));
             }}>🔖 Save</Button>
