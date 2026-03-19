@@ -154,13 +154,13 @@ export const ApplicationModel = {
     const { rows } = await pool.query(
       `SELECT 
          COUNT(*) as total,
-         SUM(CASE WHEN status = 'applied' THEN 1 ELSE 0 END) as applied,
-         SUM(CASE WHEN status = 'in_review' THEN 1 ELSE 0 END) as in_review,
-         SUM(CASE WHEN status = 'shortlisted' THEN 1 ELSE 0 END) as shortlisted,
-         SUM(CASE WHEN status = 'interview' THEN 1 ELSE 0 END) as interview,
-         SUM(CASE WHEN status = 'offer' THEN 1 ELSE 0 END) as offer,
-         SUM(CASE WHEN status = 'hired' THEN 1 ELSE 0 END) as hired,
-         SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
+       SUM(CASE WHEN status = 'APPLIED' THEN 1 ELSE 0 END) as applied,
+         SUM(CASE WHEN status = 'SCREENING' THEN 1 ELSE 0 END) as in_review,
+         SUM(CASE WHEN status = 'SHORTLISTED' THEN 1 ELSE 0 END) as shortlisted,
+         SUM(CASE WHEN status = 'INTERVIEW' THEN 1 ELSE 0 END) as interview,
+         SUM(CASE WHEN status = 'SELECTED' THEN 1 ELSE 0 END) as offer,
+         SUM(CASE WHEN status = 'HIRED' THEN 1 ELSE 0 END) as hired,
+         SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END) as rejected
        FROM applications
        WHERE applicant_id = $1`,
       [applicantId],
@@ -267,13 +267,13 @@ export const ApplicationModel = {
     const { rows } = await pool.query(
       `SELECT 
          COUNT(*) as total,
-         SUM(CASE WHEN a.status = 'applied' THEN 1 ELSE 0 END) as applied,
-         SUM(CASE WHEN a.status = 'in_review' THEN 1 ELSE 0 END) as in_review,
-         SUM(CASE WHEN a.status = 'shortlisted' THEN 1 ELSE 0 END) as shortlisted,
-         SUM(CASE WHEN a.status = 'interview' THEN 1 ELSE 0 END) as interview,
-         SUM(CASE WHEN a.status = 'offer' THEN 1 ELSE 0 END) as offer,
-         SUM(CASE WHEN a.status = 'hired' THEN 1 ELSE 0 END) as hired,
-         SUM(CASE WHEN a.status = 'rejected' THEN 1 ELSE 0 END) as rejected
+         SUM(CASE WHEN a.status = 'APPLIED' THEN 1 ELSE 0 END) as applied,
+         SUM(CASE WHEN a.status = 'SCREENING' THEN 1 ELSE 0 END) as in_review,
+         SUM(CASE WHEN a.status = 'SHORTLISTED' THEN 1 ELSE 0 END) as shortlisted,
+         SUM(CASE WHEN a.status = 'INTERVIEW' THEN 1 ELSE 0 END) as interview,
+         SUM(CASE WHEN a.status = 'SELECTED' THEN 1 ELSE 0 END) as offer,
+         SUM(CASE WHEN a.status = 'HIRED' THEN 1 ELSE 0 END) as hired,
+         SUM(CASE WHEN a.status = 'REJECTED' THEN 1 ELSE 0 END) as rejected
        FROM applications a
        JOIN jobs j ON j.id = a.job_id
        WHERE j.recruiter_id = $1`,
