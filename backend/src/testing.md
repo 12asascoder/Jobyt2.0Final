@@ -1,96 +1,111 @@
-# Recruiter Middleware Testing Report
+# EMP-1 Testing Notes (recruiter_profiles Upgrade)
 
-## Scope
+Scope: validate new `recruiter_profiles` schema behavior after adding:
 
-This report validates recruiter-protected endpoints after integrating `employerGuard`.
+- `id` as primary key
+- `user_id` as unique
+- `company_email` as optional unique
+- `is_verified` default false
+- Prisma-managed `updated_at`
 
-Middleware flow under test:
-1. `authenticate`
-2. `authorize('recruiter')`
-3. `employerGuard`
-4. Controller
+All results below are based on schema logic and SQL constraint behavior.
 
-## Test Cases
+## 1) Insert recruiter profile should succeed
 
-### Case 1: No token
-- Input:
-  - Authorization header: missing
-  - Role: N/A
-  - DB profile: N/A
-- Expected output:
-  - HTTP 401
-  - Message from auth middleware: `No token provided`
-- Actual result (by code logic):
-  - Pass
-  - `authenticate` exits early with 401 before role/profile checks.
+Input:
 
-### Case 2: Invalid token
-- Input:
-  - Authorization header: `Bearer <invalid_or_expired_token>`
-  - Role: N/A
-  - DB profile: N/A
-- Expected output:
-  - HTTP 401
-  - Message from auth middleware: `Invalid or expired token`
-- Actual result (by code logic):
-  - Pass
-  - JWT verification fails in `authenticate`, request does not continue.
+- Insert into `users` with role `recruiter`.
+- Insert into `recruiter_profiles` with:
+  - `user_id = <existing_recruiter_user_id>`
+  - `company_name = 'Acme Hiring Pvt Ltd'`
+  - `company_email = 'talent@acme.example'`
 
-### Case 3: Valid token, wrong role
-- Input:
-  - Authorization header: valid JWT
-  - Role in JWT: `applicant` or `admin`
-  - DB profile: any
-- Expected output:
-  - HTTP 403
-  - Message: `Access denied`
-- Actual result (by code logic):
-  - Pass
-  - `authorize('recruiter')` blocks request before `employerGuard`.
+Expected output:
 
-### Case 4: Valid recruiter token, recruiter profile missing
-- Input:
-  - Authorization header: valid recruiter JWT
-  - Role in JWT: `recruiter`
-  - DB state: no `recruiter_profiles` row for `req.user.userId`
-- Expected output:
-  - HTTP 403
-  - Message: `Recruiter profile not found`
-- Actual result (by code logic):
-  - Pass
-  - `employerGuard` queries Prisma and returns 403 when profile is absent.
+- Insert succeeds.
+- `id` auto-generated (UUID).
+- `is_verified = false` by default.
+- `created_at` and `updated_at` populated.
 
-### Case 5: Valid recruiter token, recruiter profile exists
-- Input:
-  - Authorization header: valid recruiter JWT
-  - Role in JWT: `recruiter`
-  - DB state: matching `recruiter_profiles.user_id`
-- Expected output:
-  - Request reaches controller
-  - Business logic executes normally
-- Actual result (by code logic):
-  - Pass
-  - Guard attaches `req.employer` and calls `next()`.
+Result (logic):
 
-### Case 6: Unexpected DB/runtime error in employerGuard
-- Input:
-  - Authorization header: valid recruiter JWT
-  - DB state: runtime Prisma failure (network/query issue)
-- Expected output:
-  - HTTP 500
-  - Message: `Internal server error`
-- Actual result (by code logic):
-  - Pass
-  - Guard catches exception and returns 500.
+- Pass.
 
-## Routes Covered by This Middleware Integration
+## 2) Unique user_id constraint should block duplicates
 
-- `src/routes/job.routes.ts` (recruiter management block)
-- `src/routes/application.routes.ts` (all recruiter endpoints)
-- `src/routes/message.routes.ts` (`POST /conversations`)
-- `src/routes/analytics.routes.ts` (all analytics endpoints)
+Input:
 
-## Conclusion
+- Attempt second insert into `recruiter_profiles` with same `user_id`.
 
-All required recruiter access scenarios are handled correctly by middleware order and guard logic.
-The integration prevents invalid/unauthorized access before controller/service execution.
+Expected output:
+
+- Insert fails due unique constraint on `user_id`.
+- Confirms 1:1 mapping between `users` and `recruiter_profiles`.
+
+Result (logic):
+
+- Pass.
+
+## 3) company_email uniqueness should be enforced when provided
+
+Input:
+
+- Profile A: `company_email = 'hr@sameco.example'`
+- Profile B: `company_email = 'hr@sameco.example'`
+
+Expected output:
+
+- Profile B insert/update fails due unique constraint on `company_email`.
+
+Result (logic):
+
+- Pass.
+
+Note:
+
+- `company_email` is optional, so multiple NULL values are allowed by PostgreSQL unique semantics.
+
+## 4) Default value validation for is_verified
+
+Input:
+
+- Insert recruiter profile without setting `is_verified`.
+
+Expected output:
+
+- Stored value is `false`.
+
+Result (logic):
+
+- Pass.
+
+## 5) updated_at auto-update behavior
+
+Input:
+
+- Read initial `updated_at` for a recruiter profile.
+- Update a mutable field (for example `company_name`).
+- Read `updated_at` again.
+
+Expected output:
+
+- New `updated_at` is greater than previous value.
+- Confirms Prisma `@updatedAt` behavior for ORM-driven updates.
+
+Result (logic):
+
+- Pass.
+
+## Quick Compatibility Check
+
+Input:
+
+- Existing job queries and joins continue to use `recruiter_profiles.user_id = jobs.recruiter_id`.
+
+Expected output:
+
+- No join breakage after introducing `recruiter_profiles.id` as primary key.
+
+Result (logic):
+
+- Pass.

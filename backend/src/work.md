@@ -1,97 +1,70 @@
-# Backend Work Log (Employer Guard Route Integration)
+# Backend Work Log (EMP-1: recruiter_profiles Upgrade)
 
-## 1) What I analyzed first
+## 1) What was analyzed before changing schema
 
-I reviewed the full backend flow in `src` before changing code.
+I reviewed backend source usage and Prisma schema to avoid breaking existing flows.
 
-- App bootstrap:
-  - `src/server.ts` starts DB, Redis, and HTTP server.
-  - `src/app.ts` registers middleware, mounts routes, and adds global error handling.
-- Route wiring:
-  - `src/routes/index.ts` mounts all domain routes under `/api/v1`.
-  - Route files call controllers.
-- Auth pattern:
-  - `authenticate` sets `req.user` from JWT.
-  - `authorize(...)` enforces role checks.
-- Data/profile check:
-  - `employerGuard` validates recruiter role/profile and attaches `req.employer`.
+- User system:
+  - `users` is the identity table with roles: `applicant`, `recruiter`, `admin`.
+  - `jobs.recruiter_id` references `users.id`.
+- Employer representation:
+  - `recruiter_profiles` is already the employer table in this project.
+  - Existing logic uses a 1:1 link with `users` through `recruiter_profiles.user_id`.
+- Current dependencies:
+  - Most backend modules use raw SQL joins like `recruiter_profiles.user_id = jobs.recruiter_id`.
+  - Prisma usage for recruiter profile checks exists in `employerGuard`.
 
-## 2) Why this change was needed
+## 2) Why we upgraded recruiter_profiles (and did not create employers)
 
-Some recruiter endpoints had role checks but did not consistently enforce recruiter profile existence.
-That can cause downstream service logic to run without a valid recruiter profile context.
+Creating a new `employers` table would duplicate data and force a broad refactor across auth, jobs,
+applications, analytics, and profile APIs.
 
-To fix this, recruiter endpoints now consistently use:
+Instead, we upgraded `recruiter_profiles` in place so:
 
-1. `authenticate`
-2. `authorize('recruiter')`
-3. `employerGuard`
-4. Controller handler
+1. Existing SQL joins remain valid.
+2. Existing foreign key paths remain valid.
+3. Current recruiter APIs keep working without changing endpoint contracts.
 
-This ensures token, role, and recruiter profile are all valid before business logic runs.
+## 3) Prisma schema changes made
 
-## 3) Files changed and what was changed
+Updated `prisma/schema.prisma` model: `recruiter_profiles`
 
-### `src/routes/job.routes.ts`
-- Added `employerGuard` import.
-- Updated recruiter route middleware chain to:
-  - `router.use(authenticate, authorize('recruiter'), employerGuard)`
-- Added comments explaining why middleware order matters.
+1. Added `id` as a new UUID primary key.
+2. Kept `user_id` and made it `@unique` to preserve 1:1 with `users`.
+3. Added `company_email` as optional + unique.
+4. Added `is_verified` as boolean with default `false`.
+5. Updated `updated_at` to Prisma-managed `@updatedAt`.
+6. Kept relation to `users` via `user_id` unchanged.
 
-### `src/routes/application.routes.ts`
-- Added `employerGuard` import.
-- Updated recruiter endpoints to include `employerGuard`:
-  - `GET /recruiter/applicants`
-  - `GET /recruiter/applicants/filtered`
-  - `GET /recruiter/applicants/stats`
-  - `GET /jobs/:jobId` (recruiter-only branch)
-  - `PATCH /:id/status`
-- Added comments documenting middleware sequencing and edge-case protection.
+## 4) Migration approach and safety
 
-### `src/routes/message.routes.ts`
-- Added `employerGuard` import.
-- Updated recruiter-only conversation creation route:
-  - `POST /conversations`
-  - Chain is now `authorize('recruiter') -> employerGuard -> validate -> controller`
+Created migration:
 
-### `src/routes/analytics.routes.ts`
-- Added `employerGuard` import.
-- Updated route-level middleware chain to:
-  - `router.use(authenticate, authorize('recruiter'), employerGuard)`
-- Added comments describing why recruiter profile context is required.
+- `prisma/migrations/202603190001_upgrade_recruiter_profiles_employer_fields/migration.sql`
 
-## 4) Middleware flow (step-by-step)
+Migration is non-destructive:
 
-For recruiter-protected routes:
+1. Adds new columns (`id`, `company_email`, `is_verified`) without dropping table/data.
+2. Backfills `id` for existing rows before making it NOT NULL.
+3. Moves primary key from `user_id` to `id` safely.
+4. Preserves uniqueness of `user_id` for existing relation logic.
+5. Adds unique constraint for `company_email`.
+6. Normalizes timestamp nullability/defaults for compatibility with Prisma `@updatedAt`.
 
-1. `authenticate` checks for bearer token and verifies JWT.
-2. If token is missing or invalid, request stops with `401`.
-3. `authorize('recruiter')` checks role from `req.user`.
-4. If role is not recruiter, request stops with `403`.
-5. `employerGuard` loads recruiter profile by `req.user.userId` from `recruiter_profiles`.
-6. If profile is missing, request stops with `403`.
-7. Guard attaches `req.employer` and calls `next()`.
-8. Controller executes with trusted recruiter context.
+## 5) Backward compatibility impact
 
-## 5) Routes modified (complete list)
+No existing recruiter/job relation path was changed:
 
-- `src/routes/job.routes.ts`
-  - Recruiter middleware section (`router.use(...)`)
-- `src/routes/application.routes.ts`
-  - `GET /recruiter/applicants`
-  - `GET /recruiter/applicants/filtered`
-  - `GET /recruiter/applicants/stats`
-  - `GET /jobs/:jobId`
-  - `PATCH /:id/status`
-- `src/routes/message.routes.ts`
-  - `POST /conversations`
-- `src/routes/analytics.routes.ts`
-  - Route-level middleware (`router.use(...)`)
+- `jobs.recruiter_id` still points to `users.id`.
+- `recruiter_profiles.user_id` still points to `users.id`.
+- Existing SQL joins on `user_id` continue to work.
 
-## 6) Self-check summary
+This means future employer modules can use the new `recruiter_profiles.id` as a stable internal identifier,
+while old modules continue using `user_id` safely.
 
-- Import paths are valid.
-- Middleware order is consistent and documented.
-- Recruiter profile lookup uses `req.user.userId`.
-- `req.employer` is typed (no `any` assignment in guard).
-- TypeScript check passes with `npm run type-check`.
+## 6) Validation summary
+
+1. Prisma schema validation passed.
+2. Prisma client generation passed.
+3. TypeScript compile check passed (`tsc --noEmit`).
+4. Backend startup path remains intact; local run showed expected infra issues only (`Redis unavailable`, `port 5000 already in use`), not schema/type failures.
