@@ -28,6 +28,7 @@ CREATE TABLE users (
   reset_token_expires_at TIMESTAMPTZ,
   referral_code VARCHAR(20) UNIQUE NOT NULL,
   credit_balance INTEGER DEFAULT 0 NOT NULL,
+  banned_at     TIMESTAMPTZ,
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );

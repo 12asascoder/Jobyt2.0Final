@@ -127,25 +127,25 @@ export const UserModel = {
   },
 
   async getPlatformMetrics(): Promise<{
-    totalUsers: number;
-    totalApplicants: number;
-    totalRecruiters: number;
-    totalJobs: number;
-    totalApplications: number;
-    totalRevenue: number;
-    newUsersToday: number;
-    activeJobsCount: number;
+    total_users: number;
+    total_applicants: number;
+    total_recruiters: number;
+    total_jobs: number;
+    total_applications: number;
+    total_revenue: number;
+    new_users_today: number;
+    active_jobs: number;
   }> {
     const { rows } = await pool.query(`
       SELECT
-        (SELECT COUNT(*) FROM users)::int AS "totalUsers",
-        (SELECT COUNT(*) FROM users WHERE role = 'applicant')::int AS "totalApplicants",
-        (SELECT COUNT(*) FROM users WHERE role = 'recruiter')::int AS "totalRecruiters",
-        (SELECT COUNT(*) FROM jobs WHERE deleted_at IS NULL)::int AS "totalJobs",
-        (SELECT COUNT(*) FROM jobs WHERE status = 'active' AND deleted_at IS NULL)::int AS "activeJobsCount",
-        (SELECT COUNT(*) FROM applications)::int AS "totalApplications",
-        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success') AS "totalRevenue",
-        (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 day')::int AS "newUsersToday"
+        (SELECT COUNT(*) FROM users)::int AS "total_users",
+        (SELECT COUNT(*) FROM users WHERE role = 'applicant')::int AS "total_applicants",
+        (SELECT COUNT(*) FROM users WHERE role = 'recruiter')::int AS "total_recruiters",
+        (SELECT COUNT(*) FROM jobs WHERE deleted_at IS NULL)::int AS "total_jobs",
+        (SELECT COUNT(*) FROM jobs WHERE status = 'active' AND deleted_at IS NULL)::int AS "active_jobs",
+        (SELECT COUNT(*) FROM applications)::int AS "total_applications",
+        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success')::int AS "total_revenue",
+        (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 day')::int AS "new_users_today"
     `);
     return rows[0];
   },

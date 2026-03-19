@@ -10,8 +10,8 @@ export interface RecruiterProfile {
   logo_url: string | null;
   website: string | null;
   location: string | null;
-  created_at: Date;
-  updated_at: Date;
+  created_at: Date | null;
+  updated_at: Date | null;
 }
 
 export const RecruiterProfileModel = {
