@@ -1,3 +1,5 @@
+import type { RecruiterProfile } from '../models/recruiterProfile.model';
+
 export type UserRole = 'applicant' | 'recruiter' | 'admin';
 
 export interface JwtPayload {
@@ -14,6 +16,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: JwtPayload;
+      employer?: RecruiterProfile;
     }
   }
 }
