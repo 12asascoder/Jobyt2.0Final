@@ -101,6 +101,14 @@ export const JobModel = {
     >,
   ): Promise<Job> {
     const fields = Object.keys(data);
+    if (fields.length === 0) {
+      const existing = await this.findById(id);
+      if (!existing) {
+        throw Object.assign(new Error('Job not found'), { statusCode: 404 });
+      }
+      return existing;
+    }
+
     const values = Object.values(data);
     const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
     const { rows } = await pool.query(

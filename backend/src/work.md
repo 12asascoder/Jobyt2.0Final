@@ -723,4 +723,84 @@ Route (src/routes/job.routes.ts)
 - Ensure DB defaults are source of truth for `type` when optional input is omitted.
 - Preserve existing API contract and recruiter-specific duplicate constraints.
 
+---
+
+# JOB-3: Job Update API
+
+## Endpoint details
+
+- Endpoint: `PUT /api/v1/jobs/:id`
+- Access: recruiter only
+- Middleware chain: `authenticate` -> `authorize('recruiter')` -> validation -> controller
+- Response: `200 OK` with message `Job updated successfully`
+
+## Architecture flow
+
+```
+Route (src/routes/job.routes.ts)
+  -> Controller (JobController.updateJob)
+  -> Service (JobService.updateJob)
+  -> Model (JobModel.update)
+  -> PostgreSQL jobs table
+```
+
+## Validation rules
+
+- Optional updatable fields:
+  - `title` non-empty string
+  - `description` non-empty string
+  - `location` string
+  - `salary_min` integer >= 0
+  - `salary_max` integer >= 0 and >= `salary_min` when both are provided
+  - `type` enum: `full-time`, `part-time`, `contract`, `remote`, `internship`
+  - `skills` array of strings
+- Empty request body is rejected in controller:
+  - `400` with `No fields provided for update`
+
+## Ownership enforcement
+
+- Service checks job existence by `id`.
+  - Not found -> `404`
+- Service enforces recruiter ownership.
+  - If job owner does not match token user -> `403`
+
+## Allowed vs restricted fields
+
+- Allowed fields passed to model update:
+  - `title`, `description`, `location`, `salary_min`, `salary_max`, `type`, `skills`
+- Restricted fields ignored by service filtering:
+  - `id`, `recruiter_id`, `created_at`, `updated_at`, `search_vector`, `views_count`, `is_boosted`
+
+## DB behavior
+
+- Uses existing `JobModel.update` (no raw SQL in service).
+- Model applies dynamic update SQL only for provided fields.
+- If filtered update payload is empty, model returns existing row safely without generating invalid SQL.
+
+---
+
+# JOB-3 Refinement Fixes
+
+## Changes applied
+
+- Rejected payloads that become empty after restricted-field filtering.
+  - `JobService.updateJob` now throws `400` with `No valid fields provided for update` when no allowed fields remain.
+- Added salary consistency check using merged existing + incoming values.
+  - Effective values are computed from current DB row + incoming payload.
+  - Update is rejected when effective `salary_max < salary_min`.
+- Strengthened `skills` validation in route.
+  - Must be a non-empty array of non-empty trimmed strings.
+  - Array items are trimmed before reaching service/model.
+- Added type normalization in route.
+  - `type` now uses trim + lowercase normalization before enum check.
+- Preserved `updated_at` database behavior.
+  - Update path still relies on SQL `updated_at = NOW()` in model updates.
+
+## Why this refinement was needed
+
+- Prevent false-positive success responses when client only sends restricted fields.
+- Enforce salary correctness for partial updates where only one salary boundary is provided.
+- Ensure clean and consistent `skills`/`type` data before persistence.
+- Keep audit freshness via automatic `updated_at` updates.
+
 

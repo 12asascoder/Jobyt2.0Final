@@ -1,7 +1,7 @@
 import { JobModel, JobFilters, JobType, JobStatus } from '../models/job.model';
 import { CreditService } from './credit.service';
 import { UserModel } from '../models/user.model';
-import { AppError } from '../utils/appError';
+import { AppError, badRequest } from '../utils/appError';
 
 export const JobService = {
   async createJob(
@@ -59,12 +59,35 @@ export const JobService = {
     return job;
   },
 
-  async updateJob(recruiterId: string, jobId: string, data: Parameters<typeof JobModel.update>[1]) {
+  async updateJob(jobId: string, recruiterId: string, data: Parameters<typeof JobModel.update>[1]) {
     const job = await JobModel.findById(jobId);
     if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
     if (job.recruiter_id !== recruiterId)
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
-    return JobModel.update(jobId, data);
+
+    const allowedFields = ['title', 'description', 'location', 'salary_min', 'salary_max', 'type', 'skills'] as const;
+    const filteredData = Object.fromEntries(
+      Object.entries(data).filter(([key]) => (allowedFields as readonly string[]).includes(key)),
+    ) as Parameters<typeof JobModel.update>[1];
+
+    if (Object.keys(filteredData).length === 0) {
+      throw badRequest('No valid fields provided for update');
+    }
+
+    const effectiveSalaryMin =
+      filteredData.salary_min !== undefined ? Number(filteredData.salary_min) : job.salary_min;
+    const effectiveSalaryMax =
+      filteredData.salary_max !== undefined ? Number(filteredData.salary_max) : job.salary_max;
+
+    if (
+      effectiveSalaryMin !== null &&
+      effectiveSalaryMax !== null &&
+      effectiveSalaryMax < effectiveSalaryMin
+    ) {
+      throw badRequest('salary_max must be greater than or equal to salary_min');
+    }
+
+    return JobModel.update(jobId, filteredData);
   },
 
   async deleteJob(recruiterId: string, jobId: string) {

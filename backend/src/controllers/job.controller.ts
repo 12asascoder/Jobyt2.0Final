@@ -47,13 +47,24 @@ export const JobController = {
     return JobController.createJob(req, res, next);
   },
 
-  async update(req: Request, res: Response, next: NextFunction) {
+  async updateJob(req: Request, res: Response, next: NextFunction) {
     try {
-      const job = await JobService.updateJob(req.user!.userId, req.params.id as string, req.body);
-      sendSuccess(res, job, 'Job updated');
+      if (!req.body || Object.keys(req.body).length === 0) {
+        res.status(400).json({ success: false, message: 'No fields provided for update' });
+        return;
+      }
+
+      const jobId = req.params.id as string;
+      const recruiterId = req.user!.userId;
+      const job = await JobService.updateJob(jobId, recruiterId, req.body);
+      sendSuccess(res, job, 'Job updated successfully');
     } catch (err) {
       next(err);
     }
+  },
+
+  async update(req: Request, res: Response, next: NextFunction) {
+    return JobController.updateJob(req, res, next);
   },
 
   async publish(req: Request, res: Response, next: NextFunction) {

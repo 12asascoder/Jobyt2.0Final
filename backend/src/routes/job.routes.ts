@@ -45,9 +45,37 @@ router.post(
 router.put(
   '/:id',
   body('title').optional().notEmpty().trim(),
-  body('type').optional().isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
+  body('description').optional().notEmpty(),
+  body('location').optional().isString().trim(),
+  body('salary_min').optional().isInt({ min: 0 }).toInt(),
+  body('salary_max')
+    .optional()
+    .isInt({ min: 0 })
+    .toInt()
+    .custom((value, { req }) => {
+      if (req.body.salary_min !== undefined && Number(value) < Number(req.body.salary_min)) {
+        throw new Error('salary_max must be greater than or equal to salary_min');
+      }
+      return true;
+    }),
+  body('type')
+    .optional()
+    .trim()
+    .toLowerCase()
+    .isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
+  body('skills')
+    .optional()
+    .isArray()
+    .withMessage('skills must be an array')
+    .bail()
+    .custom((skills) =>
+      Array.isArray(skills) &&
+      skills.every((skill) => typeof skill === 'string' && skill.trim().length > 0),
+    )
+    .withMessage('skills must contain non-empty strings only')
+    .customSanitizer((skills) => skills.map((skill: string) => skill.trim())),
   validate,
-  JobController.update,
+  JobController.updateJob,
 );
 
 router.patch('/:id/publish', JobController.publish);

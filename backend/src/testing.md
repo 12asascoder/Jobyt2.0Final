@@ -1341,4 +1341,246 @@ Validation:
   - Model omits `type` column in insert when not provided.
   - DB row persisted `type='full-time'` and `status='draft'` for minimal payload.
 
+---
+
+# JOB-3 Testing Notes
+
+Scope: validate recruiter job update flow for `PUT /api/v1/jobs/:id`.
+
+## 1) No token -> 401
+
+Input:
+
+- `PUT /api/v1/jobs/:id`
+- No authorization header
+
+Expected output:
+
+- HTTP `401`
+
+Result (logic):
+
+- Pass. Rejected by `authenticate` middleware.
+
+## 2) Wrong role -> 403
+
+Input:
+
+- `PUT /api/v1/jobs/:id`
+- Valid applicant token
+
+Expected output:
+
+- HTTP `403`
+
+Result (logic):
+
+- Pass. Rejected by `authorize('recruiter')` middleware.
+
+## 3) Job not found -> 404
+
+Input:
+
+- `PUT /api/v1/jobs/<non-existent-id>`
+- Valid recruiter token
+
+Expected output:
+
+- HTTP `404`
+
+Result (logic):
+
+- Pass. Service checks `JobModel.findById` and returns not found.
+
+## 4) Not owner -> 403
+
+Input:
+
+- Recruiter A token attempts to update job owned by Recruiter B
+
+Expected output:
+
+- HTTP `403`
+
+Result (logic):
+
+- Pass. Ownership check blocks update when `job.recruiter_id !== recruiterId`.
+
+## 5) Empty body -> 400
+
+Input:
+
+- `PUT /api/v1/jobs/:id`
+- Body: `{}`
+
+Expected output:
+
+- HTTP `400`
+- Message: `No fields provided for update`
+
+Result (logic):
+
+- Pass. Controller rejects empty update payload before service call.
+
+## 6) Invalid salary range -> 422
+
+Input:
+
+- Body with `salary_min` greater than `salary_max`
+
+Expected output:
+
+- HTTP `422`
+
+Result (logic):
+
+- Pass. Route validation enforces `salary_max >= salary_min`.
+
+## 7) Valid partial update -> 200
+
+Input:
+
+- Update one or more allowed fields (for example `title`, `location`, `skills`)
+
+Expected output:
+
+- HTTP `200`
+- Message: `Job updated successfully`
+- Only supplied fields change
+
+Result (logic):
+
+- Pass.
+
+## 8) Restricted fields ignored
+
+Input:
+
+- Attempt payload includes restricted fields (`id`, `recruiter_id`, `created_at`, `updated_at`, `search_vector`, `views_count`, `is_boosted`)
+
+Expected output:
+
+- Restricted fields are not updated.
+
+Result (logic):
+
+- Pass. Service filters update payload to allowed fields only.
+
+---
+
+# JOB-3 Refinement Validation
+
+Scope: validate critical edge-case behavior for refined `PUT /api/v1/jobs/:id`.
+
+## 1) Only restricted fields -> 400
+
+Input:
+
+- Body includes only restricted fields, for example `{ "id": "...", "views_count": 99 }`
+
+Expected output:
+
+- HTTP `400`
+- Message: `No valid fields provided for update`
+
+Result (logic):
+
+- Pass. Service rejects payload after allowed-field filtering leaves no updatable keys.
+
+## 2) salary_max below existing salary_min -> 400
+
+Input:
+
+- Existing job: `salary_min = 100000`
+- Update body: `{ "salary_max": 90000 }`
+
+Expected output:
+
+- HTTP `400`
+- Message indicates invalid salary range
+
+Result (logic):
+
+- Pass. Service computes effective salary values (existing + incoming) and blocks invalid range.
+
+## 3) Invalid skills item (empty string) -> 422
+
+Input:
+
+- Body: `{ "skills": ["Node.js", "   "] }`
+
+Expected output:
+
+- HTTP `422`
+
+Result (logic):
+
+- Pass. Route validation rejects arrays containing empty/blank skill items.
+
+## 4) Mixed-case type normalized and accepted
+
+Input:
+
+- Body: `{ "type": "Remote" }`
+
+Expected output:
+
+- HTTP `200`
+- Stored value uses lowercase enum format (`remote`)
+
+Result (logic):
+
+- Pass. Route sanitizer lowercases `type` before enum validation and update.
+
+## 5) Valid partial update -> 200
+
+Input:
+
+- Body with one or more allowed fields, for example `{ "location": "Bengaluru" }`
+
+Expected output:
+
+- HTTP `200`
+- Message: `Job updated successfully`
+
+Result (logic):
+
+- Pass.
+
+## 6) updated_at auto-update verified
+
+Input:
+
+- Read `updated_at`, perform valid update, read `updated_at` again
+
+Expected output:
+
+- New `updated_at` timestamp is greater than prior value
+
+Result (logic):
+
+- Pass. Model update SQL sets `updated_at = NOW()` on each successful update.
+
+## 7) Stable PowerShell harness validation (no parsing errors)
+
+Execution approach:
+
+- Ran reusable helper script: `scripts/job-update-api-test.ps1`
+- Command pattern:
+  - `powershell -ExecutionPolicy Bypass -File .\scripts\job-update-api-test.ps1 -JobId <job_id> -Token <jwt_token>`
+- JSON body is always prepared as a separate variable (`$jsonBody = $body | ConvertTo-Json -Depth 5`) inside `Call-JobUpdate`.
+- No inline pipeline/function chaining used in command execution.
+
+Observed results:
+
+- Case 1 (valid update): `200`
+- Case 2 (restricted-only payload): `400`
+- Case 3 (salary_max below existing salary_min): `400`
+- Case 4 (invalid skills): `422`
+- Case 5 (type normalization): `200`
+
+Validation:
+
+- Pass. All required cases executed through one reusable function without `Set-Content` prompt errors or JSON parsing failures.
+
 
