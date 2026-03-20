@@ -34,3 +34,4 @@ router.use('/pipeline', pipelineRoutes);
 router.use('/recruiter', recruiterRoutes);
 
 export default router;
+

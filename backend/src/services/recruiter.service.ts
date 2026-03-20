@@ -4,6 +4,82 @@ import { RecruiterProfile } from '../models/recruiterProfile.model';
 
 export const RecruiterService = {
   /**
+   * Update an existing recruiter profile
+   *
+   * - Supports partial updates (only provided fields are updated)
+   * - If company_email is provided, checks for uniqueness against other profiles
+   * - Uses Prisma for safe update with type checking
+   *
+   * @param userId - The recruiter user's ID
+   * @param data - Partial profile data to update
+   * @returns Updated profile
+   * @throws {AppError} 409 if company_email is already in use by another recruiter
+   * @throws {AppError} 400 for database constraint violations
+   */
+  async updateRecruiterProfile(
+    userId: string,
+    data: Partial<{
+      company_name: string;
+      company_email: string;
+      industry: string;
+      description: string;
+      company_size: string;
+      website: string;
+      location: string;
+      logo_url: string;
+    }>,
+  ): Promise<RecruiterProfile> {
+    // Step 1: If company_email is provided, check for uniqueness
+    if (data.company_email) {
+      const existingEmail = await prisma.recruiter_profiles.findUnique({
+        where: { company_email: data.company_email },
+      });
+
+      // Email is taken by another recruiter
+      if (existingEmail && existingEmail.user_id !== userId) {
+        throw conflict('Company email is already in use');
+      }
+    }
+
+    // Step 2: Update profile with Prisma
+    try {
+      const profile = await prisma.recruiter_profiles.update({
+        where: { user_id: userId },
+        data,
+      });
+
+      // Convert Prisma response to RecruiterProfile interface
+      return {
+        id: profile.id,
+        user_id: profile.user_id,
+        name: profile.name,
+        company_name: profile.company_name,
+        company_email: profile.company_email,
+        industry: profile.industry,
+        description: profile.description,
+        company_size: profile.company_size,
+        logo_url: profile.logo_url,
+        website: profile.website,
+        location: profile.location,
+        is_verified: profile.is_verified,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at,
+      };
+    } catch (err: unknown) {
+      const error = err as { code?: string; message?: string };
+
+      // PostgreSQL unique constraint violation (23505)
+      if (error.code === '23505') {
+        if (error.message?.includes('company_email')) {
+          throw conflict('Company email is already in use');
+        }
+      }
+
+      throw err;
+    }
+  },
+
+  /**
    * Create a new recruiter profile
    *
    * - Check if recruiter already has a profile (only one profile per recruiter allowed)

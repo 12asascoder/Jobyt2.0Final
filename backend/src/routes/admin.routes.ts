@@ -48,6 +48,19 @@ router.post(
   AdminController.adjustCredits,
 );
 
+// ── Recruiter Verification ─────────────────────────────────────────────────────
+router.patch(
+  '/recruiter/:id/verify',
+  body('is_verified')
+    .exists()
+    .withMessage('is_verified is required')
+    .isBoolean({ strict: true })
+    .withMessage('is_verified must be a strict boolean')
+    .toBoolean(),
+  validate,
+  AdminController.verifyRecruiter,
+);
+
 // ── Metrics & Audit ────────────────────────────────────────────────────────────────
 router.get('/metrics', AdminController.getMetrics);
 router.get('/audit-log', AdminController.getAuditLog);
