@@ -1127,4 +1127,218 @@ Result:
 - Prisma migrate: Pass (already in sync, no pending migration).
 - Backend startup: Pass (Postgres connected, server started on port 5000; Redis unavailable fallback is non-blocking in current setup).
 
+---
+
+# JOB-2 Testing Notes (Job Creation API)
+
+Scope: validate `POST /api/v1/jobs` recruiter job creation flow.
+
+## 1) No token -> 401
+
+Input:
+
+- `POST /api/v1/jobs`
+- No `Authorization` header
+
+Expected output:
+
+- HTTP `401`
+
+Result (logic):
+
+- Pass. Rejected by `authenticate` middleware.
+
+## 2) Wrong role -> 403
+
+Input:
+
+- `POST /api/v1/jobs`
+- Valid token for `applicant` user
+
+Expected output:
+
+- HTTP `403`
+
+Result (logic):
+
+- Pass. Rejected by `authorize('recruiter')` middleware.
+
+## 3) Missing title -> 422
+
+Input:
+
+- `POST /api/v1/jobs`
+- Recruiter token
+- Body without `title`
+
+Expected output:
+
+- HTTP `422`
+
+Result (logic):
+
+- Pass. Rejected by express-validator + `validate` middleware.
+
+## 4) Invalid salary range -> 422
+
+Input:
+
+- `POST /api/v1/jobs`
+- Recruiter token
+- Body with `salary_min: 100000` and `salary_max: 50000`
+
+Expected output:
+
+- HTTP `422` with validation message for salary range.
+
+Result (logic):
+
+- Pass. `salary_max` custom validator enforces `salary_max >= salary_min`.
+
+## 5) Valid job creation -> 201
+
+Input:
+
+- `POST /api/v1/jobs`
+- Recruiter token
+- Body with required fields (`title`, `description`) and valid optional fields
+
+Expected output:
+
+- HTTP `201`
+- Success message: `Job created successfully`
+- Job contains authenticated `recruiter_id`
+
+Result (logic):
+
+- Pass.
+
+## 6) Optional fields test
+
+Input:
+
+- `POST /api/v1/jobs`
+- Recruiter token
+- Body includes only `title` and `description`
+
+Expected output:
+
+- HTTP `201`
+- Defaults applied by model/DB:
+  - `type = full-time`
+  - `status = draft`
+
+Result (logic):
+
+- Pass.
+
+## 7) Skills array validation
+
+Input:
+
+- Case A: `skills` as non-array value
+- Case B: `skills` as array with non-string entries
+
+Expected output:
+
+- HTTP `422` for both invalid cases.
+
+Result (logic):
+
+- Pass. `skills` must be array and each item must be a string.
+
+## JOB-2 Refinement Validation Note
+
+- Service-layer role check removed from job creation flow; authorization remains middleware-driven.
+- Job type default is now DB-driven when `type` is omitted (no model-layer forced assignment).
+- Duplicate title check remains recruiter-scoped via `recruiter_id` condition.
+
+---
+
+# JOB-2 Final Sanity Test
+
+Scope: live sanity validation for `POST /api/v1/jobs` using authenticated recruiter JWT.
+
+## 1) Minimal request payload
+
+Request:
+
+```json
+{
+  "title": "Backend Developer",
+  "description": "Node.js role"
+}
+```
+
+Observed API result:
+
+- `CREATE_STATUS=201`
+- `CREATE_MESSAGE=Job created successfully`
+- `RESP_RECRUITER_ID=2f4dec1e-4f59-4ee1-927a-d809a81c6ca3`
+- `RESP_TYPE=full-time`
+- `RESP_STATUS=draft`
+- `RESP_CREATED_AT=2026-03-20T14:01:37.003Z`
+- `RESP_UPDATED_AT=2026-03-20T14:01:37.003Z`
+
+Validation:
+
+- Pass. Recruiter ID in response matches authenticated token user.
+- Pass. `type` and `status` defaults are present for minimal payload.
+- Pass. Timestamps returned in API response.
+
+## 2) Direct PostgreSQL validation
+
+Validated latest created row for recruiter `2f4dec1e-4f59-4ee1-927a-d809a81c6ca3`:
+
+- `DB_ROW_FOUND=true`
+- `DB_JOB_ID=1db9f8c8-f3dc-485c-822e-8bb98453960e`
+- `DB_RECRUITER_ID=2f4dec1e-4f59-4ee1-927a-d809a81c6ca3`
+- `DB_TYPE=full-time`
+- `DB_STATUS=draft`
+- `DB_CREATED_AT=2026-03-20T14:01:37.003Z`
+- `DB_UPDATED_AT=2026-03-20T14:01:37.003Z`
+
+Validation:
+
+- Pass. Row exists in DB.
+- Pass. `type='full-time'` and `status='draft'` stored as defaults.
+- Pass. `recruiter_id` matches token user.
+
+## 3) Negative validation case
+
+Request:
+
+```json
+{
+  "description": "Missing title"
+}
+```
+
+Observed result:
+
+- `NEG_STATUS=422`
+- `NEG_BODY={"success":false,"message":"Validation failed","errors":[{"field":"field","message":"Invalid value"}]}`
+
+Validation:
+
+- Pass. Missing title is rejected by validation middleware.
+
+## 4) Final backend runtime check
+
+Health check result:
+
+- `GET /api/v1/health` returned `{"success":true,"message":"API is running",...}`
+
+Validation:
+
+- Pass. Backend is running and responsive.
+
+## 5) Default source confirmation
+
+- Pass. Defaults are DB-driven for `type` when omitted.
+- Evidence:
+  - Service does not force `type`.
+  - Model omits `type` column in insert when not provided.
+  - DB row persisted `type='full-time'` and `status='draft'` for minimal payload.
+
 

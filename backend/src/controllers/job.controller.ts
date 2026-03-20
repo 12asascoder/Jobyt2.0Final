@@ -33,13 +33,18 @@ export const JobController = {
     }
   },
 
-  async create(req: Request, res: Response, next: NextFunction) {
+  async createJob(req: Request, res: Response, next: NextFunction) {
     try {
-      const job = await JobService.createJob(req.user!.userId, req.body);
-      sendSuccess(res, job, 'Job created', 201);
+      const recruiterId = req.user!.userId;
+      const job = await JobService.createJob(recruiterId, req.body);
+      sendSuccess(res, job, 'Job created successfully', 201);
     } catch (err) {
       next(err);
     }
+  },
+
+  async create(req: Request, res: Response, next: NextFunction) {
+    return JobController.createJob(req, res, next);
   },
 
   async update(req: Request, res: Response, next: NextFunction) {

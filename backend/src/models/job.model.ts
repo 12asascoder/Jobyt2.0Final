@@ -53,28 +53,44 @@ export const JobModel = {
     recruiter_id: string;
     title: string;
     description: string;
-    type: JobType;
+    type?: JobType;
     location?: string;
     salary_min?: number;
     salary_max?: number;
     skills?: string[];
     status?: JobStatus;
   }): Promise<Job> {
-    const { rows } = await pool.query(
-      `INSERT INTO jobs (recruiter_id, title, description, type, location, salary_min, salary_max, skills, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [
-        data.recruiter_id,
-        data.title,
-        data.description,
-        data.type,
-        data.location || null,
-        data.salary_min || null,
-        data.salary_max || null,
-        data.skills || [],
-        data.status || 'draft',
-      ],
-    );
+    const hasType = data.type !== undefined;
+    const { rows } = hasType
+      ? await pool.query(
+          `INSERT INTO jobs (recruiter_id, title, description, type, location, salary_min, salary_max, skills, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+          [
+            data.recruiter_id,
+            data.title,
+            data.description,
+            data.type,
+            data.location || null,
+            data.salary_min || null,
+            data.salary_max || null,
+            data.skills || [],
+            data.status || 'draft',
+          ],
+        )
+      : await pool.query(
+          `INSERT INTO jobs (recruiter_id, title, description, location, salary_min, salary_max, skills, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+          [
+            data.recruiter_id,
+            data.title,
+            data.description,
+            data.location || null,
+            data.salary_min || null,
+            data.salary_max || null,
+            data.skills || [],
+            data.status || 'draft',
+          ],
+        );
     return rows[0];
   },
 

@@ -24,11 +24,22 @@ router.post(
   '/',
   body('title').notEmpty().trim(),
   body('description').notEmpty(),
-  body('type').isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
+  body('location').optional().isString().trim(),
   body('salary_min').optional().isInt({ min: 0 }),
-  body('salary_max').optional().isInt({ min: 0 }),
+  body('salary_max')
+    .optional()
+    .isInt({ min: 0 })
+    .custom((value, { req }) => {
+      if (req.body.salary_min !== undefined && Number(value) < Number(req.body.salary_min)) {
+        throw new Error('salary_max must be greater than or equal to salary_min');
+      }
+      return true;
+    }),
+  body('type').optional().isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
+  body('skills').optional().isArray().withMessage('skills must be an array'),
+  body('skills.*').optional().isString().withMessage('Each skill must be a string'),
   validate,
-  JobController.create,
+  JobController.createJob,
 );
 
 router.put(

@@ -652,4 +652,75 @@ Why this matters:
 - Since `jobs` already met the required production contract, creating a redundant migration would add risk without benefit.
 - Keeping migration history unchanged for JOB-1 prevents unnecessary schema churn and protects existing data.
 
+---
+
+# JOB-2: Job Creation API
+
+## Endpoint details
+
+- Endpoint: `POST /api/v1/jobs`
+- Access: recruiter only
+- Middleware chain: `authenticate` -> `authorize('recruiter')` -> validation -> controller
+- Response: `201 Created` with `sendSuccess(res, job, 'Job created successfully', 201)`
+
+## Architecture flow
+
+```
+Route (src/routes/job.routes.ts)
+  -> Controller (JobController.createJob)
+  -> Service (JobService.createJob)
+  -> Model (JobModel.create)
+  -> PostgreSQL jobs table
+```
+
+## Validation rules
+
+- Required:
+  - `title`: non-empty string
+  - `description`: non-empty string
+- Optional:
+  - `location`: string
+  - `salary_min`: integer >= 0
+  - `salary_max`: integer >= 0 and must be >= `salary_min` when both are provided
+  - `type`: one of `full-time`, `part-time`, `contract`, `remote`, `internship`
+  - `skills`: array of strings
+
+## Security (recruiter-only)
+
+- Service enforces recruiter checks before create:
+  - recruiter must exist (`404` if not found)
+  - recruiter role must be recruiter (`404` if not recruiter)
+  - recruiter must not be banned (`403` if banned)
+- Validation errors are returned by existing `validate` middleware (`422`).
+
+## DB behavior
+
+- Uses existing `JobModel.create` pattern (no raw SQL in service).
+- Inserted row uses:
+  - `recruiter_id` from authenticated token (`req.user.userId`)
+  - `status` default to `draft` when not supplied
+  - `type` default to `full-time` when not supplied
+- Existing duplicate title guard remains intact for active/draft jobs per recruiter.
+
+---
+
+# JOB-2 Refinement Fix
+
+## Changes applied
+
+- Removed redundant recruiter role check inside `JobService.createJob`.
+  - Kept only recruiter existence check (`404`) and banned check (`403`).
+  - Role authorization remains enforced by middleware (`authorize('recruiter')`).
+- Removed model-layer forced type default assignment.
+  - `JobModel.create` no longer sets `type = 'full-time'` in application code.
+  - When `type` is omitted, insert query omits the `type` column so PostgreSQL default is applied.
+- Re-validated duplicate title logic scope.
+  - Duplicate check remains scoped to `recruiter_id` and is not global.
+
+## Why this refinement was needed
+
+- Prevent duplicate role enforcement across layers and keep responsibilities clear.
+- Ensure DB defaults are source of truth for `type` when optional input is omitted.
+- Preserve existing API contract and recruiter-specific duplicate constraints.
+
 

@@ -1,5 +1,7 @@
 import { JobModel, JobFilters, JobType, JobStatus } from '../models/job.model';
 import { CreditService } from './credit.service';
+import { UserModel } from '../models/user.model';
+import { AppError } from '../utils/appError';
 
 export const JobService = {
   async createJob(
@@ -7,7 +9,7 @@ export const JobService = {
     data: {
       title: string;
       description: string;
-      type: JobType;
+      type?: JobType;
       location?: string;
       salary_min?: number;
       salary_max?: number;
@@ -15,6 +17,14 @@ export const JobService = {
       status?: JobStatus;
     },
   ) {
+    const recruiter = await UserModel.findById(recruiterId);
+    if (!recruiter) {
+      throw new AppError('Recruiter not found', 404);
+    }
+    if (recruiter.banned_at) {
+      throw new AppError('Recruiter account is banned', 403);
+    }
+
     const isDuplicate = await JobModel.checkDuplicate(recruiterId, data.title);
     if (isDuplicate) {
       throw Object.assign(new Error('You already have an active or draft job with this title'), { statusCode: 409 });
