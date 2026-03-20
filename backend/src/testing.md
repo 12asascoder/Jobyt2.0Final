@@ -1037,4 +1037,94 @@ Result:
 
 - Pass. No SQL syntax/default-expression blockers remain in migrations.
 
+---
+
+# JOB-1 Testing Notes (Jobs Table Validation & Upgrade)
+
+Scope: validate existing `jobs` table is production-ready without recreating it.
+
+## 1) Table exists
+
+Input:
+
+- Query `information_schema.tables` for `public.jobs`.
+
+Expected output:
+
+- Table exists = true.
+
+Result:
+
+- Pass (`table_exists=true`).
+
+## 2) Insert job works
+
+Input:
+
+- Insert a recruiter user.
+- Insert a job row using that recruiter as `recruiter_id`.
+
+Expected output:
+
+- Insert succeeds.
+- Defaults applied: `is_boosted=false`, `views_count=0`, `deleted_at=NULL`.
+
+Result:
+
+- Pass (`insert_defaults={...,"is_boosted":false,"views_count":0,"deleted_at":null}`).
+
+## 3) Foreign key works
+
+Input:
+
+- Attempt insert into `jobs` with a random non-existent `recruiter_id`.
+
+Expected output:
+
+- Insert fails due FK constraint (`jobs_recruiter_id_fkey`).
+
+Result:
+
+- Pass (`fk_rejected=true`).
+
+## 4) Indexes exist
+
+Input:
+
+- Query `pg_indexes` for `idx_jobs_recruiter`, `idx_jobs_search`, `idx_jobs_skills`.
+
+Expected output:
+
+- All three indexes found.
+
+Result:
+
+- Pass (`indexes_found=idx_jobs_recruiter,idx_jobs_search,idx_jobs_skills`).
+
+## 5) Soft delete works
+
+Input:
+
+- Update inserted test job: `deleted_at = CURRENT_TIMESTAMP`.
+
+Expected output:
+
+- `deleted_at` becomes non-null.
+
+Result:
+
+- Pass (`soft_delete_set=true`).
+
+## 6) Migration and runtime validation
+
+Checks:
+
+- `npx prisma migrate dev --name job1_validation_noop`.
+- `npm run dev` startup check.
+
+Result:
+
+- Prisma migrate: Pass (already in sync, no pending migration).
+- Backend startup: Pass (Postgres connected, server started on port 5000; Redis unavailable fallback is non-blocking in current setup).
+
 

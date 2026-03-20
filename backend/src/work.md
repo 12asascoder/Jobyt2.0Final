@@ -606,4 +606,50 @@ Why this matters:
 - Prisma applies migrations to a shadow database; this invalid default caused migration validation to fail before schema creation.
 - Keeping `search_vector` without computed default is production-safe and avoids non-portable SQL behavior in migrations.
 
+---
+
+# JOB-1: Jobs Table Validation & Upgrade
+
+## What was checked
+
+- Verified `jobs` table already exists in `prisma/migrations/000_init/migration.sql` and was not recreated.
+- Validated required columns and defaults:
+  - `id` UUID PK with `uuid_generate_v4()`
+  - `recruiter_id` UUID
+  - required fields `title`, `description`
+  - optional fields `location`, `salary_min`, `salary_max`
+  - enum-backed `type`, `status`
+  - `skills` TEXT[]
+  - `is_boosted` default false, `views_count` default 0
+  - `deleted_at` nullable timestamp
+  - `created_at` and `updated_at` default `CURRENT_TIMESTAMP`
+  - `search_vector` as `tsvector` with no default expression
+- Validated required indexes exist:
+  - `idx_jobs_recruiter`
+  - `idx_jobs_search` (GIN)
+  - `idx_jobs_skills` (GIN)
+- Validated FK exists and is correct:
+  - `jobs.recruiter_id` → `users.id` with `ON DELETE CASCADE`
+- Validated Prisma alignment in `prisma/schema.prisma`:
+  - `jobs` model matches SQL table shape
+  - `search_vector` has no `dbgenerated` default
+  - job enums map correctly to DB enum values
+
+## What was changed
+
+- No JOB-1 schema upgrade was required.
+- No new migration was created because the table structure and constraints already satisfy JOB-1 requirements.
+- Performed runtime validation with PostgreSQL transaction checks:
+  - table exists
+  - insert into `jobs` succeeds with defaults
+  - FK violation is rejected
+  - soft delete update (`deleted_at`) works
+  - required indexes are present
+
+## Why changes were needed
+
+- Objective for JOB-1 was safety and production readiness without duplicate table creation.
+- Since `jobs` already met the required production contract, creating a redundant migration would add risk without benefit.
+- Keeping migration history unchanged for JOB-1 prevents unnecessary schema churn and protects existing data.
+
 
