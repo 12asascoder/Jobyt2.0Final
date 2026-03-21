@@ -10,12 +10,41 @@ export const JobController = {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const status = req.query.status as string | undefined;
       const type = req.query.type as JobType | undefined;
+      const keywordRaw = req.query.keyword;
+      const locationRaw = req.query.location;
+      const salaryMinRaw = req.query.salary_min;
+      const salaryMaxRaw = req.query.salary_max;
+      const skillsRaw = req.query.skills;
+
+      const keyword = typeof keywordRaw === 'string' ? keywordRaw.trim() : undefined;
+      const location = typeof locationRaw === 'string' ? locationRaw.trim() : undefined;
+      const salary_min = typeof salaryMinRaw === 'string' ? Number(salaryMinRaw) : undefined;
+      const salary_max = typeof salaryMaxRaw === 'string' ? Number(salaryMaxRaw) : undefined;
+
+      const normalizedSkills = (() => {
+        if (!skillsRaw) return undefined;
+
+        const rawValues = Array.isArray(skillsRaw)
+          ? skillsRaw.flatMap((value) => String(value).split(','))
+          : String(skillsRaw).split(',');
+
+        const normalized = rawValues
+          .map((value) => value.trim().toLowerCase())
+          .filter((value) => value.length > 0);
+
+        return normalized.length > 0 ? Array.from(new Set(normalized)) : undefined;
+      })();
 
       const { jobs, pagination } = await JobService.getJobs({
         page,
         limit,
         status,
         type: type ? type.toLowerCase() as JobType : undefined,
+        keyword: keyword && keyword.length > 0 ? keyword : undefined,
+        location: location && location.length > 0 ? location : undefined,
+        salary_min,
+        salary_max,
+        skills: normalizedSkills,
       });
 
       sendPaginated(res, jobs, pagination.total, pagination.page, pagination.limit, 'Jobs fetched successfully');

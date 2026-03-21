@@ -1236,3 +1236,112 @@ Verified `JobService.getJobById` follows the required order exactly:
 - Ownership check happens only after successful existence check.
 - Model layer remains unchanged for this task.
 
+---
+
+# JOB-7 Job Search Filters
+
+## Goal
+
+- Extended existing `GET /api/v1/jobs` flow to support advanced search filters.
+- Kept the same endpoint and existing pagination behavior from JOB-5.
+- Preserved production-safe SQL with parameterized queries only.
+
+## New query params
+
+- `keyword`: optional string, searched in both `title` and `description`
+- `location`: optional string, partial case-insensitive match
+- `salary_min`: optional number, applies `jobs.salary_min >= value`
+- `salary_max`: optional number, applies `jobs.salary_max <= value`
+- `skills`: optional list (comma-separated or array), requires all skills present in job row
+
+## Architecture flow (extended existing path)
+
+```
+GET /api/v1/jobs
+
+Route (job.routes.ts)
+  -> JobController.getJobs
+    -> JobService.getJobs
+      -> JobModel.findAll
+```
+
+## Controller updates
+
+- Added parsing for: `keyword`, `location`, `salary_min`, `salary_max`, `skills`.
+- Normalization applied:
+  - `keyword.trim()`
+  - `location.trim()`
+  - `type` lowercased
+  - `skills` normalized to trimmed lowercase array (supports comma-separated or query-array format)
+- Existing pagination/status/type query behavior retained.
+
+## Service updates
+
+- Extended `getJobs` filter input with new fields.
+- Kept existing pagination normalization unchanged.
+- Kept status allowlist unchanged: `draft`, `active`, `closed`.
+- Added safe salary validation:
+  - non-numeric `salary_min` or `salary_max` -> `422`
+  - if both provided and `salary_max < salary_min` -> `422`
+- Passed validated filters to model in the existing list flow.
+
+## Model SQL logic (shared WHERE for COUNT + SELECT)
+
+- `JobModel.findAll` now dynamically builds one shared `whereClause` used by both:
+  - `SELECT COUNT(*) ...`
+  - main `SELECT ... LIMIT/OFFSET ...`
+- Base filter remains:
+  - `jobs.deleted_at IS NULL`
+- Optional filters added with parameter placeholders:
+  - `jobs.status = $X`
+  - `jobs.type = $X`
+  - `(jobs.title ILIKE $X OR jobs.description ILIKE $X)`
+  - `jobs.location ILIKE $X`
+  - `jobs.salary_min >= $X`
+  - `jobs.salary_max <= $X`
+  - `jobs.skills @> $X::text[]`
+
+## Skills filter explanation
+
+- Uses PostgreSQL array containment operator: `@>`.
+- `jobs.skills @> $X::text[]` means the job row must contain all requested skills.
+- This enforces strict "contains-all" behavior for multi-skill filtering.
+
+## SQL safety notes
+
+- No filter values are inlined into SQL strings.
+- All values are passed via parameter arrays.
+- COUNT and SELECT share the same dynamic conditions, preventing pagination drift.
+
+---
+
+# JOB-7 Final Safety Fixes
+
+## 1) Skills empty array safety guard
+
+- Confirmed and preserved defensive handling in both layers:
+  - Service passes `skills` only when `skills.length > 0`.
+  - Model adds `jobs.skills @> $X::text[]` only when `filters.skills.length > 0`.
+- This prevents accidental `jobs.skills @> '{}'` behavior from broad-matching all rows.
+
+## 2) Keyword trimming and empty guard
+
+- Kept existing `ILIKE '%keyword%'` behavior unchanged.
+- Added explicit service-level guard so trimmed empty keyword is not forwarded to model.
+- Controller already trims and omits empty keyword values.
+
+## 3) Salary NULL behavior clarification
+
+- No SQL logic change was made for salary comparisons.
+- Added explicit model comments documenting SQL three-valued logic:
+  - Rows with `salary_min = NULL` do not satisfy `salary_min >= X`.
+  - Rows with `salary_max = NULL` do not satisfy `salary_max <= X`.
+- This confirms expected exclusion behavior for NULL salary values under salary filters.
+
+## 4) Combined filters consistency confirmation
+
+- COUNT and SELECT continue to use the same dynamic `whereClause`.
+- Verified consistency for combined filters (`keyword + location + skills`) across pages:
+  - `pagination.total` remains identical between page 1 and page 2.
+  - `pagination.totalPages` remains identical between page 1 and page 2.
+

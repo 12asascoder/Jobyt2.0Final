@@ -2315,4 +2315,261 @@ Status: Pass
 - Non-owner authenticated draft request returns `404` (not `403`), preserving draft existence masking.
 - TypeScript compile check passed with no emitted errors.
 
+---
+
+# JOB-7 Testing Notes (Job Search Filters)
+
+Scope: validate advanced filters added to `GET /api/v1/jobs` in existing JOB-5 list flow.
+
+Execution date: 2026-03-21
+
+## 1) Keyword search
+
+Input:
+
+- `GET /api/v1/jobs?keyword=node`
+
+Expected output:
+
+- HTTP 200
+- Results filtered by keyword match in title or description
+
+Actual result:
+
+- HTTP 200
+- Filtered response returned successfully
+
+Status: Pass
+
+## 2) Location partial match
+
+Input:
+
+- `GET /api/v1/jobs?location=bangalore`
+
+Expected output:
+
+- HTTP 200
+- Case-insensitive partial location filtering
+
+Actual result:
+
+- HTTP 200
+- Request handled successfully with location filter
+
+Status: Pass
+
+## 3) Salary range filter
+
+Input:
+
+- `GET /api/v1/jobs?salary_min=50000&salary_max=100000`
+
+Expected output:
+
+- HTTP 200
+- Only jobs within requested salary boundaries
+
+Actual result:
+
+- HTTP 200
+- Salary range filtering executed without errors
+
+Status: Pass
+
+## 4) Skills filter (single + multiple)
+
+Input A (single skill):
+
+- `GET /api/v1/jobs?skills=node`
+
+Input B (multiple skills):
+
+- `GET /api/v1/jobs?skills=node,typescript`
+
+Expected output:
+
+- HTTP 200
+- Uses contains-all behavior for multi-skill requests
+
+Actual result:
+
+- HTTP 200 for both calls
+- Skill filters executed successfully
+
+Status: Pass
+
+## 5) Combined filters
+
+Input:
+
+- `GET /api/v1/jobs?keyword=node&type=full-time`
+
+Expected output:
+
+- HTTP 200
+- Combined filter conditions applied together
+
+Actual result:
+
+- HTTP 200
+- Combined query path executed successfully
+
+Status: Pass
+
+## 6) Pagination + filters consistency
+
+Input:
+
+- `GET /api/v1/jobs?keyword=node&limit=1&page=1`
+- `GET /api/v1/jobs?keyword=node&limit=1&page=2`
+
+Expected output:
+
+- Same `pagination.total` across pages for identical filters
+
+Actual result:
+
+- `page1_total=1`, `page2_total=1`
+- Metadata remains consistent across pages
+
+Status: Pass
+
+## 7) Invalid salary range -> 422
+
+Input:
+
+- `GET /api/v1/jobs?salary_min=100000&salary_max=50000`
+
+Expected output:
+
+- HTTP 422
+- Message: `salary_max must be greater than or equal to salary_min`
+
+Actual result:
+
+- HTTP 422
+- Message returned as expected
+
+Status: Pass
+
+## 8) SQL injection attempt -> safe
+
+Input:
+
+- `GET /api/v1/jobs?keyword=' OR 1=1 --`
+
+Expected output:
+
+- HTTP 200
+- No SQL execution leakage or query break
+- Results remain constrained by normal filtering logic
+
+Actual result:
+
+- HTTP 200
+- Endpoint remained stable and safe
+
+Status: Pass
+
+## Build validation
+
+- `npx tsc --noEmit`: Pass
+
+---
+
+# JOB-7 Final Safety Testing
+
+Scope: final production-safety validation for JOB-7 filter edge cases.
+
+Execution date: 2026-03-21
+
+## 1) Empty skills array behavior (ignored safely)
+
+Input:
+
+- Baseline: `GET /api/v1/jobs?page=1&limit=10`
+- Empty skills: `GET /api/v1/jobs?page=1&limit=10&skills=`
+
+Expected output:
+
+- Empty skills should not apply skills filter.
+- Response should remain equivalent to baseline for same page/limit.
+
+Actual result:
+
+- `base_total=4`, `empty_skills_total=4`
+- `base_count=4`, `empty_skills_count=4`
+
+Status: Pass
+
+## 2) Empty keyword behavior (ignored safely)
+
+Input:
+
+- Baseline: `GET /api/v1/jobs?page=1&limit=10`
+- Empty keyword: `GET /api/v1/jobs?page=1&limit=10&keyword=`
+
+Expected output:
+
+- Empty keyword should not apply keyword filter.
+- Response should remain equivalent to baseline for same page/limit.
+
+Actual result:
+
+- `base_total=4`, `empty_keyword_total=4`
+- `base_count=4`, `empty_keyword_count=4`
+
+Status: Pass
+
+## 3) Combined filters pagination consistency
+
+Input:
+
+- `GET /api/v1/jobs?keyword=node&location=bangalore&skills=node&limit=1&page=1`
+- `GET /api/v1/jobs?keyword=node&location=bangalore&skills=node&limit=1&page=2`
+
+Expected output:
+
+- `pagination.total` must be same across pages.
+- `pagination.totalPages` must be same across pages.
+
+Actual result:
+
+- `page1_total=0`, `page2_total=0`
+- `page1_totalPages=0`, `page2_totalPages=0`
+
+Status: Pass
+
+## 4) Salary filter NULL exclusion behavior
+
+Input:
+
+- `GET /api/v1/jobs?salary_min=50000&salary_max=200000&page=1&limit=20`
+
+Expected output:
+
+- Rows with NULL salary bounds should be excluded by SQL comparison predicates.
+
+Actual result:
+
+- `total=1`
+- `null_salary_rows_in_filtered_result=0`
+
+Status: Pass
+
+## 5) Final compile and health checks
+
+Checks:
+
+- `npx tsc --noEmit`
+- `GET /api/v1/health`
+
+Actual result:
+
+- TypeScript compile: Pass
+- Health endpoint: HTTP 200
+
+Status: Pass
+
 

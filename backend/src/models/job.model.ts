@@ -206,6 +206,11 @@ export const JobModel = {
   async findAll(filters: {
     status?: JobStatus;
     type?: JobType;
+    keyword?: string;
+    location?: string;
+    salary_min?: number;
+    salary_max?: number;
+    skills?: string[];
     limit: number;
     offset: number;
   }): Promise<{ rows: Job[]; total: number }> {
@@ -222,6 +227,35 @@ export const JobModel = {
     if (filters.type) {
       conditions.push(`jobs.type = $${index++}`);
       values.push(filters.type);
+    }
+
+    if (filters.keyword) {
+      conditions.push(`(jobs.title ILIKE $${index} OR jobs.description ILIKE $${index})`);
+      values.push(`%${filters.keyword}%`);
+      index++;
+    }
+
+    if (filters.location) {
+      conditions.push(`jobs.location ILIKE $${index++}`);
+      values.push(`%${filters.location}%`);
+    }
+
+    if (filters.salary_min !== undefined) {
+      // SQL three-valued logic: rows with salary_min = NULL do not satisfy >= comparisons.
+      conditions.push(`jobs.salary_min >= $${index++}`);
+      values.push(filters.salary_min);
+    }
+
+    if (filters.salary_max !== undefined) {
+      // SQL three-valued logic: rows with salary_max = NULL do not satisfy <= comparisons.
+      conditions.push(`jobs.salary_max <= $${index++}`);
+      values.push(filters.salary_max);
+    }
+
+    // Guard against empty skills arrays so we never emit jobs.skills @> '{}' (which matches all rows).
+    if (filters.skills && filters.skills.length > 0) {
+      conditions.push(`jobs.skills @> $${index++}::text[]`);
+      values.push(filters.skills);
     }
 
     const whereClause = `WHERE ${conditions.join(' AND ')}`;

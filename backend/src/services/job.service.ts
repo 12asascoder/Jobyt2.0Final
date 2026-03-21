@@ -72,7 +72,17 @@ export const JobService = {
     await JobModel.closeJob(jobId);
   },
 
-  async getJobs(filters: { page?: number; limit?: number; status?: string; type?: JobType }) {
+  async getJobs(filters: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    type?: JobType;
+    keyword?: string;
+    location?: string;
+    salary_min?: number;
+    salary_max?: number;
+    skills?: string[];
+  }) {
     // Normalize pagination safely.
     const normalizedPage = Number(filters.page);
     const normalizedLimit = Number(filters.limit);
@@ -84,7 +94,15 @@ export const JobService = {
     const offset = (page - 1) * limit;
 
     // Build filter object safely
-    const queryFilters: { status?: JobStatus; type?: JobType } = {};
+    const queryFilters: {
+      status?: JobStatus;
+      type?: JobType;
+      keyword?: string;
+      location?: string;
+      salary_min?: number;
+      salary_max?: number;
+      skills?: string[];
+    } = {};
     const allowedStatus: JobStatus[] = ['draft', 'active', 'closed'];
 
     if (filters.status && allowedStatus.includes(filters.status as JobStatus)) {
@@ -93,6 +111,46 @@ export const JobService = {
 
     if (filters.type) {
       queryFilters.type = filters.type.toLowerCase() as JobType;
+    }
+
+    if (filters.keyword) {
+      const normalizedKeyword = filters.keyword.trim();
+      if (normalizedKeyword.length > 0) {
+        queryFilters.keyword = normalizedKeyword;
+      }
+    }
+
+    if (filters.location) {
+      const normalizedLocation = filters.location.trim();
+      if (normalizedLocation.length > 0) {
+        queryFilters.location = normalizedLocation;
+      }
+    }
+
+    if (filters.salary_min !== undefined) {
+      if (!Number.isFinite(filters.salary_min)) {
+        throw new AppError('salary_min must be a valid number', 422);
+      }
+      queryFilters.salary_min = filters.salary_min;
+    }
+
+    if (filters.salary_max !== undefined) {
+      if (!Number.isFinite(filters.salary_max)) {
+        throw new AppError('salary_max must be a valid number', 422);
+      }
+      queryFilters.salary_max = filters.salary_max;
+    }
+
+    if (
+      queryFilters.salary_min !== undefined &&
+      queryFilters.salary_max !== undefined &&
+      queryFilters.salary_max < queryFilters.salary_min
+    ) {
+      throw new AppError('salary_max must be greater than or equal to salary_min', 422);
+    }
+
+    if (filters.skills && filters.skills.length > 0) {
+      queryFilters.skills = filters.skills;
     }
 
     const result = await JobModel.findAll({ ...queryFilters, limit, offset });
