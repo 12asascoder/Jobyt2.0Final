@@ -1345,3 +1345,136 @@ Route (job.routes.ts)
   - `pagination.total` remains identical between page 1 and page 2.
   - `pagination.totalPages` remains identical between page 1 and page 2.
 
+---
+
+# JOB-8 Pagination Hardening
+
+## Scope
+
+- Hardened existing pagination behavior in `GET /api/v1/jobs`.
+- No endpoint change, no response-shape change, no new library.
+
+## 1) Strict limit and page enforcement
+
+- Controller now clamps query values immediately:
+  - `page = max(1, Number(page) || 1)`
+  - `limit = min(50, max(1, Number(limit) || 10))`
+- Service retains safe normalization and cap logic as defense-in-depth.
+
+## 2) OFFSET abuse protection
+
+- Added upper-bound guard in service:
+  - if `(page - 1) * limit > 10000` -> `400 badRequest('Page limit exceeded')`
+- Prevents deep pagination requests from creating expensive offset scans.
+
+## 3) Stable deterministic ordering
+
+- List query order is now deterministic:
+  - `ORDER BY jobs.created_at DESC, jobs.id DESC`
+- Prevents row shuffling across pages when timestamps are equal.
+
+## 4) Empty page handling
+
+- Out-of-range pages return safely with:
+  - `data: []`
+  - valid `pagination` metadata (`page`, `limit`, `total`, `totalPages`)
+- No error thrown for empty pages.
+
+## 5) Pagination consistency guarantee
+
+- COUNT and SELECT continue to share exactly the same dynamic `whereClause`.
+- Ensures `pagination.total` and `totalPages` remain consistent across filtered pages.
+
+---
+
+# JOB-9 Admin Job Approval API
+
+## Endpoint
+
+- `PATCH /api/v1/admin/jobs/:id/approve`
+- Access: admin only
+- Middleware chain: `authenticate -> authorize('admin')`
+
+## Controller behavior
+
+- Method: `JobController.approveJob`
+- Extracts `jobId` from `req.params.id`
+- Calls `JobService.approveJob(jobId)`
+- Returns success response:
+  - message: `Job approved successfully`
+
+## Service behavior
+
+Method: `JobService.approveJob(jobId: string)`
+
+1. Fetch job by id.
+   - If missing -> `404 Job not found`
+2. Idempotency check.
+   - If already `active`, return existing job and skip DB write.
+3. Allowed transitions:
+   - `draft -> active`
+   - `closed -> active`
+4. Call model update method for status change.
+5. Return updated job.
+
+## Model behavior
+
+- Method: `JobModel.approveJob(jobId: string)`
+- SQL updates only:
+  - `status = 'active'`
+  - `updated_at = NOW()`
+- Uses parameterized query (`WHERE id = $1`)
+- Returns updated row via `RETURNING *`
+
+## Idempotency guarantee
+
+- Repeating `PATCH /api/v1/admin/jobs/:id/approve` on an already active job returns `200`.
+- No model call is made in that case.
+- `updated_at` remains unchanged on repeat approve.
+
+## Architecture flow
+
+```
+PATCH /api/v1/admin/jobs/:id/approve
+  -> admin.routes.ts (admin middleware already applied)
+  -> JobController.approveJob
+  -> JobService.approveJob
+  -> JobModel.approveJob (only when status is not already active)
+```
+
+## Security and scope guarantees
+
+- Endpoint is admin-only via middleware.
+- No recruiter ownership checks are required.
+- No delete behavior involved.
+- No unrelated job update/close/list/search logic changed.
+
+---
+
+# JOB-9 Transition Safety Fix
+
+## What was tightened
+
+- Added strict transition validation inside `JobService.approveJob` before model update.
+- Allowed transitions are now explicitly limited to:
+  - `draft -> active`
+  - `closed -> active`
+
+## Idempotent behavior retained
+
+- `active -> active` remains idempotent and returns success.
+- For idempotent calls, service returns early and does not call model update.
+- `updated_at` is unchanged on repeat approval of an already active job.
+
+## Rejection behavior
+
+- Any non-allowed status transition now fails with:
+  - `400 Bad Request`
+  - message: `Invalid status transition`
+
+## Safety outcome
+
+- No DB write for idempotent approval.
+- No DB write for invalid transitions.
+- Controller response shape and route middleware remain unchanged.
+

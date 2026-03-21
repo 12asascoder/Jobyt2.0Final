@@ -6,8 +6,8 @@ import { sendSuccess, sendPaginated } from '../utils/response';
 export const JobController = {
   async getJobs(req: Request, res: Response, next: NextFunction) {
     try {
-      const page = req.query.page ? parseInt(req.query.page as string) : 1;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
       const status = req.query.status as string | undefined;
       const type = req.query.type as JobType | undefined;
       const keywordRaw = req.query.keyword;
@@ -146,6 +146,16 @@ export const JobController = {
       const recruiterId = req.user!.userId;
       await JobService.closeJob(jobId, recruiterId);
       sendSuccess(res, null, 'Job closed successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async approveJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const jobId = req.params.id as string;
+      await JobService.approveJob(jobId);
+      sendSuccess(res, null, 'Job approved successfully');
     } catch (err) {
       next(err);
     }

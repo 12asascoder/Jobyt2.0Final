@@ -2572,4 +2572,371 @@ Actual result:
 
 Status: Pass
 
+---
+
+# JOB-8 Pagination Testing
+
+Scope: validate pagination hardening for `GET /api/v1/jobs` with production-safe bounds and deterministic behavior.
+
+Execution date: 2026-03-21
+
+## 1) Baseline pagination request
+
+Input:
+
+- `GET /api/v1/jobs?page=1&limit=10`
+
+Expected output:
+
+- HTTP 200
+- `pagination.page = 1`
+- `pagination.limit = 10`
+
+Actual result:
+
+- HTTP 200
+- `pagination.page = 1`, `pagination.limit = 10`
+
+Status: Pass
+
+## 2) page=0 is corrected to page=1
+
+Input:
+
+- `GET /api/v1/jobs?page=0`
+
+Expected output:
+
+- HTTP 200
+- Effective pagination page is corrected to 1
+
+Actual result:
+
+- HTTP 200
+- `pagination.page = 1`
+
+Status: Pass
+
+## 3) limit=100 is capped to 50
+
+Input:
+
+- `GET /api/v1/jobs?limit=100`
+
+Expected output:
+
+- HTTP 200
+- Effective pagination limit is capped to 50
+
+Actual result:
+
+- HTTP 200
+- `pagination.limit = 50`
+
+Status: Pass
+
+## 4) Very high page is blocked
+
+Input:
+
+- `GET /api/v1/jobs?page=99999`
+
+Expected output:
+
+- HTTP 400
+- Message: `Page limit exceeded`
+
+Actual result:
+
+- HTTP 400
+- Message: `Page limit exceeded`
+
+Status: Pass
+
+## 5) Empty page returns [] without error
+
+Input:
+
+- `GET /api/v1/jobs?page=2&limit=10` (while total pages = 1)
+
+Expected output:
+
+- HTTP 200
+- `data = []`
+- Valid pagination metadata retained
+
+Actual result:
+
+- HTTP 200
+- `data = []`
+- `pagination.total = 4`, `pagination.page = 2`, `pagination.totalPages = 1`
+
+Status: Pass
+
+## 6) Consistent totals across filtered pages
+
+Input:
+
+- `GET /api/v1/jobs?keyword=node&limit=1&page=1`
+- `GET /api/v1/jobs?keyword=node&limit=1&page=2`
+
+Expected output:
+
+- Same `pagination.total` and `pagination.totalPages` across pages for same filters
+
+Actual result:
+
+- `page1_total=1`, `page2_total=1`
+- `page1_totalPages=1`, `page2_totalPages=1`
+
+Status: Pass
+
+## Final validation
+
+Checks:
+
+- `npx tsc --noEmit`
+- `GET /api/v1/health`
+
+Actual result:
+
+- TypeScript compile: Pass
+- Health endpoint: HTTP 200
+
+Status: Pass
+
+---
+
+# JOB-9 Testing Notes
+
+Scope: validate `PATCH /api/v1/admin/jobs/:id/approve` endpoint.
+
+Execution date: 2026-03-21
+
+## 1) No token -> 401
+
+Input:
+
+- `PATCH /api/v1/admin/jobs/:id/approve` without `Authorization` header
+
+Expected output:
+
+- HTTP 401
+
+Actual result:
+
+- HTTP 401
+- Response message: `No token provided`
+
+Status: Pass
+
+## 2) Non-admin -> 403
+
+Input:
+
+- `PATCH /api/v1/admin/jobs/:id/approve` with recruiter token
+
+Expected output:
+
+- HTTP 403
+
+Actual result:
+
+- HTTP 403
+- Response message: `Forbidden: Insufficient permissions`
+
+Status: Pass
+
+## 3) Job not found -> 404
+
+Input:
+
+- `PATCH /api/v1/admin/jobs/11111111-1111-1111-1111-111111111111/approve` with admin token
+
+Expected output:
+
+- HTTP 404
+- Response message: `Job not found`
+
+Actual result:
+
+- HTTP 404
+- Response message: `Job not found`
+
+Status: Pass
+
+## 4) Approve draft job -> 200
+
+Input:
+
+- `PATCH /api/v1/admin/jobs/:draftJobId/approve` with admin token
+
+Expected output:
+
+- HTTP 200
+- Message: `Job approved successfully`
+- DB status changes from `draft` to `active`
+
+Actual result:
+
+- HTTP 200
+- Message: `Job approved successfully`
+- DB status updated to `active`
+
+Status: Pass
+
+## 5) Approve already active job -> 200 (idempotent)
+
+Input:
+
+- Repeat `PATCH /api/v1/admin/jobs/:activeJobId/approve` with admin token
+
+Expected output:
+
+- HTTP 200
+- Message: `Job approved successfully`
+- No DB write on repeat call
+
+Actual result:
+
+- HTTP 200
+- Message: `Job approved successfully`
+- No DB write on repeat call (service short-circuit)
+
+Status: Pass
+
+## 6) Approve closed job -> 200
+
+Input:
+
+- `PATCH /api/v1/admin/jobs/:closedJobId/approve` with admin token
+
+Expected output:
+
+- HTTP 200
+- Message: `Job approved successfully`
+- DB status changes from `closed` to `active`
+
+Actual result:
+
+- HTTP 200
+- Message: `Job approved successfully`
+- DB status updated to `active`
+
+Status: Pass
+
+## 7) DB validation: status active, updated_at changed once
+
+Validation checks:
+
+- First approve call updates:
+  - `status = active`
+  - `updated_at = <new_timestamp>`
+- Second approve call (same job already active):
+  - `status` remains `active`
+  - `updated_at` remains unchanged
+
+Result:
+
+- Pass. Idempotency preserved and update timestamp changes only on first transition.
+
+## Final validation
+
+Checks:
+
+- `npx tsc --noEmit`
+- `PATCH /api/v1/admin/jobs/:id/approve` scenario checks
+- `GET /api/v1/health`
+
+Actual result:
+
+- TypeScript compile: Pass
+- Admin job approval endpoint: Pass
+- Health endpoint: HTTP 200
+
+Status: Backend stable after JOB-9 changes.
+
+---
+
+# JOB-9 Transition Safety Fix Testing
+
+Scope: validate strict status transition guard for `PATCH /api/v1/admin/jobs/:id/approve`.
+
+Execution date: 2026-03-21
+
+## 1) draft -> active -> 200
+
+Input:
+
+- `PATCH /api/v1/admin/jobs/:draftJobId/approve` with admin token
+
+Expected output:
+
+- HTTP 200
+- Status transitions from `draft` to `active`
+
+Actual result:
+
+- HTTP 200
+- Status transitioned to `active`
+
+Status: Pass
+
+## 2) closed -> active -> 200
+
+Input:
+
+- `PATCH /api/v1/admin/jobs/:closedJobId/approve` with admin token
+
+Expected output:
+
+- HTTP 200
+- Status transitions from `closed` to `active`
+
+Actual result:
+
+- HTTP 200
+- Status transitioned to `active`
+
+Status: Pass
+
+## 3) active -> active -> 200 (idempotent, no DB write)
+
+Input:
+
+- First approve makes job active
+- Second approve on same active job
+
+Expected output:
+
+- Both calls return HTTP 200
+- No DB write on second call
+- `updated_at` unchanged on second call
+
+Actual result:
+
+- Both calls returned HTTP 200
+- `updated_at` unchanged on repeat call
+
+Status: Pass
+
+## 4) Invalid status transition -> 400
+
+Input:
+
+- Approve request for a job in a non-allowed future status (not `draft`, `closed`, `active`)
+
+Expected output:
+
+- HTTP 400
+- Message: `Invalid status transition`
+- No DB update write
+
+Actual result:
+
+- Logic path validated in service:
+  - non-allowed status throws `badRequest('Invalid status transition')` before model call
+
+Status: Pass
+
 

@@ -134,6 +134,14 @@ export const JobModel = {
     );
   },
 
+  async approveJob(id: string): Promise<Job> {
+    const { rows } = await pool.query(
+      `UPDATE jobs SET status = 'active', updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING *`,
+      [id],
+    );
+    return rows[0];
+  },
+
   async softDelete(id: string): Promise<void> {
     await pool.query(`UPDATE jobs SET deleted_at = NOW() WHERE id = $1`, [id]);
   },
@@ -265,7 +273,7 @@ export const JobModel = {
       FROM jobs
       LEFT JOIN recruiter_profiles ON recruiter_profiles.user_id = jobs.recruiter_id
       ${whereClause}
-      ORDER BY jobs.created_at DESC
+      ORDER BY jobs.created_at DESC, jobs.id DESC
       LIMIT $${index++} OFFSET $${index++}`;
 
     const [countResult, selectResult] = await Promise.all([

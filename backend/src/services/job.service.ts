@@ -72,6 +72,25 @@ export const JobService = {
     await JobModel.closeJob(jobId);
   },
 
+  async approveJob(jobId: string) {
+    const job = await JobModel.findById(jobId);
+    if (!job) {
+      throw notFound('Job');
+    }
+
+    // Idempotent: if already active, return success without DB write.
+    if (job.status === 'active') {
+      return job;
+    }
+
+    const allowedStatuses: JobStatus[] = ['draft', 'closed'];
+    if (!allowedStatuses.includes(job.status)) {
+      throw badRequest('Invalid status transition');
+    }
+
+    return JobModel.approveJob(jobId);
+  },
+
   async getJobs(filters: {
     page?: number;
     limit?: number;
@@ -92,6 +111,10 @@ export const JobService = {
         ? Math.min(50, Math.floor(normalizedLimit))
         : 10;
     const offset = (page - 1) * limit;
+
+    if (offset > 10000) {
+      throw badRequest('Page limit exceeded');
+    }
 
     // Build filter object safely
     const queryFilters: {
