@@ -1,17 +1,21 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { JobController } from '../controllers/job.controller';
-import { authenticate, authorize } from '../middleware/auth';
+import { authenticate, authorize, optionalAuth } from '../middleware/auth';
 import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
 
 const router = Router();
 
 // Public
-router.get('/', JobController.search);
-router.get('/:id', JobController.getById);
+router.get('/', JobController.getJobs);
+router.get('/:id', optionalAuth, JobController.getJobById);
 
-// Recruiter-only management routes.
+// Close endpoint: bypass employerGuard since service validates ownership
+// Uses: authenticate + authorize('recruiter')
+router.patch('/:id/close', authenticate, authorize('recruiter'), JobController.closeJob);
+
+// Recruiter-only management routes (with profile check).
 // Order is important:
 // 1) authenticate: token must be valid
 // 2) authorize('recruiter'): role must be recruiter

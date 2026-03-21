@@ -6,6 +6,7 @@ export type JobStatus = 'draft' | 'active' | 'closed';
 export interface Job {
   id: string;
   recruiter_id: string;
+  company_name?: string | null;
   title: string;
   location: string | null;
   salary_min: number | null;
@@ -35,9 +36,17 @@ export interface JobFilters {
 
 export const JobModel = {
   async findById(id: string): Promise<Job | null> {
-    const { rows } = await pool.query(`SELECT * FROM jobs WHERE id = $1 AND deleted_at IS NULL`, [
-      id,
-    ]);
+    const { rows } = await pool.query(
+      `SELECT
+        jobs.*,
+        recruiter_profiles.company_name
+       FROM jobs
+       LEFT JOIN recruiter_profiles ON recruiter_profiles.user_id = jobs.recruiter_id
+       WHERE jobs.id = $1
+         AND jobs.deleted_at IS NULL
+       LIMIT 1`,
+      [id],
+    );
     return rows[0] || null;
   },
 
@@ -118,6 +127,13 @@ export const JobModel = {
     return rows[0];
   },
 
+  async closeJob(id: string): Promise<void> {
+    await pool.query(
+      `UPDATE jobs SET status = 'closed', updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+  },
+
   async softDelete(id: string): Promise<void> {
     await pool.query(`UPDATE jobs SET deleted_at = NOW() WHERE id = $1`, [id]);
   },
@@ -185,6 +201,45 @@ export const JobModel = {
     ]);
 
     return { jobs: dataResult.rows, total: parseInt(countResult.rows[0].count) };
+  },
+
+  async findAll(filters: {
+    status?: JobStatus;
+    type?: JobType;
+    limit: number;
+    offset: number;
+  }): Promise<{ rows: Job[]; total: number }> {
+    // Build WHERE clause once and reuse in both COUNT and SELECT queries.
+    const conditions: string[] = ['jobs.deleted_at IS NULL'];
+    const values: unknown[] = [];
+    let index = 1;
+
+    if (filters.status) {
+      conditions.push(`jobs.status = $${index++}`);
+      values.push(filters.status);
+    }
+
+    if (filters.type) {
+      conditions.push(`jobs.type = $${index++}`);
+      values.push(filters.type);
+    }
+
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
+
+    const countQuery = `SELECT COUNT(*) FROM jobs ${whereClause}`;
+    const selectQuery = `SELECT jobs.*, recruiter_profiles.company_name
+      FROM jobs
+      LEFT JOIN recruiter_profiles ON recruiter_profiles.user_id = jobs.recruiter_id
+      ${whereClause}
+      ORDER BY jobs.created_at DESC
+      LIMIT $${index++} OFFSET $${index++}`;
+
+    const [countResult, selectResult] = await Promise.all([
+      pool.query(countQuery, values),
+      pool.query(selectQuery, [...values, filters.limit, filters.offset]),
+    ]);
+
+    return { rows: selectResult.rows, total: Number(countResult.rows[0].count) };
   },
 
   async findByRecruiter(recruiterId: string): Promise<Job[]> {

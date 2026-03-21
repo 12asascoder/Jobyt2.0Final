@@ -1,7 +1,7 @@
 import { JobModel, JobFilters, JobType, JobStatus } from '../models/job.model';
 import { CreditService } from './credit.service';
 import { UserModel } from '../models/user.model';
-import { AppError, badRequest } from '../utils/appError';
+import { AppError, badRequest, notFound } from '../utils/appError';
 
 export const JobService = {
   async createJob(
@@ -48,14 +48,86 @@ export const JobService = {
     return JobModel.update(jobId, { status: 'active' });
   },
 
+  async closeJob(jobId: string, recruiterId: string) {
+    const job = await JobModel.findById(jobId);
+    if (!job) throw new AppError('Job not found', 404);
+    if (job.recruiter_id !== recruiterId)
+      throw new AppError('Forbidden', 403);
+
+    // Idempotent: if already closed, return success without DB write
+    if (job.status === 'closed') {
+      return; // Job already in desired state
+    }
+
+    // Update job status to closed
+    await JobService._updateJobStatus(jobId, 'closed');
+  },
+
+  async _updateJobStatus(jobId: string, targetStatus: JobStatus) {
+    // Extensible pattern for future status transitions
+    // Currently only 'closed' is supported
+    if (targetStatus !== 'closed') {
+      throw new AppError('Unsupported status transition', 400);
+    }
+    await JobModel.closeJob(jobId);
+  },
+
+  async getJobs(filters: { page?: number; limit?: number; status?: string; type?: JobType }) {
+    // Normalize pagination safely.
+    const normalizedPage = Number(filters.page);
+    const normalizedLimit = Number(filters.limit);
+    const page = Number.isFinite(normalizedPage) && normalizedPage >= 1 ? Math.floor(normalizedPage) : 1;
+    const limit =
+      Number.isFinite(normalizedLimit) && normalizedLimit >= 1
+        ? Math.min(50, Math.floor(normalizedLimit))
+        : 10;
+    const offset = (page - 1) * limit;
+
+    // Build filter object safely
+    const queryFilters: { status?: JobStatus; type?: JobType } = {};
+    const allowedStatus: JobStatus[] = ['draft', 'active', 'closed'];
+
+    if (filters.status && allowedStatus.includes(filters.status as JobStatus)) {
+      queryFilters.status = filters.status as JobStatus;
+    }
+
+    if (filters.type) {
+      queryFilters.type = filters.type.toLowerCase() as JobType;
+    }
+
+    const result = await JobModel.findAll({ ...queryFilters, limit, offset });
+    const jobs = result.rows;
+    const total = Number(result.total);
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      jobs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
+  },
+
   async searchJobs(filters: JobFilters) {
     return JobModel.search(filters);
   },
 
-  async getJobById(id: string) {
+  async getJobById(id: string, userId: string | null = null) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) throw notFound('Job');
+
     const job = await JobModel.findById(id);
-    if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
-    await JobModel.incrementViews(id);
+    if (!job) throw notFound('Job');
+
+    if (job.status === 'draft') {
+      if (!userId || job.recruiter_id !== userId) {
+        throw notFound('Job');
+      }
+    }
+
     return job;
   },
 

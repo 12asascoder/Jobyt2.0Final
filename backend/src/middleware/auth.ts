@@ -19,6 +19,23 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
   }
 };
 
+export const optionalAuth = (req: Request, _res: Response, next: NextFunction): void => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    req.user = decoded;
+  } catch {
+    // Ignore invalid token for optional auth routes to keep them public.
+  }
+  next();
+};
+
 export const authorize = (...roles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     // Not authenticated
