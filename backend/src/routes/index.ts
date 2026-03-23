@@ -11,6 +11,7 @@ import referralRoutes from './referral.routes';
 import adminRoutes from './admin.routes';
 import analyticsRoutes from './analytics.routes';
 import pipelineRoutes from './pipeline.routes';
+import roadmapRoutes from './roadmap.routes';
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use('/referrals', referralRoutes);
 router.use('/admin', adminRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/pipeline', pipelineRoutes);
+router.use('/roadmaps', roadmapRoutes);
 
 export default router;

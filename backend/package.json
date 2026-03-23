@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
-    "db:seed": "dotenv -e .env -- ts-node src/config/seed.ts"
+    "db:seed": "dotenv -e .env -- ts-node src/config/seed.ts",
+    "roadmap:ingest": "dotenv -e .env -- ts-node src/scripts/runIngestion.ts"
   },
   "keywords": [],
   "author": "Parth Nath Chauhan",
