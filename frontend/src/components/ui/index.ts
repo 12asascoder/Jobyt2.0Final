@@ -5,3 +5,4 @@ export { Card, CardHeader, CardBody, CardFooter } from './Card';
 export { Spinner } from './Spinner';
 export { Avatar } from './Avatar';
 export { Modal } from './Modal';
+export { default as LogoLoop } from './LogoLoop';

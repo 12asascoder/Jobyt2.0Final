@@ -57,18 +57,18 @@ export const Sidebar = () => {
 
     const nav =
         user?.role === 'recruiter' ? recruiterNav :
-        user?.role === 'admin' ? adminNav :
-        applicantNav;
+            user?.role === 'admin' ? adminNav :
+                applicantNav;
 
     const roleLabel =
         user?.role === 'recruiter' ? 'Recruiter' :
-        user?.role === 'admin' ? 'Admin' :
-        'Applicant';
+            user?.role === 'admin' ? 'Admin' :
+                'Applicant';
 
     const roleBadgeColor =
         user?.role === 'recruiter' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-        user?.role === 'admin' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-        'bg-brand-primary/20 text-brand-primary border-brand-primary/30';
+            user?.role === 'admin' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                'bg-brand-primary/20 text-brand-primary border-brand-primary/30';
 
     return (
         <aside className="flex h-full w-60 flex-col bg-slate-900 border-r border-slate-800 px-3 py-5 shrink-0">
@@ -114,7 +114,7 @@ export const Sidebar = () => {
                     <div className="relative w-4 h-4">
                         <div className="absolute inset-0 border-[3px] border-brand-primary rounded-full border-t-transparent -rotate-45" />
                     </div>
-                    <span className="text-xs font-bold text-white tracking-tight">
+                    <span className="font-display text-xs font-bold text-white tracking-tight">
                         jobyt<span className="text-brand-primary">.</span>
                     </span>
                 </div>
