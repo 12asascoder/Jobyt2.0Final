@@ -4,6 +4,7 @@ import { NotificationModel } from '../models/notification.model';
 import { withTransaction } from '../utils/transaction';
 import { CreditService } from './credit.service';
 import { CREDIT_COSTS } from '../config/creditCosts';
+import { PipelineEventModel } from '../models/pipeline_event.model';
 
 export const ApplicationService = {
   async apply(
@@ -23,7 +24,7 @@ export const ApplicationService = {
         throw Object.assign(new Error('You have already applied to this job'), { statusCode: 409 });
 
       // 3) Credit deduction (atomic under the same DB transaction)
-      await CreditService.deductCredits(
+      const { transactionId, balanceAfter } = await CreditService.deductCredits(
         applicantId,
         CREDIT_COSTS.APPLY_JOB,
         'Job application',
@@ -32,16 +33,35 @@ export const ApplicationService = {
       );
 
       // 4) Create application (transaction-scoped)
-      const application = await ApplicationModel.create(
+      let application;
+      try {
+        application = await ApplicationModel.create(
+          {
+            job_id: jobId,
+            applicant_id: applicantId,
+            ...data,
+          },
+          client,
+        );
+      } catch (err: unknown) {
+        const code = err && typeof err === 'object' && 'code' in err ? String((err as { code: unknown }).code) : '';
+        if (code === '23505') {
+          throw Object.assign(new Error('You have already applied to this job'), { statusCode: 409 });
+        }
+        throw err;
+      }
+
+      // 5) Initial pipeline event
+      await PipelineEventModel.create(
         {
-          job_id: jobId,
-          applicant_id: applicantId,
-          ...data,
+          application_id: application.id,
+          new_status: 'APPLIED',
+          changed_by_id: applicantId,
         },
         client,
       );
 
-      // 5) Notify recruiter (transaction-scoped for consistent state)
+      // 6) Notify recruiter (transaction-scoped for consistent state)
       await NotificationModel.create(
         {
           user_id: job.recruiter_id,
@@ -53,19 +73,35 @@ export const ApplicationService = {
         client,
       );
 
-      return application;
+      return {
+        ...application,
+        creditsRemaining: balanceAfter,
+        creditTransactionId: transactionId,
+      };
     });
   },
 
-  async updateStatus(recruiterId: string, applicationId: string, status: ApplicationStatus) {
+  async checkApplied(applicantId: string, jobId: string) {
+    const existing = await ApplicationModel.findByJobAndApplicant(jobId, applicantId);
+    return { hasApplied: !!existing };
+  },
+
+  async updateStatus(user: { userId: string; role: string }, applicationId: string, status: ApplicationStatus) {
     const application = await ApplicationModel.findById(applicationId);
     if (!application) throw Object.assign(new Error('Application not found'), { statusCode: 404 });
 
     const job = await JobModel.findById(application.job_id);
-    if (!job || job.recruiter_id !== recruiterId)
+    if (!job || (user.role !== 'admin' && job.recruiter_id !== user.userId))
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
 
     const updated = await ApplicationModel.updateStatus(applicationId, status);
+
+    await PipelineEventModel.create({
+      application_id: application.id,
+      previous_status: application.status,
+      new_status: status,
+      changed_by_id: user.userId,
+    });
 
     // Notify applicant
     await NotificationModel.create({
@@ -118,5 +154,23 @@ export const ApplicationService = {
 
   async getRecruiterApplicationsStatistics(recruiterId: string) {
     return ApplicationModel.getRecruiterApplicationStats(recruiterId);
+  },
+
+  async getEvents(user: { userId: string; role: string }, applicationId: string) {
+    const application = await ApplicationModel.findById(applicationId);
+    if (!application) throw Object.assign(new Error('Application not found'), { statusCode: 404 });
+
+    if (user.role === 'applicant' && application.applicant_id !== user.userId) {
+      throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+    }
+
+    if (user.role === 'recruiter') {
+      const job = await JobModel.findById(application.job_id);
+      if (!job || job.recruiter_id !== user.userId) {
+        throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+      }
+    }
+
+    return PipelineEventModel.findByApplication(applicationId);
   },
 };

@@ -79,7 +79,7 @@ export interface Job {
 
 // ── Applications ─────────────────────────────────────────────────────────────
 export type ApplicationStatus =
-  | 'applied' | 'in_review' | 'shortlisted' | 'interview' | 'offer' | 'hired' | 'rejected';
+  | 'APPLIED' | 'SCREENING' | 'SHORTLISTED' | 'INTERVIEW' | 'SELECTED' | 'HIRED' | 'REJECTED';
 
 export interface Application {
   id: string;
@@ -94,6 +94,20 @@ export interface Application {
   job_title?: string;
   location?: string;
   company_name?: string;
+}
+
+export interface PipelineEvent {
+  id: string;
+  application_id: string;
+  previous_status: ApplicationStatus | null;
+  new_status: ApplicationStatus;
+  notes: string | null;
+  created_at: string;
+  changed_by: {
+    id: string;
+    role: string;
+    name: string | null;
+  } | null;
 }
 
 // ── Credits ───────────────────────────────────────────────────────────────────

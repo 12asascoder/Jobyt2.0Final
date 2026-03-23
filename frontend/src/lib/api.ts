@@ -24,8 +24,17 @@ async function request<T>(
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('hp_access');
+      localStorage.removeItem('hp_refresh');
+      tokenStore.set(null);
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+
     const error = await res.json().catch(() => ({ message: 'Request failed' }));
-    throw new ApiError(error.message || 'Request failed', res.status, error.errors);
+    throw new ApiError(error.message || 'Request failed', res.status, error.errors, error);
   }
 
   return res.json();
@@ -35,7 +44,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public errors?: unknown
+    public errors?: unknown,
+    public data?: any
   ) {
     super(message);
     this.name = 'ApiError';

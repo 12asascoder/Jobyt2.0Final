@@ -429,24 +429,26 @@ async function seed() {
 
     const applications = [
       // John's applications
-      { job_idx: 0, applicant_id: johnId, status: 'shortlisted' }, // Google - Senior SWE
-      { job_idx: 1, applicant_id: johnId, status: 'interview' }, // Google - ML Engineer
-      { job_idx: 5, applicant_id: johnId, status: 'applied' }, // Microsoft - Backend
-      { job_idx: 6, applicant_id: johnId, status: 'in_review' }, // Microsoft - Full Stack
-      { job_idx: 10, applicant_id: johnId, status: 'offer' }, // Amazon - SDE
+      { job_idx: 0, applicant_id: johnId, status: 'SHORTLISTED' }, // Google - Senior SWE
+      { job_idx: 1, applicant_id: johnId, status: 'INTERVIEW' }, // Google - ML Engineer
+      { job_idx: 5, applicant_id: johnId, status: 'APPLIED' }, // Microsoft - Backend
+      { job_idx: 6, applicant_id: johnId, status: 'SCREENING' }, // Microsoft - Full Stack
+      { job_idx: 10, applicant_id: johnId, status: 'SELECTED' }, // Amazon - SDE
       // Jane's applications
-      { job_idx: 1, applicant_id: janeId, status: 'shortlisted' }, // Google - ML Engineer
-      { job_idx: 8, applicant_id: janeId, status: 'applied' }, // Microsoft - Data Scientist
-      { job_idx: 14, applicant_id: janeId, status: 'in_review' }, // Amazon - Data Engineer
-      { job_idx: 2, applicant_id: janeId, status: 'rejected' }, // Google - PM Search
+      { job_idx: 1, applicant_id: janeId, status: 'SHORTLISTED' }, // Google - ML Engineer
+      { job_idx: 8, applicant_id: janeId, status: 'APPLIED' }, // Microsoft - Data Scientist
+      { job_idx: 14, applicant_id: janeId, status: 'SCREENING' }, // Amazon - Data Engineer
+      { job_idx: 2, applicant_id: janeId, status: 'REJECTED' }, // Google - PM Search
     ];
 
     for (const app of applications) {
-      await client.query(
+      const appRes = await client.query(
         `
         INSERT INTO applications (job_id, applicant_id, cover_letter, status, status_updated_at)
         VALUES ($1, $2, $3, $4, NOW())
-        ON CONFLICT (job_id, applicant_id) DO NOTHING
+        ON CONFLICT (job_id, applicant_id) 
+        DO UPDATE SET status = EXCLUDED.status, status_updated_at = NOW()
+        RETURNING id
       `,
         [
           jobIds[app.job_idx],
@@ -455,6 +457,15 @@ async function seed() {
           app.status,
         ],
       );
+
+      if (appRes.rowCount && appRes.rowCount > 0 && appRes.rows[0].id) {
+        // Create the initial pipeline event
+        await client.query(
+          `INSERT INTO pipeline_events (application_id, new_status, changed_by_id)
+           VALUES ($1, $2, $3)`,
+          [appRes.rows[0].id, app.status, app.applicant_id],
+        );
+      }
       console.log(`  Application seeded for applicant (status: ${app.status})`);
     }
 

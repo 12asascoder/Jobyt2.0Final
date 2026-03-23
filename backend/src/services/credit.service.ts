@@ -33,13 +33,18 @@ async function addCreditsTx(
   });
 }
 
+export type DeductCreditsResult = {
+  transactionId: string;
+  balanceAfter: number;
+};
+
 async function deductCreditsTx(
   client: PoolClient,
   userId: string,
   amount: number,
   description: string,
   referenceId?: string,
-): Promise<void> {
+): Promise<DeductCreditsResult> {
   if (amount <= 0) throw new Error('Amount must be greater than 0');
   if (!description || description.trim() === '') throw new Error('Ledger description required');
 
@@ -57,7 +62,7 @@ async function deductCreditsTx(
     });
   const newBalance = balance - amount;
   await client.query(`UPDATE users SET credit_balance = $1 WHERE id = $2`, [newBalance, userId]);
-  await CreditModel.record(client, {
+  const recorded = await CreditModel.record(client, {
     user_id: userId,
     type: 'debit',
     amount,
@@ -65,6 +70,7 @@ async function deductCreditsTx(
     description,
     reference_id: referenceId,
   });
+  return { transactionId: recorded.id, balanceAfter: recorded.balance_after };
 }
 
 export const CreditService = {
@@ -98,16 +104,17 @@ export const CreditService = {
     description: string,
     referenceId?: string,
     client?: PoolClient,
-  ): Promise<void> {
+  ): Promise<DeductCreditsResult> {
     console.log(`[CREDIT] debit ${amount} for user ${userId}`);
     const db = client ?? (await pool.connect());
     const shouldManageTx = !client;
     try {
       if (shouldManageTx) await db.query('BEGIN');
 
-      await deductCreditsTx(db, userId, amount, description, referenceId);
+      const result = await deductCreditsTx(db, userId, amount, description, referenceId);
 
       if (shouldManageTx) await db.query('COMMIT');
+      return result;
     } catch (err) {
       if (shouldManageTx) await db.query('ROLLBACK');
       throw err;

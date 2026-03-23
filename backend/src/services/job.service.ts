@@ -15,6 +15,11 @@ export const JobService = {
       status?: JobStatus;
     },
   ) {
+    const isDuplicate = await JobModel.checkDuplicate(recruiterId, data.title);
+    if (isDuplicate) {
+      throw Object.assign(new Error('You already have an active or draft job with this title'), { statusCode: 409 });
+    }
+
     if (data.status === 'active') {
       await CreditService.deductJobPostingCredits(recruiterId);
     }

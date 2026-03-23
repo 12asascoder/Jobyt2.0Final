@@ -4,6 +4,7 @@ import { ApplicationController } from '../controllers/application.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireCredits } from '../middleware/credit.middleware';
 import { CREDIT_COSTS } from '../config/creditCosts';
+import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
 
 const router = Router();
@@ -19,14 +20,34 @@ router.get('/my/filtered', authorize('applicant'), ApplicationController.myAppli
 // Applicant: get application statistics
 router.get('/my/stats', authorize('applicant'), ApplicationController.getApplicationStats);
 
-// Recruiter: view all applicants across all jobs
-router.get('/recruiter/applicants', authorize('recruiter', 'admin'), ApplicationController.recruiterApplications);
+// Recruiter: view all applicants across all jobs.
+// We require recruiter profile middleware here because downstream service
+// logic assumes recruiter ownership context.
+router.get(
+  '/recruiter/applicants',
+  authorize('recruiter'),
+  employerGuard,
+  ApplicationController.recruiterApplications,
+);
 
 // Recruiter: view all applicants with filters (status, jobTitle, applicantName)
-router.get('/recruiter/applicants/filtered', authorize('recruiter', 'admin'), ApplicationController.recruiterApplicationsFiltered);
+router.get(
+  '/recruiter/applicants/filtered',
+  authorize('recruiter'),
+  employerGuard,
+  ApplicationController.recruiterApplicationsFiltered,
+);
 
 // Recruiter: get statistics for all applications
-router.get('/recruiter/applicants/stats', authorize('recruiter', 'admin'), ApplicationController.recruiterApplicationsStats);
+router.get(
+  '/recruiter/applicants/stats',
+  authorize('recruiter'),
+  employerGuard,
+  ApplicationController.recruiterApplicationsStats,
+);
+
+// Applicant: check if applied to a job
+router.get('/jobs/:jobId/check', authorize('applicant'), ApplicationController.checkApplication);
 
 // Applicant: apply to a job
 router.post(
@@ -39,23 +60,32 @@ router.post(
 );
 
 // Recruiter: view applications for a job
-router.get('/jobs/:jobId', authorize('recruiter', 'admin'), ApplicationController.jobApplications);
+router.get('/jobs/:jobId', authorize('recruiter'), employerGuard, ApplicationController.jobApplications);
 
 // Recruiter: update application status
 router.patch(
   '/:id/status',
-  authorize('recruiter', 'admin'),
+  // Middleware order matters: auth -> role -> profile -> validation -> controller.
+  authorize('recruiter'),
+  employerGuard,
   body('status').isIn([
-    'applied',
-    'in_review',
-    'shortlisted',
-    'interview',
-    'offer',
-    'hired',
-    'rejected',
+    'APPLIED',
+    'SCREENING',
+    'SHORTLISTED',
+    'INTERVIEW',
+    'SELECTED',
+    'HIRED',
+    'REJECTED',
   ]),
   validate,
   ApplicationController.updateStatus,
+);
+
+// Any role: get pipeline events for an application
+router.get(
+  '/:id/events',
+  authorize('applicant', 'recruiter', 'admin'),
+  ApplicationController.getEvents,
 );
 
 export default router;
