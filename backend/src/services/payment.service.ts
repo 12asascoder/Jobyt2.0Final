@@ -54,7 +54,7 @@ export const PaymentService = {
       event = stripe.webhooks.constructEvent(
         rawBody,
         signature,
-        process.env.STRIPE_WEBHOOK_SECRET!
+        process.env.STRIPE_WEBHOOK_SECRET!,
       );
     } catch {
       throw new AppError('Webhook signature verification failed', 400);

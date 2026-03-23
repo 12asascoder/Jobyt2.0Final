@@ -16,7 +16,11 @@ export const MessageService = {
   },
 
   async sendMessage(conversationId: string, senderId: string, body: string, recipientId: string) {
-    const message = await MessageModel.createMessage({ conversation_id: conversationId, sender_id: senderId, body });
+    const message = await MessageModel.createMessage({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      body,
+    });
 
     // Real-time delivery to conversation room
     emitMessage(conversationId, message);

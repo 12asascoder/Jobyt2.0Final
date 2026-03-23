@@ -21,12 +21,15 @@ interface ApplicationWithProfile extends Application {
   profile?: ApplicantProfile;
 }
 
+import { ApplicationTimeline } from '@/components/applications/ApplicationTimeline';
+
 export default function JobApplicationsPage() {
   const params = useParams();
   const jobId = params.id as string;
   const { applications, total, isLoading, fetchJobApplications, updateStatus } = useApplications();
   const [selected, setSelected] = useState<ApplicationWithProfile | null>(null);
   const [filter, setFilter] = useState<ApplicationStatus | 'all'>('all');
+  const [timelineAppId, setTimelineAppId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchJobApplications(jobId);
@@ -45,8 +48,8 @@ export default function JobApplicationsPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Applications</h1>
-          <p className="text-sm text-gray-400">{total} total applications</p>
+          <h1 className="text-2xl font-bold text-gray-900">Application Pipeline</h1>
+          <p className="text-sm text-gray-400">Drag and drop candidates to update their stage.</p>
         </div>
         <Link href={`/recruiter/jobs/${jobId}`}>
           <Button variant="outline" size="sm">← Back to Job</Button>
@@ -102,6 +105,7 @@ export default function JobApplicationsPage() {
                     <option key={s} value={s}>{APPLICATION_STATUS_LABELS[s]}</option>
                   ))}
                 </select>
+                <Button size="sm" variant="outline" onClick={() => setTimelineAppId(app.id)}>Timeline</Button>
                 {app.resume_snapshot_url && (
                   <a href={app.resume_snapshot_url} target="_blank" rel="noreferrer">
                     <Button size="sm" variant="outline">Resume</Button>
@@ -110,6 +114,24 @@ export default function JobApplicationsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Timeline Modal */}
+      {timelineAppId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 !m-0">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="text-lg font-semibold text-gray-900">Application Timeline</h3>
+              <button onClick={() => setTimelineAppId(null)} className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100 focus:outline-none">✕</button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <ApplicationTimeline applicationId={timelineAppId} />
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <Button variant="outline" onClick={() => setTimelineAppId(null)}>Close</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

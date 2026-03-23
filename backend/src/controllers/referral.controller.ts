@@ -7,6 +7,8 @@ export const ReferralController = {
     try {
       const data = await ReferralService.getDashboard(req.user!.userId);
       sendSuccess(res, data);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 };

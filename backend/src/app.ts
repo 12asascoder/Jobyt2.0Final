@@ -9,17 +9,22 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  }),
+);
 
 // Rate limiting
-app.use('/api', rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { success: false, message: 'Too many requests, please try again later.' },
-}));
+app.use(
+  '/api',
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { success: false, message: 'Too many requests, please try again later.' },
+  }),
+);
 
 // Stripe webhook needs raw body — must come BEFORE express.json()
 app.use('/api/v1/payments/webhook/stripe', express.raw({ type: 'application/json' }));

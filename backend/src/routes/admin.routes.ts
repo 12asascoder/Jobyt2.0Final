@@ -12,43 +12,40 @@ router.use(authenticate, authorize('admin'));
 router.get('/users', AdminController.listUsers);
 router.get('/users/:id', AdminController.getUserById);
 
-router.patch('/users/:id/ban',
+router.patch(
+  '/users/:id/ban',
   body('reason').notEmpty().withMessage('Ban reason is required'),
   validate,
-  AdminController.banUser
+  AdminController.banUser,
 );
 
 router.patch('/users/:id/unban', AdminController.unbanUser);
 
-router.delete('/users/:id',
+router.delete(
+  '/users/:id',
   body('reason').notEmpty().withMessage('Delete reason is required'),
   validate,
-  AdminController.deleteUser
+  AdminController.deleteUser,
 );
 
 // ── Jobs ─────────────────────────────────────────────────────────────────────────
 router.get('/jobs', AdminController.listJobs);
 
-router.patch('/jobs/:id/close',
-  body('reason').notEmpty(),
-  validate,
-  AdminController.closeJob
-);
+router.patch('/jobs/:id/close', body('reason').notEmpty(), validate, AdminController.closeJob);
 
-router.delete('/jobs/:id',
-  body('reason').notEmpty(),
-  validate,
-  AdminController.deleteJob
-);
+router.delete('/jobs/:id', body('reason').notEmpty(), validate, AdminController.deleteJob);
 
 // ── Credits ───────────────────────────────────────────────────────────────────────
 router.get('/credits', AdminController.getAllTransactions);
 
-router.post('/credits/:id/adjust',
-  body('amount').isInt().withMessage('Amount must be an integer (positive to add, negative to deduct)'),
+router.post(
+  '/credits/:id/adjust',
+  body('amount')
+    .isInt()
+    .withMessage('Amount must be an integer (positive to add, negative to deduct)'),
   body('reason').notEmpty().withMessage('Reason is required'),
   validate,
-  AdminController.adjustCredits
+  AdminController.adjustCredits,
 );
 
 // ── Metrics & Audit ────────────────────────────────────────────────────────────────

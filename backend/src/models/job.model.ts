@@ -1,4 +1,5 @@
 import pool from '../config/database';
+import { PoolClient } from 'pg';
 
 export type JobType = 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
 export type JobStatus = 'draft' | 'active' | 'closed';
@@ -34,12 +35,20 @@ export interface JobFilters {
 }
 
 export const JobModel = {
-  async findById(id: string): Promise<Job | null> {
-    const { rows } = await pool.query(
-      `SELECT * FROM jobs WHERE id = $1 AND deleted_at IS NULL`,
-      [id]
-    );
+  async findById(id: string, client?: PoolClient): Promise<Job | null> {
+    const db = client ?? pool;
+    const { rows } = await db.query(`SELECT * FROM jobs WHERE id = $1 AND deleted_at IS NULL`, [
+      id,
+    ]);
     return rows[0] || null;
+  },
+
+  async checkDuplicate(recruiterId: string, title: string): Promise<boolean> {
+    const { rows } = await pool.query(
+      `SELECT 1 FROM jobs WHERE recruiter_id = $1 AND title ILIKE $2 AND status IN ('active', 'draft') AND deleted_at IS NULL`,
+      [recruiterId, title]
+    );
+    return rows.length > 0;
   },
 
   async create(data: {
@@ -66,18 +75,23 @@ export const JobModel = {
         data.salary_max || null,
         data.skills || [],
         data.status || 'draft',
-      ]
+      ],
     );
     return rows[0];
   },
 
-  async update(id: string, data: Partial<Omit<Job, 'id' | 'recruiter_id' | 'created_at' | 'updated_at' | 'deleted_at' | 'views_count'>>): Promise<Job> {
+  async update(
+    id: string,
+    data: Partial<
+      Omit<Job, 'id' | 'recruiter_id' | 'created_at' | 'updated_at' | 'deleted_at' | 'views_count'>
+    >,
+  ): Promise<Job> {
     const fields = Object.keys(data);
     const values = Object.values(data);
     const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
     const { rows } = await pool.query(
       `UPDATE jobs SET ${setClause}, updated_at = NOW() WHERE id = $${fields.length + 1} AND deleted_at IS NULL RETURNING *`,
-      [...values, id]
+      [...values, id],
     );
     return rows[0];
   },
@@ -132,9 +146,11 @@ export const JobModel = {
 
     const where = conditions.join(' AND ');
     const orderBy =
-      filters.sort === 'salary' ? 'j.salary_max DESC NULLS LAST' :
-      filters.sort === 'relevance' && filters.keyword ? `ts_rank(j.search_vector, plainto_tsquery('english', $1)) DESC` :
-      'j.created_at DESC';
+      filters.sort === 'salary'
+        ? 'j.salary_max DESC NULLS LAST'
+        : filters.sort === 'relevance' && filters.keyword
+          ? `ts_rank(j.search_vector, plainto_tsquery('english', $1)) DESC`
+          : 'j.created_at DESC';
 
     const countQuery = `SELECT COUNT(*) FROM jobs j WHERE ${where}`;
     const dataQuery = `SELECT j.*, rp.company_name FROM jobs j
@@ -155,7 +171,7 @@ export const JobModel = {
         (SELECT COUNT(*) FROM applications a WHERE a.job_id = j.id)::int AS application_count
        FROM jobs j
        WHERE j.recruiter_id = $1 AND j.deleted_at IS NULL ORDER BY j.created_at DESC`,
-      [recruiterId]
+      [recruiterId],
     );
     return rows;
   },
@@ -165,15 +181,15 @@ export const JobModel = {
   async saveJob(applicantId: string, jobId: string): Promise<void> {
     await pool.query(
       `INSERT INTO saved_jobs (applicant_id, job_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-      [applicantId, jobId]
+      [applicantId, jobId],
     );
   },
 
   async unsaveJob(applicantId: string, jobId: string): Promise<void> {
-    await pool.query(
-      `DELETE FROM saved_jobs WHERE applicant_id = $1 AND job_id = $2`,
-      [applicantId, jobId]
-    );
+    await pool.query(`DELETE FROM saved_jobs WHERE applicant_id = $1 AND job_id = $2`, [
+      applicantId,
+      jobId,
+    ]);
   },
 
   async getSavedJobs(applicantId: string): Promise<Job[]> {
@@ -184,7 +200,7 @@ export const JobModel = {
        LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
        WHERE sj.applicant_id = $1 AND j.deleted_at IS NULL
        ORDER BY sj.saved_at DESC`,
-      [applicantId]
+      [applicantId],
     );
     return rows;
   },
@@ -192,14 +208,19 @@ export const JobModel = {
   async isSaved(applicantId: string, jobId: string): Promise<boolean> {
     const { rows } = await pool.query(
       `SELECT 1 FROM saved_jobs WHERE applicant_id = $1 AND job_id = $2`,
-      [applicantId, jobId]
+      [applicantId, jobId],
     );
     return rows.length > 0;
   },
 
   // ── Admin ───────────────────────────────────────────────────────────────────
 
-  async adminList(filters: { status?: string; search?: string; page: number; limit: number }): Promise<{ jobs: Job[]; total: number }> {
+  async adminList(filters: {
+    status?: string;
+    search?: string;
+    page: number;
+    limit: number;
+  }): Promise<{ jobs: Job[]; total: number }> {
     const conditions: string[] = ['j.deleted_at IS NULL'];
     const params: unknown[] = [];
     let idx = 1;
@@ -224,7 +245,7 @@ export const JobModel = {
         `SELECT j.*, rp.company_name FROM jobs j
          LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
          WHERE ${where} ORDER BY j.created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
-        [...params, filters.limit, offset]
+        [...params, filters.limit, offset],
       ),
     ]);
 

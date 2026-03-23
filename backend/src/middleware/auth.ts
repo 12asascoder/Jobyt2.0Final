@@ -21,8 +21,15 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
 
 export const authorize = (...roles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      res.status(403).json({ success: false, message: 'Access denied' });
+    // Not authenticated
+    if (!req.user) {
+      res.status(401).json({ success: false, message: 'Unauthorized' });
+      return;
+    }
+
+    // Authenticated but wrong role
+    if (!roles.includes(req.user.role)) {
+      res.status(403).json({ success: false, message: 'Forbidden: Insufficient permissions' });
       return;
     }
     next();

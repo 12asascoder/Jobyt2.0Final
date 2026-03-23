@@ -36,7 +36,7 @@ export const UserModel = {
   async findByResetToken(token: string): Promise<User | null> {
     const { rows } = await pool.query(
       'SELECT * FROM users WHERE reset_token = $1 AND reset_token_expires_at > NOW()',
-      [token]
+      [token],
     );
     return rows[0] || null;
   },
@@ -56,7 +56,7 @@ export const UserModel = {
     const { rows } = await pool.query(
       `INSERT INTO users (email, password_hash, role, verify_token, referral_code)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [data.email, data.password_hash, data.role, data.verify_token, data.referral_code]
+      [data.email, data.password_hash, data.role, data.verify_token, data.referral_code],
     );
     return rows[0];
   },
@@ -64,27 +64,22 @@ export const UserModel = {
   async verify(id: string): Promise<void> {
     await pool.query(
       `UPDATE users SET is_verified = TRUE, verify_token = NULL, updated_at = NOW() WHERE id = $1`,
-      [id]
+      [id],
     );
   },
 
   async setResetToken(id: string, token: string, expiresAt: Date): Promise<void> {
     await pool.query(
       `UPDATE users SET reset_token = $1, reset_token_expires_at = $2, updated_at = NOW() WHERE id = $3`,
-      [token, expiresAt, id]
+      [token, expiresAt, id],
     );
   },
 
   async updatePassword(id: string, password_hash: string): Promise<void> {
     await pool.query(
       `UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires_at = NULL, updated_at = NOW() WHERE id = $2`,
-      [password_hash, id]
+      [password_hash, id],
     );
-  },
-
-  async updateCreditBalance(id: string, newBalance: number, client?: typeof pool): Promise<void> {
-    const db = client || pool;
-    await db.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, id]);
   },
 
   async ban(id: string): Promise<void> {
@@ -124,37 +119,33 @@ export const UserModel = {
       pool.query(
         `SELECT id, email, role, is_verified, credit_balance, banned_at, created_at FROM users ${where}
          ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
-        [...params, filters.limit, offset]
+        [...params, filters.limit, offset],
       ),
     ]);
 
     return { users: dataRes.rows, total: parseInt(countRes.rows[0].count) };
   },
 
-  async adminAdjustCredits(userId: string, newBalance: number): Promise<void> {
-    await pool.query(`UPDATE users SET credit_balance = $1, updated_at = NOW() WHERE id = $2`, [newBalance, userId]);
-  },
-
   async getPlatformMetrics(): Promise<{
-    totalUsers: number;
-    totalApplicants: number;
-    totalRecruiters: number;
-    totalJobs: number;
-    totalApplications: number;
-    totalRevenue: number;
-    newUsersToday: number;
-    activeJobsCount: number;
+    total_users: number;
+    total_applicants: number;
+    total_recruiters: number;
+    total_jobs: number;
+    total_applications: number;
+    total_revenue: number;
+    new_users_today: number;
+    active_jobs: number;
   }> {
     const { rows } = await pool.query(`
       SELECT
-        (SELECT COUNT(*) FROM users)::int AS "totalUsers",
-        (SELECT COUNT(*) FROM users WHERE role = 'applicant')::int AS "totalApplicants",
-        (SELECT COUNT(*) FROM users WHERE role = 'recruiter')::int AS "totalRecruiters",
-        (SELECT COUNT(*) FROM jobs WHERE deleted_at IS NULL)::int AS "totalJobs",
-        (SELECT COUNT(*) FROM jobs WHERE status = 'active' AND deleted_at IS NULL)::int AS "activeJobsCount",
-        (SELECT COUNT(*) FROM applications)::int AS "totalApplications",
-        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success') AS "totalRevenue",
-        (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 day')::int AS "newUsersToday"
+        (SELECT COUNT(*) FROM users)::int AS "total_users",
+        (SELECT COUNT(*) FROM users WHERE role = 'applicant')::int AS "total_applicants",
+        (SELECT COUNT(*) FROM users WHERE role = 'recruiter')::int AS "total_recruiters",
+        (SELECT COUNT(*) FROM jobs WHERE deleted_at IS NULL)::int AS "total_jobs",
+        (SELECT COUNT(*) FROM jobs WHERE status = 'active' AND deleted_at IS NULL)::int AS "active_jobs",
+        (SELECT COUNT(*) FROM applications)::int AS "total_applications",
+        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success')::int AS "total_revenue",
+        (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 day')::int AS "new_users_today"
     `);
     return rows[0];
   },

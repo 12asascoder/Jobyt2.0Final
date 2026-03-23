@@ -7,7 +7,9 @@ export const CreditController = {
     try {
       const balance = await CreditModel.getBalance(req.user!.userId);
       sendSuccess(res, { balance });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async getHistory(req: Request, res: Response, next: NextFunction) {
@@ -16,6 +18,8 @@ export const CreditController = {
       const limit = parseInt(req.query.limit as string) || 20;
       const { transactions, total } = await CreditModel.getHistory(req.user!.userId, page, limit);
       sendPaginated(res, transactions, total, page, limit);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 };

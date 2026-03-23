@@ -9,9 +9,7 @@ export const ReferralService = {
 
     const referrals = await ReferralModel.findByReferrerId(userId);
 
-    const totalCreditsEarned = referrals
-      .filter((r) => r.referrer_credited)
-      .length * 50; // 50 credits per successful referral (matches credit.service)
+    const totalCreditsEarned = referrals.filter((r) => r.referrer_credited).length * 50; // 50 credits per successful referral (matches credit.service)
 
     const referralLink = `${process.env.FRONTEND_URL}/register?ref=${user.referral_code}`;
 

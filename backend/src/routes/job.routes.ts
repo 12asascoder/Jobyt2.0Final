@@ -2,7 +2,10 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import { JobController } from '../controllers/job.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { requireCredits } from '../middleware/credit.middleware';
+import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
+import { CREDIT_COSTS } from '../config/creditCosts';
 
 const router = Router();
 
@@ -10,29 +13,36 @@ const router = Router();
 router.get('/', JobController.search);
 router.get('/:id', JobController.getById);
 
-// Recruiter
-router.use(authenticate, authorize('recruiter', 'admin'));
+// Recruiter-only management routes.
+// Order is important:
+// 1) authenticate: token must be valid
+// 2) authorize('recruiter'): role must be recruiter
+// 3) employerGuard: recruiter profile must exist in DB
+router.use(authenticate, authorize('recruiter'), employerGuard);
 
 router.get('/my/listings', JobController.myJobs);
 
-router.post('/',
+router.post(
+  '/',
+  requireCredits(CREDIT_COSTS.POST_JOB),
   body('title').notEmpty().trim(),
   body('description').notEmpty(),
   body('type').isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
   body('salary_min').optional().isInt({ min: 0 }),
   body('salary_max').optional().isInt({ min: 0 }),
   validate,
-  JobController.create
+  JobController.create,
 );
 
-router.put('/:id',
+router.put(
+  '/:id',
   body('title').optional().notEmpty().trim(),
   body('type').optional().isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
   validate,
-  JobController.update
+  JobController.update,
 );
 
-router.patch('/:id/publish', JobController.publish);
+router.patch('/:id/publish', requireCredits(CREDIT_COSTS.POST_JOB), JobController.publish);
 router.delete('/:id', JobController.delete);
 
 export default router;

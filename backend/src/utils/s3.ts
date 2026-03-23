@@ -1,8 +1,4 @@
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-} from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomBytes } from 'crypto';
 import path from 'path';
@@ -22,7 +18,7 @@ export const uploadToS3 = async (
   buffer: Buffer,
   originalName: string,
   mimeType: string,
-  folder: string
+  folder: string,
 ): Promise<string> => {
   const ext = path.extname(originalName);
   const key = `${folder}/${randomBytes(16).toString('hex')}${ext}`;
@@ -33,7 +29,7 @@ export const uploadToS3 = async (
       Key: key,
       Body: buffer,
       ContentType: mimeType,
-    })
+    }),
   );
 
   return `${CDN}/${key}`;

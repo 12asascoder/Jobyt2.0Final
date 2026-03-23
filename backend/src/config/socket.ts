@@ -15,7 +15,8 @@ export const initSocket = (httpServer: HttpServer): SocketServer => {
 
   // JWT authentication middleware for socket connections
   io.use((socket: Socket, next) => {
-    const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
+    const token =
+      socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
     if (!token) return next(new Error('Authentication required'));
 
     try {

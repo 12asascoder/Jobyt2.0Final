@@ -4,27 +4,27 @@ export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:500
 export const JOB_TYPES = ['full-time', 'part-time', 'contract', 'remote', 'internship'] as const;
 
 export const APPLICATION_STATUSES = [
-  'applied', 'in_review', 'shortlisted', 'interview', 'offer', 'hired', 'rejected',
+  'APPLIED', 'SCREENING', 'SHORTLISTED', 'INTERVIEW', 'SELECTED', 'HIRED', 'REJECTED',
 ] as const;
 
 export const APPLICATION_STATUS_LABELS: Record<string, string> = {
-  applied: 'Applied',
-  in_review: 'In Review',
-  shortlisted: 'Shortlisted',
-  interview: 'Interview',
-  offer: 'Offer',
-  hired: 'Hired',
-  rejected: 'Rejected',
+  APPLIED: 'Applied',
+  SCREENING: 'Screening',
+  SHORTLISTED: 'Shortlisted',
+  INTERVIEW: 'Interview',
+  SELECTED: 'Selected',
+  HIRED: 'Hired',
+  REJECTED: 'Rejected',
 };
 
 export const APPLICATION_STATUS_COLORS: Record<string, string> = {
-  applied: 'bg-blue-100 text-blue-700',
-  in_review: 'bg-yellow-100 text-yellow-700',
-  shortlisted: 'bg-purple-100 text-purple-700',
-  interview: 'bg-orange-100 text-orange-700',
-  offer: 'bg-teal-100 text-teal-700',
-  hired: 'bg-green-100 text-green-700',
-  rejected: 'bg-red-100 text-red-700',
+  APPLIED: 'bg-blue-100 text-blue-700',
+  SCREENING: 'bg-yellow-100 text-yellow-700',
+  SHORTLISTED: 'bg-purple-100 text-purple-700',
+  INTERVIEW: 'bg-orange-100 text-orange-700',
+  SELECTED: 'bg-teal-100 text-teal-700',
+  HIRED: 'bg-green-100 text-green-700',
+  REJECTED: 'bg-red-100 text-red-700',
 };
 
 export const ROUTES = {
@@ -45,6 +45,8 @@ export const ROUTES = {
   notifications: '/notifications',
   referral: '/referral',
   messages: '/messages',
+  roadmaps: '/roadmaps',
+  roadmapDetail: (slug: string) => `/roadmaps/${slug}`,
   messageThread: (id: string) => `/messages/${id}`,
   // Recruiter
   recruiterDashboard: '/recruiter/dashboard',

@@ -17,9 +17,46 @@ export const AuthService = {
 
     const password_hash = await hashPassword(password);
     const verify_token = randomBytes(32).toString('hex');
-    const myReferralCode = generateReferralCode();
+    const MAX_REFERRAL_CODE_ATTEMPTS = 10;
+    let lastErr: unknown;
+    let user:
+      | Awaited<ReturnType<typeof UserModel.create>>
+      | null = null;
 
-    const user = await UserModel.create({ email, password_hash, role, verify_token, referral_code: myReferralCode });
+    for (let attempt = 0; attempt < MAX_REFERRAL_CODE_ATTEMPTS; attempt++) {
+      const myReferralCode = generateReferralCode();
+      try {
+        user = await UserModel.create({
+          email,
+          password_hash,
+          role,
+          verify_token,
+          referral_code: myReferralCode,
+        });
+        break;
+      } catch (err: unknown) {
+        lastErr = err;
+        const code = (err as { code?: string } | null)?.code;
+        // 23505 = unique_violation (email or referral_code)
+        if (code === '23505') {
+          // If the email is now taken (race condition), stop retrying and return a clear error.
+          const maybeEmailTaken = await UserModel.findByEmail(email);
+          if (maybeEmailTaken) {
+            throw Object.assign(new Error('Email already registered'), { statusCode: 409 });
+          }
+          // Otherwise assume referral_code collision and retry.
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!user) {
+      console.error('Failed to generate unique referral code after retries', lastErr);
+      throw Object.assign(new Error('Could not create account. Please try again.'), {
+        statusCode: 500,
+      });
+    }
 
     // Create profile stub
     if (role === 'applicant') await ApplicantProfileModel.create(user.id);
@@ -45,7 +82,8 @@ export const AuthService = {
 
   async verifyEmail(token: string) {
     const user = await UserModel.findByVerifyToken(token);
-    if (!user) throw Object.assign(new Error('Invalid or expired verification token'), { statusCode: 400 });
+    if (!user)
+      throw Object.assign(new Error('Invalid or expired verification token'), { statusCode: 400 });
 
     await UserModel.verify(user.id);
 
@@ -65,9 +103,13 @@ export const AuthService = {
   async login(email: string, password: string) {
     const user = await UserModel.findByEmail(email);
     if (!user) throw Object.assign(new Error('Invalid credentials'), { statusCode: 401 });
-    if (!user.is_verified) throw Object.assign(new Error('Please verify your email first'), { statusCode: 403 });
+    if (!user.is_verified)
+      throw Object.assign(new Error('Please verify your email first'), { statusCode: 403 });
 
-    if (user.banned_at) throw Object.assign(new Error('Your account has been suspended. Please contact support.'), { statusCode: 403 });
+    if (user.banned_at)
+      throw Object.assign(new Error('Your account has been suspended. Please contact support.'), {
+        statusCode: 403,
+      });
 
     const valid = await comparePassword(password, user.password_hash);
     if (!valid) throw Object.assign(new Error('Invalid credentials'), { statusCode: 401 });
@@ -106,7 +148,8 @@ export const AuthService = {
 
   async resetPassword(token: string, newPassword: string) {
     const user = await UserModel.findByResetToken(token);
-    if (!user) throw Object.assign(new Error('Invalid or expired reset token'), { statusCode: 400 });
+    if (!user)
+      throw Object.assign(new Error('Invalid or expired reset token'), { statusCode: 400 });
 
     const password_hash = await hashPassword(newPassword);
     await UserModel.updatePassword(user.id, password_hash);
