@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ROUTES } from '@/constants';
 import { useAuthStore } from '@/store/auth.store';
 import { FaBars, FaXmark, FaBell } from 'react-icons/fa6';
@@ -10,12 +12,22 @@ export function Navbar() {
     const { user } = useAuthStore();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [hash, setHash] = useState('');
+    const pathname = usePathname();
 
     useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 20);
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
+        const onScroll = () => setScrolled(window.scrollY > 10);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
     }, []);
+
+    // Track hash changes
+    useEffect(() => {
+        const syncHash = () => setHash(window.location.hash);
+        syncHash();
+        window.addEventListener('hashchange', syncHash);
+        return () => window.removeEventListener('hashchange', syncHash);
+    }, [pathname]);
 
     const getDashboardRoute = () => {
         if (!user) return ROUTES.dashboard;
@@ -24,139 +36,151 @@ export function Navbar() {
         return ROUTES.dashboard;
     };
 
+    const navLinks = [
+        { href: '/', label: 'Home' },
+        { href: '/internships', label: 'Internships' },
+        { href: '/about', label: 'About Us' },
+        { href: '/#pricing', label: 'Prices' },
+    ];
+
+    const isActive = (href: string) => {
+        // Hash-anchor link (e.g. /#pricing)
+        if (href.startsWith('/#')) {
+            const targetHash = href.slice(1); // "#pricing"
+            return pathname === '/' && hash === targetHash;
+        }
+        // Home — only active when on / with NO hash
+        if (href === '/') return pathname === '/' && !hash;
+        // Normal routes
+        return pathname.startsWith(href);
+    };
+
+    const handleNavClick = (href: string) => {
+        // Clicking Home should clear hash
+        if (href === '/') {
+            setHash('');
+            if (typeof window !== 'undefined') {
+                window.history.replaceState(null, '', '/');
+            }
+        }
+        // Clicking a hash link should set hash
+        if (href.startsWith('/#')) {
+            setHash(href.slice(1));
+        }
+    };
+
     return (
-        <nav
-            className={`fixed w-full top-0 z-50 transition-all duration-300 ${scrolled ? 'glass-nav shadow-md' : ''
-                }`}
-            style={{ background: scrolled ? 'rgba(255,255,255,0.95)' : 'transparent' }}
-        >
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-12">
-                <div className="flex justify-between items-center h-20">
-                    {/* Logo */}
-                    <Link href="/" className="shrink-0 flex items-center cursor-pointer group">
-                        <div className="relative w-6 h-6 mr-2 transition-transform duration-500 group-hover:rotate-180">
-                            <div className="absolute inset-0 border-[5px] border-brand-primary rounded-full border-t-transparent -rotate-45" />
-                        </div>
-                        <span className="font-extrabold text-2xl tracking-tight text-slate-900">
-                            jobyt<span className="text-brand-primary">.</span>
-                        </span>
-                    </Link>
+        <nav className={`fixed w-full top-0 z-50 transition-all duration-300 ${scrolled
+            ? 'bg-white/95 backdrop-blur-xl border-b border-black/8'
+            : 'bg-transparent border-b border-transparent'
+            }`}>
+            <div className="max-w-350 mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between h-15">
 
-                    {/* Desktop Menu */}
-                    <div className="hidden lg:flex items-center space-x-10">
-                        <Link href="/jobs?type=internship" className="relative text-slate-600 font-semibold transition-colors group">
-                            Internships
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-primary transition-all duration-300 group-hover:w-[70%]"></span>
-                        </Link>
-                        <Link href="/jobs" className="relative text-slate-600 font-semibold transition-colors group">
-                            Jobs
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-primary transition-all duration-300 group-hover:w-[70%]"></span>
-                        </Link>
+                {/* LOGO */}
+                <Link href="/" className="flex items-center gap-2">
+                    <Image
+                        src="/logo.png"
+                        alt="Jobyt"
+                        width={28}
+                        height={28}
+                        className="object-contain"
+                    />
+                    <span className="font-display text-xl font-bold text-slate-900 tracking-tight">Jobyt</span>
+                </Link>
 
-                        {/* Auth-dependent actions */}
-                        {user ? (
-                            <>
-                                {/* Notification Bell - Only when logged in */}
-                                <Link
-                                    href={ROUTES.notifications}
-                                    className="relative inline-block text-slate-600 hover:scale-110 transition-transform"
-                                    aria-label="Notifications"
-                                >
-                                    <FaBell className="text-xl" />
-                                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
-                                </Link>
-                                <div className="h-6 w-px bg-slate-200" />
-                                <Link
-                                    href={getDashboardRoute()}
-                                    className="flex items-center gap-2 text-slate-800 font-bold hover:text-brand-primary transition-colors"
-                                >
-                                    <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-brand-primary text-sm font-bold">
-                                        {user.email[0].toUpperCase()}
-                                    </div>
-                                    <span className="text-sm">Dashboard</span>
-                                </Link>
-                            </>
-                        ) : (
-                            <>
-                                <div className="h-6 w-px bg-slate-200" />
-                                <Link href={ROUTES.login} className="text-slate-800 font-bold inline-block hover:scale-105 transition-transform">
-                                    Log in
-                                </Link>
-                                <Link
-                                    href={ROUTES.register}
-                                    className="bg-slate-900 text-white px-6 py-2.5 rounded-full font-semibold hover:bg-brand-primary hover:text-slate-900 hover:shadow-lg hover:shadow-brand-primary/30 transition-all active:scale-95 duration-300"
-                                >
-                                    Sign up
-                                </Link>
-                            </>
-                        )}
-                    </div>
-
-                    {/* Mobile Button */}
-                    <div className="lg:hidden flex items-center gap-3">
-                        {user && (
-                            <Link href={ROUTES.notifications} className="relative text-slate-600">
-                                <FaBell className="text-lg" />
-                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 border border-white rounded-full"></span>
-                            </Link>
-                        )}
-                        <button
-                            onClick={() => setMobileOpen((v) => !v)}
-                            className="text-slate-600 hover:text-brand-primary focus:outline-none p-2 transition-colors"
+                {/* CENTER PILL */}
+                <div className="hidden lg:flex items-center bg-black rounded-full px-1.5 h-10.5 font-navbar">
+                    {navLinks.map(({ href, label }) => (
+                        <Link
+                            key={href}
+                            href={href}
+                            onClick={() => handleNavClick(href)}
+                            className={`text-sm px-4.5 h-full flex items-center rounded-full transition ${
+                                isActive(href)
+                                    ? 'text-lime-400 font-medium'
+                                    : 'text-white/65 hover:text-white'
+                            }`}
                         >
-                            {mobileOpen ? <FaXmark className="text-2xl" /> : <FaBars className="text-2xl" />}
-                        </button>
-                    </div>
+                            {label}
+                        </Link>
+                    ))}
                 </div>
+
+                {/* RIGHT */}
+                <div className="hidden lg:flex items-center gap-3 font-navbar">
+                    {user ? (
+                        <>
+                            <Link href={ROUTES.notifications} className="relative text-slate-600 p-1">
+                                <FaBell size={17} />
+                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border-[1.5px] border-white" />
+                            </Link>
+                            <Link
+                                href={getDashboardRoute()}
+                                className="flex items-center gap-2 bg-black text-white rounded-full pl-1.5 pr-4.5 py-1.5 text-sm font-medium hover:opacity-85 transition"
+                            >
+                                <div className="w-7 h-7 rounded-full bg-lime-300 text-lime-900 flex items-center justify-center text-xs font-bold">
+                                    {user.email[0].toUpperCase()}
+                                </div>
+                                Dashboard
+                            </Link>
+                        </>
+                    ) : (
+                        <>
+                            <Link
+                                href={ROUTES.login}
+                                className="px-5 py-2 rounded-full border-[1.5px] border-black text-black text-sm font-medium hover:bg-black hover:text-white transition"
+                            >
+                                Sign Up
+                            </Link>
+                            <Link
+                                href={ROUTES.register}
+                                className="px-5 py-2 rounded-full border-[1.5px] border-lime-400 text-lime-700 text-sm font-medium hover:bg-lime-300 hover:text-black transition"
+                            >
+                                Employer Sign Up
+                            </Link>
+                        </>
+                    )}
+                </div>
+
+                {/* HAMBURGER */}
+                <button
+                    className="lg:hidden text-slate-800"
+                    onClick={() => setMobileOpen(!mobileOpen)}
+                >
+                    {mobileOpen ? <FaXmark size={21} /> : <FaBars size={21} />}
+                </button>
             </div>
 
-            {/* Mobile Menu */}
+            {/* MOBILE MENU */}
             {mobileOpen && (
-                <div className="lg:hidden bg-white/95 backdrop-blur-xl border-t border-slate-100 absolute w-full shadow-2xl transition-all duration-300">
-                    <div className="px-6 pt-4 pb-8 space-y-3">
+                <div className="lg:hidden bg-white/97 backdrop-blur-xl border-t border-black/6 px-6 pb-5 font-navbar">
+                    {navLinks.map(({ href, label }) => (
                         <Link
-                            href="/jobs?type=internship"
-                            className="block px-4 py-3 text-lg font-semibold text-slate-700 hover:bg-brand-primary/20 rounded-xl transition-colors"
-                            onClick={() => setMobileOpen(false)}
+                            key={href}
+                            href={href}
+                            className={`block py-3 text-[15px] border-b border-black/6 last:border-none ${
+                                isActive(href) ? 'text-lime-600 font-semibold' : 'text-slate-800'
+                            }`}
+                            onClick={() => { handleNavClick(href); setMobileOpen(false); }}
                         >
-                            Internships
+                            {label}
                         </Link>
-                        <Link
-                            href="/jobs"
-                            className="block px-4 py-3 text-lg font-semibold text-slate-700 hover:bg-brand-primary/20 rounded-xl transition-colors"
-                            onClick={() => setMobileOpen(false)}
-                        >
-                            Jobs
-                        </Link>
-
-                        <div className="border-t border-slate-100 mt-4 pt-4 space-y-3">
-                            {user ? (
-                                <Link
-                                    href={getDashboardRoute()}
-                                    className="block w-full text-center bg-slate-900 text-white px-4 py-3 rounded-xl font-bold hover:bg-brand-primary hover:text-slate-900 transition-colors shadow-lg"
-                                    onClick={() => setMobileOpen(false)}
-                                >
-                                    Go to Dashboard
+                    ))}
+                    <div className="mt-3 flex flex-col gap-2">
+                        {user ? (
+                            <Link href={getDashboardRoute()} className="text-center bg-black text-white py-3 rounded-full text-sm font-medium">
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <>
+                                <Link href={ROUTES.login} className="text-center border-[1.5px] border-black py-3 rounded-full text-sm font-medium">
+                                    Sign Up
                                 </Link>
-                            ) : (
-                                <>
-                                    <Link
-                                        href={ROUTES.login}
-                                        className="block w-full text-center px-4 py-3 text-lg font-bold text-slate-800 hover:bg-slate-50 rounded-xl transition-colors"
-                                        onClick={() => setMobileOpen(false)}
-                                    >
-                                        Log in
-                                    </Link>
-                                    <Link
-                                        href={ROUTES.register}
-                                        className="block w-full text-center bg-slate-900 text-white px-4 py-3 rounded-xl font-bold hover:bg-brand-primary hover:text-slate-900 transition-colors shadow-lg"
-                                        onClick={() => setMobileOpen(false)}
-                                    >
-                                        Sign up
-                                    </Link>
-                                </>
-                            )}
-                        </div>
+                                <Link href={ROUTES.register} className="text-center border-[1.5px] border-lime-400 text-lime-700 py-3 rounded-full text-sm font-medium">
+                                    Employer Sign Up
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

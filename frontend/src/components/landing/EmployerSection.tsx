@@ -1,160 +1,119 @@
 'use client';
 
 import Image from 'next/image';
-import {
-    FaWandMagicSparkles,
-    FaCalendarCheck,
-    FaBolt,
-    FaCheck,
-} from 'react-icons/fa6';
 
 export function EmployerSection() {
     return (
-        <section className="bg-slate-900 text-white py-24 relative overflow-hidden">
-            {/* Abstract Background */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-                <div className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] bg-brand-primary/20 rounded-full blur-[120px]" />
-                <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] bg-brand-blue/20 rounded-full blur-[120px]" />
-                <svg
-                    className="absolute top-1/2 left-0 w-full opacity-20"
-                    viewBox="0 0 1440 320"
-                    preserveAspectRatio="none"
-                >
-                    <path
-                        fill="none"
-                        stroke="#ffffff"
-                        strokeWidth="2"
-                        strokeDasharray="10 10"
-                        d="M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,149.3C672,149,768,203,864,229.3C960,256,1056,256,1152,240C1248,224,1344,192,1392,176L1440,160"
-                    />
-                </svg>
-            </div>
+        <section className="bg-white min-h-[70vh] flex items-center relative overflow-hidden py-16">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-12 w-full">
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16">
+                    
+                    {/* Left - Composite Image */}
+                    <div className="w-full lg:w-[35%] shrink-0 relative flex justify-center lg:justify-start">
+                        <style dangerouslySetInnerHTML={{__html: `
+                            @media (max-width: 1023px) {
+                                .animate-flap-top { animation: flapTop 4s ease-in-out infinite; }
+                                .animate-flap-bottom { animation: flapBottom 4s ease-in-out infinite; }
+                            }
+                            @keyframes flapTop {
+                                0%, 100% { transform: rotate(0deg); }
+                                50% { transform: rotate(-5deg); }
+                            }
+                            @keyframes flapBottom {
+                                0%, 100% { transform: rotate(0deg); }
+                                50% { transform: rotate(5deg); }
+                            }
+                        `}} />
 
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-12 relative z-10">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                    {/* Left Content */}
-                    <div className="reveal">
-                        <span className="text-brand-primary font-extrabold uppercase tracking-widest text-sm mb-4 block">
-                            For Employers
-                        </span>
-                        <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 leading-[1.1]">
-                            Hire the top{' '}
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-yellow-400">
-                                1% talent.
-                            </span>
-                        </h2>
-                        <p className="text-slate-300 text-lg md:text-xl mb-10 leading-relaxed max-w-lg font-medium">
-                            Jobyt gives you access to a curated pool of passionate students and professionals in
-                            India and globally. Post a job in minutes.
-                        </p>
-
-                        <ul className="space-y-6 mb-10">
-                            <li className="flex items-center gap-4 text-lg font-semibold text-white">
-                                <div className="bg-white/10 p-3 rounded-xl border border-white/5">
-                                    <FaWandMagicSparkles className="text-brand-primary" />
-                                </div>
-                                Smart AI Candidate Matching
-                            </li>
-                            <li className="flex items-center gap-4 text-lg font-semibold text-white">
-                                <div className="bg-white/10 p-3 rounded-xl border border-white/5">
-                                    <FaCalendarCheck className="text-green-400" />
-                                </div>
-                                Seamless Interview Scheduling
-                            </li>
-                            <li className="flex items-center gap-4 text-lg font-semibold text-white">
-                                <div className="bg-white/10 p-3 rounded-xl border border-white/5">
-                                    <FaBolt className="text-yellow-400" />
-                                </div>
-                                Zero Hidden Charges
-                            </li>
-                        </ul>
-
-                        <button className="bg-brand-primary text-slate-900 px-8 py-4 rounded-2xl font-bold text-lg hover:brightness-95 transition-all shadow-[0_10px_25px_rgba(195,255,61,0.3)] hover:shadow-[0_15px_35px_rgba(195,255,61,0.4)] hover:-translate-y-1">
-                            Post a Job for Free
-                        </button>
-                    </div>
-
-                    {/* Right - Live Applicants Mockup */}
-                    <div className="relative hidden lg:block reveal reveal-delay-2">
-                        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2.5rem] p-8 relative shadow-2xl transform rotate-2 hover:rotate-0 transition-transform duration-700 ease-out z-10">
-                            {/* Header */}
-                            <div className="flex items-center justify-between border-b border-white/10 pb-6 mb-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-4 h-4 rounded-full bg-brand-primary animate-pulse" />
-                                    <div className="text-white font-bold text-lg tracking-wide">Live Applicants</div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-slate-600" />
-                                    <div className="w-3 h-3 rounded-full bg-slate-500" />
-                                    <div className="w-3 h-3 rounded-full bg-green-400" />
-                                </div>
-                            </div>
-
-                            {/* Applicant List */}
-                            <div className="space-y-5">
-                                <div className="flex gap-5 items-center bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                                    <div className="shrink-0 relative">
-                                        <Image
-                                            src="https://i.pravatar.cc/150?img=5"
-                                            alt="Priya Sharma"
-                                            width={56}
-                                            height={56}
-                                            className="w-14 h-14 rounded-full border-2 border-brand-primary object-cover"
-                                            unoptimized
-                                        />
-                                        <div className="absolute -bottom-0.5 -right-0.5 bg-green-500 w-3.5 h-3.5 border-2 border-slate-900 rounded-full" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="text-white font-bold text-lg">Priya Sharma</div>
-                                        <div className="text-slate-400 text-sm font-medium">UI/UX Designer • Bangalore</div>
-                                    </div>
-                                    <div className="bg-green-400/20 text-green-400 px-4 py-1.5 text-sm font-bold rounded-full border border-green-400/30">
-                                        Match 98%
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-5 items-center bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-                                    <Image
-                                        src="https://i.pravatar.cc/150?img=11"
-                                        alt="Arjun Reddy"
-                                        width={56}
-                                        height={56}
-                                        className="w-14 h-14 rounded-full border-2 border-slate-600"
+                        <div className="relative w-[100px] h-[100px] sm:w-[125px] sm:h-[125px] md:w-[140px] md:h-[140px] lg:w-[225px] lg:h-[225px] mx-auto lg:ml-[-3rem] lg:mr-0 -rotate-90 lg:rotate-0 transition-transform duration-700">
+                            {/* Base Knot (Green Tie)*/}
+                            <div className="absolute inset-0 rotate-90 z-20 flex items-center justify-center -translate-x-[40%]">
+                                <div className="relative w-full h-full scale-[1.15]">
+                                    <Image 
+                                        src="/LogoBottom.svg" 
+                                        alt="Jobyt Base" 
+                                        fill 
+                                        className="object-contain drop-shadow-sm" 
                                         unoptimized
                                     />
-                                    <div className="flex-1">
-                                        <div className="text-white font-bold text-lg">Arjun Reddy</div>
-                                        <div className="text-slate-400 text-sm font-medium">
-                                            Full Stack Dev • Hyderabad
-                                        </div>
-                                    </div>
-                                    <div className="bg-brand-blue/20 text-brand-blue px-4 py-1.5 text-sm font-bold rounded-full border border-brand-blue/30">
-                                        Match 92%
-                                    </div>
                                 </div>
-
-                                {/* Loading Skeleton */}
-                                <div className="flex gap-5 items-center opacity-40 p-4">
-                                    <div className="w-14 h-14 bg-white/20 rounded-full animate-pulse" />
-                                    <div className="flex-1">
-                                        <div className="w-1/2 h-4 bg-white/20 rounded-full mb-3 animate-pulse" />
-                                        <div className="w-1/3 h-3 bg-white/10 rounded-full animate-pulse" />
+                            </div>
+                            
+                            {/* Top Earn*/}
+                            <div className="absolute inset-0 z-10 -translate-x-[35%]">
+                                <div className="w-full h-full origin-center transition-transform duration-700 animate-flap-top lg:hover:-rotate-[5deg]">
+                                    <div className="absolute inset-0 flex items-center justify-center rotate-[90deg] translate-x-[85%] -translate-y-[28%]">
+                                        <div className="relative w-[85%] h-[85%]">
+                                            <Image 
+                                                src="/LogoLeftEar.svg" 
+                                                alt="Top Loop" 
+                                                fill 
+                                                className="object-contain" 
+                                                unoptimized
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Floating Badge */}
-                            <div className="absolute -right-8 -bottom-8 bg-white rounded-3xl p-5 shadow-2xl border border-slate-100 flex items-center gap-4 animate-float-delayed z-20">
-                                <div className="bg-green-100 p-3 rounded-2xl text-xl">
-                                    <FaCheck className="text-green-600" />
-                                </div>
-                                <div>
-                                    <p className="text-slate-900 font-extrabold text-base">Hired Successfully</p>
-                                    <p className="text-slate-500 text-sm font-medium">Just now via Jobyt</p>
+                            
+                            {/* Bottom Ear */}
+                            <div className="absolute inset-0 z-10 -translate-x-[35%]">
+                                <div className="w-full h-full origin-center transition-transform duration-700 animate-flap-bottom lg:hover:rotate-[5deg]">
+                                    <div className="absolute inset-0 flex items-center justify-center rotate-[85deg] scale-x-[-1] translate-x-[85%] translate-y-[25%]">
+                                        <div className="relative w-[85%] h-[85%]">
+                                            <Image 
+                                                src="/LogoLeftEar.svg" 
+                                                alt="Bottom Loop" 
+                                                fill 
+                                                className="object-contain" 
+                                                unoptimized
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    {/* Right - Text Content */}
+                    <div className="w-full lg:w-[60%] flex flex-col justify-center">
+                        <h2 className="font-display text-4xl md:text-[44px] font-bold text-[#1a1a1a] leading-[1.2] mb-12 mt-10 text-center lg:text-left tracking-tight">
+                            We make a difference for all students
+                        </h2>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-6 lg:gap-8 items-start">
+                            {/* Stat 1 */}
+                            <div className="text-center flex flex-col items-center">
+                                <div className="text-5xl md:text-[56px] font-bold text-[#91D245] mb-4 tracking-tighter">
+                                    96%
+                                </div>
+                                <p className="text-[#333] font-medium text-[13px] md:text-sm leading-relaxed max-w-[180px]">
+                                    Of students say they discovered internship opportunities that matched their skills.
+                                </p>
+                            </div>
+                            
+                            {/* Stat 2 - Staggered Down */}
+                            <div className="text-center flex flex-col items-center mt-0 sm:mt-12 md:mt-16">
+                                <div className="text-5xl md:text-[56px] font-bold text-[#91D245] mb-4 tracking-tighter">
+                                    94%
+                                </div>
+                                <p className="text-[#333] font-medium text-[13px] md:text-sm leading-relaxed max-w-[180px]">
+                                    Of students feel more confident applying for internships using Jobyt.
+                                </p>
+                            </div>
+                            
+                            {/* Stat 3 */}
+                            <div className="text-center flex flex-col items-center">
+                                <div className="text-5xl md:text-[56px] font-bold text-[#91D245] mb-4 tracking-tighter">
+                                    5X
+                                </div>
+                                <p className="text-[#333] font-medium text-[13px] md:text-sm leading-relaxed max-w-[180px]">
+                                    Higher chances of landing an internship.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
         </section>
