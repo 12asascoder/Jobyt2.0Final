@@ -470,7 +470,7 @@ async function seed() {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises, prefer-top-level-await
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
 seed().catch((err) => {
   console.error(err);
   process.exit(1);

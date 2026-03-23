@@ -1,4 +1,5 @@
 import pool from '../config/database';
+import { PoolClient } from 'pg';
 
 export type JobType = 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
 export type JobStatus = 'draft' | 'active' | 'closed';
@@ -34,8 +35,9 @@ export interface JobFilters {
 }
 
 export const JobModel = {
-  async findById(id: string): Promise<Job | null> {
-    const { rows } = await pool.query(`SELECT * FROM jobs WHERE id = $1 AND deleted_at IS NULL`, [
+  async findById(id: string, client?: PoolClient): Promise<Job | null> {
+    const db = client ?? pool;
+    const { rows } = await db.query(`SELECT * FROM jobs WHERE id = $1 AND deleted_at IS NULL`, [
       id,
     ]);
     return rows[0] || null;

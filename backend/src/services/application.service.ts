@@ -1,6 +1,9 @@
 import { ApplicationModel, ApplicationStatus } from '../models/application.model';
 import { JobModel } from '../models/job.model';
 import { NotificationModel } from '../models/notification.model';
+import { withTransaction } from '../utils/transaction';
+import { CreditService } from './credit.service';
+import { CREDIT_COSTS } from '../config/creditCosts';
 
 export const ApplicationService = {
   async apply(
@@ -8,30 +11,50 @@ export const ApplicationService = {
     jobId: string,
     data: { cover_letter?: string; resume_snapshot_url?: string },
   ) {
-    const job = await JobModel.findById(jobId);
-    if (!job || job.status !== 'active')
-      throw Object.assign(new Error('Job not found or no longer active'), { statusCode: 404 });
+    return withTransaction(async (client) => {
+      // 1) Job validation (transaction-scoped)
+      const job = await JobModel.findById(jobId, client);
+      if (!job || job.status !== 'active')
+        throw Object.assign(new Error('Job not found or no longer active'), { statusCode: 404 });
 
-    const existing = await ApplicationModel.findByJobAndApplicant(jobId, applicantId);
-    if (existing)
-      throw Object.assign(new Error('You have already applied to this job'), { statusCode: 409 });
+      // 2) Duplicate check (transaction-scoped)
+      const existing = await ApplicationModel.findByJobAndApplicant(jobId, applicantId, client);
+      if (existing)
+        throw Object.assign(new Error('You have already applied to this job'), { statusCode: 409 });
 
-    const application = await ApplicationModel.create({
-      job_id: jobId,
-      applicant_id: applicantId,
-      ...data,
+      // 3) Credit deduction (atomic under the same DB transaction)
+      await CreditService.deductCredits(
+        applicantId,
+        CREDIT_COSTS.APPLY_JOB,
+        'Job application',
+        jobId,
+        client,
+      );
+
+      // 4) Create application (transaction-scoped)
+      const application = await ApplicationModel.create(
+        {
+          job_id: jobId,
+          applicant_id: applicantId,
+          ...data,
+        },
+        client,
+      );
+
+      // 5) Notify recruiter (transaction-scoped for consistent state)
+      await NotificationModel.create(
+        {
+          user_id: job.recruiter_id,
+          type: 'application_submitted',
+          title: 'New application received',
+          body: `A new applicant has applied to "${job.title}"`,
+          action_url: `/recruiter/jobs/${jobId}/applications`,
+        },
+        client,
+      );
+
+      return application;
     });
-
-    // Notify recruiter
-    await NotificationModel.create({
-      user_id: job.recruiter_id,
-      type: 'application_submitted',
-      title: 'New application received',
-      body: `A new applicant has applied to "${job.title}"`,
-      action_url: `/recruiter/jobs/${jobId}/applications`,
-    });
-
-    return application;
   },
 
   async updateStatus(recruiterId: string, applicationId: string, status: ApplicationStatus) {

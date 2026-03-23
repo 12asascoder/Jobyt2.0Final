@@ -1,4 +1,5 @@
 import pool from '../config/database';
+import { PoolClient } from 'pg';
 
 export type ApplicationStatus =
   | 'applied'
@@ -26,21 +27,30 @@ export const ApplicationModel = {
     return rows[0] || null;
   },
 
-  async findByJobAndApplicant(jobId: string, applicantId: string): Promise<Application | null> {
-    const { rows } = await pool.query(
-      'SELECT * FROM applications WHERE job_id = $1 AND applicant_id = $2',
-      [jobId, applicantId],
-    );
+  async findByJobAndApplicant(
+    jobId: string,
+    applicantId: string,
+    client?: PoolClient,
+  ): Promise<Application | null> {
+    const db = client ?? pool;
+    const { rows } = await db.query('SELECT * FROM applications WHERE job_id = $1 AND applicant_id = $2', [
+      jobId,
+      applicantId,
+    ]);
     return rows[0] || null;
   },
 
-  async create(data: {
-    job_id: string;
-    applicant_id: string;
-    cover_letter?: string;
-    resume_snapshot_url?: string;
-  }): Promise<Application> {
-    const { rows } = await pool.query(
+  async create(
+    data: {
+      job_id: string;
+      applicant_id: string;
+      cover_letter?: string;
+      resume_snapshot_url?: string;
+    },
+    client?: PoolClient,
+  ): Promise<Application> {
+    const db = client ?? pool;
+    const { rows } = await db.query(
       `INSERT INTO applications (job_id, applicant_id, cover_letter, resume_snapshot_url)
        VALUES ($1,$2,$3,$4) RETURNING *`,
       [data.job_id, data.applicant_id, data.cover_letter || null, data.resume_snapshot_url || null],

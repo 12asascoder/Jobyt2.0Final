@@ -48,7 +48,13 @@ async function deductCreditsTx(
   ]);
   if (!rows[0]) throw new Error('User not found');
   const balance: number = rows[0].credit_balance;
-  if (balance < amount) throw Object.assign(new Error('Insufficient credits'), { statusCode: 400 });
+  if (balance < amount)
+    throw Object.assign(new Error('Insufficient credits'), {
+      statusCode: 402,
+      error: 'INSUFFICIENT_CREDITS',
+      required: amount,
+      available: balance,
+    });
   const newBalance = balance - amount;
   await client.query(`UPDATE users SET credit_balance = $1 WHERE id = $2`, [newBalance, userId]);
   await CreditModel.record(client, {
@@ -67,18 +73,22 @@ export const CreditService = {
     amount: number,
     description: string,
     referenceId?: string,
+    client?: PoolClient,
   ): Promise<void> {
     console.log(`[CREDIT] credit ${amount} for user ${userId}`);
-    const client = await pool.connect();
+    const db = client ?? (await pool.connect());
+    const shouldManageTx = !client;
     try {
-      await client.query('BEGIN');
-      await addCreditsTx(client, userId, amount, description, referenceId);
-      await client.query('COMMIT');
+      if (shouldManageTx) await db.query('BEGIN');
+
+      await addCreditsTx(db, userId, amount, description, referenceId);
+
+      if (shouldManageTx) await db.query('COMMIT');
     } catch (err) {
-      await client.query('ROLLBACK');
+      if (shouldManageTx) await db.query('ROLLBACK');
       throw err;
     } finally {
-      client.release();
+      if (shouldManageTx) db.release();
     }
   },
 
@@ -87,18 +97,22 @@ export const CreditService = {
     amount: number,
     description: string,
     referenceId?: string,
+    client?: PoolClient,
   ): Promise<void> {
     console.log(`[CREDIT] debit ${amount} for user ${userId}`);
-    const client = await pool.connect();
+    const db = client ?? (await pool.connect());
+    const shouldManageTx = !client;
     try {
-      await client.query('BEGIN');
-      await deductCreditsTx(client, userId, amount, description, referenceId);
-      await client.query('COMMIT');
+      if (shouldManageTx) await db.query('BEGIN');
+
+      await deductCreditsTx(db, userId, amount, description, referenceId);
+
+      if (shouldManageTx) await db.query('COMMIT');
     } catch (err) {
-      await client.query('ROLLBACK');
+      if (shouldManageTx) await db.query('ROLLBACK');
       throw err;
     } finally {
-      client.release();
+      if (shouldManageTx) db.release();
     }
   },
 
