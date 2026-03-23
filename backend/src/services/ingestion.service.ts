@@ -127,36 +127,39 @@ export async function runFullIngestion(dryRun: boolean = false): Promise<Ingesti
 
         if (parsed.warnings.length > 0) {
           console.log(`  ⚠️ ${parsed.roadmap.slug}: ${parsed.warnings.length} warnings`);
-          for (const w of parsed.warnings) {
-            console.log(`     - ${w}`);
-          }
         }
       }
 
       successCount = parsedResults.length;
     } else {
-      // 4. Persist to database
-      console.log('💾 Persisting to database...\n');
+      // 4. Persist to database in controlled concurrency batches
+      console.log('💾 Persisting to database in batches...\n');
 
-      for (const parsed of parsedResults) {
-        const detail = await persistRoadmap(parsed);
-        roadmapDetails.push(detail);
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < parsedResults.length; i += BATCH_SIZE) {
+        const batch = parsedResults.slice(i, i + BATCH_SIZE);
+        
+        const results = await Promise.all(
+          batch.map(parsed => persistRoadmap(parsed))
+        );
 
-        if (detail.status === 'success') {
-          successCount++;
-          console.log(
-            `  ✅ ${parsed.roadmap.slug}: ${detail.nodesUpserted} nodes, ${detail.edgesUpserted} edges (${detail.durationMs}ms)`,
-          );
-        } else {
-          failCount++;
-          console.log(`  ❌ ${parsed.roadmap.slug}: ${detail.error}`);
+        for (const detail of results) {
+          roadmapDetails.push(detail);
+          if (detail.status === 'success') {
+            successCount++;
+            console.log(`  ✅ ${detail.slug}: ${detail.nodesUpserted} nodes, ${detail.edgesUpserted} edges (${detail.durationMs}ms)`);
+          } else {
+            failCount++;
+            console.log(`  ❌ ${detail.slug}: ${detail.error}`);
+          }
         }
       }
     }
 
     // 5. Mark complete
     const totalDuration = Date.now() - startTime;
-    const finalStatus = failCount === parsedResults.length ? 'failed' : 'completed';
+    // Strict failure - if there is EVEN ONE fail, mark the entire run failed
+    const finalStatus = failCount > 0 ? 'failed' : 'completed';
 
     logs.push({
       phase: 'complete',

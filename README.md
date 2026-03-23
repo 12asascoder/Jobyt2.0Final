@@ -210,6 +210,13 @@ curl -X POST http://localhost:5001/api/v1/roadmaps/ingest \
   -d '{"dryRun": true}'
 ```
 
+### Viewing Roadmaps in the Frontend
+Once ingestion is complete, you can view the interactive roadmaps directly in the browser:
+1. Ensure the frontend is running (`cd frontend && npm run dev`)
+2. Log in (or just visit directly if placed in a public route)
+3. Navigate to **Roadmaps** in the sidebar navigation or go to `http://localhost:3000/roadmaps`.
+4. Click on any topic to see the interactive Zoom/Pan graph powered by React Flow.
+
 ### Roadmap API Endpoints
 
 | Method | Endpoint | Description |

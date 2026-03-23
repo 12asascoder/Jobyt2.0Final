@@ -8,8 +8,8 @@ A complete system for fetching, parsing, and serving roadmap data from [roadmap.
 ┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌────────────┐
 │  Source      │────▶│   Parser     │────▶│  Ingestion   │────▶│ PostgreSQL │
 │  Loader     │     │              │     │  Service     │     │            │
-│ (GitHub +   │     │ (Flatten,    │     │ (Transact,   │     │ roadmaps   │
-│  Scrape)    │     │  Dedup, DFS) │     │  Upsert)     │     │ nodes/edges│
+│ (Local /    │     │ (Flatten,    │     │ (Transact,   │     │ roadmaps   │
+│  GitHub)    │     │  Dedup, DFS) │     │  Upsert)     │     │ nodes/edges│
 └─────────────┘     └──────────────┘     └──────────────┘     └────────────┘
                                                                      │
                                                                ┌─────▼──────┐
@@ -233,6 +233,6 @@ backend/src/
 | Issue | Solution |
 |-------|----------|
 | Tables don't exist | Run migration: `npm run roadmap:ingest` (auto-migrates) |
-| GitHub rate limited | Loader falls back to scraping automatically |
-| Ingestion timeout | Individual roadmap failures don't stop the pipeline |
+| GitHub rate limited | Use `ROADMAP_LOCAL_REPO_PATH` to load from a local clone |
+| Ingestion timeout | Individual roadmap failures mark the run as failed so you can inspect logs |
 | Duplicate data | Impossible — upserts + unique constraints enforce this |
