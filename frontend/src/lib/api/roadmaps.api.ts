@@ -45,6 +45,35 @@ export interface PaginatedRoadmaps {
   };
 }
 
+export interface MatchDetail {
+  nodeId: string;
+  nodeTitle: string;
+  nodeSlug: string;
+  matchedSkill: string | null;
+  matchType: 'exact' | 'normalized' | null;
+}
+
+export interface RoadmapProgressResponse {
+  roadmap: { id: string; slug: string; title: string };
+  completionPercentage: number;
+  totalNodes: number;
+  completedNodes: { id: string; title: string; slug: string; matchedSkill: string }[];
+  pendingNodes: { id: string; title: string; slug: string }[];
+  matchDetails: MatchDetail[];
+}
+
+export interface SkillRecommendationResponse {
+  recommendedNode?: {
+    id: string; title: string; slug: string; description: string | null; type: string;
+  };
+  reason?: string;
+  prerequisitesSatisfied?: { id: string; title: string }[];
+  estimatedProgressGain?: number;
+  learningResources?: string | null;
+  completed?: boolean;
+  message?: string;
+}
+
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   // If we need auth token, it would be passed via Zustand or cookies here.
   // For now, roadmaps endpoints are public.
@@ -84,5 +113,15 @@ export const RoadmapApi = {
   /** Get roadmap with all nodes and edges */
   async getNodes(slug: string): Promise<RoadmapFullData> {
     return fetchApi<RoadmapFullData>(`/roadmaps/${slug}/nodes`);
+  },
+
+  /** Get roadmap progress for a user */
+  async getProgress(roadmapId: string, userId: string): Promise<RoadmapProgressResponse> {
+    return fetchApi<RoadmapProgressResponse>(`/users/${userId}/roadmaps/${roadmapId}/progress`);
+  },
+
+  /** Get next skill recommendation for a user */
+  async getRecommendedNextSkill(roadmapId: string, userId: string): Promise<SkillRecommendationResponse> {
+    return fetchApi<SkillRecommendationResponse>(`/users/${userId}/roadmaps/${roadmapId}/recommend-next-skill`);
   },
 };
