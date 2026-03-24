@@ -1,4 +1,5 @@
 import pool from '../config/database';
+import { PoolClient } from 'pg';
 
 export type JobType = 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
 export type JobStatus = 'draft' | 'active' | 'closed';

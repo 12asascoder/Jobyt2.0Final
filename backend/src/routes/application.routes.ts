@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import { ApplicationController } from '../controllers/application.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { requireCredits } from '../middleware/credit.middleware';
+import { CREDIT_COSTS } from '../config/creditCosts';
 import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
 
@@ -51,6 +53,7 @@ router.get('/jobs/:jobId/check', authorize('applicant'), ApplicationController.c
 router.post(
   '/jobs/:jobId',
   authorize('applicant'),
+  requireCredits(CREDIT_COSTS.APPLY_JOB),
   body('cover_letter').optional().isString(),
   validate,
   ApplicationController.apply,

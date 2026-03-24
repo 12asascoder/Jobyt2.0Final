@@ -2,8 +2,11 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import { JobController } from '../controllers/job.controller';
 import { authenticate, authorize, optionalAuth } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
+import { requireCredits } from '../middleware/credit.middleware';
 import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
+import { CREDIT_COSTS } from '../config/creditCosts';
 
 const router = Router();
 
@@ -26,6 +29,7 @@ router.get('/my/listings', JobController.myJobs);
 
 router.post(
   '/',
+  requireCredits(CREDIT_COSTS.POST_JOB),
   body('title').notEmpty().trim(),
   body('description').notEmpty(),
   body('location').optional().isString().trim(),
@@ -82,7 +86,7 @@ router.put(
   JobController.updateJob,
 );
 
-router.patch('/:id/publish', JobController.publish);
+router.patch('/:id/publish', requireCredits(CREDIT_COSTS.POST_JOB), JobController.publish);
 router.delete('/:id', JobController.delete);
 
 export default router;

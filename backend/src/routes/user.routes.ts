@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { UserController } from '../controllers/user.controller';
+import * as RoadmapProgressController from '../controllers/roadmapProgress.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { uploadResume, uploadImage } from '../middleware/upload';
 import { validate } from '../middleware/validate';
@@ -48,6 +49,13 @@ router.post('/me/photo', uploadImage.single('photo'), UserController.uploadPhoto
 router.get('/me/saved-jobs', authorize('applicant'), UserController.getSavedJobs);
 router.post('/me/saved-jobs/:jobId', authorize('applicant'), UserController.saveJob);
 router.delete('/me/saved-jobs/:jobId', authorize('applicant'), UserController.unsaveJob);
+
+// ── Roadmap Progress & Recommendations ────────────────────────────────────────
+router.get('/:userId/roadmaps/:roadmapId/progress', RoadmapProgressController.getUserProgress);
+router.get(
+  '/:userId/roadmaps/:roadmapId/recommend-next-skill',
+  RoadmapProgressController.getRecommendedNextSkill,
+);
 
 // ── Public profile ─────────────────────────────────────────────────────────────
 router.get('/:userId', UserController.getPublicProfile);

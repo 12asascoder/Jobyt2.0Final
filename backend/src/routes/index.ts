@@ -12,6 +12,7 @@ import adminRoutes from './admin.routes';
 import analyticsRoutes from './analytics.routes';
 import pipelineRoutes from './pipeline.routes';
 import recruiterRoutes from './recruiter.routes';
+import roadmapRoutes from './roadmap.routes';
 
 const router = Router();
 
@@ -32,6 +33,7 @@ router.use('/admin', adminRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/pipeline', pipelineRoutes);
 router.use('/recruiter', recruiterRoutes);
+router.use('/roadmaps', roadmapRoutes);
 
 export default router;
 

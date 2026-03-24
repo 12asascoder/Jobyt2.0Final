@@ -1,4 +1,5 @@
 import pool from '../config/database';
+import { PoolClient } from 'pg';
 
 export type NotificationType =
   | 'job_match'
@@ -28,8 +29,9 @@ export const NotificationModel = {
     title: string;
     body: string;
     action_url?: string;
-  }): Promise<Notification> {
-    const { rows } = await pool.query(
+  }, client?: PoolClient): Promise<Notification> {
+    const db = client ?? pool;
+    const { rows } = await db.query(
       `INSERT INTO notifications (user_id, type, title, body, action_url)
        VALUES ($1,$2,$3,$4,$5) RETURNING *`,
       [data.user_id, data.type, data.title, data.body, data.action_url || null],

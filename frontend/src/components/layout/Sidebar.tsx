@@ -19,6 +19,7 @@ import {
     FaChartLine,
     FaUsers,
     FaCoins,
+    FaMapLocationDot,
 } from 'react-icons/fa6';
 import { IconType } from 'react-icons';
 
@@ -32,6 +33,7 @@ const applicantNav: NavItem[] = [
     { label: 'Messages', href: ROUTES.messages, icon: FaComments },
     { label: 'Credits', href: ROUTES.credits, icon: FaCreditCard },
     { label: 'Referrals', href: ROUTES.referral, icon: FaGift },
+    { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
     { label: 'Profile', href: ROUTES.profile, icon: FaCircleUser },
 ];
 
@@ -41,6 +43,7 @@ const recruiterNav: NavItem[] = [
     { label: 'Post a Job', href: ROUTES.recruiterNewJob, icon: FaPlus },
     { label: 'Messages', href: ROUTES.messages, icon: FaComments },
     { label: 'Analytics', href: ROUTES.recruiterAnalytics, icon: FaChartLine },
+    { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
     { label: 'Credits', href: ROUTES.recruiterCredits, icon: FaCreditCard },
 ];
 
@@ -48,6 +51,7 @@ const adminNav: NavItem[] = [
     { label: 'Dashboard', href: ROUTES.adminDashboard, icon: FaHouse },
     { label: 'Users', href: ROUTES.adminUsers, icon: FaUsers },
     { label: 'Jobs', href: ROUTES.adminJobs, icon: FaBriefcase },
+    { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
     { label: 'Credits', href: ROUTES.adminCredits, icon: FaCoins },
 ];
 

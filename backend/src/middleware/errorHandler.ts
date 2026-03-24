@@ -9,8 +9,11 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction,
 ): void => {
-  const statusCode = err instanceof AppError ? err.statusCode : (err.statusCode ?? 500);
-  const isOperational = err instanceof AppError ? err.isOperational : !!err.isOperational;
+  const anyErr = err as unknown as Record<string, unknown>;
+  const rawStatusCode = err instanceof AppError ? err.statusCode : anyErr.statusCode;
+  const statusCode = typeof rawStatusCode === 'number' ? rawStatusCode : 500;
+  // If a raw Error was thrown with a `statusCode`, treat it as operational so we preserve its payload.
+  const isOperational = err instanceof AppError ? err.isOperational : anyErr.statusCode !== undefined;
   const message = isOperational ? err.message : 'Internal server error';
 
   if (process.env.NODE_ENV !== 'production') {
@@ -18,6 +21,12 @@ export const errorHandler = (
   }
 
   const body: Record<string, unknown> = { success: false, message };
+  if (isOperational) {
+    const errorCode = anyErr.error ?? anyErr.code;
+    if (typeof errorCode === 'string') body.error = errorCode;
+    if (anyErr.required !== undefined) body.required = anyErr.required;
+    if (anyErr.available !== undefined) body.available = anyErr.available;
+  }
   if (process.env.NODE_ENV === 'development') body.stack = err.stack;
 
   res.status(statusCode).json(body);

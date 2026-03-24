@@ -1,4 +1,5 @@
 import pool from '../config/database';
+import { PoolClient } from 'pg';
 import { ApplicationStatus } from './application.model';
 
 export interface PipelineEvent {
@@ -12,14 +13,18 @@ export interface PipelineEvent {
 }
 
 export const PipelineEventModel = {
-  async create(data: {
-    application_id: string;
-    previous_status?: ApplicationStatus | null;
-    new_status: ApplicationStatus;
-    changed_by_id?: string | null;
-    notes?: string | null;
-  }): Promise<PipelineEvent> {
-    const { rows } = await pool.query(
+  async create(
+    data: {
+      application_id: string;
+      previous_status?: ApplicationStatus | null;
+      new_status: ApplicationStatus;
+      changed_by_id?: string | null;
+      notes?: string | null;
+    },
+    client?: PoolClient,
+  ): Promise<PipelineEvent> {
+    const db = client ?? pool;
+    const { rows } = await db.query(
       `INSERT INTO pipeline_events (application_id, previous_status, new_status, changed_by_id, notes)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
       [

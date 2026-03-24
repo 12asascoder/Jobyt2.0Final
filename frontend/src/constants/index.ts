@@ -45,6 +45,8 @@ export const ROUTES = {
   notifications: '/notifications',
   referral: '/referral',
   messages: '/messages',
+  roadmaps: '/roadmaps',
+  roadmapDetail: (slug: string) => `/roadmaps/${slug}`,
   messageThread: (id: string) => `/messages/${id}`,
   // Recruiter
   recruiterDashboard: '/recruiter/dashboard',
