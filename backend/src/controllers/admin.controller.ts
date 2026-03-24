@@ -113,6 +113,29 @@ export const AdminController = {
     }
   },
 
+  async verifyRecruiter(req: Request, res: Response, next: NextFunction) {
+    try {
+      const recruiterProfileId = req.params.id as string;
+      const { is_verified } = req.body as { is_verified: boolean };
+      const adminId = req.user!.userId;
+
+      const updatedProfile = await AdminService.verifyRecruiterProfile(
+        recruiterProfileId,
+        is_verified,
+        adminId,
+      );
+
+      sendSuccess(
+        res,
+        updatedProfile,
+        'Recruiter verification status updated successfully',
+        200,
+      );
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // ── Metrics ──────────────────────────────────────────────────────────────────
   async getMetrics(req: Request, res: Response, next: NextFunction) {
     try {

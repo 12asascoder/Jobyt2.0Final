@@ -1,5 +1,7 @@
 import { JobModel, JobFilters, JobType, JobStatus } from '../models/job.model';
 import { CreditService } from './credit.service';
+import { UserModel } from '../models/user.model';
+import { AppError, badRequest, notFound } from '../utils/appError';
 
 export const JobService = {
   async createJob(
@@ -7,7 +9,7 @@ export const JobService = {
     data: {
       title: string;
       description: string;
-      type: JobType;
+      type?: JobType;
       location?: string;
       salary_min?: number;
       salary_max?: number;
@@ -15,6 +17,14 @@ export const JobService = {
       status?: JobStatus;
     },
   ) {
+    const recruiter = await UserModel.findById(recruiterId);
+    if (!recruiter) {
+      throw new AppError('Recruiter not found', 404);
+    }
+    if (recruiter.banned_at) {
+      throw new AppError('Recruiter account is banned', 403);
+    }
+
     const isDuplicate = await JobModel.checkDuplicate(recruiterId, data.title);
     if (isDuplicate) {
       throw Object.assign(new Error('You already have an active or draft job with this title'), { statusCode: 409 });
@@ -38,23 +48,199 @@ export const JobService = {
     return JobModel.update(jobId, { status: 'active' });
   },
 
+  async closeJob(jobId: string, recruiterId: string) {
+    const job = await JobModel.findById(jobId);
+    if (!job) throw new AppError('Job not found', 404);
+    if (job.recruiter_id !== recruiterId)
+      throw new AppError('Forbidden', 403);
+
+    // Idempotent: if already closed, return success without DB write
+    if (job.status === 'closed') {
+      return; // Job already in desired state
+    }
+
+    // Update job status to closed
+    await JobService._updateJobStatus(jobId, 'closed');
+  },
+
+  async _updateJobStatus(jobId: string, targetStatus: JobStatus) {
+    // Extensible pattern for future status transitions
+    // Currently only 'closed' is supported
+    if (targetStatus !== 'closed') {
+      throw new AppError('Unsupported status transition', 400);
+    }
+    await JobModel.closeJob(jobId);
+  },
+
+  async approveJob(jobId: string) {
+    const job = await JobModel.findById(jobId);
+    if (!job) {
+      throw notFound('Job');
+    }
+
+    // Idempotent: if already active, return success without DB write.
+    if (job.status === 'active') {
+      return job;
+    }
+
+    const allowedStatuses: JobStatus[] = ['draft', 'closed'];
+    if (!allowedStatuses.includes(job.status)) {
+      throw badRequest('Invalid status transition');
+    }
+
+    return JobModel.approveJob(jobId);
+  },
+
+  async getJobs(filters: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    type?: JobType;
+    keyword?: string;
+    location?: string;
+    salary_min?: number;
+    salary_max?: number;
+    skills?: string[];
+  }) {
+    // Normalize pagination safely.
+    const normalizedPage = Number(filters.page);
+    const normalizedLimit = Number(filters.limit);
+    const page = Number.isFinite(normalizedPage) && normalizedPage >= 1 ? Math.floor(normalizedPage) : 1;
+    const limit =
+      Number.isFinite(normalizedLimit) && normalizedLimit >= 1
+        ? Math.min(50, Math.floor(normalizedLimit))
+        : 10;
+    const offset = (page - 1) * limit;
+
+    if (offset > 10000) {
+      throw badRequest('Page limit exceeded');
+    }
+
+    // Build filter object safely
+    const queryFilters: {
+      status?: JobStatus;
+      type?: JobType;
+      keyword?: string;
+      location?: string;
+      salary_min?: number;
+      salary_max?: number;
+      skills?: string[];
+    } = {};
+    const allowedStatus: JobStatus[] = ['draft', 'active', 'closed'];
+
+    if (filters.status && allowedStatus.includes(filters.status as JobStatus)) {
+      queryFilters.status = filters.status as JobStatus;
+    }
+
+    if (filters.type) {
+      queryFilters.type = filters.type.toLowerCase() as JobType;
+    }
+
+    if (filters.keyword) {
+      const normalizedKeyword = filters.keyword.trim();
+      if (normalizedKeyword.length > 0) {
+        queryFilters.keyword = normalizedKeyword;
+      }
+    }
+
+    if (filters.location) {
+      const normalizedLocation = filters.location.trim();
+      if (normalizedLocation.length > 0) {
+        queryFilters.location = normalizedLocation;
+      }
+    }
+
+    if (filters.salary_min !== undefined) {
+      if (!Number.isFinite(filters.salary_min)) {
+        throw new AppError('salary_min must be a valid number', 422);
+      }
+      queryFilters.salary_min = filters.salary_min;
+    }
+
+    if (filters.salary_max !== undefined) {
+      if (!Number.isFinite(filters.salary_max)) {
+        throw new AppError('salary_max must be a valid number', 422);
+      }
+      queryFilters.salary_max = filters.salary_max;
+    }
+
+    if (
+      queryFilters.salary_min !== undefined &&
+      queryFilters.salary_max !== undefined &&
+      queryFilters.salary_max < queryFilters.salary_min
+    ) {
+      throw new AppError('salary_max must be greater than or equal to salary_min', 422);
+    }
+
+    if (filters.skills && filters.skills.length > 0) {
+      queryFilters.skills = filters.skills;
+    }
+
+    const result = await JobModel.findAll({ ...queryFilters, limit, offset });
+    const jobs = result.rows;
+    const total = Number(result.total);
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      jobs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
+  },
+
   async searchJobs(filters: JobFilters) {
     return JobModel.search(filters);
   },
 
-  async getJobById(id: string) {
+  async getJobById(id: string, userId: string | null = null) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) throw notFound('Job');
+
     const job = await JobModel.findById(id);
-    if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
-    await JobModel.incrementViews(id);
+    if (!job) throw notFound('Job');
+
+    if (job.status === 'draft') {
+      if (!userId || job.recruiter_id !== userId) {
+        throw notFound('Job');
+      }
+    }
+
     return job;
   },
 
-  async updateJob(recruiterId: string, jobId: string, data: Parameters<typeof JobModel.update>[1]) {
+  async updateJob(jobId: string, recruiterId: string, data: Parameters<typeof JobModel.update>[1]) {
     const job = await JobModel.findById(jobId);
     if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
     if (job.recruiter_id !== recruiterId)
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
-    return JobModel.update(jobId, data);
+
+    const allowedFields = ['title', 'description', 'location', 'salary_min', 'salary_max', 'type', 'skills'] as const;
+    const filteredData = Object.fromEntries(
+      Object.entries(data).filter(([key]) => (allowedFields as readonly string[]).includes(key)),
+    ) as Parameters<typeof JobModel.update>[1];
+
+    if (Object.keys(filteredData).length === 0) {
+      throw badRequest('No valid fields provided for update');
+    }
+
+    const effectiveSalaryMin =
+      filteredData.salary_min !== undefined ? Number(filteredData.salary_min) : job.salary_min;
+    const effectiveSalaryMax =
+      filteredData.salary_max !== undefined ? Number(filteredData.salary_max) : job.salary_max;
+
+    if (
+      effectiveSalaryMin !== null &&
+      effectiveSalaryMax !== null &&
+      effectiveSalaryMax < effectiveSalaryMin
+    ) {
+      throw badRequest('salary_max must be greater than or equal to salary_min');
+    }
+
+    return JobModel.update(jobId, filteredData);
   },
 
   async deleteJob(recruiterId: string, jobId: string) {

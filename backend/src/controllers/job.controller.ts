@@ -4,6 +4,55 @@ import { JobType } from '../models/job.model';
 import { sendSuccess, sendPaginated } from '../utils/response';
 
 export const JobController = {
+  async getJobs(req: Request, res: Response, next: NextFunction) {
+    try {
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+      const status = req.query.status as string | undefined;
+      const type = req.query.type as JobType | undefined;
+      const keywordRaw = req.query.keyword;
+      const locationRaw = req.query.location;
+      const salaryMinRaw = req.query.salary_min;
+      const salaryMaxRaw = req.query.salary_max;
+      const skillsRaw = req.query.skills;
+
+      const keyword = typeof keywordRaw === 'string' ? keywordRaw.trim() : undefined;
+      const location = typeof locationRaw === 'string' ? locationRaw.trim() : undefined;
+      const salary_min = typeof salaryMinRaw === 'string' ? Number(salaryMinRaw) : undefined;
+      const salary_max = typeof salaryMaxRaw === 'string' ? Number(salaryMaxRaw) : undefined;
+
+      const normalizedSkills = (() => {
+        if (!skillsRaw) return undefined;
+
+        const rawValues = Array.isArray(skillsRaw)
+          ? skillsRaw.flatMap((value) => String(value).split(','))
+          : String(skillsRaw).split(',');
+
+        const normalized = rawValues
+          .map((value) => value.trim().toLowerCase())
+          .filter((value) => value.length > 0);
+
+        return normalized.length > 0 ? Array.from(new Set(normalized)) : undefined;
+      })();
+
+      const { jobs, pagination } = await JobService.getJobs({
+        page,
+        limit,
+        status,
+        type: type ? type.toLowerCase() as JobType : undefined,
+        keyword: keyword && keyword.length > 0 ? keyword : undefined,
+        location: location && location.length > 0 ? location : undefined,
+        salary_min,
+        salary_max,
+        skills: normalizedSkills,
+      });
+
+      sendPaginated(res, jobs, pagination.total, pagination.page, pagination.limit, 'Jobs fetched successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async search(req: Request, res: Response, next: NextFunction) {
     try {
       const filters = {
@@ -24,31 +73,53 @@ export const JobController = {
     }
   },
 
-  async getById(req: Request, res: Response, next: NextFunction) {
+  async getJobById(req: Request, res: Response, next: NextFunction) {
     try {
-      const job = await JobService.getJobById(req.params.id as string);
-      sendSuccess(res, job);
+      const jobId = req.params.id as string;
+      const userId = req.user?.userId || null;
+      const job = await JobService.getJobById(jobId, userId);
+      sendSuccess(res, job, 'Job fetched successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getById(req: Request, res: Response, next: NextFunction) {
+    return JobController.getJobById(req, res, next);
+  },
+
+  async createJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const recruiterId = req.user!.userId;
+      const job = await JobService.createJob(recruiterId, req.body);
+      sendSuccess(res, job, 'Job created successfully', 201);
     } catch (err) {
       next(err);
     }
   },
 
   async create(req: Request, res: Response, next: NextFunction) {
+    return JobController.createJob(req, res, next);
+  },
+
+  async updateJob(req: Request, res: Response, next: NextFunction) {
     try {
-      const job = await JobService.createJob(req.user!.userId, req.body);
-      sendSuccess(res, job, 'Job created', 201);
+      if (!req.body || Object.keys(req.body).length === 0) {
+        res.status(400).json({ success: false, message: 'No fields provided for update' });
+        return;
+      }
+
+      const jobId = req.params.id as string;
+      const recruiterId = req.user!.userId;
+      const job = await JobService.updateJob(jobId, recruiterId, req.body);
+      sendSuccess(res, job, 'Job updated successfully');
     } catch (err) {
       next(err);
     }
   },
 
   async update(req: Request, res: Response, next: NextFunction) {
-    try {
-      const job = await JobService.updateJob(req.user!.userId, req.params.id as string, req.body);
-      sendSuccess(res, job, 'Job updated');
-    } catch (err) {
-      next(err);
-    }
+    return JobController.updateJob(req, res, next);
   },
 
   async publish(req: Request, res: Response, next: NextFunction) {
@@ -64,6 +135,27 @@ export const JobController = {
     try {
       await JobService.deleteJob(req.user!.userId, req.params.id as string);
       sendSuccess(res, null, 'Job deleted');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async closeJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const jobId = req.params.id as string;
+      const recruiterId = req.user!.userId;
+      await JobService.closeJob(jobId, recruiterId);
+      sendSuccess(res, null, 'Job closed successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async approveJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const jobId = req.params.id as string;
+      await JobService.approveJob(jobId);
+      sendSuccess(res, null, 'Job approved successfully');
     } catch (err) {
       next(err);
     }
