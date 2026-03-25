@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { JobController } from '../controllers/job.controller';
+import { authenticate, authorize, optionalAuth } from '../middleware/auth';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireCredits } from '../middleware/credit.middleware';
 import { employerGuard } from '../middleware/employerGuard';
@@ -10,10 +11,14 @@ import { CREDIT_COSTS } from '../config/creditCosts';
 const router = Router();
 
 // Public
-router.get('/', JobController.search);
-router.get('/:id', JobController.getById);
+router.get('/', JobController.getJobs);
+router.get('/:id', optionalAuth, JobController.getJobById);
 
-// Recruiter-only management routes.
+// Close endpoint: bypass employerGuard since service validates ownership
+// Uses: authenticate + authorize('recruiter')
+router.patch('/:id/close', authenticate, authorize('recruiter'), JobController.closeJob);
+
+// Recruiter-only management routes (with profile check).
 // Order is important:
 // 1) authenticate: token must be valid
 // 2) authorize('recruiter'): role must be recruiter
@@ -27,19 +32,58 @@ router.post(
   requireCredits(CREDIT_COSTS.POST_JOB),
   body('title').notEmpty().trim(),
   body('description').notEmpty(),
-  body('type').isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
+  body('location').optional().isString().trim(),
   body('salary_min').optional().isInt({ min: 0 }),
-  body('salary_max').optional().isInt({ min: 0 }),
+  body('salary_max')
+    .optional()
+    .isInt({ min: 0 })
+    .custom((value, { req }) => {
+      if (req.body.salary_min !== undefined && Number(value) < Number(req.body.salary_min)) {
+        throw new Error('salary_max must be greater than or equal to salary_min');
+      }
+      return true;
+    }),
+  body('type').optional().isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
+  body('skills').optional().isArray().withMessage('skills must be an array'),
+  body('skills.*').optional().isString().withMessage('Each skill must be a string'),
   validate,
-  JobController.create,
+  JobController.createJob,
 );
 
 router.put(
   '/:id',
   body('title').optional().notEmpty().trim(),
-  body('type').optional().isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
+  body('description').optional().notEmpty(),
+  body('location').optional().isString().trim(),
+  body('salary_min').optional().isInt({ min: 0 }).toInt(),
+  body('salary_max')
+    .optional()
+    .isInt({ min: 0 })
+    .toInt()
+    .custom((value, { req }) => {
+      if (req.body.salary_min !== undefined && Number(value) < Number(req.body.salary_min)) {
+        throw new Error('salary_max must be greater than or equal to salary_min');
+      }
+      return true;
+    }),
+  body('type')
+    .optional()
+    .trim()
+    .toLowerCase()
+    .isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
+  body('skills')
+    .optional()
+    .isArray()
+    .withMessage('skills must be an array')
+    .bail()
+    .custom((skills) =>
+      Array.isArray(skills) &&
+      skills.every((skill) => typeof skill === 'string' && skill.trim().length > 0),
+    )
+    .withMessage('skills must contain non-empty strings only')
+    .customSanitizer((skills) => skills.map((skill: string) => skill.trim())),
   validate,
-  JobController.update,
+  JobController.updateJob,
 );
 
 router.patch('/:id/publish', requireCredits(CREDIT_COSTS.POST_JOB), JobController.publish);

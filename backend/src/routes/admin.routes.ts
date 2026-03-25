@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { AdminController } from '../controllers/admin.controller';
+import { JobController } from '../controllers/job.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
@@ -33,6 +34,8 @@ router.get('/jobs', AdminController.listJobs);
 
 router.patch('/jobs/:id/close', body('reason').notEmpty(), validate, AdminController.closeJob);
 
+router.patch('/jobs/:id/approve', JobController.approveJob);
+
 router.delete('/jobs/:id', body('reason').notEmpty(), validate, AdminController.deleteJob);
 
 // ── Credits ───────────────────────────────────────────────────────────────────────
@@ -46,6 +49,19 @@ router.post(
   body('reason').notEmpty().withMessage('Reason is required'),
   validate,
   AdminController.adjustCredits,
+);
+
+// ── Recruiter Verification ─────────────────────────────────────────────────────
+router.patch(
+  '/recruiter/:id/verify',
+  body('is_verified')
+    .exists()
+    .withMessage('is_verified is required')
+    .isBoolean({ strict: true })
+    .withMessage('is_verified must be a strict boolean')
+    .toBoolean(),
+  validate,
+  AdminController.verifyRecruiter,
 );
 
 // ── Metrics & Audit ────────────────────────────────────────────────────────────────

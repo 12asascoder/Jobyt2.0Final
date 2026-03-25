@@ -217,6 +217,12 @@ Once ingestion is complete, you can view the interactive roadmaps directly in th
 3. Navigate to **Roadmaps** in the sidebar navigation or go to `http://localhost:3000/roadmaps`.
 4. Click on any topic to see the interactive Zoom/Pan graph powered by React Flow.
 
+### Intelligent Features (Skill Integration)
+The system automatically maps an applicant's `skills` array to roadmap nodes.
+- **Progress Tracking**: Completed nodes are visually highlighted in green on the Roadmap graph view.
+- **Next-Skill Recommendation**: Features a Directed Acyclic Graph (DAG) traversal engine to recommend the most optimal next skill based on satisfied prerequisites and unlockable dependencies.
+- **Idempotent Matcher**: Uses flexible formatting to match user skills against node titles dynamically.
+
 ### Roadmap API Endpoints
 
 | Method | Endpoint | Description |
@@ -224,6 +230,8 @@ Once ingestion is complete, you can view the interactive roadmaps directly in th
 | `GET` | `/api/v1/roadmaps` | List all roadmaps (paginated) |
 | `GET` | `/api/v1/roadmaps/:id` | Get roadmap by UUID or slug |
 | `GET` | `/api/v1/roadmaps/:id/nodes` | Get nodes and edges for a roadmap |
+| `GET` | `/api/v1/users/:userId/roadmaps/:roadmapId/progress` | **[NEW]** Current user roadmap progress |
+| `GET` | `/api/v1/users/:userId/roadmaps/:roadmapId/recommend-next-skill` | **[NEW]** Recommended next skill |
 | `POST` | `/api/v1/roadmaps/ingest` | Trigger ingestion pipeline |
 | `GET` | `/api/v1/roadmaps/ingestion/:id` | Get ingestion run status |
 
