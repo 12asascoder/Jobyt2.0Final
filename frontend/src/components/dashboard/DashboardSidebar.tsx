@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -37,8 +38,13 @@ export function DashboardSidebar() {
     const { logout } = useAuthStore();
 
     const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const handleLogout = () => {
+        setShowLogoutConfirm(true);
+    };
+
+    const confirmLogout = () => {
         logout();
         router.push('/');
     };
@@ -83,7 +89,13 @@ export function DashboardSidebar() {
                     >
                         <FaArrowRightFromBracket className="text-base" />
                     </button>
-                    <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/20 mt-1">
+                    <Link
+                        href={ROUTES.profile}
+                        className={`w-11 h-11 rounded-full overflow-hidden border-2 mt-1 transition-colors ${
+                            isActive(ROUTES.profile) ? 'border-[#c3ff3d]' : 'border-white/20 hover:border-white/40'
+                        }`}
+                        title="Profile"
+                    >
                         <Image
                             src="https://i.pravatar.cc/80?img=47"
                             alt="Avatar"
@@ -91,7 +103,7 @@ export function DashboardSidebar() {
                             height={44}
                             className="object-cover"
                         />
-                    </div>
+                    </Link>
                 </div>
             </div>
 
@@ -124,6 +136,32 @@ export function DashboardSidebar() {
                     })}
                 </div>
             </div>
+
+            {/* Logout Confirmation Modal */}
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-black border border-[#222] rounded-2xl w-full max-w-sm p-8 text-center shadow-2xl font-brand">
+                        <h3 className="text-2xl font-bold text-white mb-3 tracking-wide">Log Out?</h3>
+                        <p className="text-white/60 text-sm mb-8 leading-relaxed">
+                            Your progress is saved. Come back anytime to track your internship applications and update your profile.
+                        </p>
+                        <div className="flex items-center justify-center gap-4">
+                            <button
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="px-6 py-2.5 rounded-lg border border-white/20 text-white hover:border-white transition-colors text-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmLogout}
+                                className="px-6 py-2.5 rounded-lg bg-[#c3ff3d] text-black font-semibold hover:bg-[#aee62d] transition-colors text-sm"
+                            >
+                                Confirm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }
