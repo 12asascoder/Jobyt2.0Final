@@ -1,12 +1,28 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Myanmar Sans Pro";
+  src: url("/fonts/Myanmar Sans Pro Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Myanmar Khyay";
+  src: url("/fonts/MyanmarKhyay.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-jakarta);
+  --font-sans: "Myanmar Khyay", "Myanmar Sans Pro", sans-serif;
 
   /* Brand Colors */
-  --color-brand-primary: #C3FF3D;
+  --color-brand-primary: #c3ff3d;
   --color-brand-coral: #ff6b6b;
   --color-brand-dark: #0b1120;
   --color-brand-light: #f4f7ff;
@@ -20,31 +36,50 @@
   --animate-marquee: marquee 30s linear infinite;
 
   @keyframes blob {
-    0% { transform: translate(0px, 0px) scale(1); }
-    33% { transform: translate(30px, -50px) scale(1.1); }
-    66% { transform: translate(-20px, 20px) scale(0.9); }
-    100% { transform: translate(0px, 0px) scale(1); }
+    0% {
+      transform: translate(0px, 0px) scale(1);
+    }
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+    100% {
+      transform: translate(0px, 0px) scale(1);
+    }
   }
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
-  }
+
   @keyframes marquee {
-    0% { transform: translateX(0%); }
-    100% { transform: translateX(-50%); }
+    0% {
+      transform: translateX(0%);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
   }
 }
 
 :root {
   --background: #fcfcfc;
   --foreground: #1e293b;
+  --font-display: "Myanmar Khyay";
 }
 
 /* Custom Scrollbar */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #f8fafc; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
 
 html {
   scroll-behavior: smooth;
@@ -53,7 +88,24 @@ html {
 body {
   background-color: #fcfcfc;
   overflow-x: hidden;
-  font-family: var(--font-jakarta), sans-serif;
+  font-family: "Myanmar Khyay", "Myanmar Sans Pro", sans-serif;
+}
+
+body * {
+  font-family: "Myanmar Khyay", "Myanmar Sans Pro", sans-serif;
+}
+
+.font-display,
+.font-brand {
+  font-family: "Myanmar Khyay", "Myanmar Sans Pro", sans-serif;
+}
+
+.font-navbar {
+  font-family: "Myanmar Sans Pro", sans-serif;
+}
+
+.font-navbar * {
+  font-family: "Myanmar Sans Pro", sans-serif;
 }
 
 ::selection {
@@ -83,7 +135,9 @@ body {
 }
 .job-card:hover {
   transform: translateY(-8px) scale(1.01);
-  box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.08), 0 15px 15px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 25px 35px -5px rgba(0, 0, 0, 0.08),
+    0 15px 15px -5px rgba(0, 0, 0, 0.04);
 }
 
 /* Marquee */
@@ -107,9 +161,15 @@ body {
   opacity: 1;
   transform: translateY(0);
 }
-.reveal-delay-1 { transition-delay: 0.1s; }
-.reveal-delay-2 { transition-delay: 0.2s; }
-.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-1 {
+  transition-delay: 0.1s;
+}
+.reveal-delay-2 {
+  transition-delay: 0.2s;
+}
+.reveal-delay-3 {
+  transition-delay: 0.3s;
+}
 
 /* Fade-in animation for dynamically loaded content (e.g. API-loaded job cards) */
 @keyframes fadeInUp {
@@ -133,6 +193,33 @@ body {
   overflow: hidden;
   z-index: -1;
 }
-.blob-1 { background: radial-gradient(circle, rgba(255,230,240,0.8) 0%, rgba(255,255,255,0) 70%); }
-.blob-2 { background: radial-gradient(circle, rgba(220,235,255,0.8) 0%, rgba(255,255,255,0) 70%); }
-.blob-3 { background: radial-gradient(circle, rgba(255,245,210,0.8) 0%, rgba(255,255,255,0) 70%); }
+.blob-1 {
+  background: radial-gradient(
+    circle,
+    rgba(255, 230, 240, 0.8) 0%,
+    rgba(255, 255, 255, 0) 70%
+  );
+}
+.blob-2 {
+  background: radial-gradient(
+    circle,
+    rgba(220, 235, 255, 0.8) 0%,
+    rgba(255, 255, 255, 0) 70%
+  );
+}
+.blob-3 {
+  background: radial-gradient(
+    circle,
+    rgba(255, 245, 210, 0.8) 0%,
+    rgba(255, 255, 255, 0) 70%
+  );
+}
+
+.concave-cut {
+  -webkit-mask: radial-gradient(
+    circle at top right,
+    transparent 26px,
+    black 27px
+  );
+  mask: radial-gradient(circle at top right, transparent 26px, black 27px);
+}

@@ -7,6 +7,7 @@ export type JobStatus = 'draft' | 'active' | 'closed';
 export interface Job {
   id: string;
   recruiter_id: string;
+  company_name?: string | null;
   title: string;
   location: string | null;
   salary_min: number | null;
@@ -35,11 +36,18 @@ export interface JobFilters {
 }
 
 export const JobModel = {
-  async findById(id: string, client?: PoolClient): Promise<Job | null> {
-    const db = client ?? pool;
-    const { rows } = await db.query(`SELECT * FROM jobs WHERE id = $1 AND deleted_at IS NULL`, [
-      id,
-    ]);
+  async findById(id: string): Promise<Job | null> {
+    const { rows } = await pool.query(
+      `SELECT
+        jobs.*,
+        recruiter_profiles.company_name
+       FROM jobs
+       LEFT JOIN recruiter_profiles ON recruiter_profiles.user_id = jobs.recruiter_id
+       WHERE jobs.id = $1
+         AND jobs.deleted_at IS NULL
+       LIMIT 1`,
+      [id],
+    );
     return rows[0] || null;
   },
 
@@ -55,28 +63,44 @@ export const JobModel = {
     recruiter_id: string;
     title: string;
     description: string;
-    type: JobType;
+    type?: JobType;
     location?: string;
     salary_min?: number;
     salary_max?: number;
     skills?: string[];
     status?: JobStatus;
   }): Promise<Job> {
-    const { rows } = await pool.query(
-      `INSERT INTO jobs (recruiter_id, title, description, type, location, salary_min, salary_max, skills, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [
-        data.recruiter_id,
-        data.title,
-        data.description,
-        data.type,
-        data.location || null,
-        data.salary_min || null,
-        data.salary_max || null,
-        data.skills || [],
-        data.status || 'draft',
-      ],
-    );
+    const hasType = data.type !== undefined;
+    const { rows } = hasType
+      ? await pool.query(
+          `INSERT INTO jobs (recruiter_id, title, description, type, location, salary_min, salary_max, skills, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+          [
+            data.recruiter_id,
+            data.title,
+            data.description,
+            data.type,
+            data.location || null,
+            data.salary_min || null,
+            data.salary_max || null,
+            data.skills || [],
+            data.status || 'draft',
+          ],
+        )
+      : await pool.query(
+          `INSERT INTO jobs (recruiter_id, title, description, location, salary_min, salary_max, skills, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+          [
+            data.recruiter_id,
+            data.title,
+            data.description,
+            data.location || null,
+            data.salary_min || null,
+            data.salary_max || null,
+            data.skills || [],
+            data.status || 'draft',
+          ],
+        );
     return rows[0];
   },
 
@@ -87,11 +111,34 @@ export const JobModel = {
     >,
   ): Promise<Job> {
     const fields = Object.keys(data);
+    if (fields.length === 0) {
+      const existing = await this.findById(id);
+      if (!existing) {
+        throw Object.assign(new Error('Job not found'), { statusCode: 404 });
+      }
+      return existing;
+    }
+
     const values = Object.values(data);
     const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
     const { rows } = await pool.query(
       `UPDATE jobs SET ${setClause}, updated_at = NOW() WHERE id = $${fields.length + 1} AND deleted_at IS NULL RETURNING *`,
       [...values, id],
+    );
+    return rows[0];
+  },
+
+  async closeJob(id: string): Promise<void> {
+    await pool.query(
+      `UPDATE jobs SET status = 'closed', updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`,
+      [id],
+    );
+  },
+
+  async approveJob(id: string): Promise<Job> {
+    const { rows } = await pool.query(
+      `UPDATE jobs SET status = 'active', updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL RETURNING *`,
+      [id],
     );
     return rows[0];
   },
@@ -163,6 +210,79 @@ export const JobModel = {
     ]);
 
     return { jobs: dataResult.rows, total: parseInt(countResult.rows[0].count) };
+  },
+
+  async findAll(filters: {
+    status?: JobStatus;
+    type?: JobType;
+    keyword?: string;
+    location?: string;
+    salary_min?: number;
+    salary_max?: number;
+    skills?: string[];
+    limit: number;
+    offset: number;
+  }): Promise<{ rows: Job[]; total: number }> {
+    // Build WHERE clause once and reuse in both COUNT and SELECT queries.
+    const conditions: string[] = ['jobs.deleted_at IS NULL'];
+    const values: unknown[] = [];
+    let index = 1;
+
+    if (filters.status) {
+      conditions.push(`jobs.status = $${index++}`);
+      values.push(filters.status);
+    }
+
+    if (filters.type) {
+      conditions.push(`jobs.type = $${index++}`);
+      values.push(filters.type);
+    }
+
+    if (filters.keyword) {
+      conditions.push(`(jobs.title ILIKE $${index} OR jobs.description ILIKE $${index})`);
+      values.push(`%${filters.keyword}%`);
+      index++;
+    }
+
+    if (filters.location) {
+      conditions.push(`jobs.location ILIKE $${index++}`);
+      values.push(`%${filters.location}%`);
+    }
+
+    if (filters.salary_min !== undefined) {
+      // SQL three-valued logic: rows with salary_min = NULL do not satisfy >= comparisons.
+      conditions.push(`jobs.salary_min >= $${index++}`);
+      values.push(filters.salary_min);
+    }
+
+    if (filters.salary_max !== undefined) {
+      // SQL three-valued logic: rows with salary_max = NULL do not satisfy <= comparisons.
+      conditions.push(`jobs.salary_max <= $${index++}`);
+      values.push(filters.salary_max);
+    }
+
+    // Guard against empty skills arrays so we never emit jobs.skills @> '{}' (which matches all rows).
+    if (filters.skills && filters.skills.length > 0) {
+      conditions.push(`jobs.skills @> $${index++}::text[]`);
+      values.push(filters.skills);
+    }
+
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
+
+    const countQuery = `SELECT COUNT(*) FROM jobs ${whereClause}`;
+    const selectQuery = `SELECT jobs.*, recruiter_profiles.company_name
+      FROM jobs
+      LEFT JOIN recruiter_profiles ON recruiter_profiles.user_id = jobs.recruiter_id
+      ${whereClause}
+      ORDER BY jobs.created_at DESC, jobs.id DESC
+      LIMIT $${index++} OFFSET $${index++}`;
+
+    const [countResult, selectResult] = await Promise.all([
+      pool.query(countQuery, values),
+      pool.query(selectQuery, [...values, filters.limit, filters.offset]),
+    ]);
+
+    return { rows: selectResult.rows, total: Number(countResult.rows[0].count) };
   },
 
   async findByRecruiter(recruiterId: string): Promise<Job[]> {

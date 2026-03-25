@@ -1,17 +1,20 @@
 import pool from '../config/database';
 
 export interface RecruiterProfile {
+  id: string;
   user_id: string;
   name: string | null;
   company_name: string | null;
+  company_email: string | null;
   industry: string | null;
   description: string | null;
   company_size: string | null;
   logo_url: string | null;
   website: string | null;
   location: string | null;
-  created_at: Date | null;
-  updated_at: Date | null;
+  is_verified: boolean;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export const RecruiterProfileModel = {

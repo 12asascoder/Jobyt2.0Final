@@ -1,3 +1,6 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- uuid extension required for uuid_generate_v4() defaults
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
@@ -112,7 +115,7 @@ CREATE TABLE "jobs" (
     "deleted_at" TIMESTAMPTZ(6),
     "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "search_vector" tsvector DEFAULT (setweight(to_tsvector('english'::regconfig, (COALESCE(title, ''::character varying))::text), 'A'::"char") || setweight(to_tsvector('english'::regconfig, COALESCE(description, ''::text)), 'B'::"char")),
+    "search_vector" tsvector,
 
     CONSTRAINT "jobs_pkey" PRIMARY KEY ("id")
 );
