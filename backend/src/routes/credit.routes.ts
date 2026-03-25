@@ -6,6 +6,7 @@ const router = Router();
 
 router.use(authenticate);
 router.get('/balance', CreditController.getBalance);
-router.get('/history', CreditController.getHistory);
+router.get('/ledger', CreditController.getLedger);
+router.get('/history', CreditController.getLedger);
 
 export default router;

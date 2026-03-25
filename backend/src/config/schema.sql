@@ -42,7 +42,6 @@ CREATE TABLE applicant_profiles (
   skills        TEXT[] DEFAULT '{}',
   experience    JSONB DEFAULT '[]',
   education     JSONB DEFAULT '[]',
-  resume_url    VARCHAR(500),
   portfolio_url VARCHAR(500),
   github_url    VARCHAR(500),
   linkedin_url  VARCHAR(500),
@@ -123,6 +122,26 @@ CREATE TABLE saved_jobs (
   saved_at     TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (applicant_id, job_id)
 );
+
+-- Resumes (S3/CloudFront URL + metadata; multiple per user; is_default for applications)
+CREATE TABLE resumes (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  file_url    VARCHAR(500) NOT NULL,
+  file_name   VARCHAR(255) NOT NULL,
+  file_size   INTEGER,
+  mime_type   VARCHAR(100),
+  is_default  BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_resumes_user_default ON resumes (user_id, is_default);
+
+CREATE INDEX idx_resumes_user_created_at ON resumes (user_id, created_at DESC);
+
+-- At most one default per user (complements application-layer clearing in transactions)
+CREATE UNIQUE INDEX unique_default_resume_per_user ON resumes (user_id) WHERE (is_default = TRUE);
 
 -- Conversations
 CREATE TABLE conversations (

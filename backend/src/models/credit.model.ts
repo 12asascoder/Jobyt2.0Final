@@ -14,26 +14,35 @@ export interface CreditTransaction {
   created_at: Date;
 }
 
+/** Ledger row for API / history (excludes user_id). */
+export type CreditLedgerEntry = Omit<CreditTransaction, 'user_id'>;
+
 export const CreditModel = {
-  async getBalance(userId: string): Promise<number> {
+  /** Returns null if no user row exists (caller / service decides how to handle). */
+  async getBalance(userId: string): Promise<number | null> {
     const { rows } = await pool.query('SELECT credit_balance FROM users WHERE id = $1', [userId]);
-    return rows[0]?.credit_balance ?? 0;
+    if (rows.length === 0) return null;
+    return rows[0].credit_balance;
   },
 
   async getHistory(
     userId: string,
     page = 1,
     limit = 20,
-  ): Promise<{ transactions: CreditTransaction[]; total: number }> {
+  ): Promise<{ transactions: CreditLedgerEntry[]; total: number }> {
     const offset = (page - 1) * limit;
     const [countRes, dataRes] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM credit_transactions WHERE user_id = $1', [userId]),
       pool.query(
-        `SELECT * FROM credit_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+        `SELECT id, type, amount, balance_after, description, reference_id, created_at
+         FROM credit_transactions
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT $2 OFFSET $3`,
         [userId, limit, offset],
       ),
     ]);
-    return { transactions: dataRes.rows, total: parseInt(countRes.rows[0].count) };
+    return { transactions: dataRes.rows, total: parseInt(countRes.rows[0].count, 10) };
   },
 
   // Atomically debit/credit and record transaction — must be called inside a DB transaction

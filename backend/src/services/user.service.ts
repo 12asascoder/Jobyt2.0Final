@@ -1,14 +1,16 @@
 import { ApplicantProfileModel, ApplicantProfile } from '../models/applicantProfile.model';
 import { RecruiterProfileModel, RecruiterProfile } from '../models/recruiterProfile.model';
+import { ResumeModel } from '../models/resume.model';
 import { UserModel } from '../models/user.model';
 import { JobModel } from '../models/job.model';
-import { uploadToS3, deleteFromS3 } from '../utils/s3';
+import { StorageService } from './storage.service';
+import { uploadToS3 } from '../utils/s3';
 import { AppError } from '../utils/appError';
 import { UserRole } from '../types';
 
 // ── Profile completeness ────────────────────────────────────────────────────
 
-const computeApplicantCompleteness = (p: ApplicantProfile): number => {
+const computeApplicantCompleteness = (p: ApplicantProfile, hasResume: boolean): number => {
   let score = 0;
   if (p.name) score += 10;
   if (p.phone) score += 5;
@@ -17,7 +19,7 @@ const computeApplicantCompleteness = (p: ApplicantProfile): number => {
   if (p.skills?.length >= 3) score += 15;
   if ((p.experience as unknown[])?.length >= 1) score += 20;
   if ((p.education as unknown[])?.length >= 1) score += 15;
-  if (p.resume_url) score += 15;
+  if (hasResume) score += 15;
   return Math.min(score, 100);
 };
 
@@ -43,13 +45,20 @@ export const UserService = {
 
     if (role === 'applicant') {
       const profile = await ApplicantProfileModel.findByUserId(userId);
-      const completeness = profile ? computeApplicantCompleteness(profile) : 0;
+      const [defaultResume, hasResume] = await Promise.all([
+        ResumeModel.findDefaultByUserId(userId),
+        ResumeModel.hasAnyResume(userId),
+      ]);
+      const profileOut = profile
+        ? { ...profile, resume_url: defaultResume?.file_url ?? null }
+        : null;
+      const completeness = profile ? computeApplicantCompleteness(profile, hasResume) : 0;
       return {
         email: user.email,
         role: user.role,
         credit_balance: user.credit_balance,
         referral_code: user.referral_code,
-        profile,
+        profile: profileOut,
         completeness,
       };
     }
@@ -74,10 +83,20 @@ export const UserService = {
     userId: string,
     data: Partial<Omit<ApplicantProfile, 'user_id' | 'created_at' | 'updated_at'>>,
   ) {
+    const raw = { ...data } as Record<string, unknown>;
+    delete raw.resume_url;
     let profile = await ApplicantProfileModel.findByUserId(userId);
     if (!profile) profile = await ApplicantProfileModel.create(userId);
-    const updated = await ApplicantProfileModel.update(userId, data);
-    return { profile: updated, completeness: computeApplicantCompleteness(updated) };
+    const updated = await ApplicantProfileModel.update(
+      userId,
+      raw as Partial<Omit<ApplicantProfile, 'user_id' | 'created_at' | 'updated_at'>>,
+    );
+    const hasResume = await ResumeModel.hasAnyResume(userId);
+    const defaultResume = await ResumeModel.findDefaultByUserId(userId);
+    return {
+      profile: { ...updated, resume_url: defaultResume?.file_url ?? null },
+      completeness: computeApplicantCompleteness(updated, hasResume),
+    };
   },
 
   async updateRecruiterProfile(
@@ -91,13 +110,14 @@ export const UserService = {
   },
 
   async uploadResume(userId: string, file: Express.Multer.File) {
-    const url = await uploadToS3(file.buffer, file.originalname, file.mimetype, 'resumes');
-    const profile = await ApplicantProfileModel.findByUserId(userId);
-    if (profile?.resume_url) {
-      await deleteFromS3(profile.resume_url).catch(() => null); // ignore delete errors
-    }
-    await ApplicantProfileModel.update(userId, { resume_url: url });
-    return { resume_url: url };
+    const { url } = await StorageService.uploadResume(file);
+    const row = await ResumeModel.createDefaultForUser(userId, {
+      file_url: url,
+      file_name: file.originalname,
+      file_size: file.size ?? Buffer.byteLength(file.buffer),
+      mime_type: file.mimetype,
+    });
+    return { resume_url: url, id: row.id };
   },
 
   async uploadPhoto(userId: string, role: UserRole, file: Express.Multer.File) {
@@ -132,7 +152,11 @@ export const UserService = {
 
     if (user.role === 'applicant') {
       const profile = await ApplicantProfileModel.findByUserId(targetUserId);
-      return { id: user.id, email: user.email, role: user.role, profile };
+      const defaultResume = profile ? await ResumeModel.findDefaultByUserId(targetUserId) : null;
+      const profileOut = profile
+        ? { ...profile, resume_url: defaultResume?.file_url ?? null }
+        : null;
+      return { id: user.id, email: user.email, role: user.role, profile: profileOut };
     }
     if (user.role === 'recruiter') {
       const profile = await RecruiterProfileModel.findByUserId(targetUserId);

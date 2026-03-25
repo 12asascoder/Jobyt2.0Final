@@ -25,7 +25,16 @@ export const requireCredits = (requiredCredits: number) => {
       }
 
       next();
-    } catch {
+    } catch (err) {
+      const anyErr = err as { statusCode?: number; code?: string };
+      if (anyErr.statusCode === 404) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found',
+          error: 'USER_NOT_FOUND',
+        });
+        return;
+      }
       res.status(500).json({
         success: false,
         message: 'Credit validation failed',

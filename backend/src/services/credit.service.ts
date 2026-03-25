@@ -4,6 +4,10 @@ import { CreditModel } from '../models/credit.model';
 
 const REGISTRATION_CREDITS = parseInt(process.env.REGISTRATION_CREDIT_AMOUNT || '150');
 const JOB_POST_COST = parseInt(process.env.JOB_POSTING_CREDIT_COST || '10');
+const LOW_CREDIT_THRESHOLD = (() => {
+  const n = parseInt(process.env.LOW_CREDIT_THRESHOLD ?? '10', 10);
+  return Number.isFinite(n) && n >= 0 ? n : 10;
+})();
 const REFERRAL_REWARD = 50; // configurable — move to DB/env
 const REFERRAL_JOIN_BONUS = 25;
 
@@ -124,7 +128,20 @@ export const CreditService = {
   },
 
   async getBalance(userId: string): Promise<number> {
-    return CreditModel.getBalance(userId);
+    const balance = await CreditModel.getBalance(userId);
+    if (balance === null) {
+      throw Object.assign(new Error('User not found'), {
+        statusCode: 404,
+        code: 'USER_NOT_FOUND',
+      });
+    }
+    return balance;
+  },
+
+  /** Balance plus low-credit flag for API consumers (threshold from LOW_CREDIT_THRESHOLD). */
+  async getBalanceState(userId: string): Promise<{ balance: number; low_credit: boolean }> {
+    const balance = await CreditService.getBalance(userId);
+    return { balance, low_credit: balance < LOW_CREDIT_THRESHOLD };
   },
 
   async getLedger(userId: string, page = 1, limit = 20) {

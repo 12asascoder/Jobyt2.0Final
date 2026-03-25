@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { UserController } from '../controllers/user.controller';
+import { ResumeController } from '../controllers/resume.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { uploadResume, uploadImage } from '../middleware/upload';
 import { validate } from '../middleware/validate';
@@ -43,6 +44,20 @@ router.post(
 );
 
 router.post('/me/photo', uploadImage.single('photo'), UserController.uploadPhoto);
+
+// ── Resumes (applicant only) ────────────────────────────────────────────────
+router.get('/me/resumes', authorize('applicant'), ResumeController.getMyResumes);
+router.get(
+  '/me/resumes/default',
+  authorize('applicant'),
+  ResumeController.getDefaultResume,
+);
+router.patch(
+  '/me/resumes/:id/set-default',
+  authorize('applicant'),
+  ResumeController.setDefault,
+);
+router.delete('/me/resumes/:id', authorize('applicant'), ResumeController.delete);
 
 // ── Saved Jobs (applicant only) ───────────────────────────────────────────────
 router.get('/me/saved-jobs', authorize('applicant'), UserController.getSavedJobs);
