@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { Card, CardBody, Spinner, Badge } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
+import Image from 'next/image';
 
 interface ReferralEntry {
   referred_email: string;
@@ -42,78 +43,96 @@ export default function ReferralPage() {
   if (!data) return null;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Referral Program</h1>
+    <div className="max-w-4xl mx-auto space-y-8 font-brand text-gray-900 pb-10 px-4 sm:px-6">
+      
+      {/* Header section */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 tracking-tight">Referral Program</h1>
+        <p className="text-sm sm:text-[15px] leading-relaxed max-w-3xl font-medium">
+          Every user can take part in our internship referral program. For every person who joins the platform using your unique link, you'll earn credits.
+        </p>
+        <p className="text-sm sm:text-[15px] font-medium mt-4">
+          Want to promote us? <a href="#" className="text-[#a8e02d] hover:text-[#c3ff3d] hover:underline transition-all">Download banners, sample messages, and logos to get started.</a>
+        </p>
+      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardBody className="p-4 text-center">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Total Referrals</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">{data.total_referrals}</p>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody className="p-4 text-center">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Credited</p>
-            <p className="text-3xl font-bold text-green-600 mt-1">{data.credited_referrals}</p>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardBody className="p-4 text-center">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Credits Earned</p>
-            <p className="text-3xl font-bold text-blue-600 mt-1">{data.credits_earned}</p>
-          </CardBody>
-        </Card>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="bg-[#0b0b0b] rounded-2xl sm:rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-lg border border-gray-900 min-h-[140px] sm:min-h-[160px]">
+          <p className="text-[10px] sm:text-xs text-[#a8e02d] font-semibold tracking-wider uppercase mb-2 sm:mb-3">Total Referrals</p>
+          <p className="text-4xl sm:text-5xl font-bold text-[#c3ff3d]">{(data.total_referrals || 0).toString().padStart(2, '0')}</p>
+        </div>
+        
+        <div className="bg-[#0b0b0b] rounded-2xl sm:rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-lg border border-gray-900 min-h-[140px] sm:min-h-[160px]">
+          <p className="text-[10px] sm:text-xs text-[#a8e02d] font-semibold tracking-wider uppercase mb-2 sm:mb-3">Credited</p>
+          <p className="text-4xl sm:text-5xl font-bold text-[#c3ff3d]">{(data.credited_referrals || 0).toString().padStart(2, '0')}</p>
+        </div>
+        
+        <div className="bg-[#0b0b0b] rounded-2xl sm:rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-lg border border-gray-900 min-h-[140px] sm:min-h-[160px]">
+          <p className="text-[10px] sm:text-xs text-[#a8e02d] font-semibold tracking-wider uppercase mb-2 sm:mb-3">Credits Earned</p>
+          <p className="text-4xl sm:text-5xl font-bold text-[#c3ff3d]">{data.credits_earned || 0}</p>
+        </div>
+      </div>
+
+      {/* Referral list */}
+      <div className="bg-[#F4F1E9] rounded-2xl p-5 sm:p-6 shadow-sm">
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 tracking-tight">Your Referrals</h2>
+        {!(data.referrals && data.referrals.length > 0) ? (
+          <p className="text-gray-500 font-medium text-sm sm:text-base">No referrals yet. Share your link to start earning!</p>
+        ) : (
+          <div className="space-y-3 sm:space-y-4">
+            {data.referrals.map((r, i) => (
+              <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 py-3 sm:py-2 border-b border-gray-200/50 last:border-0">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 shrink-0 border border-white">
+                      <Image
+                        src={`https://i.pravatar.cc/150?u=${r.referred_email}`}
+                        alt="Avatar"
+                        width={40}
+                        height={40}
+                        className="object-cover"
+                      />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900 line-clamp-1">
+                      <span className="capitalize">{r.referred_email.split('@')[0]}</span> Joined!
+                    </p>
+                    <p className="text-[11px] sm:text-xs text-gray-500 font-medium">{formatDate(r.created_at)}</p>
+                  </div>
+                </div>
+                <div className="pl-14 sm:pl-0 sm:pr-2 self-start sm:self-auto">
+                  <span className={`text-[10px] sm:text-xs font-bold px-3 py-1 bg-white rounded-full border inline-block ${r.referred_credited ? 'border-lime-200 text-lime-600' : 'border-gray-200 text-gray-500'}`}>
+                    {r.referred_credited ? 'Credited' : 'Pending'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Referral link */}
-      <Card>
-        <CardBody className="p-6">
-          <h2 className="font-semibold text-gray-800 mb-1">Your Referral Link</h2>
-          <p className="text-xs text-gray-500 mb-3">
-            Earn 50 credits when a friend registers and 25 more when they verify their email.
-          </p>
-          <div className="flex gap-2">
-            <input
-              readOnly
-              value={data.link}
-              className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono text-gray-700 focus:outline-none"
-            />
-            <button
-              onClick={() => copy(data.link)}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-            >
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-          <p className="mt-2 text-xs text-gray-400">Code: <span className="font-mono font-semibold">{data.code}</span></p>
-        </CardBody>
-      </Card>
-
-      {/* Referral list */}
-      <Card>
-        <CardBody className="p-6">
-          <h2 className="font-semibold text-gray-800 mb-4">Your Referrals</h2>
-          {data.referrals.length === 0 ? (
-            <p className="text-center py-8 text-gray-400">No referrals yet. Share your link to start earning!</p>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {data.referrals.map((r, i) => (
-                <div key={i} className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{r.referred_email}</p>
-                    <p className="text-xs text-gray-400">{formatDate(r.created_at)}</p>
-                  </div>
-                  <Badge variant={r.referred_credited ? 'success' : 'default'}>
-                    {r.referred_credited ? 'Credited' : 'Pending'}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardBody>
-      </Card>
+      <div className="bg-[#0b0b0b] rounded-2xl p-5 sm:p-6 shadow-xl border border-gray-900">
+        <h2 className="text-lg sm:text-xl font-bold text-white mb-2 tracking-tight">Your Unique Referral Link</h2>
+        <p className="text-xs sm:text-[13px] text-gray-400 font-medium mb-4 sm:mb-6">
+          Earn 50 credits when a friend registers
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <input
+            readOnly
+            value={data.link || ''}
+            className="flex-1 rounded-xl bg-[#222] border border-[#333] px-4 sm:px-5 py-3 sm:py-3.5 text-xs sm:text-[15px] font-mono text-gray-300 focus:outline-none placeholder-gray-600 truncate"
+            placeholder="Loading link..."
+          />
+          <button
+            onClick={() => copy(data.link || '')}
+            className="rounded-xl shrink-0 bg-[#c3ff3d] px-6 sm:px-10 py-3 sm:py-3.5 text-sm sm:text-[15px] font-bold text-black hover:bg-[#aee62d] transition-transform active:scale-95 text-center"
+          >
+            {copied ? 'Copied!' : 'Copy Link'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
