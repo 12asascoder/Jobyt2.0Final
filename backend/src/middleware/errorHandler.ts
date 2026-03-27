@@ -45,12 +45,14 @@ export const errorHandler = (
   let isOperational = false;
   let message = 'Internal server error';
   let errorCode: string | undefined;
+  let details: unknown;
 
   if (err instanceof AppError) {
     statusCode = err.statusCode;
     isOperational = err.isOperational;
     message = err.message;
     errorCode = err.code;
+    details = (err as unknown as { details?: unknown }).details;
   } else {
     // If a raw Error was thrown with a `statusCode`, treat it as operational so we preserve its payload.
     const rawStatusCode = typeof anyErr.statusCode === 'number' ? anyErr.statusCode : 500;
@@ -59,6 +61,7 @@ export const errorHandler = (
     message = isOperational ? err.message : 'Internal server error';
     const maybeErrorCode = anyErr.error ?? anyErr.code;
     if (typeof maybeErrorCode === 'string') errorCode = maybeErrorCode;
+    if (anyErr.details !== undefined) details = anyErr.details;
   }
 
   // Normalize common DB/driver errors.
@@ -68,6 +71,27 @@ export const errorHandler = (
     isOperational = true;
     message = 'Resource already exists';
     errorCode = 'DUPLICATE_ENTRY';
+  }
+
+  // Normalize JWT errors when they bubble up to the handler.
+  if (!(err instanceof AppError) && typeof anyErr.name === 'string') {
+    if (anyErr.name === 'JsonWebTokenError') {
+      statusCode = 401;
+      isOperational = true;
+      message = 'Invalid token';
+      errorCode = 'INVALID_TOKEN';
+    } else if (anyErr.name === 'TokenExpiredError') {
+      statusCode = 401;
+      isOperational = true;
+      message = 'Token expired';
+      errorCode = 'TOKEN_EXPIRED';
+    }
+  }
+
+  // Metrics hook (placeholder) — replace with Prometheus/StatsD later.
+  if (errorCode) {
+    // eslint-disable-next-line no-unused-expressions
+    errorCode;
   }
 
   if (process.env.NODE_ENV !== 'production') {
@@ -100,6 +124,7 @@ export const errorHandler = (
     if (anyErr.required !== undefined) response.required = anyErr.required;
     if (anyErr.available !== undefined) response.available = anyErr.available;
   }
+  if (details !== undefined) response.details = details;
 
   if (process.env.NODE_ENV === 'development') response.stack = (err as unknown as { stack?: string }).stack;
 

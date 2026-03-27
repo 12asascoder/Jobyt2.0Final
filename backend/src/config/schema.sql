@@ -6,6 +6,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm"; -- for full-text similarity search
 
 -- Enum types
 CREATE TYPE user_role AS ENUM ('applicant', 'recruiter', 'admin');
+CREATE TYPE auth_provider AS ENUM ('local', 'google', 'github', 'linkedin');
 CREATE TYPE job_type AS ENUM ('full-time', 'part-time', 'contract', 'remote', 'internship');
 CREATE TYPE job_status AS ENUM ('draft', 'active', 'closed');
 CREATE TYPE application_status AS ENUM ('APPLIED', 'SCREENING', 'SHORTLISTED', 'INTERVIEW', 'SELECTED', 'HIRED', 'REJECTED');
@@ -20,7 +21,11 @@ CREATE TYPE notification_type AS ENUM (
 CREATE TABLE users (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email         VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255),
+  auth_provider auth_provider NOT NULL DEFAULT 'local',
+  google_id     VARCHAR(255) UNIQUE,
+  github_id     VARCHAR(255) UNIQUE,
+  linkedin_id   VARCHAR(255) UNIQUE,
   role          user_role NOT NULL,
   is_verified   BOOLEAN DEFAULT FALSE,
   verify_token  VARCHAR(255),

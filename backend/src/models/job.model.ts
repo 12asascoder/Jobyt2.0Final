@@ -36,8 +36,9 @@ export interface JobFilters {
 }
 
 export const JobModel = {
-  async findById(id: string): Promise<Job | null> {
-    const { rows } = await pool.query(
+  async findById(id: string, client?: PoolClient): Promise<Job | null> {
+    const db = client ?? pool;
+    const { rows } = await db.query(
       `SELECT
         jobs.*,
         recruiter_profiles.company_name

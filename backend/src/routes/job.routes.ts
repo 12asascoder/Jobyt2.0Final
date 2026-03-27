@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import { JobController } from '../controllers/job.controller';
 import { authenticate, authorize, optionalAuth } from '../middleware/auth';
-import { authenticate, authorize } from '../middleware/auth';
 import { requireCredits } from '../middleware/credit.middleware';
 import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';

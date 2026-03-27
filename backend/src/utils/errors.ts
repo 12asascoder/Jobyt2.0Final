@@ -1,18 +1,37 @@
 export class AppError extends Error {
   public statusCode: number;
   public isOperational: boolean;
-  public code?: string;
+  public code: string;
+  public details?: unknown;
 
   constructor(
     message: string,
     statusCode: number = 500,
     code?: string,
     isOperational: boolean = true,
+    details?: unknown,
   ) {
     super(message);
     this.statusCode = statusCode;
-    this.code = code;
+    this.code =
+      code ??
+      (statusCode === 400
+        ? 'BAD_REQUEST'
+        : statusCode === 401
+          ? 'UNAUTHORIZED'
+          : statusCode === 403
+            ? 'FORBIDDEN'
+            : statusCode === 404
+              ? 'NOT_FOUND'
+              : statusCode === 409
+                ? 'CONFLICT'
+                : statusCode === 422
+                  ? 'VALIDATION_ERROR'
+                  : statusCode >= 500
+                    ? 'INTERNAL_ERROR'
+                    : 'ERROR');
     this.isOperational = isOperational;
+    this.details = details;
 
     Error.captureStackTrace(this, this.constructor);
   }
