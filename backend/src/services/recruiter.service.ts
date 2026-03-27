@@ -31,8 +31,8 @@ export const RecruiterService = {
   ): Promise<RecruiterProfile> {
     // Step 1: If company_email is provided, check for uniqueness
     if (data.company_email) {
-      const existingEmail = await prisma.recruiter_profiles.findUnique({
-        where: { company_email: data.company_email },
+      const existingEmail = await (prisma.recruiter_profiles as any).findFirst({
+        where: { company_email: data.company_email } as any,
       });
 
       // Email is taken by another recruiter
@@ -43,28 +43,12 @@ export const RecruiterService = {
 
     // Step 2: Update profile with Prisma
     try {
-      const profile = await prisma.recruiter_profiles.update({
+      const profile = await (prisma.recruiter_profiles as any).update({
         where: { user_id: userId },
         data,
       });
 
-      // Convert Prisma response to RecruiterProfile interface
-      return {
-        id: profile.id,
-        user_id: profile.user_id,
-        name: profile.name,
-        company_name: profile.company_name,
-        company_email: profile.company_email,
-        industry: profile.industry,
-        description: profile.description,
-        company_size: profile.company_size,
-        logo_url: profile.logo_url,
-        website: profile.website,
-        location: profile.location,
-        is_verified: profile.is_verified,
-        created_at: profile.created_at,
-        updated_at: profile.updated_at,
-      };
+      return profile as unknown as RecruiterProfile;
     } catch (err: unknown) {
       const error = err as { code?: string; message?: string };
 
@@ -115,7 +99,7 @@ export const RecruiterService = {
 
     // Step 2: Check for duplicate company_email if provided
     if (data.company_email) {
-      const duplicateEmail = await prisma.recruiter_profiles.findUnique({
+      const duplicateEmail = await (prisma.recruiter_profiles as any).findFirst({
         where: { company_email: data.company_email },
       });
 
@@ -126,7 +110,7 @@ export const RecruiterService = {
 
     // Step 3: Create recruiter profile
     try {
-      const profile = await prisma.recruiter_profiles.create({
+      const profile = await (prisma.recruiter_profiles as any).create({
         data: {
           user_id: userId,
           name: data.company_name, // Store company name as profile name initially
@@ -141,23 +125,7 @@ export const RecruiterService = {
         },
       });
 
-      // Convert Prisma response to RecruiterProfile interface
-      return {
-        id: profile.id,
-        user_id: profile.user_id,
-        name: profile.name,
-        company_name: profile.company_name,
-        company_email: profile.company_email,
-        industry: profile.industry,
-        description: profile.description,
-        company_size: profile.company_size,
-        logo_url: profile.logo_url,
-        website: profile.website,
-        location: profile.location,
-        is_verified: profile.is_verified,
-        created_at: profile.created_at,
-        updated_at: profile.updated_at,
-      };
+      return profile as unknown as RecruiterProfile;
     } catch (err: unknown) {
       const error = err as { code?: string; message?: string };
 

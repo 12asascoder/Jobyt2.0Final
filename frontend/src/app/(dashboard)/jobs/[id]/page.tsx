@@ -17,8 +17,12 @@ import {
   FaCalendar,
   FaIndianRupeeSign,
   FaBookmark,
-  FaCheck
+  FaCheck,
+  FaRobot,
+  FaRoute,
+  FaFileLines
 } from 'react-icons/fa6';
+import { useAuthStore } from '@/store/auth.store';
 
 function formatSalary(min: number | null, max: number | null): string {
   if (!min && !max) return 'Competitive';
@@ -35,6 +39,8 @@ function formatSalary(min: number | null, max: number | null): string {
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
+  const { user } = useAuthStore();
+  
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
@@ -46,8 +52,22 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const [hasApplied, setHasApplied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
+  // AI Feature States
+  const [matchScore, setMatchScore] = useState<number | null>(null);
+  const [matchedSkills, setMatchedSkills] = useState<string[]>([]);
+  const [missingSkills, setMissingSkills] = useState<string[]>([]);
+  const [skillSuggestions, setSkillSuggestions] = useState<Record<string, string>>({});
+  const [loadingInsights, setLoadingInsights] = useState(false);
+
+  const [roadmap, setRoadmap] = useState<any>(null);
+  const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
+  const [showRoadmapModal, setShowRoadmapModal] = useState(false);
+
+  const [atsScore, setAtsScore] = useState<{ score: number; missingKeywords: string[] } | null>(null);
+  const [scoringAts, setScoringAts] = useState(false);
+  const [resumeText, setResumeText] = useState('');
+
   useEffect(() => {
-    // Guard against undefined or empty ID
     if (!id || id === 'undefined') {
       setLoading(false);
       router.push(ROUTES.dashboard);
@@ -66,10 +86,42 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       .finally(() => setLoading(false));
   }, [id, router]);
 
+  // Fetch AI Insights once job is loaded
+  useEffect(() => {
+    if (!job || user?.role !== 'applicant') return;
+    
+    const fetchInsights = async () => {
+      setLoadingInsights(true);
+      try {
+        const meRes = await api.get<any>('/users/me');
+        const userSkills = meRes.data.profile?.skills || [];
+        const bio = meRes.data.profile?.bio || '';
+        
+        setResumeText(`${bio}\\n\\nSkills: ${userSkills.join(', ')}`);
+
+        if (job.skills.length > 0) {
+          const matchRes = await api.post<any>('/jobs/match', { userSkills, jobSkills: job.skills });
+          setMatchScore(matchRes.data.matchScore);
+          setMatchedSkills(matchRes.data.matchedSkills);
+          setMissingSkills(matchRes.data.missingSkills);
+
+          const gapRes = await api.post<any>('/jobs/skill-gap', { userSkills, requiredSkills: job.skills });
+          setSkillSuggestions(gapRes.data.suggestions);
+        }
+      } catch (err) {
+        console.error('Failed to fetch AI insights:', err);
+      } finally {
+        setLoadingInsights(false);
+      }
+    };
+
+    fetchInsights();
+  }, [job, user?.role]);
+
   const handleApply = async () => {
     setApplying(true);
     try {
-      await api.post<{ creditsRemaining?: number }>(`/applications/jobs/${params.id}`, { cover_letter: coverLetter });
+      await api.post<{ creditsRemaining?: number }>(`/applications/jobs/${id}`, { cover_letter: coverLetter });
       setHasApplied(true);
       setShowModal(false);
       setShowSuccessOverlay(true);
@@ -102,6 +154,35 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       }
     } catch (err) {
       toast.error(isSaved ? 'Failed to remove from saved' : 'Failed to save job');
+    }
+  };
+
+  const handleGenerateRoadmap = async () => {
+    try {
+      setGeneratingRoadmap(true);
+      setShowRoadmapModal(true);
+      const res = await api.post<any>('/roadmaps/generate', { missingSkills });
+      setRoadmap(res.data.roadmap);
+    } catch (err) {
+      toast.error('Failed to generate roadmap');
+      setShowRoadmapModal(false);
+    } finally {
+      setGeneratingRoadmap(false);
+    }
+  };
+
+  const handleScoreAts = async () => {
+    try {
+      setScoringAts(true);
+      const res = await api.post<any>('/users/me/resume-score', { 
+        resumeText, 
+        jobDescription: job?.description 
+      });
+      setAtsScore(res.data);
+    } catch (err) {
+      toast.error('ATS scoring failed');
+    } finally {
+      setScoringAts(false);
     }
   };
 
@@ -229,6 +310,70 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               </button>
             </div>
 
+            {/* AI Match Insights */}
+            {user?.role === 'applicant' && job.skills.length > 0 && (
+              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <FaRobot className="w-5 h-5 text-indigo-600" />
+                  <h2 className="text-lg font-extrabold text-indigo-900">AI Match Insights</h2>
+                </div>
+
+                {loadingInsights ? (
+                  <div className="flex justify-center py-6"><Spinner size="sm" /></div>
+                ) : matchScore !== null ? (
+                  <div className="space-y-5">
+                    {/* Circular Score */}
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-16 h-16 flex items-center justify-center shrink-0">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                          <path className="text-indigo-200" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
+                          <path className={`${matchScore >= 80 ? 'text-green-500' : matchScore >= 50 ? 'text-yellow-500' : 'text-orange-500'}`} strokeDasharray={`${matchScore}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
+                        </svg>
+                        <span className="absolute text-sm font-bold text-indigo-900">{matchScore}%</span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-indigo-950">Match Score</p>
+                        <p className="text-xs text-indigo-700 leading-relaxed">Based on your profile skills vs job requirements.</p>
+                      </div>
+                    </div>
+
+                    {/* Missing Skills */}
+                    {missingSkills.length > 0 ? (
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-bold text-indigo-900">Skill Gaps Detected:</h3>
+                        <div className="space-y-2">
+                          {missingSkills.map(skill => (
+                            <div key={skill} className="bg-white rounded-xl p-3 shadow-sm border border-indigo-50">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="w-2 h-2 rounded-full bg-orange-400"></div>
+                                <span className="text-sm font-bold text-gray-800">{skill}</span>
+                              </div>
+                              {skillSuggestions[skill] && (
+                                <p className="text-xs text-gray-600 pl-4">{skillSuggestions[skill]}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <button
+                          onClick={handleGenerateRoadmap}
+                          className="w-full mt-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-md"
+                        >
+                          <FaRoute /> Generate Learning Roadmap
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="bg-green-100 text-green-800 p-3 rounded-xl text-sm font-bold text-center border border-green-200">
+                        🌟 You have 100% of the required skills!
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-indigo-500 text-center py-2">Could not load insights.</p>
+                )}
+              </div>
+            )}
+
             {/* Info Card */}
             <div className="bg-white border border-[#e8e4dc] rounded-2xl p-6 space-y-5">
               <div>
@@ -266,6 +411,47 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         </div>
       </div>
 
+      {/* Roadmap Modal */}
+      <Modal isOpen={showRoadmapModal} onClose={() => setShowRoadmapModal(false)} title="Your Custom Learning Roadmap">
+        <div className="space-y-6">
+          <div className="bg-indigo-50 rounded-xl p-4 text-sm text-indigo-900 border border-indigo-100">
+            <p className="font-bold mb-1 flex items-center gap-2"><FaRobot className="text-indigo-600"/> AI-Generated Path</p>
+            <p>This roadmap is specifically tailored to bridge your skill gap for this role.</p>
+          </div>
+          
+          {generatingRoadmap ? (
+            <div className="py-12 flex flex-col items-center justify-center space-y-4">
+              <Spinner size="lg" />
+              <p className="text-gray-500 font-medium">Generating your personalized roadmap...</p>
+            </div>
+          ) : roadmap ? (
+            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
+              {roadmap.map((week: any, idx: number) => (
+                <div key={idx} className="relative pl-6 pb-4 border-l-2 border-indigo-200 last:border-0 last:pb-0">
+                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 border-2 border-white"></div>
+                  <h3 className="font-bold text-gray-900 mb-1">Week {week.week}: {week.topic}</h3>
+                  <ul className="space-y-2 mt-2">
+                    {week.tasks.map((task: string, i: number) => (
+                      <li key={i} className="text-sm text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                        {task}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-red-500">Failed to generate roadmap.</p>
+          )}
+          
+          <div className="pt-2">
+            <button onClick={() => setShowRoadmapModal(false)} className="w-full py-3 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-colors">
+              Close
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Apply Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Apply for this Position">
         <div className="space-y-5">
@@ -281,9 +467,61 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             <p className="text-sm text-blue-900">
               <span className="font-bold">⚡ Cost:</span> 1 Credit will be deducted from your balance
             </p>
-            <p className="text-xs text-blue-800 mt-2">
-              Please ensure your profile is complete before applying.
-            </p>
+          </div>
+
+          {/* ATS Analyzer */}
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                <FaFileLines className="text-blue-600"/> Resume ATS Analyzer
+              </h4>
+              <button 
+                onClick={handleScoreAts}
+                disabled={scoringAts || !resumeText.trim()}
+                className="px-3 py-1.5 bg-white border border-gray-300 shadow-sm rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                {scoringAts ? 'Analyzing...' : 'Analyze Fit'}
+              </button>
+            </div>
+            
+            {!atsScore && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Paste your resume text to analyze fit against this job (Optional)</label>
+                <textarea
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-500 resize-none bg-white"
+                  rows={3}
+                  placeholder="Paste resume text or use your profile defaults..."
+                  value={resumeText}
+                  onChange={(e) => setResumeText(e.target.value)}
+                />
+              </div>
+            )}
+
+            {atsScore && (
+              <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                  <div className={`text-3xl font-extrabold ${atsScore.score >= 80 ? 'text-green-600' : atsScore.score >= 50 ? 'text-yellow-600' : 'text-orange-600'}`}>
+                    {atsScore.score}%
+                  </div>
+                  <div className="text-sm font-medium text-gray-700">
+                    ATS Match Score<br/>
+                    <span className="text-xs text-gray-400 font-normal">Based on semantic relevance.</span>
+                  </div>
+                </div>
+                {atsScore.missingKeywords?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold text-red-500 mb-1.5">Missing Keywords to Include:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {atsScore.missingKeywords.map(kw => (
+                        <span key={kw} className="px-2 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-bold uppercase tracking-wider border border-red-100">
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div>

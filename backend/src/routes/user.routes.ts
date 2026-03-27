@@ -59,6 +59,14 @@ router.patch(
   ResumeController.setDefault,
 );
 router.delete('/me/resumes/:id', authorize('applicant'), ResumeController.delete);
+router.post(
+  '/me/resume-score',
+  authorize('applicant'),
+  body('resumeText').isString(),
+  body('jobDescription').isString(),
+  validate,
+  ResumeController.scoreATS
+);
 
 // ── Saved Jobs (applicant only) ───────────────────────────────────────────────
 router.get('/me/saved-jobs', authorize('applicant'), UserController.getSavedJobs);

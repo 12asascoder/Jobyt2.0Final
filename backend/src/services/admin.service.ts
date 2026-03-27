@@ -154,7 +154,7 @@ export const AdminService = {
     isVerified: boolean,
     adminId: string,
   ): Promise<RecruiterProfile> {
-    const existingProfile = await prisma.recruiter_profiles.findUnique({
+    const existingProfile = await (prisma.recruiter_profiles as any).findFirst({
       where: { id: profileId },
     });
 
@@ -163,25 +163,10 @@ export const AdminService = {
     }
 
     if (existingProfile.is_verified === isVerified) {
-      return {
-        id: existingProfile.id,
-        user_id: existingProfile.user_id,
-        name: existingProfile.name,
-        company_name: existingProfile.company_name,
-        company_email: existingProfile.company_email,
-        industry: existingProfile.industry,
-        description: existingProfile.description,
-        company_size: existingProfile.company_size,
-        logo_url: existingProfile.logo_url,
-        website: existingProfile.website,
-        location: existingProfile.location,
-        is_verified: existingProfile.is_verified,
-        created_at: existingProfile.created_at,
-        updated_at: existingProfile.updated_at,
-      };
+      return existingProfile as unknown as RecruiterProfile;
     }
 
-    const updatedProfile = await prisma.recruiter_profiles.update({
+    const updatedProfile = await (prisma.recruiter_profiles as any).update({
       where: { id: profileId },
       data: { is_verified: isVerified },
     });
@@ -194,22 +179,7 @@ export const AdminService = {
       reason: `Verification set to ${isVerified}`,
     });
 
-    return {
-      id: updatedProfile.id,
-      user_id: updatedProfile.user_id,
-      name: updatedProfile.name,
-      company_name: updatedProfile.company_name,
-      company_email: updatedProfile.company_email,
-      industry: updatedProfile.industry,
-      description: updatedProfile.description,
-      company_size: updatedProfile.company_size,
-      logo_url: updatedProfile.logo_url,
-      website: updatedProfile.website,
-      location: updatedProfile.location,
-      is_verified: updatedProfile.is_verified,
-      created_at: updatedProfile.created_at,
-      updated_at: updatedProfile.updated_at,
-    };
+    return updatedProfile as unknown as RecruiterProfile;
   },
 
   // ── Metrics ──────────────────────────────────────────────────────────────────

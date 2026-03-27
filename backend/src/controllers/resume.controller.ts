@@ -41,5 +41,15 @@ export const ResumeController = {
       next(err);
     }
   },
+
+  async scoreATS(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { resumeText, jobDescription } = req.body;
+      const result = await ResumeService.scoreATS(resumeText, jobDescription);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 

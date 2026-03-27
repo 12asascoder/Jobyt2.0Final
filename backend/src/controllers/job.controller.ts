@@ -169,4 +169,34 @@ export const JobController = {
       next(err);
     }
   },
+
+  async getMatchScore(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userSkills, jobSkills } = req.body;
+      const result = await JobService.calculateMatchScore(userSkills, jobSkills);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getSkillGap(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userSkills, requiredSkills } = req.body;
+      const result = await JobService.analyzeSkillGap(userSkills, requiredSkills);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async generateInterviewQuestions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { role, skills } = req.body;
+      const result = await JobService.generateInterviewQuestions(role, skills);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  },
 };

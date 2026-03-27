@@ -12,6 +12,9 @@ const router = Router();
 // Public
 router.get('/', JobController.getJobs);
 router.get('/:id', optionalAuth, JobController.getJobById);
+router.post('/match', body('userSkills').isArray(), body('jobSkills').isArray(), validate, JobController.getMatchScore);
+router.post('/skill-gap', body('userSkills').isArray(), body('requiredSkills').isArray(), validate, JobController.getSkillGap);
+router.post('/interview-questions', body('role').isString(), body('skills').isArray(), validate, JobController.generateInterviewQuestions);
 
 // Close endpoint: bypass employerGuard since service validates ownership
 // Uses: authenticate + authorize('recruiter')

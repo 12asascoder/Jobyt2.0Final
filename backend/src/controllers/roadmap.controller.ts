@@ -4,6 +4,7 @@ import { RoadmapNodeModel } from '../models/roadmapNode.model';
 import { RoadmapEdgeModel } from '../models/roadmapEdge.model';
 import { runFullIngestion, getIngestionRunStatus } from '../services/ingestion.service';
 import { sendSuccess, sendPaginated, sendError } from '../utils/response';
+import { RoadmapProgressService } from '../services/roadmapProgress.service';
 
 /**
  * GET /roadmaps
@@ -115,6 +116,20 @@ export const getIngestionStatus = async (req: Request, res: Response, next: Next
     }
 
     sendSuccess(res, run, 'Ingestion run retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /roadmaps/generate
+ * Generates a structured roadmap based on missing skills.
+ */
+export const generateRoadmap = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { missingSkills } = req.body;
+    const result = await RoadmapProgressService.generateRoadmapForSkills(missingSkills);
+    sendSuccess(res, result, 'Roadmap generated successfully');
   } catch (err) {
     next(err);
   }

@@ -49,5 +49,33 @@ export const ResumeService = {
     });
     return rest;
   },
+
+  async scoreATS(resumeText: string, jobDescription: string): Promise<{ score: number; missingKeywords: string[] }> {
+    if (!resumeText || !jobDescription) {
+      return { score: 0, missingKeywords: [] };
+    }
+
+    const normalize = (text: string) => text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
+    const extractKeywords = (text: string) => {
+      const words = normalize(text).split(/\s+/).filter(w => w.length > 2);
+      const stopWords = new Set(['and', 'the', 'for', 'with', 'this', 'that', 'from', 'have', 'are', 'was', 'were', 'you', 'your', 'will', 'can']);
+      return Array.from(new Set(words.filter(w => !stopWords.has(w))));
+    };
+
+    const jobKeywords = extractKeywords(jobDescription);
+    const resumeWords = new Set(extractKeywords(resumeText));
+
+    const matchedKeywords = jobKeywords.filter(k => resumeWords.has(k));
+    const missingKeywords = jobKeywords.filter(k => !resumeWords.has(k));
+
+    const score = jobKeywords.length > 0
+      ? Math.round((matchedKeywords.length / jobKeywords.length) * 100)
+      : 0;
+
+    return {
+      score,
+      missingKeywords: missingKeywords.slice(0, 10),
+    };
+  },
 };
 

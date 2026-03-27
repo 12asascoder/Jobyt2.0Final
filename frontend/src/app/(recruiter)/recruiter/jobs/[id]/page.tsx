@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
 import { Job, JobType } from '@/types';
 import { Button, Input, Card, CardBody, Spinner, Badge } from '@/components/ui';
+import { Modal } from '@/components/ui/Modal';
+import toast from 'react-hot-toast';
+import { FaRobot } from 'react-icons/fa6';
 import { ROUTES, JOB_TYPES } from '@/constants';
 
 export default function RecruiterJobDetailPage() {
@@ -18,6 +21,27 @@ export default function RecruiterJobDetailPage() {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
+
+  const [showQsModal, setShowQsModal] = useState(false);
+  const [generatingQs, setGeneratingQs] = useState(false);
+  const [questions, setQuestions] = useState<string[] | null>(null);
+
+  const handleGenerateQs = async () => {
+    try {
+      setGeneratingQs(true);
+      setShowQsModal(true);
+      const res = await api.post<any>('/jobs/interview-questions', {
+        role: job?.title,
+        skills: job?.skills
+      });
+      setQuestions(res.data.questions);
+    } catch (err) {
+      toast.error('Failed to generate interview questions');
+      setShowQsModal(false);
+    } finally {
+      setGeneratingQs(false);
+    }
+  };
   const [form, setForm] = useState({
     title: '',
     location: '',
@@ -98,6 +122,11 @@ export default function RecruiterJobDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {job.status === 'active' && (
+            <Button size="sm" variant="outline" onClick={handleGenerateQs} className="flex items-center gap-2 border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+              <FaRobot /> Generate Interview Qs
+            </Button>
+          )}
           <Link href={ROUTES.recruiterJobApplications(jobId)}>
             <Button variant="outline" size="sm">View Applications</Button>
           </Link>
@@ -154,6 +183,37 @@ export default function RecruiterJobDetailPage() {
           </form>
         </CardBody>
       </Card>
+
+      <Modal isOpen={showQsModal} onClose={() => setShowQsModal(false)} title="AI Interview Questions">
+        <div className="space-y-4">
+          <div className="bg-indigo-50 rounded-xl p-4 text-sm text-indigo-900 border border-indigo-100 mb-4">
+            <p className="font-bold flex items-center gap-2 mb-1"><FaRobot className="text-indigo-600"/> Context-Aware Questions</p>
+            <p>Generated dynamically based on the specific skills required for this <b>{job?.title}</b> role.</p>
+          </div>
+          
+          {generatingQs ? (
+            <div className="py-10 flex flex-col items-center justify-center space-y-4">
+              <Spinner size="lg" />
+              <p className="text-gray-500 font-medium text-sm">Drafting technical questions...</p>
+            </div>
+          ) : questions && questions.length > 0 ? (
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
+              {questions.map((q, idx) => (
+                <div key={idx} className="bg-gray-50 border border-gray-100 rounded-lg p-4 shadow-sm text-sm text-gray-800 leading-relaxed">
+                  <span className="font-bold text-indigo-600 mr-2">Q{idx + 1}.</span> {q}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-red-500 py-4">Failed to load questions.</p>
+          )}
+          
+          <div className="pt-2">
+            <Button variant="outline" className="w-full" onClick={() => setShowQsModal(false)}>Close</Button>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   );
 }
