@@ -36,8 +36,9 @@ export interface JobFilters {
 }
 
 export const JobModel = {
-  async findById(id: string): Promise<Job | null> {
-    const { rows } = await pool.query(
+  async findById(id: string, client?: PoolClient): Promise<Job | null> {
+    const db = client ?? pool;
+    const { rows } = await db.query(
       `SELECT
         jobs.*,
         recruiter_profiles.company_name
@@ -73,34 +74,34 @@ export const JobModel = {
     const hasType = data.type !== undefined;
     const { rows } = hasType
       ? await pool.query(
-          `INSERT INTO jobs (recruiter_id, title, description, type, location, salary_min, salary_max, skills, status)
+        `INSERT INTO jobs (recruiter_id, title, description, type, location, salary_min, salary_max, skills, status)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-          [
-            data.recruiter_id,
-            data.title,
-            data.description,
-            data.type,
-            data.location || null,
-            data.salary_min || null,
-            data.salary_max || null,
-            data.skills || [],
-            data.status || 'draft',
-          ],
-        )
+        [
+          data.recruiter_id,
+          data.title,
+          data.description,
+          data.type,
+          data.location || null,
+          data.salary_min || null,
+          data.salary_max || null,
+          data.skills || [],
+          data.status || 'draft',
+        ],
+      )
       : await pool.query(
-          `INSERT INTO jobs (recruiter_id, title, description, location, salary_min, salary_max, skills, status)
+        `INSERT INTO jobs (recruiter_id, title, description, location, salary_min, salary_max, skills, status)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-          [
-            data.recruiter_id,
-            data.title,
-            data.description,
-            data.location || null,
-            data.salary_min || null,
-            data.salary_max || null,
-            data.skills || [],
-            data.status || 'draft',
-          ],
-        );
+        [
+          data.recruiter_id,
+          data.title,
+          data.description,
+          data.location || null,
+          data.salary_min || null,
+          data.salary_max || null,
+          data.skills || [],
+          data.status || 'draft',
+        ],
+      );
     return rows[0];
   },
 

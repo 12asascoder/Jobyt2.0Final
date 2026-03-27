@@ -198,7 +198,7 @@ export function JobCards() {
 
     if (jobs.length === 0) {
         return (
-            <section className="w-full max-w-[1350px] mx-auto px-2 sm:px-6 md:px-8 xl:px-10 py-20 bg-[#fcfcfc]">
+            <section className="w-full max-w-337.5 mx-auto px-2 sm:px-6 md:px-8 xl:px-10 py-20 bg-[#fcfcfc]">
                 {SectionHeader}
                 <div className="rounded-2xl border-2 border-dashed border-slate-200 py-20 text-center">
                     <p className="text-2xl mb-2">🚀</p>
@@ -210,11 +210,11 @@ export function JobCards() {
     }
 
     return (
-        <section className="w-full max-w-[1350px] mx-auto px-2 sm:px-6 md:px-8 xl:px-10 py-20 bg-[#fcfcfc]">
+        <section className="w-full max-w-337.5 mx-auto px-2 py-20 bg-[#fcfcfc]">
             {SectionHeader}
             <div className="relative">
-                <div className="mx-auto overflow-hidden max-h-270 md:max-h-[850px]">
-                    <JobCardGrid jobs={filteredJobs} gridClass="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
+                <div className="mx-auto overflow-hidden max-h-270 md:max-h-212.5">
+                    <JobCardGrid jobs={filteredJobs} gridClass="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-4" />
                 </div>
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-linear-to-b from-transparent via-[#fcfcfc]/80 to-[#fcfcfc]" />
             </div>
