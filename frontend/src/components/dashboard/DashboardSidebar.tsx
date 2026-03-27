@@ -62,11 +62,10 @@ export function DashboardSidebar() {
                                 key={href}
                                 href={href}
                                 title={label}
-                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                                    active
+                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${active
                                         ? 'bg-lime-400 text-black'
                                         : 'text-white/60 hover:text-white hover:bg-white/10'
-                                }`}
+                                    }`}
                             >
                                 <Icon className="text-lg" />
                             </Link>
@@ -76,12 +75,16 @@ export function DashboardSidebar() {
 
                 {/* Bottom utility pill: star + logout + avatar */}
                 <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-0.5">
-                    <button
-                        className="w-12 h-12 rounded-full text-white/60 hover:text-white flex items-center justify-center transition-colors"
-                        title="Favorites"
+                    <Link
+                        href={ROUTES.credits}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isActive(ROUTES.credits)
+                                ? 'bg-lime-400 text-black'
+                                : 'text-white/60 hover:text-white hover:bg-white/10'
+                            }`}
+                        title="Credits"
                     >
                         <FaStar className="text-base" />
-                    </button>
+                    </Link>
                     <button
                         onClick={handleLogout}
                         className="w-12 h-12 rounded-full text-white/60 hover:text-red-400 flex items-center justify-center transition-colors"
@@ -91,9 +94,8 @@ export function DashboardSidebar() {
                     </button>
                     <Link
                         href={ROUTES.profile}
-                        className={`w-11 h-11 rounded-full overflow-hidden border-2 mt-1 transition-colors ${
-                            isActive(ROUTES.profile) ? 'border-[#c3ff3d]' : 'border-white/20 hover:border-white/40'
-                        }`}
+                        className={`w-11 h-11 rounded-full overflow-hidden border-2 mt-1 transition-colors ${isActive(ROUTES.profile) ? 'border-[#c3ff3d]' : 'border-white/20 hover:border-white/40'
+                            }`}
                         title="Profile"
                     >
                         <Image
@@ -120,11 +122,10 @@ export function DashboardSidebar() {
                                 className="flex flex-col items-center gap-1 py-1"
                             >
                                 <div
-                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                                        active
+                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${active
                                             ? 'bg-lime-400 text-black'
                                             : 'text-white/50 hover:text-white'
-                                    }`}
+                                        }`}
                                 >
                                     <Icon className="text-[17px]" />
                                 </div>

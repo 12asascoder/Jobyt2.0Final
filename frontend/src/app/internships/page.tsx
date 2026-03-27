@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { Navbar, Footer } from '@/components/landing';
-import { BackendJob, JobCardGrid, SkeletonGrid, getJobTypeLabel } from '@/components/ui/JobCard';
+import { BackendJob, JobCardGrid, SkeletonGrid, getJobTypeLabel, normalizeJob } from '@/components/ui/JobCard';
 import { API_BASE } from '@/constants';
 
 const AVAILABLE_SKILLS = ['React', 'Figma', 'Python', 'Marketing', 'UI/UX', 'SQL', 'Node.js'];
@@ -12,6 +12,14 @@ const WORK_TYPES = ['Remote', 'Hybrid', 'On-site'];
 const DURATIONS = ['1-3 Months', '3-6 Months', '6+ Months'];
 
 export default function InternshipsPage() {
+    return (
+        <Suspense fallback={null}>
+            <InternshipsContent />
+        </Suspense>
+    );
+}
+
+function InternshipsContent() {
     const { user, isAuthenticated, initialize } = useAuthStore();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -48,7 +56,9 @@ export default function InternshipsPage() {
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.data?.length > 0) {
-                    setJobs(data.data);
+                    // Normalize all jobs to ensure they have valid id fields
+                    const normalizedJobs = data.data.map((job: any) => normalizeJob(job));
+                    setJobs(normalizedJobs);
                 } else {
                     setJobs([]);
                 }
@@ -58,7 +68,7 @@ export default function InternshipsPage() {
     }, [mounted]);
 
     const toggleSkill = (skill: string) => {
-        setSelectedSkills(prev => 
+        setSelectedSkills(prev =>
             prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
         );
     };
@@ -99,7 +109,7 @@ export default function InternshipsPage() {
     return (
         <div className="min-h-screen flex flex-col bg-[#fcfcfc]">
             <Navbar />
-            
+
             <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 pt-28 pb-20">
                 {/* Header Section */}
                 <div className="mb-10 lg:mb-12">
@@ -112,7 +122,7 @@ export default function InternshipsPage() {
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
-                    
+
                     {/* Dark Sidebar Filters — pill on mobile, full sidebar on lg+ */}
                     <aside className="w-full lg:w-[280px] shrink-0">
 
@@ -157,11 +167,10 @@ export default function InternshipsPage() {
                                     <div className="flex flex-wrap gap-2">
                                         {AVAILABLE_SKILLS.map(skill => (
                                             <button key={skill} onClick={() => toggleSkill(skill)}
-                                                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
-                                                    selectedSkills.includes(skill)
+                                                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${selectedSkills.includes(skill)
                                                         ? 'border-lime-400 text-lime-400'
                                                         : 'border-white/20 text-slate-300 hover:border-white/40'
-                                                }`}
+                                                    }`}
                                             >{skill}</button>
                                         ))}
                                     </div>
@@ -172,9 +181,8 @@ export default function InternshipsPage() {
                                     <div className="flex flex-wrap gap-2">
                                         {WORK_TYPES.map(type => (
                                             <button key={type} onClick={() => setSelectedWorkType(type === selectedWorkType ? '' : type)}
-                                                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
-                                                    selectedWorkType === type ? 'border-lime-400 text-lime-400' : 'border-white/20 text-slate-300 hover:border-white/40'
-                                                }`}
+                                                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${selectedWorkType === type ? 'border-lime-400 text-lime-400' : 'border-white/20 text-slate-300 hover:border-white/40'
+                                                    }`}
                                             >{type}</button>
                                         ))}
                                     </div>
@@ -185,9 +193,8 @@ export default function InternshipsPage() {
                                     <div className="flex flex-wrap gap-2">
                                         {DURATIONS.map(dur => (
                                             <button key={dur} onClick={() => setSelectedDuration(dur === selectedDuration ? '' : dur)}
-                                                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
-                                                    selectedDuration === dur ? 'border-lime-400 text-lime-400' : 'border-white/20 text-slate-300 hover:border-white/40'
-                                                }`}
+                                                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${selectedDuration === dur ? 'border-lime-400 text-lime-400' : 'border-white/20 text-slate-300 hover:border-white/40'
+                                                    }`}
                                             >{dur}</button>
                                         ))}
                                     </div>
@@ -233,11 +240,10 @@ export default function InternshipsPage() {
                                 <div className="flex flex-wrap gap-2.5">
                                     {AVAILABLE_SKILLS.map(skill => (
                                         <button key={skill} onClick={() => toggleSkill(skill)}
-                                            className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
-                                                selectedSkills.includes(skill)
+                                            className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${selectedSkills.includes(skill)
                                                     ? 'bg-transparent border-lime-400 text-lime-400'
                                                     : 'bg-transparent border-white/20 text-slate-300 hover:border-white/40'
-                                            }`}
+                                                }`}
                                         >{skill}</button>
                                     ))}
                                 </div>
@@ -249,9 +255,8 @@ export default function InternshipsPage() {
                                 <div className="flex flex-col gap-2.5">
                                     {WORK_TYPES.map(type => (
                                         <button key={type} onClick={() => setSelectedWorkType(type === selectedWorkType ? '' : type)}
-                                            className={`text-left text-[13px] transition-colors ${
-                                                selectedWorkType === type ? 'text-lime-400 font-semibold' : 'text-slate-400 hover:text-white'
-                                            }`}
+                                            className={`text-left text-[13px] transition-colors ${selectedWorkType === type ? 'text-lime-400 font-semibold' : 'text-slate-400 hover:text-white'
+                                                }`}
                                         >{type}</button>
                                     ))}
                                 </div>
@@ -263,9 +268,8 @@ export default function InternshipsPage() {
                                 <div className="flex flex-col gap-2.5">
                                     {DURATIONS.map(dur => (
                                         <button key={dur} onClick={() => setSelectedDuration(dur === selectedDuration ? '' : dur)}
-                                            className={`text-left text-[13px] transition-colors ${
-                                                selectedDuration === dur ? 'text-lime-400 font-semibold' : 'text-slate-400 hover:text-white'
-                                            }`}
+                                            className={`text-left text-[13px] transition-colors ${selectedDuration === dur ? 'text-lime-400 font-semibold' : 'text-slate-400 hover:text-white'
+                                                }`}
                                         >{dur}</button>
                                     ))}
                                 </div>
@@ -285,7 +289,7 @@ export default function InternshipsPage() {
                                 <span className="text-4xl mb-4">🔍</span>
                                 <h3 className="text-lg font-bold text-slate-800 mb-1">No internships found</h3>
                                 <p className="text-slate-500 text-sm">Try tweaking your filters or search terms.</p>
-                                <button 
+                                <button
                                     onClick={() => {
                                         setKeyword('');
                                         setSelectedSkills([]);

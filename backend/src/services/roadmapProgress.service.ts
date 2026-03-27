@@ -396,4 +396,25 @@ export const RoadmapProgressService = {
       learningResources: best.node.description,
     };
   },
+
+  async generateRoadmapForSkills(missingSkills: string[]): Promise<{ roadmap: Array<{ week: number; topic: string; tasks: string[] }> }> {
+    if (!missingSkills || missingSkills.length === 0) {
+      return { roadmap: [] };
+    }
+
+    const roadmap = missingSkills.map((skill, index) => {
+      return {
+        week: index + 1,
+        topic: `Mastering ${skill}`,
+        tasks: [
+          `Understand the core concepts of ${skill}`,
+          `Complete an online tutorial or read documentation for ${skill}`,
+          `Build a small practice project using ${skill}`,
+          `Review advanced topics and best practices for ${skill}`
+        ]
+      };
+    });
+
+    return { roadmap };
+  },
 };

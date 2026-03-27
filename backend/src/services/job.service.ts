@@ -254,4 +254,103 @@ export const JobService = {
   async getRecruiterJobs(recruiterId: string) {
     return JobModel.findByRecruiter(recruiterId);
   },
+
+  async calculateMatchScore(userSkills: string[], jobSkills: string[]): Promise<{ matchScore: number; matchedSkills: string[]; missingSkills: string[] }> {
+    if (!Array.isArray(userSkills) || !Array.isArray(jobSkills)) {
+      return { matchScore: 0, matchedSkills: [], missingSkills: [] };
+    }
+    
+    try {
+      const natural = require('natural');
+      
+      const matchedSkills: string[] = [];
+      const missingSkills: string[] = [];
+
+      for (const jSkill of jobSkills) {
+        let isMatch = false;
+        for (const uSkill of userSkills) {
+          const normJ = jSkill.toLowerCase().trim();
+          const normU = uSkill.toLowerCase().trim();
+          
+          if (normJ === normU) {
+            isMatch = true;
+            break;
+          }
+          
+          // Fuzzy match threshold 0.85 (accommodates e.g. Node vs Node.js)
+          const distance = natural.JaroWinklerDistance(normJ, normU, { ignoreCase: true });
+          if (distance >= 0.85) {
+            isMatch = true;
+            break;
+          }
+        }
+        
+        if (isMatch) {
+          matchedSkills.push(jSkill);
+        } else {
+          missingSkills.push(jSkill);
+        }
+      }
+
+      const matchScore = jobSkills.length > 0
+          ? Math.round((matchedSkills.length / jobSkills.length) * 100)
+          : 0;
+
+      return { matchScore, matchedSkills, missingSkills };
+    } catch (e) {
+      console.error('Job Match Error:', e);
+      return { matchScore: 0, matchedSkills: [], missingSkills: jobSkills };
+    }
+  },
+
+  async analyzeSkillGap(userSkills: string[], requiredSkills: string[]): Promise<{ missingSkills: string[], suggestions: Record<string, string> }> {
+      const { missingSkills } = await JobService.calculateMatchScore(userSkills, requiredSkills);
+      const suggestions: Record<string, string> = {};
+      for (const skill of missingSkills) {
+          suggestions[skill] = `Consider taking an online course or practicing projects related to ${skill}.`;
+      }
+      return { missingSkills, suggestions };
+  },
+
+  async generateInterviewQuestions(role: string, skills: string[]): Promise<{ questions: string[] }> {
+      const staticFallback = [
+          `Can you explain your experience with ${skills && skills.length > 0 ? skills[0] : 'the required skills'}?`,
+          `Describe a challenging project you worked on as a ${role || 'professional'}.`,
+          `How do you keep your technical skills up to date?`,
+          `Can you describe a time you had to learn a new technology quickly?`,
+          `What is your approach to problem-solving and debugging?`
+      ];
+
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey || !role || !skills || skills.length === 0) {
+          return { questions: staticFallback };
+      }
+
+      try {
+          const prompt = `Generate 5 technical interview questions for a ${role} role requiring the following skills: ${skills.join(', ')}. Return only the questions separated by newlines, without numbering.`;
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${apiKey}`
+              },
+              body: JSON.stringify({
+                  model: 'gpt-3.5-turbo',
+                  messages: [{ role: 'user', content: prompt }]
+              })
+          });
+
+          if (!response.ok) {
+              return { questions: staticFallback };
+          }
+
+          const data = (await response.json()) as any;
+          const content = data.choices?.[0]?.message?.content || '';
+          const questions = content.split('\n').filter((q: string) => q.trim().length > 0).map((q: string) => q.replace(/^\d+\.\s*/, '').trim());
+
+          return { questions: questions.length > 0 ? questions : staticFallback };
+      } catch (error) {
+          return { questions: staticFallback };
+      }
+  },
 };

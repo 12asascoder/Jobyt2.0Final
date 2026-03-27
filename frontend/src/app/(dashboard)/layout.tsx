@@ -1,13 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AuthGuard } from '@/components/providers/AuthGuard';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const router = useRouter();
     const [searchActive, setSearchActive] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
+    const handleSearchSubmit = (query: string) => {
+        router.push(`/dashboard?keyword=${encodeURIComponent(query)}`);
+        setSearchActive(false);
+        setSearchQuery('');
+    };
 
     return (
         <AuthGuard allowedRoles={['applicant']}>
@@ -17,6 +25,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     onSearchChange={setSearchQuery}
                     searchActive={searchActive}
                     onSearchToggle={setSearchActive}
+                    onSearchSubmit={handleSearchSubmit}
                 />
 
                 <DashboardSidebar />

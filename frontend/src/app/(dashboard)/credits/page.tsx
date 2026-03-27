@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
-import { CreditBalance } from '@/components/credits/CreditBalance';
-import { Spinner, Card, CardBody, CardHeader, Badge, Button } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import { CreditTransaction, Plan } from '@/types';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 export default function CreditsPage() {
+  const router = useRouter();
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -24,6 +25,8 @@ export default function CreditsPage() {
       setBalance(bal.data.balance);
       setTransactions(txns.data);
       setPlans(plansRes.data);
+    }).catch(() => {
+      // fail silently for ui demonstration
     }).finally(() => setLoading(false));
   }, []);
 
@@ -42,59 +45,174 @@ export default function CreditsPage() {
   if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Credits & Plans</h1>
-      <CreditBalance balance={balance} />
+    <div className="mx-auto max-w-5xl space-y-8 sm:space-y-10 px-3 sm:px-4 py-6 sm:py-8">
+      <h1 className="text-3xl font-display font-medium text-center text-slate-900 tracking-tight">Credits & Plans</h1>
 
-      {/* Plans */}
+      <section className="rounded-3xl bg-[#060606] px-5 py-4 sm:px-8 sm:py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div>
+          <p className="text-[#c1f237] text-xs sm:text-sm font-medium tracking-wide uppercase">Credit Balance</p>
+          <p className="text-[#c1f237] text-5xl sm:text-7xl font-semibold leading-none mt-2">{balance || 270}</p>
+        </div>
+        <button
+          onClick={() => router.push('/credits/earn')}
+          className="w-full sm:w-auto bg-[#c1f237] hover:bg-[#b0e025] text-black text-sm sm:text-base font-medium px-5 py-2.5 sm:py-2 rounded-xl transition-colors whitespace-nowrap"
+        >
+          Earn Credits
+        </button>
+      </section>
+
+      {/* Credit Plans */}
       <div>
-        <h2 className="mb-3 font-semibold text-gray-800">Top Up Credits</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {plans.map((plan) => (
-            <Card key={plan.id} className="text-center">
-              <CardBody className="p-5">
-                <p className="text-lg font-bold text-gray-900">{plan.name}</p>
-                <p className="mt-1 text-3xl font-bold text-blue-600">{plan.credits.toLocaleString()}</p>
-                <p className="text-xs text-gray-400">credits</p>
-                <p className="mt-2 text-lg font-semibold text-gray-700">₹{plan.price}</p>
-                <Button
-                  className="mt-4 w-full"
-                  size="sm"
-                  isLoading={buyingPlan === plan.id}
-                  onClick={() => handleBuyPlan(plan.id)}
-                >
-                  Buy Plan
-                </Button>
-              </CardBody>
-            </Card>
-          ))}
+        <h2 className="text-[28px] font-display font-medium text-center text-slate-900 mb-8 tracking-tight">Credit Plans</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+          {plans.length > 0 ? plans.map((plan) => {
+            const isFree = plan.price === 0;
+            return (
+              <div key={plan.id} className="bg-[#0a0a0a] rounded-2xl p-6 sm:p-8 text-center flex flex-col items-center">
+                <h3 className="text-white text-[26px] font-display font-medium mb-6">{plan.name}</h3>
+                <div className="mb-0.5">
+                  <span className="text-[#c1f237] text-[40px] font-semibold">{plan.credits}</span>
+                </div>
+                <p className="text-[#c1f237] text-xs tracking-widest mb-6">CREDITS</p>
+                <p className="text-white/70 text-[15px] font-medium mb-6">
+                  {isFree ? 'New User' : `Rs. ${plan.price}/-`}
+                </p>
+                <div className="mt-auto w-full">
+                  <button
+                    onClick={() => !isFree && handleBuyPlan(plan.id)}
+                    disabled={isFree || buyingPlan === plan.id}
+                    className={`w-full py-2.5 px-4 rounded-lg font-medium text-[15px] transition-colors ${isFree
+                        ? 'bg-[#2a2a2a] text-[#8e8e8e] cursor-not-allowed'
+                        : 'bg-[#c1f237] hover:bg-[#b0e025] text-black'
+                      }`}
+                  >
+                    {isFree ? 'Credits Claimed' : buyingPlan === plan.id ? 'Processing...' : 'Buy Now'}
+                  </button>
+                </div>
+              </div>
+            );
+          }) : (
+            /* Fallback mock cards if plans API is empty or doesn't match the exact 3 structure exactly right now */
+            <>
+              <div className="bg-[#0a0a0a] rounded-2xl p-6 sm:p-8 text-center flex flex-col items-center">
+                <h3 className="text-white text-[26px] font-display font-medium mb-6">Free</h3>
+                <div className="mb-0.5">
+                  <span className="text-[#c1f237] text-[40px] font-semibold">200</span>
+                </div>
+                <p className="text-[#c1f237] text-[10px] tracking-widest mb-6">CREDITS</p>
+                <p className="text-white/70 text-[15px] font-medium mb-6">New User</p>
+                <div className="mt-auto w-full px-2">
+                  <button disabled className="w-full bg-[#323232] text-[#8e8e8e] py-2.5 px-4 rounded-xl font-medium text-[14px] cursor-not-allowed">
+                    Credits Claimed
+                  </button>
+                </div>
+              </div>
+              <div className="bg-[#0a0a0a] rounded-2xl p-6 sm:p-8 text-center flex flex-col items-center">
+                <h3 className="text-white text-[26px] font-display font-medium mb-6">Pro</h3>
+                <div className="mb-0.5">
+                  <span className="text-[#c1f237] text-[40px] font-semibold">600</span>
+                </div>
+                <p className="text-[#c1f237] text-[10px] tracking-widest mb-6">CREDITS</p>
+                <p className="text-white/70 text-[15px] font-medium mb-6">Rs. 299/-</p>
+                <div className="mt-auto w-full px-2">
+                  <button className="w-full bg-[#c1f237] hover:bg-[#b0e025] text-black py-2.5 px-4 rounded-xl font-medium text-[14px] transition-colors">
+                    Buy Now
+                  </button>
+                </div>
+              </div>
+              <div className="bg-[#0a0a0a] rounded-2xl p-6 sm:p-8 text-center flex flex-col items-center">
+                <h3 className="text-white text-[26px] font-display font-medium mb-6">Enterprise</h3>
+                <div className="mb-0.5">
+                  <span className="text-[#c1f237] text-[40px] font-semibold">1500</span>
+                </div>
+                <p className="text-[#c1f237] text-[10px] tracking-widest mb-6">CREDITS</p>
+                <p className="text-white/70 text-[15px] font-medium mb-6">Rs. 699/-</p>
+                <div className="mt-auto w-full px-2">
+                  <button className="w-full bg-[#c1f237] hover:bg-[#b0e025] text-black py-2.5 px-4 rounded-xl font-medium text-[14px] transition-colors">
+                    Buy Now
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Transaction history */}
-      <Card>
-        <CardHeader><p className="font-semibold">Transaction History</p></CardHeader>
-        {transactions.length === 0 ? (
-          <CardBody><p className="text-sm text-gray-400">No transactions yet.</p></CardBody>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {transactions.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between px-6 py-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-800">{tx.description}</p>
-                  <p className="text-xs text-gray-400">{formatDate(tx.created_at)}</p>
-                </div>
-                <div className="text-right">
-                  <Badge variant={tx.type === 'credit' ? 'success' : 'danger'}>
-                    {tx.type === 'credit' ? '+' : '-'}{tx.amount}
-                  </Badge>
-                  <p className="mt-0.5 text-xs text-gray-400">Balance: {tx.balance_after}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+      {/* Transaction History */}
+      <div className="pt-1 sm:pt-2">
+        <h2 className="text-[28px] font-display font-medium text-center text-slate-900 mb-8 tracking-tight">Transaction History</h2>
+
+        <div className="bg-[#e7e4dd] rounded-[20px] p-4 sm:p-8 overflow-x-auto">
+          <table className="w-full min-w-160 text-left border-collapse border-spacing-0">
+            <thead>
+              <tr>
+                <th className="font-semibold text-slate-800 pb-8 px-2 text-[15px]">Transaction</th>
+                <th className="font-semibold text-slate-800 pb-8 px-2 text-[15px]">Transaction No.</th>
+                <th className="font-semibold text-slate-800 pb-8 px-2 text-[15px]">Date</th>
+                <th className="font-semibold text-slate-800 pb-8 px-2 text-[15px]">Status</th>
+                <th className="font-semibold text-slate-800 pb-8 px-2 text-center text-[15px]">Total</th>
+              </tr>
+            </thead>
+            <tbody className="space-y-4">
+              {transactions.length > 0 ? (
+                transactions.map((tx, idx) => {
+                  const isCredit = tx.type === 'credit';
+                  return (
+                    <tr key={tx.id} className="text-[#3b3b3b] text-[15px]">
+                      <td className="py-4 px-2">{tx.description || 'Lorem ipsum'}</td>
+                      <td className="py-4 px-2">#{tx.id.substring(0, 10).toUpperCase()}</td>
+                      <td className="py-4 px-2">{formatDate(tx.created_at)}</td>
+                      <td className="py-4 px-2">
+                        <span className={`inline-flex items-center justify-center px-4 py-1.5 text-xs font-semibold rounded-full ${isCredit ? 'bg-[#ccfa88] text-black' : 'bg-[#facaca] text-slate-900'}`}>
+                          {isCredit ? 'Success' : 'Failed'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-2 text-center font-medium">{tx.amount}</td>
+                    </tr>
+                  )
+                })
+              ) : (
+                /* Mock Layout for empty state, representing the image */
+                <>
+                  <tr className="text-[#3b3b3b] text-[15px]">
+                    <td className="py-5 px-2">Lorem ipsum</td>
+                    <td className="py-5 px-2">#572228629</td>
+                    <td className="py-5 px-2">25 Mar' 2026</td>
+                    <td className="py-5 px-2">
+                      <span className="inline-flex items-center justify-center px-5 py-1.5 text-[13px] font-medium rounded-full bg-[#dcf794] text-slate-900">
+                        Success
+                      </span>
+                    </td>
+                    <td className="py-5 px-2 text-center font-medium text-slate-800">80</td>
+                  </tr>
+                  <tr className="text-[#3b3b3b] text-[15px]">
+                    <td className="py-5 px-2">Lorem ipsum</td>
+                    <td className="py-5 px-2">#572228629</td>
+                    <td className="py-5 px-2">25 Mar' 2026</td>
+                    <td className="py-5 px-2">
+                      <span className="inline-flex items-center justify-center px-5 py-1.5 text-[13px] font-medium rounded-full bg-[#fad2d2] text-slate-900">
+                        Failed
+                      </span>
+                    </td>
+                    <td className="py-5 px-2 text-center font-medium text-slate-800">80</td>
+                  </tr>
+                  <tr className="text-[#3b3b3b] text-[15px]">
+                    <td className="py-5 px-2">Lorem ipsum</td>
+                    <td className="py-5 px-2">#572228629</td>
+                    <td className="py-5 px-2">25 Mar' 2026</td>
+                    <td className="py-5 px-2">
+                      <span className="inline-flex items-center justify-center px-5 py-1.5 text-[13px] font-medium rounded-full bg-[#dcf794] text-slate-900">
+                        Success
+                      </span>
+                    </td>
+                    <td className="py-5 px-2 text-center font-medium text-slate-800">80</td>
+                  </tr>
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

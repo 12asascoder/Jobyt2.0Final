@@ -41,5 +41,27 @@ export const ResumeController = {
       next(err);
     }
   },
+
+  async scoreATS(req: Request, res: Response, next: NextFunction) {
+    try {
+      let { resumeText, jobDescription } = req.body;
+      
+      if (req.file && req.file.mimetype === 'application/pdf') {
+        const pdfParse = require('pdf-parse');
+        const data = await pdfParse(req.file.buffer);
+        resumeText = data.text;
+      }
+
+      if (!resumeText) {
+         return res.status(400).json({ success: false, message: 'resumeText or PDF file is required' });
+      }
+
+      const result = await ResumeService.scoreATS(resumeText, jobDescription);
+      sendSuccess(res, result);
+    } catch (err) {
+      console.error('Controller ATS Error:', err);
+      next(err);
+    }
+  },
 };
 

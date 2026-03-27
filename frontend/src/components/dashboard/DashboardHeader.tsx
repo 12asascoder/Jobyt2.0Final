@@ -50,26 +50,7 @@ export function DashboardHeader({
                             >
                                 <FaBell className="text-lg" />
                             </button>
-                            {/* Profile Dropdown */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => setProfileOpen(!profileOpen)}
-                                    className="w-11 h-11 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors ml-1"
-                                >
-                                    <FaUser className="text-sm" />
-                                </button>
-                                {profileOpen && (
-                                    <div className="absolute right-0 top-14 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                                        <Link href="/profile" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-lime-600 transition-colors">
-                                            <FaUser className="text-slate-400" />Profile
-                                        </Link>
-                                        <hr className="border-slate-100 my-1" />
-                                        <button onClick={() => setProfileOpen(false)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors">
-                                            <FaArrowRightFromBracket className="text-red-400" />Logout
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                            {bellActive && <NotificationPopover />}
                         </div>
                     ) : (
                         <div className="hidden sm:flex">
@@ -95,7 +76,7 @@ export function DashboardHeader({
                                         <FaXmark className="text-sm" />
                                     </button>
                                 </div>
-                                <div className="flex items-center gap-1 ml-1 pl-1">
+                                <div className="flex items-center gap-1 ml-1 pl-1 relative">
                                     <button
                                         onClick={() => setBellActive(!bellActive)}
                                         className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors ${
@@ -104,32 +85,12 @@ export function DashboardHeader({
                                     >
                                         <FaBell className="text-lg" />
                                     </button>
-                                    
-                                    {/* Profile Dropdown */}
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setProfileOpen(!profileOpen)}
-                                            className="w-11 h-11 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors"
-                                        >
-                                            <FaUser className="text-sm" />
-                                        </button>
-                                        {profileOpen && (
-                                            <div className="absolute right-0 top-14 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                                                <Link href="/profile" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-lime-600 transition-colors">
-                                                    <FaUser className="text-slate-400" />Profile
-                                                </Link>
-                                                <hr className="border-slate-100 my-1" />
-                                                <button onClick={() => setProfileOpen(false)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors">
-                                                    <FaArrowRightFromBracket className="text-red-400" />Logout
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
+                                    {bellActive && <NotificationPopover />}
                                 </div>
                             </div>
                         ) : (
                             /* STATE: Default / Notification — solid black pill */
-                            <div className="flex items-center bg-[#1a1a1a] rounded-full h-14 px-2 gap-1">
+                            <div className="flex items-center bg-[#1a1a1a] rounded-full h-14 px-2 gap-1 relative">
                                 <button
                                     onClick={() => onSearchToggle(true)}
                                     className="w-11 h-11 rounded-full flex items-center justify-center text-white/80 hover:text-white transition-colors"
@@ -146,27 +107,7 @@ export function DashboardHeader({
                                 >
                                     <FaBell className="text-lg" />
                                 </button>
-                                
-                                {/* Profile Dropdown */}
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setProfileOpen(!profileOpen)}
-                                        className="w-11 h-11 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors ml-1"
-                                    >
-                                        <FaUser className="text-sm" />
-                                    </button>
-                                    {profileOpen && (
-                                        <div className="absolute right-0 top-14 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                                            <Link href="/profile" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-lime-600 transition-colors">
-                                                <FaUser className="text-slate-400" />Profile
-                                            </Link>
-                                            <hr className="border-slate-100 my-1" />
-                                            <button onClick={() => setProfileOpen(false)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors">
-                                                <FaArrowRightFromBracket className="text-red-400" />Logout
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
+                                {bellActive && <NotificationPopover />}
                             </div>
                         )}
                     </div>
@@ -256,19 +197,68 @@ export function DashboardHeader({
                     )}
 
                     {/* Bell Icon inside the search pill */}
-                    <button
-                        onClick={() => setBellActive(!bellActive)}
-                        className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center transition-colors ${
-                            bellActive
-                                ? 'bg-lime-400 text-black'
-                                : 'text-white/80 hover:text-white'
-                        }`}
-                    >
-                        <FaBell className="text-lg" />
-                    </button>
+                    <div className="relative flex shrink-0">
+                        <button
+                            onClick={() => setBellActive(!bellActive)}
+                            className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
+                                bellActive
+                                    ? 'bg-lime-400 text-black'
+                                    : 'text-white/80 hover:text-white'
+                            }`}
+                        >
+                            <FaBell className="text-lg" />
+                        </button>
+                        {bellActive && <NotificationPopover />}
+                    </div>
                 </div>
             </div>
             )}
         </header>
     );
 }
+
+const NotificationPopover = () => {
+    const [activeTab, setActiveTab] = useState('Today');
+    const tabs = ['Today', 'This Week', 'Earlier'];
+    const notifications = [
+        { id: 1, text: "You've been invited to an interview with Paysphere. Check your email for details.", read: false },
+        { id: 2, text: "Don't miss out! 3 internships you saved are closing soon.", read: false },
+        { id: 3, text: "You have a new message from a recruiter.", read: true },
+        { id: 4, text: "You've applied to 10 internships. Keep going!", read: true },
+        { id: 5, text: "We regret to inform you that your application was not selected this time.", read: true },
+    ];
+    
+    return (
+        <div 
+            onClick={(e) => e.stopPropagation()} 
+            className="absolute right-0 top-14 sm:top-16 mt-1 w-[340px] max-w-[calc(100vw-32px)] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 p-5 z-50 animate-in fade-in slide-in-from-top-2 text-left cursor-auto"
+        >
+            <h3 className="text-xl font-display font-medium text-slate-900 mb-4">Notifications</h3>
+            
+            <div className="bg-black rounded-xl p-1.5 flex items-center justify-between mb-5">
+                {tabs.map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                            activeTab === tab 
+                                ? 'bg-[#c1f237] text-black' 
+                                : 'text-[#c1f237] hover:bg-white/10'
+                        }`}
+                    >
+                        {tab}
+                    </button>
+                ))}
+            </div>
+
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                {notifications.map((notif) => (
+                    <div key={notif.id} className="bg-[#f8f6f0] rounded-[16px] p-4 flex items-start gap-3">
+                        <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${notif.read ? 'bg-[#d9d9d9]' : 'bg-[#c1f237]'}`} />
+                        <p className="text-slate-700 text-[13px] leading-snug">{notif.text}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};

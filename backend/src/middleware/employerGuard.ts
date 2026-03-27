@@ -47,7 +47,7 @@ export const employerGuard = async (
     }
 
     // 5. Attach recruiter profile for downstream controllers/services.
-    req.employer = recruiterProfile;
+    req.employer = recruiterProfile as unknown as any;
 
     // 6. Continue request pipeline.
     next();
