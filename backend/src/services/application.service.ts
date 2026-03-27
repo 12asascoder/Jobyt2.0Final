@@ -123,7 +123,19 @@ export const ApplicationService = {
     const job = await JobModel.findById(jobId);
     if (!job || job.recruiter_id !== recruiterId)
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
-    return ApplicationModel.findByJob(jobId, page, limit);
+      
+    const result = await ApplicationModel.findByJob(jobId, page, limit);
+    const { JobService } = require('./job.service');
+    
+    const enrichedApplications = await Promise.all(result.applications.map(async (app: any) => {
+       const matchResult = await JobService.calculateMatchScore(app.skills || [], job.skills || []);
+       return { ...app, matchScore: matchResult.matchScore };
+    }));
+    
+    // Sort logically for Resume Ranking
+    enrichedApplications.sort((a, b) => b.matchScore - a.matchScore);
+    
+    return { ...result, applications: enrichedApplications };
   },
 
   async getMyApplicationsWithFilters(

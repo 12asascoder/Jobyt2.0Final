@@ -62,8 +62,9 @@ router.delete('/me/resumes/:id', authorize('applicant'), ResumeController.delete
 router.post(
   '/me/resume-score',
   authorize('applicant'),
-  body('resumeText').isString(),
+  uploadResume.single('file'),
   body('jobDescription').isString(),
+  body('resumeText').optional().isString(),
   validate,
   ResumeController.scoreATS
 );

@@ -19,6 +19,8 @@ interface ApplicantProfile {
 
 interface ApplicationWithProfile extends Application {
   profile?: ApplicantProfile;
+  name?: string;
+  matchScore?: number;
 }
 
 import { ApplicationTimeline } from '@/components/applications/ApplicationTimeline';
@@ -84,16 +86,23 @@ export default function JobApplicationsPage() {
       ) : (
         <div className="space-y-3">
           {filtered.map((app) => (
-            <div key={app.id} className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <Avatar name={app.company_name ?? 'A'} size="sm" />
+            <div key={app.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                <Avatar name={(app as any).name ?? 'A'} size="md" />
                 <div>
-                  <p className="font-medium text-gray-900">{app.company_name ?? 'Applicant'}</p>
-                  <p className="text-xs text-gray-400">Applied {formatDate(app.created_at)}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-gray-900 text-lg">{(app as any).name ?? 'Applicant'}</p>
+                    {(app as any).matchScore !== undefined && (
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${(app as any).matchScore >= 80 ? 'bg-green-100 text-green-700' : (app as any).matchScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                        {(app as any).matchScore}% Match
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-semibold text-gray-500 mt-0.5">Applied {formatDate(app.created_at)}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${APPLICATION_STATUS_COLORS[app.status]}`}>
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <span className={`rounded-xl px-3 py-1 text-xs font-extrabold shadow-sm ${APPLICATION_STATUS_COLORS[app.status]}`}>
                   {APPLICATION_STATUS_LABELS[app.status]}
                 </span>
                 <select

@@ -259,26 +259,48 @@ export const JobService = {
     if (!Array.isArray(userSkills) || !Array.isArray(jobSkills)) {
       return { matchScore: 0, matchedSkills: [], missingSkills: [] };
     }
-    const normalize = (skill: string) => skill.trim().toLowerCase();
-    const normalizedUser = new Set(userSkills.map(normalize));
-    const normalizedJob = jobSkills.map(normalize);
+    
+    try {
+      const natural = require('natural');
+      
+      const matchedSkills: string[] = [];
+      const missingSkills: string[] = [];
 
-    const matchedSkills: string[] = [];
-    const missingSkills: string[] = [];
-
-    for (let i = 0; i < normalizedJob.length; i++) {
-        if (normalizedUser.has(normalizedJob[i])) {
-            matchedSkills.push(jobSkills[i]);
-        } else {
-            missingSkills.push(jobSkills[i]);
+      for (const jSkill of jobSkills) {
+        let isMatch = false;
+        for (const uSkill of userSkills) {
+          const normJ = jSkill.toLowerCase().trim();
+          const normU = uSkill.toLowerCase().trim();
+          
+          if (normJ === normU) {
+            isMatch = true;
+            break;
+          }
+          
+          // Fuzzy match threshold 0.85 (accommodates e.g. Node vs Node.js)
+          const distance = natural.JaroWinklerDistance(normJ, normU, { ignoreCase: true });
+          if (distance >= 0.85) {
+            isMatch = true;
+            break;
+          }
         }
+        
+        if (isMatch) {
+          matchedSkills.push(jSkill);
+        } else {
+          missingSkills.push(jSkill);
+        }
+      }
+
+      const matchScore = jobSkills.length > 0
+          ? Math.round((matchedSkills.length / jobSkills.length) * 100)
+          : 0;
+
+      return { matchScore, matchedSkills, missingSkills };
+    } catch (e) {
+      console.error('Job Match Error:', e);
+      return { matchScore: 0, matchedSkills: [], missingSkills: jobSkills };
     }
-
-    const matchScore = jobSkills.length > 0
-        ? Math.round((matchedSkills.length / jobSkills.length) * 100)
-        : 0;
-
-    return { matchScore, matchedSkills, missingSkills };
   },
 
   async analyzeSkillGap(userSkills: string[], requiredSkills: string[]): Promise<{ missingSkills: string[], suggestions: Record<string, string> }> {

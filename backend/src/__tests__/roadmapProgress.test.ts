@@ -219,10 +219,7 @@ describe('getUserRoadmapProgress', () => {
       phone: null,
       photo_url: null,
       experience: [],
-      education: [],
-      resume_url: null,
-      portfolio_url: null,
-      github_url: null,
+      education: [], portfolio_url: null, github_url: null,
       linkedin_url: null,
       bio: null,
       created_at: new Date(),
@@ -258,10 +255,7 @@ describe('getUserRoadmapProgress', () => {
       phone: null,
       photo_url: null,
       experience: [],
-      education: [],
-      resume_url: null,
-      portfolio_url: null,
-      github_url: null,
+      education: [], portfolio_url: null, github_url: null,
       linkedin_url: null,
       bio: null,
       created_at: new Date(),
@@ -324,9 +318,7 @@ describe('recommendNextSkill', () => {
       user_id: 'user-1',
       skills: ['HTML', 'CSS'],
       name: null, phone: null, photo_url: null,
-      experience: [], education: [],
-      resume_url: null, portfolio_url: null,
-      github_url: null, linkedin_url: null,
+      experience: [], education: [], portfolio_url: null, github_url: null, linkedin_url: null,
       bio: null, created_at: new Date(), updated_at: new Date(),
     });
     mockRoadmapNode.findByRoadmap.mockResolvedValue([
@@ -351,9 +343,7 @@ describe('recommendNextSkill', () => {
       user_id: 'user-1',
       skills: ['HTML'],
       name: null, phone: null, photo_url: null,
-      experience: [], education: [],
-      resume_url: null, portfolio_url: null,
-      github_url: null, linkedin_url: null,
+      experience: [], education: [], portfolio_url: null, github_url: null, linkedin_url: null,
       bio: null, created_at: new Date(), updated_at: new Date(),
     });
     mockRoadmapNode.findByRoadmap.mockResolvedValue(nodes);
@@ -381,9 +371,7 @@ describe('recommendNextSkill', () => {
       user_id: 'user-1',
       skills: [],
       name: null, phone: null, photo_url: null,
-      experience: [], education: [],
-      resume_url: null, portfolio_url: null,
-      github_url: null, linkedin_url: null,
+      experience: [], education: [], portfolio_url: null, github_url: null, linkedin_url: null,
       bio: null, created_at: new Date(), updated_at: new Date(),
     });
     mockRoadmapNode.findByRoadmap.mockResolvedValue(nodes);
@@ -416,9 +404,7 @@ describe('recommendNextSkill', () => {
       user_id: 'user-1',
       skills: ['A'],
       name: null, phone: null, photo_url: null,
-      experience: [], education: [],
-      resume_url: null, portfolio_url: null,
-      github_url: null, linkedin_url: null,
+      experience: [], education: [], portfolio_url: null, github_url: null, linkedin_url: null,
       bio: null, created_at: new Date(), updated_at: new Date(),
     });
     mockRoadmapNode.findByRoadmap.mockResolvedValue(nodes);

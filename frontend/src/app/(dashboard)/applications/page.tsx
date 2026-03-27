@@ -79,12 +79,12 @@ export default function ApplicationsPage() {
                                     <div className="grid grid-cols-12 gap-3 items-center">
                                         <div className="col-span-2">
                                             <span className="text-sm font-semibold text-[#1a1a1a]">
-                                                {app.job?.company_name || 'Company'}
+                                                {(app as any).company_name || 'Company'}
                                             </span>
                                         </div>
                                         <div className="col-span-2">
                                             <span className="text-sm text-slate-600">
-                                                {app.job?.title || 'Position'}
+                                                {(app as any).job_title || 'Position'}
                                             </span>
                                         </div>
                                         <div className="col-span-2">
@@ -104,7 +104,7 @@ export default function ApplicationsPage() {
                                         </div>
                                         <div className="col-span-2">
                                             <span className="text-sm text-slate-500">
-                                                {app.status === 'rejected' ? 'Position Filled' : ''}
+                                                {app.status === 'REJECTED' ? 'Position Filled' : ''}
                                             </span>
                                         </div>
                                     </div>
@@ -123,10 +123,10 @@ export default function ApplicationsPage() {
                                 <div className="flex items-start justify-between mb-3">
                                     <div>
                                         <p className="text-sm font-bold text-[#1a1a1a]">
-                                            {app.job?.company_name || 'Company'}
+                                            {(app as any).company_name || 'Company'}
                                         </p>
                                         <p className="text-xs text-slate-500 mt-0.5">
-                                            {app.job?.title || 'Position'}
+                                            {(app as any).job_title || 'Position'}
                                         </p>
                                     </div>
                                     <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>

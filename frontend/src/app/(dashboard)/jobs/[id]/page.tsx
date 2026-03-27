@@ -63,9 +63,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
   const [showRoadmapModal, setShowRoadmapModal] = useState(false);
 
-  const [atsScore, setAtsScore] = useState<{ score: number; missingKeywords: string[] } | null>(null);
+  const [atsScore, setAtsScore] = useState<any | null>(null);
   const [scoringAts, setScoringAts] = useState(false);
   const [resumeText, setResumeText] = useState('');
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!id || id === 'undefined') {
@@ -174,13 +175,34 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const handleScoreAts = async () => {
     try {
       setScoringAts(true);
-      const res = await api.post<any>('/users/me/resume-score', { 
-        resumeText, 
-        jobDescription: job?.description 
-      });
-      setAtsScore(res.data);
+      const token = localStorage.getItem('hp_access');
+      let data;
+
+      if (resumeFile) {
+        const formData = new FormData();
+        formData.append('file', resumeFile);
+        formData.append('jobDescription', job?.description || '');
+        
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/users/me/resume-score`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
+        });
+        
+        if (!res.ok) throw new Error('ATS scoring failed');
+        const json = await res.json();
+        data = json.data;
+      } else {
+        const res = await api.post<any>('/users/me/resume-score', { 
+          resumeText, 
+          jobDescription: job?.description 
+        });
+        data = res.data;
+      }
+      setAtsScore(data);
     } catch (err) {
       toast.error('ATS scoring failed');
+      console.error(err);
     } finally {
       setScoringAts(false);
     }
@@ -485,41 +507,150 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             </div>
             
             {!atsScore && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Paste your resume text to analyze fit against this job (Optional)</label>
-                <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-500 resize-none bg-white"
-                  rows={3}
-                  placeholder="Paste resume text or use your profile defaults..."
-                  value={resumeText}
-                  onChange={(e) => setResumeText(e.target.value)}
-                />
+              <div className="space-y-4">
+                <div className="border border-dashed border-gray-400 rounded-xl p-4 text-center hover:bg-gray-100 transition-colors">
+                  <label className="cursor-pointer block">
+                    <span className="text-sm font-bold text-blue-600 block mb-1">
+                      {resumeFile ? '📄 ' + resumeFile.name : 'Click to Upload PDF Resume'}
+                    </span>
+                    <span className="text-xs text-gray-500 font-medium">For maximum accuracy in ATS scoring</span>
+                    <input type="file" accept="application/pdf" className="hidden" onChange={(e) => {
+                      setResumeFile(e.target.files?.[0] || null);
+                      setResumeText(''); // clear text fallback
+                    }} />
+                  </label>
+                </div>
+                
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-gray-50 px-2 text-gray-400 font-bold">OR PASTE TEXT</span>
+                  </div>
+                </div>
+
+                <div>
+                  <textarea
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-500 resize-none bg-white opacity-80"
+                    rows={3}
+                    placeholder="Paste resume text or leave blank to use your profile string..."
+                    value={resumeText}
+                    onChange={(e) => {
+                      setResumeText(e.target.value);
+                      setResumeFile(null); // clear file
+                    }}
+                  />
+                </div>
               </div>
             )}
 
             {atsScore && (
-              <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-                  <div className={`text-3xl font-extrabold ${atsScore.score >= 80 ? 'text-green-600' : atsScore.score >= 50 ? 'text-yellow-600' : 'text-orange-600'}`}>
-                    {atsScore.score}%
-                  </div>
-                  <div className="text-sm font-medium text-gray-700">
-                    ATS Match Score<br/>
-                    <span className="text-xs text-gray-400 font-normal">Based on semantic relevance.</span>
-                  </div>
-                </div>
-                {atsScore.missingKeywords?.length > 0 && (
-                  <div>
-                    <p className="text-xs font-bold text-red-500 mb-1.5">Missing Keywords to Include:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {atsScore.missingKeywords.map(kw => (
-                        <span key={kw} className="px-2 py-0.5 bg-red-50 text-red-600 rounded text-[10px] font-bold uppercase tracking-wider border border-red-100">
-                          {kw}
-                        </span>
-                      ))}
+              <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                {/* Master Match Row */}
+                <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -z-10 translate-x-10 -translate-y-10"></div>
+                  <div className="flex items-center gap-4">
+                    <div className={`text-4xl font-black ${atsScore.score >= 80 ? 'text-green-600' : atsScore.score >= 50 ? 'text-yellow-600' : 'text-orange-600'}`}>
+                      {atsScore.score}%
+                    </div>
+                    <div>
+                      <div className="font-extrabold text-gray-900 leading-tight">Overall Match</div>
+                      <div className="text-[10px] text-gray-500 font-bold tracking-wider uppercase">NLP + LLM AI</div>
                     </div>
                   </div>
+                  <div className="text-right">
+                    <div className="inline-block bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-lg border border-blue-200">
+                      {atsScore.rolePrediction}
+                    </div>
+                    <div className="text-[10px] uppercase font-bold text-gray-500 mt-1">
+                      {atsScore.experience} • Q-Score: {atsScore.qualityScore}/100
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section Scores Grid */}
+                {atsScore.sectionScores && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: 'Skills', val: atsScore.sectionScores.skillsScore || 0 },
+                      { label: 'Experience', val: atsScore.sectionScores.experienceScore || 0 },
+                      { label: 'Education', val: atsScore.sectionScores.educationScore || 0 }
+                    ].map((s) => (
+                      <div key={s.label} className="bg-white border border-gray-100 rounded-lg p-2 text-center shadow-[inset_0_0_10px_rgba(0,0,0,0.02)]">
+                        <div className={`text-lg font-black ${s.val >= 80 ? 'text-green-500' : s.val >= 50 ? 'text-yellow-500' : 'text-red-400'}`}>
+                          {s.val}%
+                        </div>
+                        <div className="text-[10px] uppercase font-bold text-gray-400">{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
                 )}
+
+                {/* AI Explanation Explanation */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-3 rounded-lg text-xs text-blue-900 leading-relaxed indent-2 italic font-medium">
+                  "{atsScore.explanation}"
+                </div>
+
+                {/* Feedback Areas */}
+                {atsScore.feedback && (
+                  <div className="space-y-3">
+                    {atsScore.missingKeywords?.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                          <span className="text-xs font-bold text-red-900">Missing Keywords (TF-IDF Priority)</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 pl-3.5">
+                          {atsScore.missingKeywords.map((kw: string) => (
+                            <span key={kw} className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold border border-red-200">
+                              {kw}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {atsScore.feedback.weakAreas?.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                          <span className="text-xs font-bold text-orange-900">Weak Content Areas</span>
+                        </div>
+                        <ul className="list-disc pl-7 text-[10px] font-semibold text-orange-800 space-y-0.5">
+                          {atsScore.feedback.weakAreas.map((w: string, i: number) => <li key={i}>{w}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    {atsScore.feedback.improvements?.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                          <span className="text-xs font-bold text-green-900">Suggested Improvements</span>
+                        </div>
+                        <ul className="list-disc pl-7 text-[10px] font-semibold text-green-800 space-y-0.5">
+                          {atsScore.feedback.improvements.map((imp: string, i: number) => <li key={i}>{imp}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Download Button */}
+                <button
+                  onClick={() => {
+                    const blob = new Blob([JSON.stringify(atsScore, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `resume_analysis_${job.title.replace(/\\s+/g, '_')}.json`;
+                    a.click();
+                  }}
+                  className="w-full py-2 bg-[#1a1a1a] text-white font-bold tracking-wide rounded-lg text-xs mt-2 hover:bg-gray-800 transition-colors shadow-lg"
+                >
+                  ↓ Download Full JSON Report
+                </button>
               </div>
             )}
           </div>
