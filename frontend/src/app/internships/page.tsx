@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { Navbar, Footer } from '@/components/landing';
@@ -12,6 +12,14 @@ const WORK_TYPES = ['Remote', 'Hybrid', 'On-site'];
 const DURATIONS = ['1-3 Months', '3-6 Months', '6+ Months'];
 
 export default function InternshipsPage() {
+    return (
+        <Suspense fallback={null}>
+            <InternshipsContent />
+        </Suspense>
+    );
+}
+
+function InternshipsContent() {
     const { user, isAuthenticated, initialize } = useAuthStore();
     const router = useRouter();
     const searchParams = useSearchParams();
