@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { FaArrowRight } from 'react-icons/fa6';
 import { API_BASE } from '@/constants';
-import { BackendJob, JobCardGrid, SkeletonGrid, getJobTypeLabel } from '@/components/ui/JobCard';
+import { BackendJob, JobCardGrid, SkeletonGrid, getJobTypeLabel, normalizeJob } from '@/components/ui/JobCard';
 
 const HARDCODED_JOBS: BackendJob[] = [
     {
@@ -93,8 +93,13 @@ export function JobCards() {
                 return res.json();
             })
             .then((data) => {
-                if (data.success && data.data?.length > 0) setJobs(data.data);
-                else setJobs(HARDCODED_JOBS);
+                if (data.success && data.data?.length > 0) {
+                    // Normalize all jobs to ensure they have valid id fields
+                    const normalizedJobs = data.data.map((job: any) => normalizeJob(job));
+                    setJobs(normalizedJobs);
+                } else {
+                    setJobs(HARDCODED_JOBS);
+                }
             })
             .catch(() => setJobs(HARDCODED_JOBS))
             .finally(() => setLoading(false));

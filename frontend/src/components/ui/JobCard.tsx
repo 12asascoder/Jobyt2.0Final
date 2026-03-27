@@ -17,6 +17,23 @@ export interface BackendJob {
     created_at: string;
 }
 
+// Normalize job data to ensure it has an id field
+export function normalizeJob(job: any): BackendJob {
+    return {
+        id: job.id || job._id || '',
+        title: job.title || '',
+        company_name: job.company_name,
+        location: job.location,
+        type: job.type || 'full-time',
+        salary_min: job.salary_min,
+        salary_max: job.salary_max,
+        skills: job.skills || [],
+        status: job.status || 'active',
+        is_boosted: job.is_boosted || false,
+        created_at: job.created_at || new Date().toISOString(),
+    };
+}
+
 export function formatSalary(min: number | null, max: number | null): string {
     if (!min && !max) return 'Competitive';
     const fmt = (v: number) => {

@@ -11,6 +11,7 @@ import {
     JobCardGrid,
     SkeletonGrid,
     getJobTypeLabel,
+    normalizeJob,
 } from '@/components/ui/JobCard';
 
 const AVAILABLE_SKILLS = ['React', 'Figma', 'Python', 'Marketing', 'UI/UX', 'SQL', 'Node.js'];
@@ -71,8 +72,13 @@ export default function DashboardPage() {
         fetch(`${API_BASE}/jobs?limit=50&sort=date`)
             .then((res) => res.json())
             .then((data) => {
-                if (data.success && data.data?.length > 0) setJobs(data.data);
-                else setJobs([]);
+                if (data.success && data.data?.length > 0) {
+                    // Normalize all jobs to ensure they have valid id fields
+                    const normalizedJobs = data.data.map((job: any) => normalizeJob(job));
+                    setJobs(normalizedJobs);
+                } else {
+                    setJobs([]);
+                }
             })
             .catch(() => setJobs([]))
             .finally(() => setJobsLoading(false));
@@ -240,9 +246,8 @@ export default function DashboardPage() {
                                         <div className="flex flex-wrap gap-2">
                                             {AVAILABLE_SKILLS.map(skill => (
                                                 <button key={skill} onClick={() => toggleSkill(skill)}
-                                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
-                                                        selectedSkills.includes(skill) ? 'border-lime-400 text-lime-400' : 'border-white/20 text-slate-300 hover:border-white/40'
-                                                    }`}
+                                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${selectedSkills.includes(skill) ? 'border-lime-400 text-lime-400' : 'border-white/20 text-slate-300 hover:border-white/40'
+                                                        }`}
                                                 >{skill}</button>
                                             ))}
                                         </div>
@@ -252,9 +257,8 @@ export default function DashboardPage() {
                                         <div className="flex flex-wrap gap-2">
                                             {WORK_TYPES.map(type => (
                                                 <button key={type} onClick={() => setSelectedWorkType(type === selectedWorkType ? '' : type)}
-                                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
-                                                        selectedWorkType === type ? 'border-lime-400 text-lime-400' : 'border-white/20 text-slate-300 hover:border-white/40'
-                                                    }`}
+                                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${selectedWorkType === type ? 'border-lime-400 text-lime-400' : 'border-white/20 text-slate-300 hover:border-white/40'
+                                                        }`}
                                                 >{type}</button>
                                             ))}
                                         </div>
@@ -264,9 +268,8 @@ export default function DashboardPage() {
                                         <div className="flex flex-wrap gap-2">
                                             {DURATIONS.map(dur => (
                                                 <button key={dur} onClick={() => setSelectedDuration(dur === selectedDuration ? '' : dur)}
-                                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
-                                                        selectedDuration === dur ? 'border-lime-400 text-lime-400' : 'border-white/20 text-slate-300 hover:border-white/40'
-                                                    }`}
+                                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${selectedDuration === dur ? 'border-lime-400 text-lime-400' : 'border-white/20 text-slate-300 hover:border-white/40'
+                                                        }`}
                                                 >{dur}</button>
                                             ))}
                                         </div>
@@ -311,11 +314,10 @@ export default function DashboardPage() {
                                     <div className="flex flex-wrap gap-2.5">
                                         {AVAILABLE_SKILLS.map(skill => (
                                             <button key={skill} onClick={() => toggleSkill(skill)}
-                                                className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
-                                                    selectedSkills.includes(skill)
+                                                className={`px-3.5 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${selectedSkills.includes(skill)
                                                         ? 'bg-transparent border-lime-400 text-lime-400'
                                                         : 'bg-transparent border-white/20 text-slate-300 hover:border-white/40'
-                                                }`}
+                                                    }`}
                                             >{skill}</button>
                                         ))}
                                     </div>
@@ -327,9 +329,8 @@ export default function DashboardPage() {
                                     <div className="flex flex-col gap-2.5">
                                         {WORK_TYPES.map(type => (
                                             <button key={type} onClick={() => setSelectedWorkType(type === selectedWorkType ? '' : type)}
-                                                className={`text-left text-[13px] transition-colors ${
-                                                    selectedWorkType === type ? 'text-lime-400 font-semibold' : 'text-slate-400 hover:text-white'
-                                                }`}
+                                                className={`text-left text-[13px] transition-colors ${selectedWorkType === type ? 'text-lime-400 font-semibold' : 'text-slate-400 hover:text-white'
+                                                    }`}
                                             >{type}</button>
                                         ))}
                                     </div>
@@ -341,9 +342,8 @@ export default function DashboardPage() {
                                     <div className="flex flex-col gap-2.5">
                                         {DURATIONS.map(dur => (
                                             <button key={dur} onClick={() => setSelectedDuration(dur === selectedDuration ? '' : dur)}
-                                                className={`text-left text-[13px] transition-colors ${
-                                                    selectedDuration === dur ? 'text-lime-400 font-semibold' : 'text-slate-400 hover:text-white'
-                                                }`}
+                                                className={`text-left text-[13px] transition-colors ${selectedDuration === dur ? 'text-lime-400 font-semibold' : 'text-slate-400 hover:text-white'
+                                                    }`}
                                             >{dur}</button>
                                         ))}
                                     </div>

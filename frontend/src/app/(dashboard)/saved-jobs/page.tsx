@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Job } from '@/types';
 import { API_BASE } from '@/constants';
-import { BackendJob, JobCardGrid, SkeletonGrid } from '@/components/ui/JobCard';
+import { BackendJob, JobCardGrid, SkeletonGrid, normalizeJob } from '@/components/ui/JobCard';
 import { FaTrashCan } from 'react-icons/fa6';
 
 export default function SavedJobsPage() {
@@ -14,21 +14,9 @@ export default function SavedJobsPage() {
     useEffect(() => {
         api.get<Job[]>('/users/me/saved-jobs')
             .then((res) => {
-                // Map Job to BackendJob shape for reusable card
-                const mapped: BackendJob[] = (res.data || []).map((j: Job) => ({
-                    _id: j.id,
-                    title: j.title,
-                    company_name: j.company_name || '',
-                    company_logo: '',
-                    location: j.location || '',
-                    type: j.type,
-                    salary_min: j.salary_min,
-                    salary_max: j.salary_max,
-                    skills: j.skills || [],
-                    status: j.status,
-                    created_at: j.created_at,
-                }));
-                setJobs(mapped);
+                // Normalize all jobs to ensure they have valid id fields
+                const normalizedJobs = (res.data || []).map((j: Job) => normalizeJob(j));
+                setJobs(normalizedJobs);
             })
             .catch(() => setJobs([]))
             .finally(() => setLoading(false));
@@ -37,7 +25,7 @@ export default function SavedJobsPage() {
     const unsave = async (jobId: string) => {
         try {
             await api.delete(`/users/me/saved-jobs/${jobId}`);
-            setJobs((prev) => prev.filter((j) => j._id !== jobId));
+            setJobs((prev) => prev.filter((j) => j.id !== jobId));
         } catch { /* silent */ }
     };
 
