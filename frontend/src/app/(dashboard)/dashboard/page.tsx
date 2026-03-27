@@ -115,7 +115,7 @@ export default function DashboardPage() {
     ];
 
     return (
-        <div className="max-w-[1400px] mx-auto">
+        <div className="max-w-350 mx-auto">
             {!isSearchMode ? (
                 <>
                     {/* Welcome */}
@@ -198,7 +198,7 @@ export default function DashboardPage() {
 
                     <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
                         {/* ── Dark Sidebar Filters ── */}
-                        <aside className="w-full lg:w-[280px] shrink-0">
+                        <aside className="w-full lg:w-70 shrink-0">
 
                             {/* MOBILE PILL: search + filter toggle */}
                             <div className="lg:hidden bg-[#1a1a1a] rounded-full px-4 py-2.5 flex items-center gap-3 shadow-lg">
@@ -278,7 +278,7 @@ export default function DashboardPage() {
                             )}
 
                             {/* DESKTOP FULL SIDEBAR */}
-                            <div className="hidden lg:block bg-[#1a1a1a] text-white rounded-[24px] p-7 md:p-8 h-fit shadow-xl">
+                            <div className="hidden lg:block bg-[#1a1a1a] text-white rounded-3xl p-7 md:p-8 h-fit shadow-xl">
                                 <div className="flex items-center gap-3 mb-8 border-b border-white/10 pb-5">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lime-400">
                                         <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
@@ -358,7 +358,7 @@ export default function DashboardPage() {
                             ) : filteredJobs.length > 0 ? (
                                 <JobCardGrid jobs={filteredJobs} gridClass="grid-cols-1 md:grid-cols-2 xl:grid-cols-3" />
                             ) : (
-                                <div className="w-full flex flex-col items-center justify-center py-32 text-center rounded-[24px] border-2 border-dashed border-slate-200">
+                                <div className="w-full flex flex-col items-center justify-center py-32 text-center rounded-3xl border-2 border-dashed border-slate-200">
                                     <span className="text-4xl mb-4">🔍</span>
                                     <h3 className="text-lg font-bold text-slate-800 mb-1">No internships found</h3>
                                     <p className="text-slate-500 text-sm">Try tweaking your filters or search terms.</p>
