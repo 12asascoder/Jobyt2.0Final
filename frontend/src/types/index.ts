@@ -183,7 +183,10 @@ export interface Payment {
 export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
-  data: T;
+  error?: string;
+  errors?: any[];
+  details?: any;
+  data?: T;
 }
 
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {

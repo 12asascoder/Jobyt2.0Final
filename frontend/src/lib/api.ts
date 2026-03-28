@@ -33,8 +33,19 @@ async function request<T>(
       }
     }
 
-    const error = await res.json().catch(() => ({ message: 'Request failed' }));
-    throw new ApiError(error.message || 'Request failed', res.status, error.errors, error);
+    let errorData: any = {};
+    const text = await res.text().catch(() => '');
+    try {
+      errorData = text ? JSON.parse(text) : {};
+    } catch {
+      errorData = { message: text || res.statusText || 'Request failed' };
+    }
+
+    // Attempt to extract the best error message available
+    const errorMessage = errorData.message || errorData.error || res.statusText || 'Request failed';
+    const errorCode = errorData.error || (errorData.errors && errorData.errors[0]?.code) || undefined;
+
+    throw new ApiError(errorMessage, res.status, errorCode, errorData.errors, errorData.details, errorData);
   }
 
   return res.json();
@@ -44,7 +55,9 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public errors?: unknown,
+    public code?: string,
+    public errors?: any[],
+    public details?: any,
     public data?: any
   ) {
     super(message);

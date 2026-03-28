@@ -9,8 +9,9 @@ export const sendSuccess = (
   res.status(statusCode).json({ success: true, message, data });
 };
 
-export const sendError = (res: Response, message: string, statusCode = 400, errors?: unknown) => {
+export const sendError = (res: Response, message: string, statusCode = 400, errors?: unknown, errorCode?: string) => {
   const body: Record<string, unknown> = { success: false, message };
+  if (errorCode) body.error = errorCode;
   if (errors) body.errors = errors;
   res.status(statusCode).json(body);
 };
