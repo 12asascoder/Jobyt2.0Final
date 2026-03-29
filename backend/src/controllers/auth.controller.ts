@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
+import { OAuthAuthService, type OAuthProvider } from '../services/oauth.service';
 import { sendSuccess } from '../utils/response';
+import { UnauthorizedError } from '../utils/errors';
+import logger from '../config/logger';
+import redis from '../config/redis';
 
 export const AuthController = {
   async register(req: Request, res: Response, next: NextFunction) {
@@ -28,6 +32,192 @@ export const AuthController = {
       const data = await AuthService.login(email, password);
       sendSuccess(res, data, 'Login successful');
     } catch (err) {
+      next(err);
+    }
+  },
+
+  async oauthLogin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const provider = req.body.provider as OAuthProvider;
+      const tokenOrCode = (req.body.tokenOrCode || req.body.idToken || req.body.code) as string;
+      const referralCode =
+        typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
+          ? req.body.referralCode.trim()
+          : undefined;
+
+      console.info(`[AuthController] OAuth login attempt provider=${provider} ip=${req.ip}`);
+
+      if (!tokenOrCode) {
+        if (provider === 'github') {
+          throw new UnauthorizedError('Invalid GitHub code', 'INVALID_GITHUB_CODE');
+        }
+        if (provider === 'linkedin') {
+          throw new UnauthorizedError('Invalid LinkedIn code', 'INVALID_LINKEDIN_CODE');
+        }
+      }
+
+      const data = await OAuthAuthService.login(provider, tokenOrCode, referralCode);
+      sendSuccess(res, data, 'Login successful');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async googleLogin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { idToken } = req.body;
+      const referralCode =
+        typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
+          ? req.body.referralCode.trim()
+          : undefined;
+      const hasToken = typeof idToken === 'string' && idToken.length > 0;
+
+      logger.info('Google OAuth login attempt', { hasToken, ip: req.ip });
+
+      if (!hasToken || idToken.length < 50) {
+        throw new UnauthorizedError('Invalid Google token', 'INVALID_GOOGLE_TOKEN');
+      }
+
+      let data;
+      try {
+        data = await OAuthAuthService.login('google', idToken, referralCode);
+      } catch (error) {
+        if (error instanceof UnauthorizedError) {
+          throw new UnauthorizedError('Invalid Google token', 'INVALID_GOOGLE_TOKEN');
+        }
+        throw error;
+      }
+
+      sendSuccess(res, data, 'Login successful');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async githubLogin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { code, state } = req.body;
+      const referralCode =
+        typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
+          ? req.body.referralCode.trim()
+          : undefined;
+
+      logger.info('GitHub OAuth login attempt', {
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        timestamp: new Date().toISOString(),
+      });
+
+      if (typeof code !== 'string' || !code.trim()) {
+        throw new UnauthorizedError('INVALID_GITHUB_CODE', 'INVALID_GITHUB_CODE');
+      }
+
+      if (!state || typeof state !== 'string') {
+        throw new UnauthorizedError('INVALID_STATE');
+      }
+
+      const normalizedCode = code.trim();
+      const normalizedState = state.trim();
+      const stateKey = `oauth_state:github:${normalizedState}`;
+      const key = `oauth_code:github:${normalizedCode}`;
+
+      if (redis.status === 'wait' || redis.status === 'end') {
+        await redis.connect();
+      }
+
+      const stateExists = await redis.get(stateKey);
+      if (!stateExists) {
+        throw new UnauthorizedError('INVALID_STATE');
+      }
+
+      await redis.del(stateKey);
+
+      const lock = await redis.set(key, 'used', 'EX', 300, 'NX');
+      if (!lock) {
+        logger.warn('Replay attack prevented', {
+          type: 'OAUTH_CODE',
+          provider: 'github',
+          ip: req.ip,
+        });
+        throw new UnauthorizedError('CODE_ALREADY_USED');
+      }
+
+      const data = await OAuthAuthService.login('github', normalizedCode, referralCode);
+
+      // TODO: Move OAuth provider handlers to strategy pattern if more providers are added.
+      sendSuccess(res, data, 'Login successful');
+    } catch (err) {
+      logger.error('GitHub OAuth failed', {
+        error: err,
+        ip: req.ip,
+      });
+      next(err);
+    }
+  },
+
+  async linkedinLogin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { code, state } = req.body;
+      const referralCode =
+        typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
+          ? req.body.referralCode.trim()
+          : undefined;
+
+      logger.info('LinkedIn OAuth login attempt', {
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        timestamp: new Date().toISOString(),
+      });
+
+      if (typeof code !== 'string' || !code.trim()) {
+        throw new UnauthorizedError('INVALID_LINKEDIN_CODE');
+      }
+
+      if (typeof state !== 'string' || !state.trim()) {
+        throw new UnauthorizedError('INVALID_STATE');
+      }
+
+      // LinkedIn OAuth requires r_liteprofile and r_emailaddress scopes.
+      // Email may not always be returned and should be handled in the service layer.
+      // Token exchange happens via: https://www.linkedin.com/oauth/v2/accessToken
+
+      const normalizedCode = code.trim();
+      const normalizedState = state.trim();
+      const stateKey = `oauth_state:linkedin:${normalizedState}`;
+      const codeKey = `oauth_code:linkedin:${normalizedCode}`;
+
+      if (redis.status === 'wait' || redis.status === 'end') {
+        await redis.connect();
+      }
+
+      const stateExists = await redis.get(stateKey);
+      if (!stateExists) {
+        throw new UnauthorizedError('INVALID_STATE');
+      }
+
+      await redis.del(stateKey);
+      // TODO: Ensure frontend generates and stores state before redirecting to LinkedIn.
+      // TODO: Move state generation/storage into a dedicated pre-auth endpoint.
+
+      const lock = await redis.set(codeKey, 'used', 'EX', 300, 'NX');
+      if (!lock) {
+        logger.warn('Replay attack prevented', {
+          type: 'OAUTH_CODE',
+          provider: 'linkedin',
+          ip: req.ip,
+        });
+        throw new UnauthorizedError('CODE_ALREADY_USED');
+      }
+
+      const result = await OAuthAuthService.login('linkedin', normalizedCode, referralCode);
+
+      // TODO: Move OAuth providers to a strategy-based handler when providers grow.
+      return sendSuccess(res, result);
+    } catch (err) {
+      logger.error('LinkedIn OAuth failed', {
+        error: err,
+        ip: req.ip,
+      });
       next(err);
     }
   },
@@ -63,6 +253,78 @@ export const AuthController = {
   async me(req: Request, res: Response, next: NextFunction) {
     try {
       sendSuccess(res, req.user);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async addEmail(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new UnauthorizedError('User not authenticated', 'NOT_AUTHENTICATED');
+      }
+
+      const { email } = req.body;
+      if (!email || typeof email !== 'string') {
+        throw new UnauthorizedError('Email is required', 'EMAIL_REQUIRED');
+      }
+      const data = await AuthService.addEmail(userId, email);
+      sendSuccess(res, data, 'Verification email sent');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async verifyEmailPost(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { token } = req.body;
+      if (!token || typeof token !== 'string') {
+        throw new UnauthorizedError('Verification token is required', 'TOKEN_REQUIRED');
+      }
+
+      const data = await AuthService.verifyOAuthEmail(token, req.ip);
+      sendSuccess(res, data);
+    } catch (err) {
+      const errorLike = err as { code?: string; statusCode?: number };
+
+      if (errorLike?.code === 'TOKEN_EXPIRED') {
+        res.status(400).json({
+          code: 'TOKEN_EXPIRED',
+          message: 'Verification link expired. Please request a new one.',
+        });
+        return;
+      }
+
+      if (errorLike?.code === 'TOKEN_ALREADY_USED') {
+        res.status(400).json({
+          code: 'TOKEN_ALREADY_USED',
+          message: 'This verification link has already been used.',
+        });
+        return;
+      }
+
+      if (errorLike?.code === 'INVALID_TOKEN') {
+        res.status(400).json({
+          code: 'INVALID_TOKEN',
+          message: 'Invalid verification link. Please request a new one.',
+        });
+        return;
+      }
+
+      next(err);
+    }
+  },
+
+  async resendVerification(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new UnauthorizedError('User not authenticated', 'NOT_AUTHENTICATED');
+      }
+
+      const data = await AuthService.resendOAuthEmailVerification(userId);
+      sendSuccess(res, data);
     } catch (err) {
       next(err);
     }

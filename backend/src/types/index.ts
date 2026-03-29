@@ -4,7 +4,7 @@ export type UserRole = 'applicant' | 'recruiter' | 'admin';
 
 export interface JwtPayload {
   userId: string;
-  email: string;
+  email: string | null;
   role: UserRole;
 }
 

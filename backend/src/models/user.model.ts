@@ -63,7 +63,12 @@ export const UserModel = {
 
   async verify(id: string): Promise<void> {
     await pool.query(
-      `UPDATE users SET is_verified = TRUE, verify_token = NULL, updated_at = NOW() WHERE id = $1`,
+      `UPDATE users
+       SET is_verified = TRUE,
+           email_verified = TRUE,
+           verify_token = NULL,
+           updated_at = NOW()
+       WHERE id = $1`,
       [id],
     );
   },

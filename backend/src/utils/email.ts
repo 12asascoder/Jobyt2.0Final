@@ -36,3 +36,10 @@ export const passwordResetEmailHtml = (name: string, token: string): string => `
   <a href="${process.env.FRONTEND_URL}/reset-password?token=${token}">Reset Password</a>
   <p>This link expires in 1 hour. Ignore this email if you didn't request a reset.</p>
 `;
+
+export const oauthEmailVerificationHtml = (email: string, token: string): string => `
+  <h2>Verify your email address</h2>
+  <p>Hi ${email}, please verify your email to continue using protected features.</p>
+  <a href="${process.env.FRONTEND_URL}/verify-email?token=${token}">Verify Email</a>
+  <p>This link expires in 15 minutes.</p>
+`;

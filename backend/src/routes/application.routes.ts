@@ -3,13 +3,14 @@ import { body } from 'express-validator';
 import { ApplicationController } from '../controllers/application.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireCredits } from '../middleware/credit.middleware';
+import { requireEmail } from '../middleware/requireEmail';
 import { CREDIT_COSTS } from '../config/creditCosts';
 import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticate, requireEmail);
 
 // Applicant: view own applications
 router.get('/my', authorize('applicant'), ApplicationController.myApplications);

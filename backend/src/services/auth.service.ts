@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash, timingSafeEqual } from 'crypto';
 import { UserModel } from '../models/user.model';
 import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import { RecruiterProfileModel } from '../models/recruiterProfile.model';
@@ -6,9 +6,48 @@ import { ReferralModel } from '../models/referral.model';
 import { CreditService } from './credit.service';
 import { hashPassword, comparePassword } from '../utils/password';
 import { signAccessToken, signRefreshToken, verifyToken } from '../utils/jwt';
-import { sendEmail, verificationEmailHtml, passwordResetEmailHtml } from '../utils/email';
+import {
+  sendEmail,
+  verificationEmailHtml,
+  passwordResetEmailHtml,
+  oauthEmailVerificationHtml,
+} from '../utils/email';
 import { generateReferralCode } from '../utils/referralCode';
 import { UserRole, JwtPayload } from '../types';
+import prisma from '../config/prisma';
+import logger from '../config/logger';
+import { UnauthorizedError } from '../utils/errors';
+
+const EMAIL_VERIFICATION_TTL_MS = 15 * 60 * 1000;
+
+function hashVerificationToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+function timingSafeTokenMatch(hashedToken: string, storedToken: string | null): boolean {
+  if (!storedToken) return false;
+
+  const a = Buffer.from(hashedToken, 'utf8');
+  const b = Buffer.from(storedToken, 'utf8');
+
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+function throwInvalidOrExpiredToken(reason: 'INVALID' | 'EXPIRED' | 'REPLAY' | 'INVALID_FORMAT', ip?: string): never {
+  logger.warn('Token validation failed', {
+    reason,
+    ip,
+  });
+  throw new UnauthorizedError('INVALID_OR_EXPIRED_TOKEN', 'INVALID_OR_EXPIRED_TOKEN');
+}
+
+function generateVerificationTokenPair(): { token: string; hashedToken: string; expiresAt: Date } {
+  const token = randomBytes(32).toString('hex');
+  const hashedToken = hashVerificationToken(token);
+  const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
+  return { token, hashedToken, expiresAt };
+}
 
 export const AuthService = {
   async register(email: string, password: string, role: UserRole, referralCode?: string) {
@@ -153,5 +192,159 @@ export const AuthService = {
 
     const password_hash = await hashPassword(newPassword);
     await UserModel.updatePassword(user.id, password_hash);
+  },
+
+  async addEmail(userId: string, email: string) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true },
+    });
+    if (!user) {
+      throw Object.assign(new Error('User not found'), { statusCode: 404, code: 'USER_NOT_FOUND' });
+    }
+
+    const existing = await prisma.users.findUnique({ where: { email: normalizedEmail } });
+    if (existing && existing.id !== userId) {
+      throw Object.assign(new Error('Email already in use'), {
+        statusCode: 409,
+        code: 'EMAIL_ALREADY_IN_USE',
+      });
+    }
+
+    const { token, hashedToken, expiresAt } = generateVerificationTokenPair();
+
+    const updated = await prisma.users.update({
+      where: { id: userId },
+      data: {
+        email: normalizedEmail,
+        is_email_dummy: false,
+        email_verified: false,
+        email_verification_token: hashedToken,
+        email_verification_expires: expiresAt,
+      },
+      select: { id: true, email: true, role: true },
+    });
+
+    await sendEmail({
+      to: normalizedEmail,
+      subject: 'Verify your email address',
+      html: oauthEmailVerificationHtml(normalizedEmail, token),
+    });
+
+    logger.info('Email verification initiated', { userId, email: normalizedEmail });
+
+    return {
+      user: updated,
+      requiresVerification: true,
+      message: 'Verification email sent. Please verify your email to continue.',
+    };
+  },
+
+  async verifyOAuthEmail(token: string, ip?: string) {
+    if (!token || typeof token !== 'string' || token.length < 32) {
+      throwInvalidOrExpiredToken('INVALID_FORMAT', ip);
+    }
+
+    const hashedToken = hashVerificationToken(token);
+
+    const verifiedUserId = await prisma.$transaction(async (tx) => {
+      const user = await tx.users.findFirst({
+        where: { email_verification_token: hashedToken },
+        select: {
+          id: true,
+          email_verification_token: true,
+          email_verification_expires: true,
+        },
+      });
+
+      if (!user) {
+        throwInvalidOrExpiredToken('INVALID', ip);
+      }
+
+      if (!user.email_verification_token) {
+        throwInvalidOrExpiredToken('REPLAY', ip);
+      }
+
+      if (!timingSafeTokenMatch(hashedToken, user.email_verification_token)) {
+        throwInvalidOrExpiredToken('INVALID', ip);
+      }
+
+      if (!user.email_verification_expires || user.email_verification_expires < new Date()) {
+        throwInvalidOrExpiredToken('EXPIRED', ip);
+      }
+
+      // Atomically invalidate token (single-use) and verify in one transaction.
+      const invalidated = await tx.users.updateMany({
+        where: {
+          id: user.id,
+          email_verification_token: user.email_verification_token,
+        },
+        data: {
+          email_verified: true,
+          email_verification_token: null,
+          email_verification_expires: null,
+        },
+      });
+
+      if (invalidated.count !== 1) {
+        throwInvalidOrExpiredToken('REPLAY', ip);
+      }
+
+      return user.id;
+    });
+
+    logger.info('Email verified', { userId: verifiedUserId });
+
+    // TODO: Periodically clean expired tokens from DB.
+
+    return { message: 'Email verified successfully' };
+  },
+
+  async resendOAuthEmailVerification(userId: string) {
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        email_verified: true,
+      },
+    });
+
+    if (!user) {
+      throw Object.assign(new Error('User not found'), { statusCode: 404, code: 'USER_NOT_FOUND' });
+    }
+
+    if (!user.email) {
+      throw Object.assign(new Error('Email is required'), {
+        statusCode: 400,
+        code: 'EMAIL_REQUIRED',
+      });
+    }
+
+    if (user.email_verified) {
+      return { message: 'Email is already verified' };
+    }
+
+    const { token, hashedToken, expiresAt } = generateVerificationTokenPair();
+
+    await prisma.users.update({
+      where: { id: user.id },
+      data: {
+        email_verification_token: hashedToken,
+        email_verification_expires: expiresAt,
+      },
+    });
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Verify your email address',
+      html: oauthEmailVerificationHtml(user.email, token),
+    });
+
+    logger.info('Email verification initiated', { userId: user.id, email: user.email });
+
+    return { message: 'Verification email resent successfully' };
   },
 };

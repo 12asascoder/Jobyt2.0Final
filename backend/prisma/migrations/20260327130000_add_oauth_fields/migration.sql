@@ -15,12 +15,36 @@ ALTER TABLE "users"
   ADD COLUMN IF NOT EXISTS "github_id" VARCHAR(255),
   ADD COLUMN IF NOT EXISTS "linkedin_id" VARCHAR(255);
 
-ALTER TABLE "users"
-  ADD CONSTRAINT IF NOT EXISTS "users_google_id_key" UNIQUE ("google_id");
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'users_google_id_key'
+  ) THEN
+    ALTER TABLE "users"
+      ADD CONSTRAINT "users_google_id_key" UNIQUE ("google_id");
+  END IF;
+END $$;
 
-ALTER TABLE "users"
-  ADD CONSTRAINT IF NOT EXISTS "users_github_id_key" UNIQUE ("github_id");
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'users_github_id_key'
+  ) THEN
+    ALTER TABLE "users"
+      ADD CONSTRAINT "users_github_id_key" UNIQUE ("github_id");
+  END IF;
+END $$;
 
-ALTER TABLE "users"
-  ADD CONSTRAINT IF NOT EXISTS "users_linkedin_id_key" UNIQUE ("linkedin_id");
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'users_linkedin_id_key'
+  ) THEN
+    ALTER TABLE "users"
+      ADD CONSTRAINT "users_linkedin_id_key" UNIQUE ("linkedin_id");
+  END IF;
+END $$;
 

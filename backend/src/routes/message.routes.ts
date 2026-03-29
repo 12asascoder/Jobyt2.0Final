@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import { MessageController } from '../controllers/message.controller';
 import { authenticate, authorize } from '../middleware/auth';
+import { requireEmail } from '../middleware/requireEmail';
 import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticate, requireEmail);
 
 router.get('/conversations', MessageController.getConversations);
 

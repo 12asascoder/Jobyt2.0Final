@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import { JobController } from '../controllers/job.controller';
 import { authenticate, authorize, optionalAuth } from '../middleware/auth';
 import { requireCredits } from '../middleware/credit.middleware';
+import { requireEmail } from '../middleware/requireEmail';
 import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
 import { CREDIT_COSTS } from '../config/creditCosts';
@@ -18,14 +19,15 @@ router.post('/interview-questions', body('role').isString(), body('skills').isAr
 
 // Close endpoint: bypass employerGuard since service validates ownership
 // Uses: authenticate + authorize('recruiter')
-router.patch('/:id/close', authenticate, authorize('recruiter'), JobController.closeJob);
+router.patch('/:id/close', authenticate, requireEmail, authorize('recruiter'), JobController.closeJob);
 
 // Recruiter-only management routes (with profile check).
 // Order is important:
 // 1) authenticate: token must be valid
+// 2) requireEmail: user must have a real email
 // 2) authorize('recruiter'): role must be recruiter
 // 3) employerGuard: recruiter profile must exist in DB
-router.use(authenticate, authorize('recruiter'), employerGuard);
+router.use(authenticate, requireEmail, authorize('recruiter'), employerGuard);
 
 router.get('/my/listings', JobController.myJobs);
 
