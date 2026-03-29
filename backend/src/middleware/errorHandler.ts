@@ -125,6 +125,7 @@ export const errorHandler = (
     if (anyErr.available !== undefined) response.available = anyErr.available;
   }
   if (details !== undefined) response.details = details;
+  if (anyErr.errors !== undefined) response.errors = anyErr.errors;
 
   if (process.env.NODE_ENV === 'development') response.stack = (err as unknown as { stack?: string }).stack;
 

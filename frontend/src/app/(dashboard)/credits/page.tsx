@@ -51,7 +51,7 @@ export default function CreditsPage() {
       <section className="rounded-3xl bg-[#060606] px-5 py-4 sm:px-8 sm:py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <p className="text-[#c1f237] text-xs sm:text-sm font-medium tracking-wide uppercase">Credit Balance</p>
-          <p className="text-[#c1f237] text-5xl sm:text-7xl font-semibold leading-none mt-2">{balance || 270}</p>
+          <p className="text-[#c1f237] text-5xl sm:text-7xl font-semibold leading-none mt-2">{balance}</p>
         </div>
         <button
           onClick={() => router.push('/credits/earn')}
@@ -92,48 +92,10 @@ export default function CreditsPage() {
               </div>
             );
           }) : (
-            /* Fallback mock cards if plans API is empty or doesn't match the exact 3 structure exactly right now */
-            <>
-              <div className="bg-[#0a0a0a] rounded-2xl p-6 sm:p-8 text-center flex flex-col items-center">
-                <h3 className="text-white text-[26px] font-display font-medium mb-6">Free</h3>
-                <div className="mb-0.5">
-                  <span className="text-[#c1f237] text-[40px] font-semibold">200</span>
-                </div>
-                <p className="text-[#c1f237] text-[10px] tracking-widest mb-6">CREDITS</p>
-                <p className="text-white/70 text-[15px] font-medium mb-6">New User</p>
-                <div className="mt-auto w-full px-2">
-                  <button disabled className="w-full bg-[#323232] text-[#8e8e8e] py-2.5 px-4 rounded-xl font-medium text-[14px] cursor-not-allowed">
-                    Credits Claimed
-                  </button>
-                </div>
-              </div>
-              <div className="bg-[#0a0a0a] rounded-2xl p-6 sm:p-8 text-center flex flex-col items-center">
-                <h3 className="text-white text-[26px] font-display font-medium mb-6">Pro</h3>
-                <div className="mb-0.5">
-                  <span className="text-[#c1f237] text-[40px] font-semibold">600</span>
-                </div>
-                <p className="text-[#c1f237] text-[10px] tracking-widest mb-6">CREDITS</p>
-                <p className="text-white/70 text-[15px] font-medium mb-6">Rs. 299/-</p>
-                <div className="mt-auto w-full px-2">
-                  <button className="w-full bg-[#c1f237] hover:bg-[#b0e025] text-black py-2.5 px-4 rounded-xl font-medium text-[14px] transition-colors">
-                    Buy Now
-                  </button>
-                </div>
-              </div>
-              <div className="bg-[#0a0a0a] rounded-2xl p-6 sm:p-8 text-center flex flex-col items-center">
-                <h3 className="text-white text-[26px] font-display font-medium mb-6">Enterprise</h3>
-                <div className="mb-0.5">
-                  <span className="text-[#c1f237] text-[40px] font-semibold">1500</span>
-                </div>
-                <p className="text-[#c1f237] text-[10px] tracking-widest mb-6">CREDITS</p>
-                <p className="text-white/70 text-[15px] font-medium mb-6">Rs. 699/-</p>
-                <div className="mt-auto w-full px-2">
-                  <button className="w-full bg-[#c1f237] hover:bg-[#b0e025] text-black py-2.5 px-4 rounded-xl font-medium text-[14px] transition-colors">
-                    Buy Now
-                  </button>
-                </div>
-              </div>
-            </>
+            <div className="col-span-full bg-[#0a0a0a] rounded-2xl p-8 text-center">
+              <p className="text-white/60 text-lg font-medium">No credit plans available at the moment.</p>
+              <p className="text-white/40 text-sm mt-2">Check back soon for new plans.</p>
+            </div>
           )}
         </div>
       </div>
@@ -172,42 +134,11 @@ export default function CreditsPage() {
                   )
                 })
               ) : (
-                /* Mock Layout for empty state, representing the image */
-                <>
-                  <tr className="text-[#3b3b3b] text-[15px]">
-                    <td className="py-5 px-2">Lorem ipsum</td>
-                    <td className="py-5 px-2">#572228629</td>
-                    <td className="py-5 px-2">25 Mar' 2026</td>
-                    <td className="py-5 px-2">
-                      <span className="inline-flex items-center justify-center px-5 py-1.5 text-[13px] font-medium rounded-full bg-[#dcf794] text-slate-900">
-                        Success
-                      </span>
-                    </td>
-                    <td className="py-5 px-2 text-center font-medium text-slate-800">80</td>
-                  </tr>
-                  <tr className="text-[#3b3b3b] text-[15px]">
-                    <td className="py-5 px-2">Lorem ipsum</td>
-                    <td className="py-5 px-2">#572228629</td>
-                    <td className="py-5 px-2">25 Mar' 2026</td>
-                    <td className="py-5 px-2">
-                      <span className="inline-flex items-center justify-center px-5 py-1.5 text-[13px] font-medium rounded-full bg-[#fad2d2] text-slate-900">
-                        Failed
-                      </span>
-                    </td>
-                    <td className="py-5 px-2 text-center font-medium text-slate-800">80</td>
-                  </tr>
-                  <tr className="text-[#3b3b3b] text-[15px]">
-                    <td className="py-5 px-2">Lorem ipsum</td>
-                    <td className="py-5 px-2">#572228629</td>
-                    <td className="py-5 px-2">25 Mar' 2026</td>
-                    <td className="py-5 px-2">
-                      <span className="inline-flex items-center justify-center px-5 py-1.5 text-[13px] font-medium rounded-full bg-[#dcf794] text-slate-900">
-                        Success
-                      </span>
-                    </td>
-                    <td className="py-5 px-2 text-center font-medium text-slate-800">80</td>
-                  </tr>
-                </>
+                <tr>
+                  <td colSpan={5} className="py-10 text-center text-slate-500 text-[15px] font-medium">
+                    No transactions yet. Your credit history will appear here.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

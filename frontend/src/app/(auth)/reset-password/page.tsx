@@ -24,7 +24,7 @@ function ResetPasswordForm() {
     setError('');
     setLoading(true);
     try {
-      await api.post('/auth/reset-password', { token, newPassword: password });
+      await api.post('/auth/reset-password', { token, password });
       setDone(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Reset failed');

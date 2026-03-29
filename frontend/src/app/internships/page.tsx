@@ -13,7 +13,7 @@ const DURATIONS = ['1-3 Months', '3-6 Months', '6+ Months'];
 
 export default function InternshipsPage() {
     return (
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p>Loading...</p></div>}>
             <InternshipsContent />
         </Suspense>
     );
