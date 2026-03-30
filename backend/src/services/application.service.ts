@@ -1,16 +1,22 @@
 import { ApplicationModel, ApplicationStatus } from '../models/application.model';
 import { JobModel } from '../models/job.model';
 import { NotificationModel } from '../models/notification.model';
+import { PipelineEventModel } from '../models/pipeline_event.model';
 import { withTransaction } from '../utils/transaction';
 import { CreditService } from './credit.service';
 import { CREDIT_COSTS } from '../config/creditCosts';
-import { PipelineEventModel } from '../models/pipeline_event.model';
+import { ResumeModel } from '../models/resume.model';
 
 export const ApplicationService = {
   async apply(
     applicantId: string,
     jobId: string,
-    data: { cover_letter?: string; resume_snapshot_url?: string },
+    data: {
+      cover_letter?: string;
+      resume_snapshot_url?: string;
+      resume_id?: string;
+      answers?: Array<{ question_id: string; answer: string }>;
+    },
   ) {
     return withTransaction(async (client) => {
       // 1) Job validation (transaction-scoped)
@@ -22,6 +28,47 @@ export const ApplicationService = {
       const existing = await ApplicationModel.findByJobAndApplicant(jobId, applicantId, client);
       if (existing)
         throw Object.assign(new Error('You have already applied to this job'), { statusCode: 409 });
+
+      const selectedResumeId = data.resume_id || null;
+      if (selectedResumeId) {
+        const resume = await ResumeModel.findByUserAndId(applicantId, selectedResumeId);
+        if (!resume) {
+          throw Object.assign(new Error('Selected resume not found'), {
+            statusCode: 404,
+            code: 'RESUME_NOT_FOUND',
+          });
+        }
+      }
+
+      const jobQuestions = Array.isArray(job.application_questions) ? job.application_questions : [];
+      const submittedAnswers = Array.isArray(data.answers)
+        ? data.answers
+            .map((item) => ({
+              question_id: String(item?.question_id || '').trim(),
+              answer: String(item?.answer || '').trim(),
+            }))
+            .filter((item) => item.question_id.length > 0)
+        : [];
+
+      const answerMap = new Map(submittedAnswers.map((item) => [item.question_id, item.answer]));
+      for (const question of jobQuestions) {
+        if (!question.required) continue;
+        const answer = answerMap.get(question.id) || '';
+        if (!answer.trim()) {
+          throw Object.assign(
+            new Error(`Answer required for question: ${question.label}`),
+            { statusCode: 422, code: 'MISSING_APPLICATION_ANSWER' },
+          );
+        }
+      }
+
+      const filteredAnswers = jobQuestions
+        .map((question) => {
+          const answer = answerMap.get(question.id);
+          if (!answer || !answer.trim()) return null;
+          return { question_id: question.id, answer: answer.trim() };
+        })
+        .filter((answer): answer is { question_id: string; answer: string } => Boolean(answer));
 
       // 3) Credit deduction (atomic under the same DB transaction)
       const { transactionId, balanceAfter } = await CreditService.deductCredits(
@@ -39,7 +86,10 @@ export const ApplicationService = {
           {
             job_id: jobId,
             applicant_id: applicantId,
-            ...data,
+            cover_letter: data.cover_letter,
+            resume_snapshot_url: data.resume_snapshot_url,
+            resume_id: selectedResumeId || undefined,
+            application_answers: filteredAnswers,
           },
           client,
         );
@@ -55,7 +105,7 @@ export const ApplicationService = {
       await PipelineEventModel.create(
         {
           application_id: application.id,
-          new_status: 'APPLIED',
+          new_status: 'applied',
           changed_by_id: applicantId,
         },
         client,
@@ -96,6 +146,7 @@ export const ApplicationService = {
 
     const updated = await ApplicationModel.updateStatus(applicationId, status);
 
+    // Pipeline event creation
     await PipelineEventModel.create({
       application_id: application.id,
       previous_status: application.status,

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Input, Button } from '@/components/ui';
 import { JOB_TYPES } from '@/constants';
-import { FaMagnifyingGlass, FaLocationDot, FaFilterCircleXmark } from 'react-icons/fa6';
+import { FaMagnifyingGlass, FaFilterCircleXmark } from 'react-icons/fa6';
 
 interface Filters {
     keyword?: string;
@@ -25,14 +25,6 @@ export const JobFilters = ({ onApply, initialKeyword = '', initialType = '' }: J
         keyword: initialKeyword || undefined,
         type: initialType || undefined,
     });
-
-    useEffect(() => {
-        setFilters((prev) => ({
-            ...prev,
-            keyword: initialKeyword || undefined,
-            type: initialType || undefined,
-        }));
-    }, [initialKeyword, initialType]);
 
     const set = (key: keyof Filters, value: string | number | undefined) =>
         setFilters((f) => ({ ...f, [key]: value || undefined }));

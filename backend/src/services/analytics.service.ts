@@ -91,7 +91,7 @@ export const AnalyticsService = {
          (SELECT COUNT(*) FROM jobs WHERE recruiter_id = $1 AND deleted_at IS NULL)::int AS total_jobs,
          (SELECT COUNT(*) FROM jobs WHERE recruiter_id = $1 AND status = 'active' AND deleted_at IS NULL)::int AS active_jobs,
          (SELECT COUNT(*) FROM applications a JOIN jobs j ON j.id = a.job_id WHERE j.recruiter_id = $1)::int AS total_applications,
-         (SELECT COUNT(*) FROM applications a JOIN jobs j ON j.id = a.job_id WHERE j.recruiter_id = $1 AND a.status = 'HIRED')::int AS total_hired,
+         (SELECT COUNT(*) FROM applications a JOIN jobs j ON j.id = a.job_id WHERE j.recruiter_id = $1 AND a.status = 'hired')::int AS total_hired,
          (SELECT SUM(views_count) FROM jobs WHERE recruiter_id = $1 AND deleted_at IS NULL)::int AS total_views
        FROM (SELECT 1) t`,
       [recruiterId],

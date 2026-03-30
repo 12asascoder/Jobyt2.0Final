@@ -34,6 +34,17 @@ export const ResumeModel = {
     return rows;
   },
 
+  async findByUserAndId(userId: string, resumeId: string): Promise<ResumeListItem | null> {
+    const { rows } = await pool.query(
+      `SELECT id, file_url, file_name, file_size, mime_type, is_default, created_at
+       FROM resumes
+       WHERE user_id = $1 AND id = $2
+       LIMIT 1`,
+      [userId, resumeId],
+    );
+    return rows[0] || null;
+  },
+
   async findDefaultByUserId(userId: string): Promise<ResumeRow | null> {
     const { rows } = await pool.query(
       `SELECT id, user_id, file_url, file_name, file_size, mime_type, is_default, created_at, updated_at
@@ -64,8 +75,8 @@ export const ResumeModel = {
     return withTransaction(async (client: PoolClient) => {
       await client.query(`UPDATE resumes SET is_default = FALSE WHERE user_id = $1`, [userId]);
       const { rows } = await client.query(
-        `INSERT INTO resumes (user_id, file_url, file_name, file_size, mime_type, is_default)
-         VALUES ($1, $2, $3, $4, $5, TRUE)
+        `INSERT INTO resumes (user_id, file_url, file_name, file_size, mime_type, is_default, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, TRUE, NOW(), NOW())
          RETURNING id, user_id, file_url, file_name, file_size, mime_type, is_default, created_at, updated_at`,
         [userId, data.file_url, data.file_name, data.file_size, data.mime_type],
       );

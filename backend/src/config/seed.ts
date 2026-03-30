@@ -83,8 +83,8 @@ async function seed() {
       // Recruiter profile
       await client.query(
         `
-        INSERT INTO recruiter_profiles (user_id, name, company_name, industry, description)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO recruiter_profiles (user_id, name, company_name, industry, description, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
         ON CONFLICT (user_id) DO NOTHING
       `,
         [userId, r.name, r.company, r.industry, r.description],
@@ -429,16 +429,16 @@ async function seed() {
 
     const applications = [
       // John's applications
-      { job_idx: 0, applicant_id: johnId, status: 'SHORTLISTED' }, // Google - Senior SWE
-      { job_idx: 1, applicant_id: johnId, status: 'INTERVIEW' }, // Google - ML Engineer
-      { job_idx: 5, applicant_id: johnId, status: 'APPLIED' }, // Microsoft - Backend
-      { job_idx: 6, applicant_id: johnId, status: 'SCREENING' }, // Microsoft - Full Stack
-      { job_idx: 10, applicant_id: johnId, status: 'SELECTED' }, // Amazon - SDE
+      { job_idx: 0, applicant_id: johnId, status: 'shortlisted' }, // Google - Senior SWE
+      { job_idx: 1, applicant_id: johnId, status: 'interview' }, // Google - ML Engineer
+      { job_idx: 5, applicant_id: johnId, status: 'applied' }, // Microsoft - Backend
+      { job_idx: 6, applicant_id: johnId, status: 'in_review' }, // Microsoft - Full Stack
+      { job_idx: 10, applicant_id: johnId, status: 'offer' }, // Amazon - SDE
       // Jane's applications
-      { job_idx: 1, applicant_id: janeId, status: 'SHORTLISTED' }, // Google - ML Engineer
-      { job_idx: 8, applicant_id: janeId, status: 'APPLIED' }, // Microsoft - Data Scientist
-      { job_idx: 14, applicant_id: janeId, status: 'SCREENING' }, // Amazon - Data Engineer
-      { job_idx: 2, applicant_id: janeId, status: 'REJECTED' }, // Google - PM Search
+      { job_idx: 1, applicant_id: janeId, status: 'shortlisted' }, // Google - ML Engineer
+      { job_idx: 8, applicant_id: janeId, status: 'applied' }, // Microsoft - Data Scientist
+      { job_idx: 14, applicant_id: janeId, status: 'in_review' }, // Amazon - Data Engineer
+      { job_idx: 2, applicant_id: janeId, status: 'rejected' }, // Google - PM Search
     ];
 
     for (const app of applications) {
@@ -459,12 +459,12 @@ async function seed() {
       );
 
       if (appRes.rowCount && appRes.rowCount > 0 && appRes.rows[0].id) {
-        // Create the initial pipeline event
-        await client.query(
-          `INSERT INTO pipeline_events (application_id, new_status, changed_by_id)
-           VALUES ($1, $2, $3)`,
-          [appRes.rows[0].id, app.status, app.applicant_id],
-        );
+        // Pipeline events table not yet implemented
+        // await client.query(
+        //   `INSERT INTO pipeline_events (application_id, new_status, changed_by_id)
+        //    VALUES ($1, $2, $3)`,
+        //   [appRes.rows[0].id, app.status, app.applicant_id],
+        // );
       }
       console.log(`  Application seeded for applicant (status: ${app.status})`);
     }

@@ -5,6 +5,11 @@ import { useApplications } from '@/hooks/useApplications';
 import { APPLICATION_STATUS_LABELS } from '@/constants';
 import { FaArrowUpRightFromSquare } from 'react-icons/fa6';
 
+type ApplicationView = {
+    company_name?: string;
+    job_title?: string;
+};
+
 const STATUS_STYLES: Record<string, string> = {
     applied: 'bg-blue-100 text-blue-700',
     in_review: 'bg-yellow-100 text-yellow-700',
@@ -71,7 +76,9 @@ export default function ApplicationsPage() {
 
                         {/* Table Rows */}
                         <div className="space-y-2.5">
-                            {applications.map((app) => (
+                            {applications.map((app) => {
+                                const view = app as typeof app & ApplicationView;
+                                return (
                                 <div
                                     key={app.id}
                                     className="bg-white border border-[#e8e4dc] rounded-2xl px-6 py-5 hover:shadow-md transition-shadow"
@@ -79,12 +86,12 @@ export default function ApplicationsPage() {
                                     <div className="grid grid-cols-12 gap-3 items-center">
                                         <div className="col-span-2">
                                             <span className="text-sm font-semibold text-[#1a1a1a]">
-                                                {(app as any).company_name || 'Company'}
+                                                {view.company_name || 'Company'}
                                             </span>
                                         </div>
                                         <div className="col-span-2">
                                             <span className="text-sm text-slate-600">
-                                                {(app as any).job_title || 'Position'}
+                                                {view.job_title || 'Position'}
                                             </span>
                                         </div>
                                         <div className="col-span-2">
@@ -109,13 +116,16 @@ export default function ApplicationsPage() {
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 
                     {/* Mobile Cards */}
                     <div className="md:hidden space-y-3">
-                        {applications.map((app) => (
+                        {applications.map((app) => {
+                            const view = app as typeof app & ApplicationView;
+                            return (
                             <div
                                 key={app.id}
                                 className="bg-white border border-[#e8e4dc] rounded-2xl p-5"
@@ -123,10 +133,10 @@ export default function ApplicationsPage() {
                                 <div className="flex items-start justify-between mb-3">
                                     <div>
                                         <p className="text-sm font-bold text-[#1a1a1a]">
-                                            {(app as any).company_name || 'Company'}
+                                            {view.company_name || 'Company'}
                                         </p>
                                         <p className="text-xs text-slate-500 mt-0.5">
-                                            {(app as any).job_title || 'Position'}
+                                            {view.job_title || 'Position'}
                                         </p>
                                     </div>
                                     <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
@@ -142,7 +152,8 @@ export default function ApplicationsPage() {
                                     </button>
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     {/* View Past Applications */}

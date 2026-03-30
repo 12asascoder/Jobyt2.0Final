@@ -24,21 +24,21 @@ async function runTests() {
        "VALUES ($1, 'Test Job', 'Desc', 'Remote', 'full-time', 50000, 60000) RETURNING id", [recruiterId]);
     const jobId = jobRes.rows[0].id;
 
-    const appRes = await client.query("INSERT INTO applications (job_id, applicant_id, status) VALUES ($1, $2, 'APPLIED') RETURNING id", [jobId, applicantId]);
+    const appRes = await client.query("INSERT INTO applications (job_id, applicant_id, status) VALUES ($1, $2, 'applied') RETURNING id", [jobId, applicantId]);
     const appId = appRes.rows[0].id;
 
     // 2. Test Pipeline Board Aggregation
     console.log('2. Testing Pipeline Board Aggregation...');
     const board = await PipelineService.getPipelineBoard(recruiterId, jobId);
-    if (board.totalCandidates !== 1 || !board.stages.APPLIED.length) {
+    if (board.totalCandidates !== 1 || !board.stages.applied.length) {
       throw new Error('Board aggregation failed to fetch assigned test candidate');
     }
     console.log('✅ Board query using JSON_AGG worked flawlessly.');
 
     // 3. Test Move Candidate Stage
     console.log('3. Testing Candidate Stage Movement (APPLIED -> INTERVIEW)...');
-    const newBoard = await PipelineService.moveCandidateStage(recruiterId, applicantId, jobId, 'INTERVIEW', 'Automated interview transition');
-    if (!newBoard.stages.INTERVIEW.find(c => c.applicant_id === applicantId)) {
+    const newBoard = await PipelineService.moveCandidateStage(recruiterId, applicantId, jobId, 'interview', 'Automated interview transition');
+    if (!newBoard.stages.interview.find((c: any) => c.applicant_id === applicantId)) {
       throw new Error('Candidate did not move to INTERVIEW stage properly');
     }
     console.log('✅ Stage movement transaction succeeded');
@@ -46,7 +46,7 @@ async function runTests() {
     // 4. Test History Logging
     console.log('4. Testing History Logging Tracking...');
     const history = await PipelineService.getCandidateHistory(recruiterId, applicantId, jobId);
-    if (!history.find((h: any) => h.new_status === 'INTERVIEW' && h.notes === 'Automated interview transition')) {
+    if (!history.find((h: any) => h.new_status === 'interview' && h.notes === 'Automated interview transition')) {
       throw new Error('Pipeline history missing the newly logged event');
     }
     console.log('✅ History logged successfully');

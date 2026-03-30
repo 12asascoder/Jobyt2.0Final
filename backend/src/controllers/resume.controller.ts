@@ -12,6 +12,18 @@ export const ResumeController = {
     }
   },
 
+  async getById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const resume = await ResumeService.getUserResumeById(
+        req.user!.userId,
+        req.params.id as string,
+      );
+      sendSuccess(res, { resume });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getDefaultResume(req: Request, res: Response, next: NextFunction) {
     try {
       const resume = await ResumeService.getDefaultResume(req.user!.userId);
@@ -44,12 +56,20 @@ export const ResumeController = {
 
   async scoreATS(req: Request, res: Response, next: NextFunction) {
     try {
-      let { resumeText, jobDescription } = req.body;
+      let { resumeText, jobDescription, resume_id } = req.body as {
+        resumeText?: string;
+        jobDescription: string;
+        resume_id?: string;
+      };
       
       if (req.file && req.file.mimetype === 'application/pdf') {
         const pdfParse = require('pdf-parse');
         const data = await pdfParse(req.file.buffer);
         resumeText = data.text;
+      }
+
+      if (!resumeText && !req.file && resume_id) {
+        resumeText = await ResumeService.getResumeTextForUserResume(req.user!.userId, resume_id);
       }
 
       if (!resumeText) {

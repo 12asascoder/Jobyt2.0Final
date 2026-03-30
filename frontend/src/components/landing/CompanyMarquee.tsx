@@ -49,7 +49,7 @@ export function CompanyMarquee() {
             if (seqW > 0) {
                 const target = pausedRef.current ? 0 : SPEED;
                 velocityRef.current += (target - velocityRef.current) * (1 - Math.exp(-dt / SMOOTH_TAU));
-                let next = ((offsetRef.current + velocityRef.current * dt) % seqW + seqW) % seqW;
+                const next = ((offsetRef.current + velocityRef.current * dt) % seqW + seqW) % seqW;
                 offsetRef.current = next;
                 track.style.transform = `translate3d(${-next}px,0,0)`;
             }

@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { CreditBalance } from '@/components/credits/CreditBalance';
-import { Spinner, Card, CardBody, CardHeader, Badge, Button } from '@/components/ui';
+import { Spinner, Card, CardBody, CardHeader, Button } from '@/components/ui';
 import { CreditTransaction, Plan } from '@/types';
-import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 export default function RecruiterCreditsPage() {
@@ -14,6 +13,15 @@ export default function RecruiterCreditsPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [buyingPlan, setBuyingPlan] = useState<string | null>(null);
+
+  const formattedTransactions = transactions.map((t) => ({
+    id: t.id,
+    transaction: t.description || t.type,
+    transactionNo: t.id.slice(0, 10),
+    date: new Date(t.created_at).toLocaleDateString(),
+    status: t.status || 'success',
+    total: Math.abs(t.amount),
+  }));
 
   useEffect(() => {
     Promise.all([
@@ -75,25 +83,43 @@ export default function RecruiterCreditsPage() {
 
       <Card>
         <CardHeader><p className="font-semibold">Transaction History</p></CardHeader>
-        {transactions.length === 0 ? (
+        {formattedTransactions.length === 0 ? (
           <CardBody><p className="text-sm text-gray-400">No transactions yet.</p></CardBody>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {transactions.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between px-6 py-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-800">{tx.description}</p>
-                  <p className="text-xs text-gray-400">{formatDate(tx.created_at)}</p>
-                </div>
-                <div className="text-right">
-                  <Badge variant={tx.type === 'credit' ? 'success' : 'danger'}>
-                    {tx.type === 'credit' ? '+' : '-'}{tx.amount}
-                  </Badge>
-                  <p className="mt-0.5 text-xs text-gray-400">Balance: {tx.balance_after}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <CardBody className="p-4 sm:p-6 overflow-x-auto">
+            <table className="w-full text-sm min-w-[680px]">
+              <thead className="text-slate-500">
+                <tr>
+                  <th className="text-left py-2">Transaction</th>
+                  <th className="text-left py-2">Transaction No.</th>
+                  <th className="text-left py-2">Date</th>
+                  <th className="text-left py-2">Status</th>
+                  <th className="text-left py-2">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {formattedTransactions.map((tx) => (
+                  <tr key={tx.id} className="border-t border-slate-100">
+                    <td className="py-3 text-slate-800">{tx.transaction}</td>
+                    <td className="py-3 text-slate-700">#{tx.transactionNo}</td>
+                    <td className="py-3 text-slate-700">{tx.date}</td>
+                    <td className="py-3">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          tx.status === 'success'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {tx.status === 'success' ? 'Success' : 'Failed'}
+                      </span>
+                    </td>
+                    <td className="py-3 text-slate-800">{tx.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardBody>
         )}
       </Card>
     </div>

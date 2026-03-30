@@ -6,6 +6,11 @@ import { FaArrowRight } from 'react-icons/fa6';
 import { API_BASE } from '@/constants';
 import { BackendJob, JobCardGrid, SkeletonGrid, getJobTypeLabel, normalizeJob } from '@/components/ui/JobCard';
 
+interface JobsApiResult {
+    success: boolean;
+    data?: BackendJob[];
+}
+
 const HARDCODED_JOBS: BackendJob[] = [
     {
         id: 'hc-1', title: 'Software Development Engineer Intern', company_name: 'SpazorLabs',
@@ -92,10 +97,10 @@ export function JobCards() {
                 if (!res.ok) throw new Error('API Error');
                 return res.json();
             })
-            .then((data) => {
+            .then((data: JobsApiResult) => {
                 if (data.success && data.data?.length > 0) {
                     // Normalize all jobs to ensure they have valid id fields
-                    const normalizedJobs = data.data.map((job: any) => normalizeJob(job));
+                    const normalizedJobs = data.data.map((job) => normalizeJob(job));
                     setJobs(normalizedJobs);
                 } else {
                     setJobs(HARDCODED_JOBS);

@@ -49,7 +49,7 @@ export default function ReferralPage() {
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold mb-4 tracking-tight">Referral Program</h1>
         <p className="text-sm sm:text-[15px] leading-relaxed max-w-3xl font-medium">
-          Every user can take part in our internship referral program. For every person who joins the platform using your unique link, you'll earn credits.
+          Every user can take part in our internship referral program. For every person who joins the platform using your unique link, you&apos;ll earn credits.
         </p>
         <p className="text-sm sm:text-[15px] font-medium mt-4">
           Want to promote us? <a href="#" className="text-[#a8e02d] hover:text-[#c3ff3d] hover:underline transition-all">Download banners, sample messages, and logos to get started.</a>

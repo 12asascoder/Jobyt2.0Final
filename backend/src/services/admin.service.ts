@@ -1,5 +1,5 @@
 import { UserModel } from '../models/user.model';
-import { JobModel } from '../models/job.model';
+import { JobModel, normalizeQuestions } from '../models/job.model';
 import { CreditModel } from '../models/credit.model';
 import { AdminAuditLogModel } from '../models/adminAuditLog.model';
 import { NotificationModel } from '../models/notification.model';
@@ -9,6 +9,7 @@ import { AppError } from '../utils/appError';
 import prisma from '../config/prisma';
 import pool from '../config/database';
 import { PoolClient } from 'pg';
+import logger from '../config/logger';
 
 export const AdminService = {
   // ── Users ───────────────────────────────────────────────────────────────────
@@ -104,6 +105,80 @@ export const AdminService = {
       target_id: jobId,
       reason,
     });
+  },
+
+  async createJob(
+    adminId: string,
+    data: {
+      title: string;
+      description: string;
+      type?: 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
+      location?: string;
+      salary_min?: number;
+      salary_max?: number;
+      skills?: string[];
+      status?: 'draft' | 'active' | 'closed';
+      company_id?: string;
+      company_name?: string;
+      company_logo?: string;
+      company_website?: string;
+      company_location?: string;
+      application_questions?: Array<{
+        id?: string;
+        label: string;
+        type?: string;
+        required?: boolean;
+        section?: string;
+        placeholder?: string;
+        options?: string[];
+      }>;
+    },
+  ) {
+    if (!data.company_id && !data.company_name?.trim()) {
+      throw new AppError('COMPANY_REQUIRED', 400, 'COMPANY_REQUIRED');
+    }
+
+    if (!data.company_id && !data.company_location?.trim()) {
+      throw new AppError('External company requires company_location', 400, 'COMPANY_REQUIRED');
+    }
+
+    const job = await JobModel.createByAdmin({
+      admin_id: adminId,
+      title: data.title,
+      description: data.description,
+      type: data.type,
+      location: data.location,
+      salary_min: data.salary_min,
+      salary_max: data.salary_max,
+      skills: data.skills,
+      status: data.status,
+      company_id: data.company_id,
+      company_name: data.company_name,
+      company_logo: data.company_logo,
+      company_website: data.company_website,
+      company_location: data.company_location,
+      application_questions: normalizeQuestions(data.application_questions),
+    });
+
+    await AdminAuditLogModel.create({
+      admin_id: adminId,
+      action: 'CREATE_JOB',
+      target_type: 'job',
+      target_id: job.id,
+      reason: job.is_external_company
+        ? `Admin created external job for ${job.company.name}`
+        : `Admin created job for company ${job.company.name}`,
+    });
+
+    if (job.is_external_company) {
+      logger.info('Admin created external job', {
+        adminId,
+        companyName: job.company.name,
+        jobId: job.id,
+      });
+    }
+
+    return job;
   },
 
   // ── Credits ──────────────────────────────────────────────────────────────────

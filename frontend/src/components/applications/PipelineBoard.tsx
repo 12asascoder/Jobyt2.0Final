@@ -7,7 +7,7 @@ import { DndContext, DragEndEvent, closestCenter, useSensor, useSensors, Pointer
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { ApplicationStatus } from '@/types';
 import { APPLICATION_STATUSES, APPLICATION_STATUS_LABELS } from '@/constants';
-import { Spinner, Avatar, Button } from '@/components/ui';
+import { Avatar, Button } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
 import { ApplicationTimeline } from './ApplicationTimeline';
 
@@ -123,8 +123,9 @@ export const PipelineBoard = ({ jobId }: { jobId: string }) => {
     try {
       const res = await api.get<BoardData>(`/pipeline/board/${jobId}`);
       setBoard(res.data);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to generic board fetch');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch board';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -194,10 +195,11 @@ export const PipelineBoard = ({ jobId }: { jobId: string }) => {
       toast.success(`Moved to ${APPLICATION_STATUS_LABELS[targetStage]}`);
       // Re-fetch to guarantee sync (or rely on optimistic ui)
       fetchBoard();
-    } catch (err: any) {
+     } catch (err) {
        // ROllback
        setBoard(previousBoardState);
-       toast.error(err.message || 'Failed to move candidate');
+       const message = err instanceof Error ? err.message : 'Failed to move candidate';
+       toast.error(message);
     }
   };
 

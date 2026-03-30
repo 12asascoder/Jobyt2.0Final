@@ -10,7 +10,8 @@ import { requestLogger } from './middleware/logger.middleware';
 const app = express();
 
 // Local resume/photo storage (STORAGE_TYPE=local); S3 URLs are absolute and do not use this
-if ((process.env.STORAGE_TYPE || '').toLowerCase() === 'local') {
+const storageType = (process.env.STORAGE_TYPE || 'local').toLowerCase();
+if (storageType !== 's3') {
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 }
 
@@ -24,14 +25,12 @@ app.use(
 );
 
 // Rate limiting
-app.use(
-  '/api',
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: { success: false, message: 'Too many requests, please try again later.' },
-  }),
-);
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Relax for development
+  message: { success: false, message: 'Too many requests, please try again later.' },
+});
+app.use('/api', limiter);
 
 // Stripe webhook needs raw body — must come BEFORE express.json()
 app.use('/api/v1/payments/webhook/stripe', express.raw({ type: 'application/json' }));

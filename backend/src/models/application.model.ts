@@ -1,24 +1,70 @@
 import pool from '../config/database';
 import { PoolClient } from 'pg';
 
+export interface ApplicationAnswer {
+  question_id: string;
+  answer: string;
+}
+
 export type ApplicationStatus =
-  | 'APPLIED'
-  | 'SCREENING'
-  | 'SHORTLISTED'
-  | 'INTERVIEW'
-  | 'SELECTED'
-  | 'HIRED'
-  | 'REJECTED';
+  | 'applied'
+  | 'in_review'
+  | 'shortlisted'
+  | 'interview'
+  | 'offer'
+  | 'hired'
+  | 'rejected';
 
 export interface Application {
   id: string;
   job_id: string;
   applicant_id: string;
+  resume_id: string | null;
+  application_answers: ApplicationAnswer[];
   cover_letter: string | null;
   resume_snapshot_url: string | null;
   status: ApplicationStatus;
   status_updated_at: Date;
   created_at: Date;
+}
+
+let resumeIdColumnExists: boolean | null = null;
+let applicationAnswersColumnExists: boolean | null = null;
+
+async function hasColumn(columnName: 'resume_id' | 'application_answers', client?: PoolClient): Promise<boolean> {
+  const cached = columnName === 'resume_id' ? resumeIdColumnExists : applicationAnswersColumnExists;
+  if (cached !== null) return cached;
+
+  const db = client ?? pool;
+  const { rows } = await db.query(
+    `SELECT 1
+       FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'applications'
+        AND column_name = $1
+      LIMIT 1`,
+    [columnName],
+  );
+
+  const exists = rows.length > 0;
+  if (columnName === 'resume_id') resumeIdColumnExists = exists;
+  if (columnName === 'application_answers') applicationAnswersColumnExists = exists;
+  return exists;
+}
+
+function normalizeAnswers(raw: unknown): ApplicationAnswer[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null;
+      const item = entry as Record<string, unknown>;
+      const questionId = String(item.question_id || '').trim();
+      const answer = String(item.answer || '').trim();
+      if (!questionId || !answer) return null;
+      return { question_id: questionId, answer } as ApplicationAnswer;
+    })
+    .filter((answer): answer is ApplicationAnswer => Boolean(answer));
 }
 
 export const ApplicationModel = {
@@ -44,16 +90,41 @@ export const ApplicationModel = {
     data: {
       job_id: string;
       applicant_id: string;
+      resume_id?: string;
+      application_answers?: ApplicationAnswer[];
       cover_letter?: string;
       resume_snapshot_url?: string;
     },
     client?: PoolClient,
   ): Promise<Application> {
     const db = client ?? pool;
+    const hasResumeId = await hasColumn('resume_id', client);
+    const hasAnswers = await hasColumn('application_answers', client);
+    const answers = normalizeAnswers(data.application_answers);
+
+    const columns = ['job_id', 'applicant_id', 'cover_letter', 'resume_snapshot_url'];
+    const values: unknown[] = [
+      data.job_id,
+      data.applicant_id,
+      data.cover_letter || null,
+      data.resume_snapshot_url || null,
+    ];
+
+    if (hasResumeId) {
+      columns.push('resume_id');
+      values.push(data.resume_id || null);
+    }
+
+    if (hasAnswers) {
+      columns.push('application_answers');
+      values.push(JSON.stringify(answers));
+    }
+
+    const placeholders = columns.map((_, index) => `$${index + 1}`).join(',');
     const { rows } = await db.query(
-      `INSERT INTO applications (job_id, applicant_id, cover_letter, resume_snapshot_url)
-       VALUES ($1,$2,$3,$4) RETURNING *`,
-      [data.job_id, data.applicant_id, data.cover_letter || null, data.resume_snapshot_url || null],
+      `INSERT INTO applications (${columns.join(', ')})
+       VALUES (${placeholders}) RETURNING *`,
+      values,
     );
     return rows[0];
   },
@@ -201,7 +272,7 @@ export const ApplicationModel = {
         [recruiterId],
       ),
       pool.query(
-        `SELECT a.*, ap.name, ap.photo_url, ap.skills, ap.experience_level,
+        `SELECT a.*, ap.name, ap.photo_url, ap.skills,
                 j.title as job_title, j.location as job_location
          FROM applications a
          JOIN applicant_profiles ap ON ap.user_id = a.applicant_id

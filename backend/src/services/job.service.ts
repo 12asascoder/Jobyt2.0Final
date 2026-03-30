@@ -1,9 +1,66 @@
-import { JobModel, JobFilters, JobType, JobStatus } from '../models/job.model';
+import {
+  JobModel,
+  JobFilters,
+  JobType,
+  JobStatus,
+  JobApplicationQuestion,
+} from '../models/job.model';
 import { CreditService } from './credit.service';
 import { UserModel } from '../models/user.model';
 import { AppError, badRequest, notFound } from '../utils/appError';
 
 export const JobService = {
+  validateApplicationQuestions(questions: unknown): JobApplicationQuestion[] {
+    if (questions === undefined) return [];
+    if (!Array.isArray(questions)) {
+      throw badRequest('application_questions must be an array');
+    }
+
+    if (questions.length > 30) {
+      throw badRequest('application_questions cannot exceed 30 items');
+    }
+
+    const allowedTypes = new Set(['text', 'textarea', 'select', 'rating', 'link']);
+    const normalized = questions.map((question, index) => {
+      if (!question || typeof question !== 'object') {
+        throw badRequest(`application_questions[${index}] must be an object`);
+      }
+
+      const item = question as Record<string, unknown>;
+      const label = String(item.label || '').trim();
+      if (!label) {
+        throw badRequest(`application_questions[${index}].label is required`);
+      }
+
+      const type = String(item.type || 'text').trim().toLowerCase();
+      if (!allowedTypes.has(type)) {
+        throw badRequest(`application_questions[${index}].type is invalid`);
+      }
+
+      const options = Array.isArray(item.options)
+        ? item.options
+            .map((opt) => String(opt || '').trim())
+            .filter((opt) => opt.length > 0)
+        : [];
+
+      if ((type === 'select' || type === 'rating') && options.length < 2) {
+        throw badRequest(`application_questions[${index}].options must contain at least 2 values`);
+      }
+
+      return {
+        id: typeof item.id === 'string' ? item.id : undefined,
+        label,
+        type,
+        required: Boolean(item.required),
+        section: typeof item.section === 'string' ? item.section : undefined,
+        placeholder: typeof item.placeholder === 'string' ? item.placeholder : undefined,
+        options: options.length > 0 ? options : undefined,
+      } as JobApplicationQuestion;
+    });
+
+    return normalized;
+  },
+
   async createJob(
     recruiterId: string,
     data: {
@@ -15,6 +72,7 @@ export const JobService = {
       salary_max?: number;
       skills?: string[];
       status?: JobStatus;
+      application_questions?: JobApplicationQuestion[];
     },
   ) {
     const recruiter = await UserModel.findById(recruiterId);
@@ -33,7 +91,12 @@ export const JobService = {
     if (data.status === 'active') {
       await CreditService.deductJobPostingCredits(recruiterId);
     }
-    return JobModel.create({ recruiter_id: recruiterId, ...data });
+    const applicationQuestions = JobService.validateApplicationQuestions(data.application_questions);
+    return JobModel.create({
+      recruiter_id: recruiterId,
+      ...data,
+      application_questions: applicationQuestions,
+    });
   },
 
   async publishJob(recruiterId: string, jobId: string) {
@@ -200,13 +263,23 @@ export const JobService = {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
     if (!isUuid) throw notFound('Job');
 
-    const job = await JobModel.findById(id);
+    let job = await JobModel.findById(id);
     if (!job) throw notFound('Job');
 
     if (job.status === 'draft') {
       if (!userId || job.recruiter_id !== userId) {
         throw notFound('Job');
       }
+    }
+
+    // Count views only for non-owner access on non-draft jobs.
+    const isOwner = Boolean(userId) && job.recruiter_id === userId;
+    if (job.status !== 'draft' && !isOwner) {
+      await JobModel.incrementViews(id);
+      job = {
+        ...job,
+        views_count: Number(job.views_count ?? 0) + 1,
+      };
     }
 
     return job;
@@ -218,10 +291,25 @@ export const JobService = {
     if (job.recruiter_id !== recruiterId)
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
 
-    const allowedFields = ['title', 'description', 'location', 'salary_min', 'salary_max', 'type', 'skills'] as const;
+    const allowedFields = [
+      'title',
+      'description',
+      'location',
+      'salary_min',
+      'salary_max',
+      'type',
+      'skills',
+      'application_questions',
+    ] as const;
     const filteredData = Object.fromEntries(
       Object.entries(data).filter(([key]) => (allowedFields as readonly string[]).includes(key)),
     ) as Parameters<typeof JobModel.update>[1];
+
+    if (filteredData.application_questions !== undefined) {
+      filteredData.application_questions = JobService.validateApplicationQuestions(
+        filteredData.application_questions,
+      );
+    }
 
     if (Object.keys(filteredData).length === 0) {
       throw badRequest('No valid fields provided for update');

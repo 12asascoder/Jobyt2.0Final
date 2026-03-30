@@ -1,15 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { api, ApiError } from '@/lib/api';
+import { API_BASE } from '@/constants';
 import { useAuthStore } from '@/store/auth.store';
 import { ApplicantProfile, RecruiterProfile } from '@/types';
 import { Spinner, Avatar } from '@/components/ui';
 import toast from 'react-hot-toast';
 import { FaPenToSquare, FaCheck } from 'react-icons/fa6';
+import { ResumeUploadCard } from '@/components/profile/ResumeUploadCard';
+import { ResumeListCard } from '@/components/profile/ResumeListCard';
 
 type ProfileData = Partial<ApplicantProfile & RecruiterProfile>;
+
+const resolveAssetUrl = (url?: string | null): string | null => {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  const origin = API_BASE.replace(/\/api\/v1\/?$/, '');
+  return url.startsWith('/') ? `${origin}${url}` : `${origin}/${url}`;
+};
 
 export default function ProfilePage() {
   const { user } = useAuthStore();
@@ -29,15 +39,17 @@ export default function ProfilePage() {
 
   // Determine missing fields
   const [missingFields, setMissingFields] = useState<string[]>([]);
+  const [resumeRefreshKey, setResumeRefreshKey] = useState(0);
 
-  useEffect(() => {
-    api.get<{ profile: ProfileData; completeness: number; email: string }>('/users/me')
+  const loadProfile = useCallback(async () => {
+    await api
+      .get<{ profile: ProfileData; completeness: number; email: string }>('/users/me')
       .then((r) => {
         reset(r.data.profile || {});
         setCompleteness(r.data.completeness);
         if (r.data.profile) {
           const p = r.data.profile as ApplicantProfile & RecruiterProfile;
-          setPhotoUrl(p.photo_url || p.logo_url || null);
+          setPhotoUrl(resolveAssetUrl(p.photo_url || p.logo_url || null));
 
           // Calculate missing fields for the checklist
           const missing = [];
@@ -49,6 +61,10 @@ export default function ProfilePage() {
       })
       .finally(() => setLoading(false));
   }, [reset, user]);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
 
   const onSubmit = async (data: ProfileData) => {
     try {
@@ -70,16 +86,20 @@ export default function ProfilePage() {
     const form = new FormData();
     form.append('photo', file);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/photo`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('hp_access')}` },
-        body: form,
+      const res = await api.post<{ url: string }>('/users/me/photo', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      const json = await res.json();
-      setPhotoUrl(json.data.url);
+
+      const uploadedUrl = res.data?.url;
+      if (!uploadedUrl) {
+        throw new Error('Photo upload succeeded but URL is missing.');
+      }
+
+      setPhotoUrl(resolveAssetUrl(uploadedUrl));
       toast.success('Photo updated!');
-    } catch {
-      toast.error('Upload failed');
+      await loadProfile();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
     }
@@ -280,16 +300,18 @@ export default function ProfilePage() {
             </ul>
           </div>
 
-          {/* Upload Resume Card */}
+          {/* Resume Upload + Parsing */}
           {user?.role === 'applicant' && (
-            <div className="bg-[#0b0b0b] rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-900 text-center">
-              <h3 className="text-white font-semibold text-lg mb-6">Upload Your Resume</h3>
-              <div className="border border-dashed border-gray-700 rounded-xl p-4 mb-4 hover:border-gray-500 transition-colors cursor-pointer group bg-[#111]">
-                <span className="text-sm font-medium text-gray-400 group-hover:text-white transition-colors">Choose File</span>
-              </div>
-              <button type="button" className="w-full bg-[#c3ff3d] text-black font-semibold text-sm py-3.5 rounded-xl hover:bg-[#aee62d] transition-colors mt-2">
-                Generate with Jobyt
-              </button>
+            <div className="space-y-6">
+              <ResumeUploadCard
+                onSuccess={async () => {
+                  toast.success('Resume uploaded successfully');
+                  setLoading(true);
+                  await loadProfile();
+                  setResumeRefreshKey((prev) => prev + 1);
+                }}
+              />
+              <ResumeListCard refreshKey={resumeRefreshKey} />
             </div>
           )}
         </div>

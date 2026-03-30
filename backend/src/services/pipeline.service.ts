@@ -41,13 +41,13 @@ export const PipelineService = {
     );
 
     const stages: Record<ApplicationStatus, any[]> = {
-      APPLIED: [],
-      SCREENING: [],
-      SHORTLISTED: [],
-      INTERVIEW: [],
-      SELECTED: [],
-      REJECTED: [],
-      HIRED: [],
+      applied: [],
+      in_review: [],
+      shortlisted: [],
+      interview: [],
+      offer: [],
+      rejected: [],
+      hired: [],
     };
 
     let totalCandidates = 0;

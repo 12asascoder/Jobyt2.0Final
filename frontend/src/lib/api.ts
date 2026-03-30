@@ -1,64 +1,219 @@
 import { API_BASE } from '@/constants';
 import { ApiResponse, PaginatedResponse } from '@/types';
+import axios, {
+  AxiosError,
+  AxiosInstance,
+  AxiosRequestConfig,
+  InternalAxiosRequestConfig,
+} from 'axios';
+
+interface ErrorPayload {
+  message?: string;
+  error?: string;
+  errors?: Array<{ code?: string; [key: string]: unknown }>;
+  details?: unknown;
+  [key: string]: unknown;
+}
+
+interface RefreshResponsePayload {
+  accessToken: string;
+  refreshToken: string;
+}
+
+interface RetryableRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
 let accessToken: string | null = null;
+let isRefreshing = false;
+let refreshQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}> = [];
 
 export const tokenStore = {
   get: () => accessToken,
   set: (t: string | null) => { accessToken = t; },
 };
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const headers: Record<string, string> = {
+const ACCESS_TOKEN_KEY = 'hp_access';
+const REFRESH_TOKEN_KEY = 'hp_refresh';
+const LOGIN_PATH = '/login';
+const REFRESH_PATH = '/auth/refresh-token';
+
+const getStoredAccessToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
+};
+
+const getStoredRefreshToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+};
+
+const saveTokens = (tokens: RefreshResponsePayload) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+  tokenStore.set(tokens.accessToken);
+};
+
+const clearTokens = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  tokenStore.set(null);
+};
+
+const performLogoutRedirect = () => {
+  clearTokens();
+  if (typeof window !== 'undefined' && window.location.pathname !== LOGIN_PATH) {
+    window.location.href = LOGIN_PATH;
+  }
+};
+
+const processRefreshQueue = (error: unknown, token: string | null) => {
+  refreshQueue.forEach(({ resolve, reject }) => {
+    if (token) {
+      resolve(token);
+    } else {
+      reject(error);
+    }
+  });
+  refreshQueue = [];
+};
+
+const parseRefreshTokens = (payload: unknown): RefreshResponsePayload | null => {
+  if (!payload || typeof payload !== 'object') return null;
+
+  const direct = payload as Partial<RefreshResponsePayload>;
+  if (typeof direct.accessToken === 'string' && typeof direct.refreshToken === 'string') {
+    return { accessToken: direct.accessToken, refreshToken: direct.refreshToken };
+  }
+
+  const wrapped = payload as { data?: Partial<RefreshResponsePayload> };
+  if (
+    wrapped.data &&
+    typeof wrapped.data.accessToken === 'string' &&
+    typeof wrapped.data.refreshToken === 'string'
+  ) {
+    return {
+      accessToken: wrapped.data.accessToken,
+      refreshToken: wrapped.data.refreshToken,
+    };
+  }
+
+  return null;
+};
+
+const toApiError = (error: unknown): ApiError => {
+  if (error instanceof ApiError) return error;
+
+  const axiosError = error as AxiosError<ErrorPayload>;
+  const status = axiosError.response?.status ?? 0;
+  const payload = axiosError.response?.data;
+  const message =
+    payload?.message ||
+    payload?.error ||
+    axiosError.message ||
+    'Request failed';
+  const code = payload?.error || payload?.errors?.[0]?.code;
+
+  return new ApiError(message, status, code, payload?.errors, payload?.details, payload);
+};
+
+const apiClient: AxiosInstance = axios.create({
+  baseURL: API_BASE,
+  headers: {
     'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
+  },
+});
 
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
+const refreshClient: AxiosInstance = axios.create({
+  baseURL: API_BASE,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+apiClient.interceptors.request.use((config) => {
+  const token = tokenStore.get() || getStoredAccessToken();
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  return config;
+});
 
-  if (!res.ok) {
-    if (res.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('hp_access');
-      localStorage.removeItem('hp_refresh');
-      tokenStore.set(null);
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError<ErrorPayload>) => {
+    const originalRequest = error.config as RetryableRequestConfig | undefined;
+    const status = error.response?.status;
+    const isRefreshCall = originalRequest?.url?.includes(REFRESH_PATH) ?? false;
+
+    if (!originalRequest || status !== 401 || isRefreshCall || originalRequest._retry) {
+      if (status === 401 && isRefreshCall) {
+        performLogoutRedirect();
       }
+      return Promise.reject(toApiError(error));
     }
 
-    let errorData: any = {};
-    const text = await res.text().catch(() => '');
+    const refreshToken = getStoredRefreshToken();
+    if (!refreshToken) {
+      performLogoutRedirect();
+      return Promise.reject(toApiError(error));
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        refreshQueue.push({ resolve, reject });
+      })
+        .then((newToken) => {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return apiClient(originalRequest);
+        })
+        .catch((queueError) => Promise.reject(toApiError(queueError)));
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
     try {
-      errorData = text ? JSON.parse(text) : {};
-    } catch {
-      errorData = { message: text || res.statusText || 'Request failed' };
+      const refreshResponse = await refreshClient.post<ApiResponse<RefreshResponsePayload>>(
+        REFRESH_PATH,
+        { refreshToken },
+      );
+
+      const tokens = parseRefreshTokens(refreshResponse.data);
+      if (!tokens) {
+        throw new ApiError('Invalid refresh token response', 500, 'INVALID_REFRESH_RESPONSE');
+      }
+
+      saveTokens(tokens);
+      processRefreshQueue(null, tokens.accessToken);
+
+      originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      processRefreshQueue(refreshError, null);
+      performLogoutRedirect();
+      return Promise.reject(toApiError(refreshError));
+    } finally {
+      isRefreshing = false;
     }
-
-    // Attempt to extract the best error message available
-    const errorMessage = errorData.message || errorData.error || res.statusText || 'Request failed';
-    const errorCode = errorData.error || (errorData.errors && errorData.errors[0]?.code) || undefined;
-
-    throw new ApiError(errorMessage, res.status, errorCode, errorData.errors, errorData.details, errorData);
-  }
-
-  return res.json();
-}
+  },
+);
 
 export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
     public code?: string,
-    public errors?: any[],
-    public details?: any,
-    public data?: any
+    public errors?: Array<Record<string, unknown>>,
+    public details?: unknown,
+    public data?: unknown
   ) {
     super(message);
     this.name = 'ApiError';
@@ -66,14 +221,52 @@ export class ApiError extends Error {
 }
 
 export const api = {
-  get: <T>(path: string) => request<ApiResponse<T>>(path),
-  post: <T>(path: string, body: unknown) =>
-    request<ApiResponse<T>>(path, { method: 'POST', body: JSON.stringify(body) }),
-  put: <T>(path: string, body: unknown) =>
-    request<ApiResponse<T>>(path, { method: 'PUT', body: JSON.stringify(body) }),
-  patch: <T>(path: string, body?: unknown) =>
-    request<ApiResponse<T>>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(path: string, body?: unknown) =>
-    request<ApiResponse<T>>(path, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }),
-  getPaginated: <T>(path: string) => request<PaginatedResponse<T>>(path),
+  get: async <T>(path: string, config?: AxiosRequestConfig) => {
+    try {
+      const res = await apiClient.get<ApiResponse<T>>(path, config);
+      return res.data;
+    } catch (error) {
+      throw toApiError(error);
+    }
+  },
+  post: async <T>(path: string, body: unknown, config?: AxiosRequestConfig) => {
+    try {
+      const res = await apiClient.post<ApiResponse<T>>(path, body, config);
+      return res.data;
+    } catch (error) {
+      throw toApiError(error);
+    }
+  },
+  put: async <T>(path: string, body: unknown, config?: AxiosRequestConfig) => {
+    try {
+      const res = await apiClient.put<ApiResponse<T>>(path, body, config);
+      return res.data;
+    } catch (error) {
+      throw toApiError(error);
+    }
+  },
+  patch: async <T>(path: string, body?: unknown, config?: AxiosRequestConfig) => {
+    try {
+      const res = await apiClient.patch<ApiResponse<T>>(path, body, config);
+      return res.data;
+    } catch (error) {
+      throw toApiError(error);
+    }
+  },
+  delete: async <T>(path: string, body?: unknown, config?: AxiosRequestConfig) => {
+    try {
+      const res = await apiClient.delete<ApiResponse<T>>(path, { ...config, data: body });
+      return res.data;
+    } catch (error) {
+      throw toApiError(error);
+    }
+  },
+  getPaginated: async <T>(path: string, config?: AxiosRequestConfig) => {
+    try {
+      const res = await apiClient.get<PaginatedResponse<T>>(path, config);
+      return res.data;
+    } catch (error) {
+      throw toApiError(error);
+    }
+  },
 };

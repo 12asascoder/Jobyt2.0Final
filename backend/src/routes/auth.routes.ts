@@ -87,6 +87,15 @@ router.post(
 );
 
 router.post(
+  '/oauth/state',
+  oauthAuthLimiter,
+  body('provider').isIn(['github', 'linkedin']),
+  body('state').notEmpty().isString().isLength({ min: 16, max: 128 }),
+  validate,
+  AuthController.registerOAuthState,
+);
+
+router.post(
   '/google',
   oauthAuthLimiter,
   oauthCredentialPresence,

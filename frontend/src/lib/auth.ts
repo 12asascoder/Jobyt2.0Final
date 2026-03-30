@@ -30,7 +30,12 @@ export const authStorage = {
 export const decodeToken = (token: string): AuthUser | null => {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
-    return { id: payload.userId, email: payload.email, role: payload.role };
+    return {
+      id: payload.userId,
+      email: payload.email ?? null,
+      role: payload.role,
+      email_verified: payload.email_verified,
+    };
   } catch {
     return null;
   }

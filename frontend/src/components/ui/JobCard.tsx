@@ -17,8 +17,10 @@ export interface BackendJob {
     created_at: string;
 }
 
+type JobLike = Partial<BackendJob> & { _id?: string };
+
 // Normalize job data to ensure it has an id field
-export function normalizeJob(job: any): BackendJob {
+export function normalizeJob(job: JobLike): BackendJob {
     return {
         id: job.id || job._id || '',
         title: job.title || '',

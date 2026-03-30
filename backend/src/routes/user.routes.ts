@@ -53,6 +53,7 @@ router.get(
   authorize('applicant'),
   ResumeController.getDefaultResume,
 );
+router.get('/me/resumes/:id', authorize('applicant'), ResumeController.getById);
 router.patch(
   '/me/resumes/:id/set-default',
   authorize('applicant'),
@@ -65,6 +66,7 @@ router.post(
   uploadResume.single('file'),
   body('jobDescription').isString(),
   body('resumeText').optional().isString(),
+  body('resume_id').optional().isUUID(),
   validate,
   ResumeController.scoreATS
 );

@@ -45,7 +45,7 @@ export function HeroSection() {
                 {/* TAGLINE */}
                 <p className="font-medium text-slate-500 tracking-wide"
                     style={{ fontSize: 'clamp(0.72rem, 1.4vw, 0.95rem)', marginBottom: 'clamp(1rem, 2.5vw, 1.5rem)' }}>
-                    India's most loved platform
+                    India&apos;s most loved platform
                 </p>
 
                 {/* HEADING */}

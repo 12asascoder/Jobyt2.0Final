@@ -5,16 +5,37 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 import { ROUTES, APP_NAME } from '@/constants';
-import { UserRole } from '@/types';
-import { FaGoogle, FaApple, FaArrowRight, FaEnvelopeCircleCheck } from 'react-icons/fa6';
+import { AuthTokens, AuthUser, UserRole } from '@/types';
+import { FaArrowRight, FaEnvelopeCircleCheck } from 'react-icons/fa6';
 import Image from 'next/image';
+import { useAuthStore } from '@/store/auth.store';
+import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
+import { GitHubLoginButton } from '@/components/auth/GitHubLoginButton';
+import { LinkedInLoginButton } from '@/components/auth/LinkedInLoginButton';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const setSession = useAuthStore((s) => s.setSession);
   const [form, setForm] = useState({ email: '', password: '', role: 'applicant' as UserRole, referralCode: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  const routeByRole = (user: AuthUser) =>
+    user.role === 'recruiter'
+      ? ROUTES.recruiterDashboard
+      : user.role === 'admin'
+        ? ROUTES.adminDashboard
+        : ROUTES.dashboard;
+
+  const handleAuthSuccess = (tokens: AuthTokens, user: AuthUser) => {
+    setSession(tokens.accessToken, tokens.refreshToken, user);
+    if (!user.email) {
+      router.push(ROUTES.addEmail);
+      return;
+    }
+    router.push(routeByRole(user));
+  };
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -117,13 +138,20 @@ export default function RegisterPage() {
             <p className="text-slate-500 mt-1.5 font-medium text-sm">Join {APP_NAME} today. 150 free credits on sign-up!</p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 mb-5">
-            <button className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all font-semibold shadow-sm text-sm">
-              <FaGoogle className="text-red-500 text-base" /> Google
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-2 bg-slate-900 border border-slate-900 text-white px-4 py-2 rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-sm text-sm">
-              <FaApple className="text-white text-base mb-0.5" /> Apple
-            </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+            <GoogleLoginButton
+              referralCode={form.referralCode}
+              onSuccess={handleAuthSuccess}
+              onRequiresEmail={() => router.push(ROUTES.addEmail)}
+              onRequiresVerification={() => router.push(`${ROUTES.verifyEmail}?pending=1`)}
+              onError={setError}
+            />
+            <GitHubLoginButton referralCode={form.referralCode} onError={setError} />
+            <LinkedInLoginButton
+              referralCode={form.referralCode}
+              onError={setError}
+              className="sm:col-span-2 flex items-center justify-center gap-2 bg-[#0a66c2] border border-[#0a66c2] text-white px-4 py-2 rounded-xl hover:bg-[#08549d] transition-all font-semibold shadow-sm text-sm"
+            />
           </div>
 
           <div className="relative flex items-center py-1 mb-5">

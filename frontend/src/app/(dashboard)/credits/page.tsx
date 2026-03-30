@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
-import { Spinner } from '@/components/ui';
+import { Spinner, Card, CardBody } from '@/components/ui';
 import { CreditTransaction, Plan } from '@/types';
-import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 export default function CreditsPage() {
@@ -16,10 +15,19 @@ export default function CreditsPage() {
   const [loading, setLoading] = useState(true);
   const [buyingPlan, setBuyingPlan] = useState<string | null>(null);
 
+  const formattedTransactions = transactions.map((t) => ({
+    id: t.id,
+    transaction: t.description || t.type,
+    transactionNo: t.id.slice(0, 10),
+    date: new Date(t.created_at).toLocaleDateString(),
+    status: t.status || 'success',
+    total: Math.abs(t.amount),
+  }));
+
   useEffect(() => {
     Promise.all([
       api.get<{ balance: number }>('/credits/balance'),
-      api.getPaginated<CreditTransaction>('/credits/history'),
+      api.getPaginated<CreditTransaction>('/credits/ledger'),
       api.get<Plan[]>('/payments/plans'),
     ]).then(([bal, txns, plansRes]) => {
       setBalance(bal.data.balance);
@@ -100,49 +108,57 @@ export default function CreditsPage() {
         </div>
       </div>
 
-      {/* Transaction History */}
+      {/* Ledger */}
       <div className="pt-1 sm:pt-2">
-        <h2 className="text-[28px] font-display font-medium text-center text-slate-900 mb-8 tracking-tight">Transaction History</h2>
+        <h2 className="text-[28px] font-display font-medium text-center text-slate-900 mb-8 tracking-tight">Credit Ledger</h2>
 
-        <div className="bg-[#e7e4dd] rounded-[20px] p-4 sm:p-8 overflow-x-auto">
-          <table className="w-full min-w-160 text-left border-collapse border-spacing-0">
-            <thead>
-              <tr>
-                <th className="font-semibold text-slate-800 pb-8 px-2 text-[15px]">Transaction</th>
-                <th className="font-semibold text-slate-800 pb-8 px-2 text-[15px]">Transaction No.</th>
-                <th className="font-semibold text-slate-800 pb-8 px-2 text-[15px]">Date</th>
-                <th className="font-semibold text-slate-800 pb-8 px-2 text-[15px]">Status</th>
-                <th className="font-semibold text-slate-800 pb-8 px-2 text-center text-[15px]">Total</th>
-              </tr>
-            </thead>
-            <tbody className="space-y-4">
-              {transactions.length > 0 ? (
-                transactions.map((tx, idx) => {
-                  const isCredit = tx.type === 'credit';
-                  return (
-                    <tr key={tx.id} className="text-[#3b3b3b] text-[15px]">
-                      <td className="py-4 px-2">{tx.description || 'Lorem ipsum'}</td>
-                      <td className="py-4 px-2">#{tx.id.substring(0, 10).toUpperCase()}</td>
-                      <td className="py-4 px-2">{formatDate(tx.created_at)}</td>
-                      <td className="py-4 px-2">
-                        <span className={`inline-flex items-center justify-center px-4 py-1.5 text-xs font-semibold rounded-full ${isCredit ? 'bg-[#ccfa88] text-black' : 'bg-[#facaca] text-slate-900'}`}>
-                          {isCredit ? 'Success' : 'Failed'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-2 text-center font-medium">{tx.amount}</td>
-                    </tr>
-                  )
-                })
-              ) : (
-                <tr>
-                  <td colSpan={5} className="py-10 text-center text-slate-500 text-[15px] font-medium">
-                    No transactions yet. Your credit history will appear here.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {formattedTransactions.length === 0 ? (
+          <Card>
+            <CardBody className="p-6 text-center">
+              <p className="text-slate-700">No transactions yet</p>
+            </CardBody>
+          </Card>
+        ) : (
+          <Card>
+            <CardBody className="p-4 sm:p-6 overflow-x-auto">
+              <table className="w-full text-sm min-w-[640px]">
+                <thead className="text-slate-500">
+                  <tr>
+                    <th className="text-left py-2">Transaction</th>
+                    <th className="text-left py-2">Transaction No.</th>
+                    <th className="text-left py-2">Date</th>
+                    <th className="text-left py-2">Status</th>
+                    <th className="text-left py-2">Total</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {formattedTransactions.map((tx) => {
+                    return (
+                      <tr key={tx.id} className="border-t border-slate-100">
+                        <td className="py-3 text-slate-800">{tx.transaction}</td>
+                        <td className="py-3 text-slate-700">#{tx.transactionNo}</td>
+                        <td className="py-3 text-slate-700">{tx.date}</td>
+                        <td className="py-3">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              tx.status === 'success'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
+                            }`}
+                          >
+                            {tx.status === 'success' ? 'Success' : 'Failed'}
+                          </span>
+                        </td>
+                        <td className="py-3 text-slate-800">{tx.total}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </CardBody>
+          </Card>
+        )}
       </div>
     </div>
   );

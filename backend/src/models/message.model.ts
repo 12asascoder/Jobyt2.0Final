@@ -19,6 +19,14 @@ export interface Message {
 }
 
 export const MessageModel = {
+  async getConversationById(conversationId: string): Promise<Conversation | null> {
+    const { rows } = await pool.query(
+      `SELECT * FROM conversations WHERE id = $1 LIMIT 1`,
+      [conversationId],
+    );
+    return rows[0] || null;
+  },
+
   async findOrCreateConversation(
     recruiterId: string,
     applicantId: string,

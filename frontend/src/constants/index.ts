@@ -1,5 +1,5 @@
 export const APP_NAME = 'Hiring Platform';
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1';
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 export const JOB_TYPES = ['full-time', 'part-time', 'contract', 'remote', 'internship'] as const;
 
@@ -32,6 +32,8 @@ export const ROUTES = {
   login: '/login',
   register: '/register',
   verifyEmail: '/verify-email',
+  oauthCallback: '/oauth/callback',
+  addEmail: '/add-email',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   // Applicant
@@ -47,9 +49,12 @@ export const ROUTES = {
   messages: '/messages',
   roadmaps: '/roadmaps',
   roadmapDetail: (slug: string) => `/roadmaps/${slug}`,
+  resumeDetail: (id: string) => `/resumes/${id}`,
   messageThread: (id: string) => `/messages/${id}`,
   // Recruiter
   recruiterDashboard: '/recruiter/dashboard',
+  recruiterApplications: '/recruiter/applications',
+  recruiterApplicationDetail: (applicationId: string, jobId: string) => `/recruiter/applications/${applicationId}?jobId=${encodeURIComponent(jobId)}`,
   recruiterJobs: '/recruiter/jobs',
   recruiterNewJob: '/recruiter/jobs/new',
   recruiterJobDetail: (id: string) => `/recruiter/jobs/${id}`,

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
 import { OAuthAuthService, type OAuthProvider } from '../services/oauth.service';
 import { sendSuccess } from '../utils/response';
-import { UnauthorizedError } from '../utils/errors';
+import { BadRequestError, UnauthorizedError } from '../utils/errors';
 import logger from '../config/logger';
 import redis from '../config/redis';
 
@@ -218,6 +218,37 @@ export const AuthController = {
         error: err,
         ip: req.ip,
       });
+      next(err);
+    }
+  },
+
+  async registerOAuthState(req: Request, res: Response, next: NextFunction) {
+    try {
+      const provider = req.body.provider as OAuthProvider;
+      const state = req.body.state as string;
+
+      if (!provider || (provider !== 'github' && provider !== 'linkedin')) {
+        throw new BadRequestError('Invalid OAuth provider', 'INVALID_OAUTH_PROVIDER');
+      }
+
+      if (!state || typeof state !== 'string' || state.trim().length < 16) {
+        throw new BadRequestError('Invalid OAuth state', 'INVALID_STATE');
+      }
+
+      const normalizedState = state.trim();
+      const stateKey = `oauth_state:${provider}:${normalizedState}`;
+
+      if (redis.status === 'wait' || redis.status === 'end') {
+        await redis.connect();
+      }
+
+      const ok = await redis.set(stateKey, 'valid', 'EX', 600, 'NX');
+      if (!ok) {
+        throw new BadRequestError('Failed to register OAuth state', 'STATE_REGISTRATION_FAILED');
+      }
+
+      sendSuccess(res, { provider, stateRegistered: true }, 'OAuth state registered');
+    } catch (err) {
       next(err);
     }
   },

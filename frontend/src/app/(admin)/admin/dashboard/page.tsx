@@ -49,9 +49,20 @@ export default function AdminDashboardPage() {
     }, []);
 
     useEffect(() => {
-        fetchData().finally(() => setLoading(false));
+        let active = true;
+        const load = async () => {
+            await fetchData();
+            if (active) {
+                setLoading(false);
+            }
+        };
+
+        void load();
         const interval = setInterval(fetchData, 30000);
-        return () => clearInterval(interval);
+        return () => {
+            active = false;
+            clearInterval(interval);
+        };
     }, [fetchData]);
 
     if (loading) {

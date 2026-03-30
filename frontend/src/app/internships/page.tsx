@@ -20,23 +20,19 @@ export default function InternshipsPage() {
 }
 
 function InternshipsContent() {
-    const { user, isAuthenticated, initialize } = useAuthStore();
+    const { isAuthenticated, initialize } = useAuthStore();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [mounted, setMounted] = useState(false);
 
-    // Hydrate auth on mount
     useEffect(() => {
-        initialize();
-        setMounted(true);
+        void initialize();
     }, [initialize]);
 
-    // Redirect if not authenticated after mount
     useEffect(() => {
-        if (mounted && !isAuthenticated) {
+        if (!isAuthenticated) {
             router.push('/login');
         }
-    }, [mounted, isAuthenticated, router]);
+    }, [isAuthenticated, router]);
 
     const [jobs, setJobs] = useState<BackendJob[]>([]);
     const [loading, setLoading] = useState(true);
@@ -50,14 +46,12 @@ function InternshipsContent() {
     const [filterOpen, setFilterOpen] = useState(false);
 
     useEffect(() => {
-        if (!mounted) return;
-
         fetch(`${API_BASE}/jobs?limit=50&sort=date`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.data?.length > 0) {
                     // Normalize all jobs to ensure they have valid id fields
-                    const normalizedJobs = data.data.map((job: any) => normalizeJob(job));
+                    const normalizedJobs = data.data.map((job: BackendJob) => normalizeJob(job));
                     setJobs(normalizedJobs);
                 } else {
                     setJobs([]);
@@ -65,7 +59,7 @@ function InternshipsContent() {
             })
             .catch(() => setJobs([]))
             .finally(() => setLoading(false));
-    }, [mounted]);
+    }, []);
 
     const toggleSkill = (skill: string) => {
         setSelectedSkills(prev =>
@@ -102,9 +96,7 @@ function InternshipsContent() {
             // if (selectedDuration) { ... }
             return true;
         });
-    }, [jobs, keyword, selectedSkills, selectedWorkType, selectedDuration]);
-
-    if (!mounted) return null; // Avoid rendering flash before hydration
+    }, [jobs, keyword, selectedSkills, selectedWorkType]);
 
     return (
         <div className="min-h-screen flex flex-col bg-[#fcfcfc]">

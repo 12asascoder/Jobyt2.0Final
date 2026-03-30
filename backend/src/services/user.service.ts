@@ -4,9 +4,9 @@ import { ResumeModel } from '../models/resume.model';
 import { UserModel } from '../models/user.model';
 import { JobModel } from '../models/job.model';
 import { StorageService } from './storage.service';
-import { uploadToS3 } from '../utils/s3';
 import { AppError } from '../utils/appError';
 import { UserRole } from '../types';
+import type { ParsedResume } from '../utils/resumeParser';
 
 // ── Profile completeness ────────────────────────────────────────────────────
 
@@ -117,12 +117,62 @@ export const UserService = {
       file_size: file.size ?? Buffer.byteLength(file.buffer),
       mime_type: file.mimetype,
     });
-    return { resume_url: url, id: row.id };
+
+    // Keep upload resilient: parsing is best-effort and should not block file persistence.
+    if ((file.mimetype || '').toLowerCase().includes('pdf')) {
+      try {
+        const { parseResume } = await import('../utils/resumeParser');
+        const parsed = await parseResume(file.buffer, {
+          filename: file.originalname,
+          mimeType: file.mimetype,
+        });
+        await UserService.syncParsedResumeToProfile(userId, parsed);
+      } catch (err) {
+        console.warn('Resume uploaded but parsing/profile sync failed:', err);
+      }
+    }
+
+    return {
+      resume: {
+        id: row.id,
+        file_url: row.file_url,
+        created_at: row.created_at,
+      },
+    };
+  },
+
+  async syncParsedResumeToProfile(userId: string, parsed: ParsedResume) {
+    let profile = await ApplicantProfileModel.findByUserId(userId);
+    if (!profile) {
+      profile = await ApplicantProfileModel.create(userId);
+    }
+
+    const patch: Partial<Pick<ApplicantProfile, 'name' | 'skills' | 'experience' | 'education'>> = {};
+
+    if (!profile.name && parsed.name) {
+      patch.name = parsed.name;
+    }
+
+    if (Array.isArray(parsed.skills) && parsed.skills.length > 0) {
+      patch.skills = Array.from(new Set(parsed.skills.map((s) => String(s).trim()).filter(Boolean)));
+    }
+
+    if (Array.isArray(parsed.experience) && parsed.experience.length > 0) {
+      patch.experience = parsed.experience;
+    }
+
+    if (Array.isArray(parsed.education) && parsed.education.length > 0) {
+      patch.education = parsed.education;
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await ApplicantProfileModel.update(userId, patch);
+    }
   },
 
   async uploadPhoto(userId: string, role: UserRole, file: Express.Multer.File) {
     const folder = role === 'recruiter' ? 'logos' : 'photos';
-    const url = await uploadToS3(file.buffer, file.originalname, file.mimetype, folder);
+    const { url } = await StorageService.uploadPhoto(file, folder);
 
     if (role === 'applicant') {
       await ApplicantProfileModel.update(userId, { photo_url: url });

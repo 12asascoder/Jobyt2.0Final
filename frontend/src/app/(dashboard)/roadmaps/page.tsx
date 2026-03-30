@@ -48,7 +48,7 @@ export default function RoadmapsPage() {
           <FaMapLocationDot className="mx-auto h-12 w-12 text-slate-300 mb-4" />
           <h3 className="text-lg font-semibold text-slate-900">No Roadmaps Found</h3>
           <p className="text-slate-500 mt-2">
-            The roadmap ingestion pipeline hasn't run yet.
+            The roadmap ingestion pipeline hasn&apos;t run yet.
           </p>
         </div>
       ) : (

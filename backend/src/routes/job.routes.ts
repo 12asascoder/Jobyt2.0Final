@@ -50,6 +50,14 @@ router.post(
   body('type').optional().isIn(['full-time', 'part-time', 'contract', 'remote', 'internship']),
   body('skills').optional().isArray().withMessage('skills must be an array'),
   body('skills.*').optional().isString().withMessage('Each skill must be a string'),
+  body('application_questions').optional().isArray().withMessage('application_questions must be an array'),
+  body('application_questions.*.label').optional().isString().trim().notEmpty(),
+  body('application_questions.*.type').optional().isIn(['text', 'textarea', 'select', 'rating', 'link']),
+  body('application_questions.*.required').optional().isBoolean(),
+  body('application_questions.*.section').optional().isString().trim(),
+  body('application_questions.*.placeholder').optional().isString(),
+  body('application_questions.*.options').optional().isArray(),
+  body('application_questions.*.options.*').optional().isString(),
   validate,
   JobController.createJob,
 );
@@ -86,6 +94,14 @@ router.put(
     )
     .withMessage('skills must contain non-empty strings only')
     .customSanitizer((skills) => skills.map((skill: string) => skill.trim())),
+  body('application_questions').optional().isArray().withMessage('application_questions must be an array'),
+  body('application_questions.*.label').optional().isString().trim().notEmpty(),
+  body('application_questions.*.type').optional().isIn(['text', 'textarea', 'select', 'rating', 'link']),
+  body('application_questions.*.required').optional().isBoolean(),
+  body('application_questions.*.section').optional().isString().trim(),
+  body('application_questions.*.placeholder').optional().isString(),
+  body('application_questions.*.options').optional().isArray(),
+  body('application_questions.*.options.*').optional().isString(),
   validate,
   JobController.updateJob,
 );

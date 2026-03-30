@@ -14,6 +14,11 @@ import {
     normalizeJob,
 } from '@/components/ui/JobCard';
 
+interface JobsApiResult {
+    success: boolean;
+    data?: BackendJob[];
+}
+
 const AVAILABLE_SKILLS = ['React', 'Figma', 'Python', 'Marketing', 'UI/UX', 'SQL', 'Node.js'];
 const WORK_TYPES = ['Remote', 'Hybrid', 'On-site'];
 const DURATIONS = ['1-3 Months', '3-6 Months', '6+ Months'];
@@ -71,10 +76,10 @@ export default function DashboardPage() {
     useEffect(() => {
         fetch(`${API_BASE}/jobs?limit=50&sort=date`)
             .then((res) => res.json())
-            .then((data) => {
+            .then((data: JobsApiResult) => {
                 if (data.success && data.data?.length > 0) {
                     // Normalize all jobs to ensure they have valid id fields
-                    const normalizedJobs = data.data.map((job: any) => normalizeJob(job));
+                    const normalizedJobs = data.data.map((job) => normalizeJob(job));
                     setJobs(normalizedJobs);
                 } else {
                     setJobs([]);

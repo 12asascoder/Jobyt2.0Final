@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface Testimonial {
     text: string;
@@ -50,15 +50,7 @@ export function Testimonials() {
     // We track precise width percentage for the continuous line
     const [progressWidth, setProgressWidth] = useState(20);
 
-    // Initial calculation on mount
-    useEffect(() => {
-        handleScroll();
-        // Recalculate on window resize
-        window.addEventListener('resize', handleScroll);
-        return () => window.removeEventListener('resize', handleScroll);
-    }, []);
-
-    const handleScroll = () => {
+    const handleScroll = useCallback(() => {
         if (!scrollRef.current) return;
         
         const scrollPosition = scrollRef.current.scrollLeft;
@@ -88,7 +80,18 @@ export function Testimonials() {
         }
         
         setProgressWidth(Math.max(20, Math.min(100, visibleRatio * 100)));
-    };
+    }, []);
+
+    // Initial calculation on mount
+    useEffect(() => {
+        const rafId = window.requestAnimationFrame(handleScroll);
+        // Recalculate on window resize
+        window.addEventListener('resize', handleScroll);
+        return () => {
+            window.cancelAnimationFrame(rafId);
+            window.removeEventListener('resize', handleScroll);
+        };
+    }, [handleScroll]);
 
     return (
         <section className="py-24 bg-white overflow-hidden">

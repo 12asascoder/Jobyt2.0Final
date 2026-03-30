@@ -3,12 +3,13 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
-import { Job } from '@/types';
+import { ApplicationQuestion, Job } from '@/types';
 import { Button, Spinner } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { ROUTES } from '@/constants';
+import { InsufficientCreditsCard } from '@/components/credits/InsufficientCreditsCard';
 import Link from 'next/link';
 import {
   FaArrowLeft,
@@ -20,9 +21,66 @@ import {
   FaCheck,
   FaRobot,
   FaRoute,
-  FaFileLines
+  FaFileLines,
+  FaChevronDown,
+  FaChevronUp
 } from 'react-icons/fa6';
 import { useAuthStore } from '@/store/auth.store';
+
+interface UserProfilePayload {
+  profile?: {
+    skills?: string[];
+    bio?: string;
+  };
+}
+
+interface MatchResponse {
+  matchScore: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+}
+
+interface SkillGapResponse {
+  suggestions: Record<string, string>;
+}
+
+interface RoadmapWeek {
+  week: number;
+  topic: string;
+  tasks: string[];
+}
+
+interface RoadmapResponse {
+  roadmap: RoadmapWeek[];
+}
+
+interface AtsScoreReport {
+  score: number;
+  rolePrediction: string;
+  experience: string;
+  qualityScore: number;
+  explanation: string;
+  sectionScores?: {
+    skillsScore?: number;
+    experienceScore?: number;
+    educationScore?: number;
+  };
+  missingKeywords?: string[];
+  feedback?: {
+    weakAreas?: string[];
+    improvements?: string[];
+  };
+}
+
+interface AtsScoreResponse {
+  data: AtsScoreReport;
+}
+
+interface ResumeListItem {
+  id: string;
+  file_name: string;
+  is_default: boolean;
+}
 
 function formatSalary(min: number | null, max: number | null): string {
   if (!min && !max) return 'Competitive';
@@ -34,6 +92,35 @@ function formatSalary(min: number | null, max: number | null): string {
   if (min && max) return `${fmt(min)}–${fmt(max)}`;
   if (min) return `${fmt(min)}+`;
   return `Up to ${fmt(max!)}`;
+}
+
+function deriveJobRole(title: string): string {
+  const cleaned = title
+    .replace(/\b(internship|intern|trainee)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned || title;
+}
+
+function getCompanyName(job: Job): string {
+  const maybe = job as Job & {
+    company?: { name?: string | null };
+    companyName?: string | null;
+  };
+
+  const normalizedPrimary = job.company_name?.trim();
+  const normalizedNested = maybe.company?.name?.trim();
+  const normalizedCamel = maybe.companyName?.trim();
+
+  const isUnknown = (value?: string | null) =>
+    Boolean(value) && value.toLowerCase() === 'unknown company';
+
+  return (
+    (!isUnknown(normalizedPrimary) ? normalizedPrimary : '') ||
+    (!isUnknown(normalizedNested) ? normalizedNested : '') ||
+    (!isUnknown(normalizedCamel) ? normalizedCamel : '') ||
+    'Unknown Company'
+  );
 }
 
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -51,6 +138,17 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const [coverLetter, setCoverLetter] = useState('');
   const [hasApplied, setHasApplied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [resumes, setResumes] = useState<ResumeListItem[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState('');
+  const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    description: true,
+    eligibility: false,
+    requirements: false,
+    perks: false,
+    openings: false,
+    about: false,
+  });
 
   // AI Feature States
   const [matchScore, setMatchScore] = useState<number | null>(null);
@@ -59,11 +157,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const [skillSuggestions, setSkillSuggestions] = useState<Record<string, string>>({});
   const [loadingInsights, setLoadingInsights] = useState(false);
 
-  const [roadmap, setRoadmap] = useState<any>(null);
+  const [roadmap, setRoadmap] = useState<RoadmapWeek[] | null>(null);
   const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
   const [showRoadmapModal, setShowRoadmapModal] = useState(false);
 
-  const [atsScore, setAtsScore] = useState<any | null>(null);
+  const [atsScore, setAtsScore] = useState<AtsScoreReport | null>(null);
   const [scoringAts, setScoringAts] = useState(false);
   const [resumeText, setResumeText] = useState('');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -77,11 +175,20 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
     Promise.all([
       api.get<Job>(`/jobs/${id}`),
-      api.get<{ hasApplied: boolean }>(`/applications/jobs/${id}/check`).catch(() => ({ data: { hasApplied: false } }))
+      api.get<{ hasApplied: boolean }>(`/applications/jobs/${id}/check`).catch(() => ({ data: { hasApplied: false } })),
+      api.get<{ resumes: ResumeListItem[] }>('/users/me/resumes').catch(() => ({ data: { resumes: [] } })),
     ])
-      .then(([jobRes, checkRes]) => {
+      .then(([jobRes, checkRes, resumeRes]) => {
         setJob(jobRes.data);
         setHasApplied(checkRes.data.hasApplied);
+        const availableResumes = Array.isArray(resumeRes.data.resumes) ? resumeRes.data.resumes : [];
+        setResumes(availableResumes);
+        const defaultResume = availableResumes.find((resume) => resume.is_default);
+        if (defaultResume) {
+          setSelectedResumeId(defaultResume.id);
+        } else if (availableResumes.length > 0) {
+          setSelectedResumeId(availableResumes[0].id);
+        }
       })
       .catch(() => router.push(ROUTES.dashboard))
       .finally(() => setLoading(false));
@@ -94,19 +201,22 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const fetchInsights = async () => {
       setLoadingInsights(true);
       try {
-        const meRes = await api.get<any>('/users/me');
+        const meRes = await api.get<UserProfilePayload>('/users/me');
         const userSkills = meRes.data.profile?.skills || [];
-        const bio = meRes.data.profile?.bio || '';
-        
-        setResumeText(`${bio}\\n\\nSkills: ${userSkills.join(', ')}`);
 
         if (job.skills.length > 0) {
-          const matchRes = await api.post<any>('/jobs/match', { userSkills, jobSkills: job.skills });
+          const matchRes = await api.post<MatchResponse>('/jobs/match', {
+            userSkills,
+            jobSkills: job.skills,
+          });
           setMatchScore(matchRes.data.matchScore);
           setMatchedSkills(matchRes.data.matchedSkills);
           setMissingSkills(matchRes.data.missingSkills);
 
-          const gapRes = await api.post<any>('/jobs/skill-gap', { userSkills, requiredSkills: job.skills });
+          const gapRes = await api.post<SkillGapResponse>('/jobs/skill-gap', {
+            userSkills,
+            requiredSkills: job.skills,
+          });
           setSkillSuggestions(gapRes.data.suggestions);
         }
       } catch (err) {
@@ -119,23 +229,68 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     fetchInsights();
   }, [job, user?.role]);
 
+  const dynamicQuestions: ApplicationQuestion[] = Array.isArray(job?.application_questions)
+    ? job.application_questions
+    : [];
+
+  const sectionedQuestions = dynamicQuestions.reduce<Record<string, ApplicationQuestion[]>>((acc, question) => {
+    const section = (question.section || 'Additional Questions').trim();
+    if (!acc[section]) {
+      acc[section] = [];
+    }
+    acc[section].push(question);
+    return acc;
+  }, {});
+
   const handleApply = async () => {
+    for (const question of dynamicQuestions) {
+      if (!question.required) continue;
+      const answer = (questionAnswers[question.id] || '').trim();
+      if (!answer) {
+        toast.error(`Please answer: ${question.label}`);
+        return;
+      }
+    }
+
     setApplying(true);
     try {
-      await api.post<{ creditsRemaining?: number }>(`/applications/jobs/${id}`, { cover_letter: coverLetter });
+      await api.post<{ creditsRemaining?: number }>(`/applications/jobs/${id}`, {
+        cover_letter: coverLetter,
+        resume_id: selectedResumeId || undefined,
+        answers: dynamicQuestions
+          .map((question) => ({
+            question_id: question.id,
+            answer: (questionAnswers[question.id] || '').trim(),
+          }))
+          .filter((answer) => answer.answer.length > 0),
+      });
       setHasApplied(true);
       setShowModal(false);
       setShowSuccessOverlay(true);
-    } catch (err: any) {
-      if (err instanceof ApiError && err.status === 402) {
-        setCreditError({
-          required: err.data?.requiredCredits || 1,
-          available: err.data?.availableCredits || 0
-        });
-        setShowModal(false);
-        setShowCreditsModal(true);
+      setCreditError(null);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        const creditData = err.data as
+          | { code?: string; required?: number; available?: number; requiredCredits?: number; availableCredits?: number }
+          | undefined;
+
+        const isInsufficient =
+          err.status === 402 ||
+          creditData?.code === 'INSUFFICIENT_CREDITS' ||
+          err.code === 'INSUFFICIENT_CREDITS';
+
+        if (isInsufficient) {
+          setCreditError({
+            required: creditData?.required ?? creditData?.requiredCredits ?? 1,
+            available: creditData?.available ?? creditData?.availableCredits ?? 0,
+          });
+          setShowModal(false);
+          setShowCreditsModal(true);
+        } else {
+          toast.error(err.message || 'Failed to apply');
+        }
       } else {
-        toast.error(err instanceof ApiError ? err.message : 'Failed to apply');
+        toast.error('Failed to apply');
       }
     } finally {
       setApplying(false);
@@ -158,11 +313,20 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     }
   };
 
+  const scrollToApplySection = () => {
+    const node = document.getElementById('apply-now-section');
+    if (node) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+
+
   const handleGenerateRoadmap = async () => {
     try {
       setGeneratingRoadmap(true);
       setShowRoadmapModal(true);
-      const res = await api.post<any>('/roadmaps/generate', { missingSkills });
+      const res = await api.post<RoadmapResponse>('/roadmaps/generate', { missingSkills });
       setRoadmap(res.data.roadmap);
     } catch (err) {
       toast.error('Failed to generate roadmap');
@@ -172,16 +336,24 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     }
   };
 
+  const retryApplyAction = () => {
+    setShowCreditsModal(false);
+    scrollToApplySection();
+  };
+
   const handleScoreAts = async () => {
     try {
       setScoringAts(true);
       const token = localStorage.getItem('hp_access');
-      let data;
+      let data: AtsScoreReport;
 
       if (resumeFile) {
         const formData = new FormData();
         formData.append('file', resumeFile);
         formData.append('jobDescription', job?.description || '');
+        if (selectedResumeId) {
+          formData.append('resume_id', selectedResumeId);
+        }
         
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/users/me/resume-score`, {
           method: 'POST',
@@ -190,13 +362,25 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         });
         
         if (!res.ok) throw new Error('ATS scoring failed');
-        const json = await res.json();
+        const json = (await res.json()) as AtsScoreResponse;
         data = json.data;
       } else {
-        const res = await api.post<any>('/users/me/resume-score', { 
-          resumeText, 
-          jobDescription: job?.description 
-        });
+        const customResumeText = resumeText.trim();
+        const payload: { jobDescription: string; resumeText?: string; resume_id?: string } = {
+          jobDescription: job?.description || '',
+        };
+
+        if (customResumeText.length > 0) {
+          payload.resumeText = customResumeText;
+        } else if (selectedResumeId) {
+          payload.resume_id = selectedResumeId;
+        } else {
+          toast.error('Please select a resume or paste resume text first');
+          setScoringAts(false);
+          return;
+        }
+
+        const res = await api.post<AtsScoreReport>('/users/me/resume-score', payload);
         data = res.data;
       }
       setAtsScore(data);
@@ -211,224 +395,296 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   if (loading) return <div className="flex items-center justify-center py-32"><Spinner size="lg" /></div>;
   if (!job) return null;
 
+  const companyName = getCompanyName(job);
+  const jobRole = deriveJobRole(job.title);
+
   return (
-    <div className="max-w-[1200px] mx-auto">
-      {/* Header with breadcrumb and back button */}
-      <div className="mb-6 flex items-center gap-3">
+    <div className="mx-auto max-w-[1180px] rounded-[30px] bg-[#edf3df] px-4 pb-8 pt-4 md:px-8">
+      <div className="mb-5 flex items-center justify-between gap-4">
         <button
           onClick={() => router.back()}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-black text-white"
         >
-          <FaArrowLeft className="w-5 h-5 text-gray-600" />
+          <FaArrowLeft className="h-4 w-4" />
         </button>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Link href={ROUTES.jobs} className="hover:text-[#1a1a1a] transition-colors">Jobs</Link>
-          <span>/</span>
-          <span className="text-gray-900 font-medium">{job.title}</span>
-        </div>
+        <h1 className="text-center text-3xl font-black tracking-tight text-[#111] md:text-[42px]">{job.title}</h1>
+        <button
+          onClick={scrollToApplySection}
+          disabled={hasApplied}
+          className={`rounded-full px-7 py-2.5 text-sm font-extrabold transition ${hasApplied
+            ? 'bg-gray-300 text-gray-700'
+            : 'bg-[#bbf52f] text-black hover:brightness-95'}`}
+        >
+          {hasApplied ? 'Already Applied' : 'Apply Now'}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Hero Section */}
-          <div className="bg-gradient-to-br from-[#1a1a1a] to-[#2d2d2d] rounded-3xl p-8 text-white">
-            <div className="flex items-start justify-between gap-4 mb-6">
-              <div>
-                <h1 className="text-4xl font-extrabold mb-3 leading-tight">{job.title}</h1>
-                {job.company_name && (
-                  <p className="text-xl text-gray-300 font-semibold">{job.company_name}</p>
-                )}
-              </div>
+      <div className="job-mock-scroll rounded-[24px] bg-[#e8e7e2] p-4 shadow-[0_8px_30px_rgba(0,0,0,0.06)] md:max-h-[calc(100vh-130px)] md:overflow-y-scroll md:pr-2 md:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-[20px] bg-[#f3f3f0] p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#2a3f98] text-lg font-black text-white">
+              {companyName.slice(0, 2).toUpperCase()}
             </div>
-
-            <div className="flex flex-wrap gap-4 text-sm text-gray-200">
-              {job.location && (
-                <div className="flex items-center gap-2">
-                  <FaMapPin className="w-4 h-4" />
-                  <span>{job.location}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <FaBriefcase className="w-4 h-4" />
-                <span className="capitalize">{job.type}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <FaCalendar className="w-4 h-4" />
-                <span>Posted {formatDate(job.created_at)}</span>
-              </div>
-            </div>
-
-            {job.is_boosted && (
-              <div className="mt-4 inline-flex items-center gap-2 bg-lime-400/20 text-lime-300 px-4 py-2 rounded-xl text-sm font-semibold">
-                ⚡ Actively Hiring
-              </div>
-            )}
-          </div>
-
-          {/* Salary Section */}
-          {(job.salary_min || job.salary_max) && (
-            <div className="bg-white border border-[#e8e4dc] rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <FaIndianRupeeSign className="w-5 h-5 text-[#1a1a1a]" />
-                <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600">Expected Salary</h2>
-              </div>
-              <p className="text-3xl font-extrabold text-[#1a1a1a]">{formatSalary(job.salary_min, job.salary_max)}</p>
-              <p className="text-xs text-gray-500 mt-2">/month</p>
-            </div>
-          )}
-
-          {/* Job Description */}
-          <div className="bg-white border border-[#e8e4dc] rounded-2xl p-8">
-            <h2 className="text-2xl font-extrabold text-[#1a1a1a] mb-4">About the Role</h2>
-            <div className="prose prose-sm max-w-none text-gray-700 leading-8 whitespace-pre-wrap">
-              {job.description}
+            <div>
+              <p className="text-3xl font-black tracking-tight text-[#121212]">{companyName}</p>
+              <p className="text-lg text-[#333] underline">{companyName.toLowerCase().replace(/\s+/g, '')}.studio</p>
             </div>
           </div>
-
-          {/* Required Skills */}
-          {job.skills.length > 0 && (
-            <div className="bg-white border border-[#e8e4dc] rounded-2xl p-8">
-              <h2 className="text-2xl font-extrabold text-[#1a1a1a] mb-6">Required Skills</h2>
-              <div className="flex flex-wrap gap-3">
-                {job.skills.map((skill) => (
-                  <div
-                    key={skill}
-                    className="bg-[#1a1a1a] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#2d2d2d] transition-colors"
-                  >
-                    {skill}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <button
+            onClick={handleSaveJob}
+            className={`inline-flex h-12 w-12 items-center justify-center rounded-xl border-2 ${isSaved ? 'border-[#bbf52f] bg-black text-[#bbf52f]' : 'border-black bg-white text-black'}`}
+            aria-label="Save job"
+          >
+            <FaBookmark className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-24 space-y-4">
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              <button
-                onClick={() => setShowModal(true)}
-                disabled={hasApplied}
-                className={`w-full py-3 px-4 rounded-2xl font-bold text-base transition-all duration-200 ${hasApplied
-                    ? 'bg-gray-200 text-gray-600 cursor-not-allowed'
-                    : 'bg-lime-400 text-[#1a1a1a] hover:bg-lime-500 hover:shadow-lg active:scale-95'
-                  }`}
-              >
-                {hasApplied ? '✓ Already Applied' : 'Apply Now'}
-              </button>
+        <div className="mb-5 grid grid-cols-2 gap-x-3 gap-y-3 rounded-[18px] bg-[#fbfbfb] px-3 py-4 text-center md:grid-cols-6">
+          <div>
+            <p className="text-[10px] font-bold uppercase text-[#666]">Job Role</p>
+            <p className="text-sm font-bold text-[#121212]">{jobRole}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-[#666]">Location</p>
+            <p className="text-sm font-bold text-[#121212]">{job.location || 'Remote'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-[#666]">Start Date</p>
+            <p className="text-sm font-bold text-[#121212]">Immediately</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-[#666]">Duration</p>
+            <p className="text-sm font-bold text-[#121212]">6 Months</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-[#666]">Stipend</p>
+            <p className="text-sm font-bold text-[#121212]">{formatSalary(job.salary_min, job.salary_max)} /mo</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-[#666]">Apply By</p>
+            <p className="text-sm font-bold text-[#121212]">{formatDate(job.created_at)}</p>
+          </div>
+        </div>
 
-              <button
-                onClick={handleSaveJob}
-                className={`w-full py-3 px-4 rounded-2xl font-bold text-base transition-all duration-200 flex items-center justify-center gap-2 ${isSaved
-                    ? 'bg-[#1a1a1a] text-lime-400 border-2 border-lime-400'
-                    : 'bg-white border-2 border-[#1a1a1a] text-[#1a1a1a] hover:bg-gray-50'
-                  }`}
-              >
-                <FaBookmark className="w-4 h-4" />
-                {isSaved ? 'Saved' : 'Save Job'}
-              </button>
-            </div>
-
-            {/* AI Match Insights */}
-            {user?.role === 'applicant' && job.skills.length > 0 && (
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <FaRobot className="w-5 h-5 text-indigo-600" />
-                  <h2 className="text-lg font-extrabold text-indigo-900">AI Match Insights</h2>
-                </div>
-
-                {loadingInsights ? (
-                  <div className="flex justify-center py-6"><Spinner size="sm" /></div>
-                ) : matchScore !== null ? (
-                  <div className="space-y-5">
-                    {/* Circular Score */}
-                    <div className="flex items-center gap-4">
-                      <div className="relative w-16 h-16 flex items-center justify-center shrink-0">
-                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                          <path className="text-indigo-200" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
-                          <path className={`${matchScore >= 80 ? 'text-green-500' : matchScore >= 50 ? 'text-yellow-500' : 'text-orange-500'}`} strokeDasharray={`${matchScore}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
-                        </svg>
-                        <span className="absolute text-sm font-bold text-indigo-900">{matchScore}%</span>
-                      </div>
-                      <div>
-                        <p className="font-bold text-indigo-950">Match Score</p>
-                        <p className="text-xs text-indigo-700 leading-relaxed">Based on your profile skills vs job requirements.</p>
-                      </div>
-                    </div>
-
-                    {/* Missing Skills */}
-                    {missingSkills.length > 0 ? (
-                      <div className="space-y-3">
-                        <h3 className="text-sm font-bold text-indigo-900">Skill Gaps Detected:</h3>
-                        <div className="space-y-2">
-                          {missingSkills.map(skill => (
-                            <div key={skill} className="bg-white rounded-xl p-3 shadow-sm border border-indigo-50">
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="w-2 h-2 rounded-full bg-orange-400"></div>
-                                <span className="text-sm font-bold text-gray-800">{skill}</span>
-                              </div>
-                              {skillSuggestions[skill] && (
-                                <p className="text-xs text-gray-600 pl-4">{skillSuggestions[skill]}</p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        
-                        <button
-                          onClick={handleGenerateRoadmap}
-                          className="w-full mt-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-md"
-                        >
-                          <FaRoute /> Generate Learning Roadmap
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="bg-green-100 text-green-800 p-3 rounded-xl text-sm font-bold text-center border border-green-200">
-                        🌟 You have 100% of the required skills!
-                      </div>
-                    )}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="space-y-3">
+            {[
+              { key: 'description', title: 'Job Description', content: job.description },
+              {
+                key: 'eligibility',
+                title: 'Eligibility',
+                content: job.skills.length ? `Preferred skills: ${job.skills.join(', ')}` : 'Open to applicants with relevant experience.',
+              },
+              {
+                key: 'requirements',
+                title: 'Other Requirements',
+                content: dynamicQuestions.length > 0
+                  ? `You need to answer ${dynamicQuestions.length} additional question${dynamicQuestions.length > 1 ? 's' : ''} while applying.`
+                  : 'No additional mandatory requirements listed by recruiter.',
+              },
+              {
+                key: 'perks',
+                title: 'Perks',
+                content: `Hands-on projects, mentorship, and stipend range ${formatSalary(job.salary_min, job.salary_max)}.`,
+              },
+              {
+                key: 'openings',
+                title: 'Number of Openings',
+                content: '1 opening',
+              },
+              {
+                key: 'about',
+                title: `About ${companyName}`,
+                content: `${companyName} is hiring for a ${job.type.replace('-', ' ')} role in ${job.location || 'multiple locations'}.`,
+              },
+            ].map((section) => (
+              <div key={section.key} className="overflow-hidden rounded-2xl border border-[#dcdcd4] bg-[#f8f8f8]">
+                <button
+                  onClick={() =>
+                    setOpenSections((prev) => ({ ...prev, [section.key]: !prev[section.key] }))
+                  }
+                  className="flex w-full items-center justify-between px-5 py-4 text-left"
+                >
+                  <span className="text-[30px] font-bold tracking-tight text-[#111] md:text-[34px]">{section.title}</span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white">
+                    {openSections[section.key] ? <FaChevronUp className="h-3.5 w-3.5" /> : <FaChevronDown className="h-3.5 w-3.5" />}
+                  </span>
+                </button>
+                {openSections[section.key] && (
+                  <div className="border-t border-[#dfdfd9] px-5 pb-4 pt-3">
+                    <p className="whitespace-pre-wrap text-sm leading-7 text-[#252525]">{section.content}</p>
                   </div>
-                ) : (
-                  <p className="text-xs text-indigo-500 text-center py-2">Could not load insights.</p>
                 )}
               </div>
+            ))}
+
+            <div id="apply-now-section" className="mt-2 rounded-2xl border border-[#caf36a] bg-[#f8f8f8] px-4 py-5 md:px-6">
+              <h2 className="mb-3 text-4xl font-black tracking-tight text-[#98cf2d]">Apply Now</h2>
+
+              <div className="mb-5">
+                <h3 className="text-2xl font-bold text-[#1c1c1c]">Resume</h3>
+                <p className="mb-3 text-sm text-[#444]">Your current resume will be submitted along with this application.</p>
+                {resumes.length > 0 ? (
+                  <select
+                    className="max-w-[250px] rounded-xl border border-black bg-black px-3 py-2 text-sm font-semibold text-white"
+                    value={selectedResumeId}
+                    onChange={(e) => {
+                      setSelectedResumeId(e.target.value);
+                      setResumeFile(null);
+                      setAtsScore(null);
+                    }}
+                  >
+                    {resumes.map((resume) => (
+                      <option key={resume.id} value={resume.id}>
+                        {resume.file_name}{resume.is_default ? ' (Default)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="inline-block rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    No resume found. Please upload one from profile.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-2xl font-bold text-[#1c1c1c]">Additional Questions</h3>
+                {dynamicQuestions.length > 0 ? (
+                  Object.entries(sectionedQuestions).map(([section, questions]) => (
+                    <div key={section} className="space-y-2">
+                      <p className="text-sm font-bold text-[#2d2d2d]">{section}</p>
+                      {questions.map((question) => (
+                        <div key={question.id} className="space-y-1">
+                          <label className="text-sm text-[#1f1f1f]">
+                            {question.label} {question.required ? <span className="text-red-500">*</span> : null}
+                          </label>
+
+                          {(question.type === 'text' || question.type === 'link') && (
+                            <input
+                              type={question.type === 'link' ? 'url' : 'text'}
+                              className="w-full rounded-xl border border-black bg-black px-4 py-3 text-sm text-white placeholder:text-gray-300"
+                              placeholder={question.placeholder || (question.type === 'link' ? 'Add Link' : 'Enter answer')}
+                              value={questionAnswers[question.id] || ''}
+                              onChange={(e) =>
+                                setQuestionAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))
+                              }
+                            />
+                          )}
+
+                          {question.type === 'textarea' && (
+                            <textarea
+                              className="w-full rounded-xl border border-black bg-black px-4 py-3 text-sm text-white placeholder:text-gray-300"
+                              rows={4}
+                              placeholder={question.placeholder || 'Enter answer'}
+                              value={questionAnswers[question.id] || ''}
+                              onChange={(e) =>
+                                setQuestionAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))
+                              }
+                            />
+                          )}
+
+                          {(question.type === 'select' || question.type === 'rating') && (
+                            <select
+                              className="w-full max-w-[220px] rounded-xl border border-black bg-black px-4 py-3 text-sm text-white"
+                              value={questionAnswers[question.id] || ''}
+                              onChange={(e) =>
+                                setQuestionAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))
+                              }
+                            >
+                              <option value="">Select Range</option>
+                              {(question.options || []).map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-[#444]">No additional recruiter questions for this role.</p>
+                )}
+              </div>
+
+              <div className="mt-4">
+                <label className="mb-1 block text-sm font-bold text-[#252525]">Cover Letter (optional)</label>
+                <textarea
+                  className="w-full rounded-xl border border-[#cfd7c2] bg-white px-4 py-3 text-sm"
+                  rows={4}
+                  value={coverLetter}
+                  onChange={(e) => setCoverLetter(e.target.value)}
+                  placeholder="Tell the recruiter why you are a strong fit"
+                />
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  onClick={handleApply}
+                  disabled={applying || hasApplied}
+                  className="rounded-full bg-[#bbf52f] px-7 py-2.5 text-sm font-extrabold text-black disabled:bg-gray-300"
+                >
+                  {hasApplied ? 'Already Applied' : applying ? 'Submitting...' : 'Submit Application'}
+                </button>
+                {!hasApplied && (
+                  <button
+                    onClick={scrollToApplySection}
+                    className="rounded-full border border-black px-7 py-2.5 text-sm font-bold text-black"
+                  >
+                    Review Form
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="h-fit rounded-3xl bg-black p-5 text-white lg:sticky lg:top-24">
+            {user?.role === 'applicant' && job.skills.length > 0 && (
+              <>
+                <div className="mb-3 text-center">
+                  <p className="text-[54px] font-black leading-none text-[#bbf52f]">
+                    {loadingInsights ? '--' : matchScore !== null ? `${matchScore}%` : '80%'}
+                  </p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#bbf52f]">Skill Matching</p>
+                </div>
+                <div className="mb-5 h-5 rounded-full bg-[#4a4a4a]">
+                  <div
+                    className="h-full rounded-full bg-[#bbf52f]"
+                    style={{ width: `${loadingInsights ? 0 : matchScore ?? 80}%` }}
+                  />
+                </div>
+              </>
             )}
 
-            {/* Info Card */}
-            <div className="bg-white border border-[#e8e4dc] rounded-2xl p-6 space-y-5">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Job Type</p>
-                <p className="text-lg font-bold text-[#1a1a1a] capitalize">{job.type}</p>
-              </div>
-
-              {job.location && (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Location</p>
-                  <p className="text-lg font-bold text-[#1a1a1a]">{job.location}</p>
-                </div>
-              )}
-
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Posted</p>
-                <p className="text-lg font-bold text-[#1a1a1a]">{formatDate(job.created_at)}</p>
-              </div>
-
-              {job.views_count !== undefined && (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Applied By</p>
-                  <p className="text-lg font-bold text-[#1a1a1a]">{job.views_count}+ Applicants</p>
-                </div>
-              )}
+            <h3 className="mb-3 text-3xl font-black">Skills</h3>
+            <div className="flex flex-wrap gap-2">
+              {job.skills.map((skill) => (
+                <span
+                  key={skill}
+                  className="rounded-full border border-[#9acd32] px-3 py-1 text-sm text-[#bbf52f]"
+                >
+                  {skill}
+                </span>
+              ))}
             </div>
 
-            {/* Credit Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-              <p className="text-sm text-blue-900">
-                <span className="font-bold">1 Credit</span> will be deducted when you apply
-              </p>
-            </div>
+            {user?.role === 'applicant' && missingSkills.length > 0 && (
+              <div className="mt-5 space-y-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-300">Missing Skills</p>
+                <div className="flex flex-wrap gap-2">
+                  {missingSkills.map((skill) => (
+                    <span key={skill} className="rounded-full border border-white px-3 py-1 text-xs text-white">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  onClick={handleGenerateRoadmap}
+                  className="mt-2 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-black"
+                >
+                  <FaRoute className="h-3 w-3" /> Generate Roadmap
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -448,7 +704,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             </div>
           ) : roadmap ? (
             <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
-              {roadmap.map((week: any, idx: number) => (
+              {roadmap.map((week, idx: number) => (
                 <div key={idx} className="relative pl-6 pb-4 border-l-2 border-indigo-200 last:border-0 last:pb-0">
                   <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-600 border-2 border-white"></div>
                   <h3 className="font-bold text-gray-900 mb-1">Week {week.week}: {week.topic}</h3>
@@ -480,7 +736,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           <div>
             <h3 className="font-bold text-[#1a1a1a] mb-1">{job.title}</h3>
             <p className="text-sm text-gray-600">
-              {job.company_name || 'Company'}
+              {companyName}
               {job.location ? ` • ${job.location}` : ''}
             </p>
           </div>
@@ -491,6 +747,39 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             </p>
           </div>
 
+          <div className="rounded-2xl border border-gray-200 p-4 space-y-3">
+            <div>
+              <p className="text-sm font-bold text-gray-900">Choose Resume</p>
+              <p className="text-xs text-gray-500">Your selected resume is attached to this application.</p>
+            </div>
+            {resumes.length === 0 ? (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                No resume found. You can still apply, but uploading a resume is strongly recommended.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {resumes.map((resume) => (
+                  <label key={resume.id} className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 cursor-pointer hover:bg-gray-50">
+                    <span className="text-sm text-gray-800">{resume.file_name}</span>
+                    <span className="inline-flex items-center gap-2">
+                      {resume.is_default && <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Default</span>}
+                      <input
+                        type="radio"
+                        name="resume_id"
+                        checked={selectedResumeId === resume.id}
+                        onChange={() => {
+                          setSelectedResumeId(resume.id);
+                          setResumeFile(null);
+                          setAtsScore(null);
+                        }}
+                      />
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* ATS Analyzer */}
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
@@ -499,7 +788,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               </h4>
               <button 
                 onClick={handleScoreAts}
-                disabled={scoringAts || !resumeText.trim()}
+                disabled={scoringAts || (!resumeText.trim() && !resumeFile && !selectedResumeId)}
                 className="px-3 py-1.5 bg-white border border-gray-300 shadow-sm rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 {scoringAts ? 'Analyzing...' : 'Analyze Fit'}
@@ -589,7 +878,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
                 {/* AI Explanation Explanation */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-3 rounded-lg text-xs text-blue-900 leading-relaxed indent-2 italic font-medium">
-                  "{atsScore.explanation}"
+                  &quot;{atsScore.explanation}&quot;
                 </div>
 
                 {/* Feedback Areas */}
@@ -655,6 +944,64 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             )}
           </div>
 
+          {dynamicQuestions.length > 0 ? (
+            Object.entries(sectionedQuestions).map(([section, questions]) => (
+              <div key={section} className="rounded-2xl border border-gray-200 p-4 space-y-3">
+                <h4 className="text-sm font-bold text-gray-900">{section}</h4>
+                {questions.map((question) => (
+                  <div key={question.id} className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">
+                      {question.label} {question.required ? <span className="text-red-500">*</span> : null}
+                    </label>
+
+                    {(question.type === 'text' || question.type === 'link') && (
+                      <input
+                        type={question.type === 'link' ? 'url' : 'text'}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                        placeholder={question.placeholder || (question.type === 'link' ? 'https://...' : 'Enter answer')}
+                        value={questionAnswers[question.id] || ''}
+                        onChange={(e) =>
+                          setQuestionAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))
+                        }
+                      />
+                    )}
+
+                    {question.type === 'textarea' && (
+                      <textarea
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                        rows={4}
+                        placeholder={question.placeholder || 'Enter answer'}
+                        value={questionAnswers[question.id] || ''}
+                        onChange={(e) =>
+                          setQuestionAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))
+                        }
+                      />
+                    )}
+
+                    {(question.type === 'select' || question.type === 'rating') && (
+                      <select
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                        value={questionAnswers[question.id] || ''}
+                        onChange={(e) =>
+                          setQuestionAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))
+                        }
+                      >
+                        <option value="">Select an option</option>
+                        {(question.options || []).map((option) => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))
+          ) : (
+            <div className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+              No additional recruiter questions for this role. You can apply directly.
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">
               Cover Letter <span className="text-gray-400 font-normal">(optional)</span>
@@ -689,31 +1036,14 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
       {/* Credits Insufficient Modal */}
       <Modal isOpen={showCreditsModal} onClose={() => setShowCreditsModal(false)} title="">
-        <div className="space-y-5 text-center py-6">
-          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">
-            ⚠️
-          </div>
-          <div>
-            <h3 className="text-xl font-extrabold text-[#1a1a1a] mb-2">Insufficient Credits</h3>
-            <p className="text-gray-600">
-              This application requires <span className="font-bold">{creditError?.required || 1} credit</span>, but you have <span className="font-bold">{creditError?.available || 0}</span> available.
-            </p>
-          </div>
-          <div className="flex gap-3 pt-3">
-            <button
-              onClick={() => router.push(ROUTES.credits)}
-              className="flex-1 bg-lime-400 text-[#1a1a1a] font-bold py-3 px-4 rounded-xl hover:bg-lime-500 transition-colors active:scale-95"
-            >
-              Buy Credits
-            </button>
-            <button
-              onClick={() => setShowCreditsModal(false)}
-              className="flex-1 bg-gray-100 text-[#1a1a1a] font-bold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        {creditError && (
+          <InsufficientCreditsCard
+            creditError={creditError}
+            onViewCredits={() => router.push(ROUTES.credits)}
+            onRetry={retryApplyAction}
+            retryDisabled={applying}
+          />
+        )}
       </Modal>
 
       {/* Success Overlay */}
@@ -729,7 +1059,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 Application Submitted! 🎉
               </h2>
               <p className="text-gray-600 leading-relaxed">
-                Your application for <span className="font-bold">{job.title}</span> at <span className="font-bold">{job.company_name}</span> has been sent. The recruiter will review and get back to you soon.
+                Your application for <span className="font-bold">{job.title}</span> at <span className="font-bold">{companyName}</span> has been sent. The recruiter will review and get back to you soon.
               </p>
             </div>
 
@@ -759,6 +1089,34 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        .job-mock-scroll {
+          scrollbar-gutter: stable;
+          scrollbar-width: auto;
+          scrollbar-color: #d8ddd2 #000000;
+        }
+
+        .job-mock-scroll::-webkit-scrollbar {
+          width: 12px;
+        }
+
+        .job-mock-scroll::-webkit-scrollbar-track {
+          background: #000000;
+          border-radius: 9999px;
+        }
+
+        .job-mock-scroll::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #f1f1ed 0%, #d7ddd0 100%);
+          border-radius: 9999px;
+          border: 2px solid #000000;
+          min-height: 52px;
+        }
+
+        .job-mock-scroll::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, #f7f7f3 0%, #dfe4d9 100%);
+        }
+      `}</style>
     </div>
   );
 }

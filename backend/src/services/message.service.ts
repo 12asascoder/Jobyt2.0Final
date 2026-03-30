@@ -1,6 +1,7 @@
 import { MessageModel } from '../models/message.model';
 import { NotificationModel } from '../models/notification.model';
 import { emitMessage, emitNotification } from '../config/socket';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 
 export const MessageService = {
   async getConversations(userId: string) {
@@ -11,11 +12,40 @@ export const MessageService = {
     return MessageModel.findOrCreateConversation(recruiterId, applicantId, jobId);
   },
 
-  async getMessages(conversationId: string, page: number, limit: number) {
+  async getConversationForUser(conversationId: string, userId: string) {
+    const conversation = await MessageModel.getConversationById(conversationId);
+    if (!conversation) {
+      throw new NotFoundError('Conversation not found', 'CONVERSATION_NOT_FOUND');
+    }
+
+    const isParticipant =
+      conversation.recruiter_id === userId || conversation.applicant_id === userId;
+
+    if (!isParticipant) {
+      throw new ForbiddenError('You are not part of this conversation', 'NOT_CONVERSATION_MEMBER');
+    }
+
+    return conversation;
+  },
+
+  async getMessages(conversationId: string, userId: string, page: number, limit: number) {
+    await MessageService.getConversationForUser(conversationId, userId);
     return MessageModel.getMessages(conversationId, page, limit);
   },
 
-  async sendMessage(conversationId: string, senderId: string, body: string, recipientId: string) {
+  async sendMessage(conversationId: string, senderId: string, content: string) {
+    const conversation = await MessageService.getConversationForUser(conversationId, senderId);
+    const body = String(content || '').trim();
+
+    if (!body) {
+      throw new BadRequestError('Message content is required', 'MESSAGE_REQUIRED');
+    }
+
+    const recipientId =
+      senderId === conversation.recruiter_id
+        ? conversation.applicant_id
+        : conversation.recruiter_id;
+
     const message = await MessageModel.createMessage({
       conversation_id: conversationId,
       sender_id: senderId,

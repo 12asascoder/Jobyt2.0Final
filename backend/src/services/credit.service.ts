@@ -1,6 +1,7 @@
 import pool from '../config/database';
 import { PoolClient } from 'pg';
 import { CreditModel } from '../models/credit.model';
+import { CreditStatus } from '../models/credit.model';
 
 const REGISTRATION_CREDITS = parseInt(process.env.REGISTRATION_CREDIT_AMOUNT || '150');
 const JOB_POST_COST = parseInt(process.env.JOB_POSTING_CREDIT_COST || '10');
@@ -17,6 +18,7 @@ async function addCreditsTx(
   amount: number,
   description: string,
   referenceId?: string,
+  status: CreditStatus = 'success',
 ): Promise<void> {
   if (amount <= 0) throw new Error('Amount must be greater than 0');
   if (!description || description.trim() === '') throw new Error('Ledger description required');
@@ -31,6 +33,7 @@ async function addCreditsTx(
     user_id: userId,
     type: 'credit',
     amount,
+    status,
     balance_after: rows[0].credit_balance,
     description,
     reference_id: referenceId,
@@ -48,6 +51,7 @@ async function deductCreditsTx(
   amount: number,
   description: string,
   referenceId?: string,
+  status: CreditStatus = 'success',
 ): Promise<DeductCreditsResult> {
   if (amount <= 0) throw new Error('Amount must be greater than 0');
   if (!description || description.trim() === '') throw new Error('Ledger description required');
@@ -70,6 +74,7 @@ async function deductCreditsTx(
     user_id: userId,
     type: 'debit',
     amount,
+    status,
     balance_after: newBalance,
     description,
     reference_id: referenceId,
@@ -84,6 +89,7 @@ export const CreditService = {
     description: string,
     referenceId?: string,
     client?: PoolClient,
+    status: CreditStatus = 'success',
   ): Promise<void> {
     console.log(`[CREDIT] credit ${amount} for user ${userId}`);
     const db = client ?? (await pool.connect());
@@ -91,7 +97,7 @@ export const CreditService = {
     try {
       if (shouldManageTx) await db.query('BEGIN');
 
-      await addCreditsTx(db, userId, amount, description, referenceId);
+      await addCreditsTx(db, userId, amount, description, referenceId, status);
 
       if (shouldManageTx) await db.query('COMMIT');
     } catch (err) {
@@ -108,6 +114,7 @@ export const CreditService = {
     description: string,
     referenceId?: string,
     client?: PoolClient,
+    status: CreditStatus = 'success',
   ): Promise<DeductCreditsResult> {
     console.log(`[CREDIT] debit ${amount} for user ${userId}`);
     const db = client ?? (await pool.connect());
@@ -115,7 +122,7 @@ export const CreditService = {
     try {
       if (shouldManageTx) await db.query('BEGIN');
 
-      const result = await deductCreditsTx(db, userId, amount, description, referenceId);
+      const result = await deductCreditsTx(db, userId, amount, description, referenceId, status);
 
       if (shouldManageTx) await db.query('COMMIT');
       return result;

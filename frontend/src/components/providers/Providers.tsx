@@ -3,13 +3,23 @@
 import { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '@/store/auth.store';
+import { Spinner } from '@/components/ui';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const initialize = useAuthStore((s) => s.initialize);
+  const loading = useAuthStore((s) => s.loading);
 
   useEffect(() => {
-    initialize();
+    void initialize();
   }, [initialize]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <>

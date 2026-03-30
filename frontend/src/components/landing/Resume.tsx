@@ -11,7 +11,7 @@ export function Resume() {
                         Got no Resume?
                     </h3>
                     <h2 className="font-display text-3xl font-extrabold text-slate-900 sm:text-4xl md:text-[2.6rem] lg:text-5xl tracking-tight">
-                        We've got you covered!
+                        We&apos;ve got you covered!
                     </h2>
                 </div>
 
@@ -55,7 +55,7 @@ export function Resume() {
                     <div className="flex flex-col items-start mx-auto lg:mx-0 text-left w-full pl-2 sm:pl-4 lg:pl-8">
                         
                         <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed mb-8 max-w-[400px]">
-                            Let us help you create one or improve the one you've got.
+                            Let us help you create one or improve the one you&apos;ve got.
                         </p>
 
                         <ul className="flex flex-col gap-5 text-base sm:text-lg text-slate-800 font-semibold w-full mb-10 pl-0">

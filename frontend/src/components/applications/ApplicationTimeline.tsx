@@ -17,18 +17,29 @@ export const ApplicationTimeline = ({ applicationId }: ApplicationTimelineProps)
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    api.get<PipelineEvent[]>(`/applications/${applicationId}/events`)
-      .then((res) => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        if (active) setLoading(true);
+        const res = await api.get<PipelineEvent[]>(`/applications/${applicationId}/events`);
+        if (!active) return;
         setEvents(res.data);
         setError(null);
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to load timeline events');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      } catch (err) {
+        if (!active) return;
+        const message = err instanceof Error ? err.message : 'Failed to load timeline events';
+        setError(message);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void load();
+
+    return () => {
+      active = false;
+    };
   }, [applicationId]);
 
   if (loading) {
@@ -45,7 +56,7 @@ export const ApplicationTimeline = ({ applicationId }: ApplicationTimelineProps)
 
   return (
     <div className="relative border-l border-gray-200 ml-3 space-y-6 pb-4">
-      {events.map((event, idx) => (
+      {events.map((event) => (
         <div key={event.id} className="relative pl-6">
           {/* Timeline Dot */}
           <div className="absolute -left-1.5 top-1 h-3 w-3 rounded-full border-2 border-white bg-blue-500 shadow-sm" />

@@ -91,7 +91,11 @@ export const UserController = {
     try {
       if (!req.file) throw new Error('No file uploaded');
       const { parseResume } = await import('../utils/resumeParser');
-      const parsed = await parseResume(req.file.buffer);
+       const parsed = await parseResume(req.file.buffer, {
+         filename: req.file.originalname,
+         mimeType: req.file.mimetype,
+       });
+      await UserService.syncParsedResumeToProfile(req.user!.userId, parsed);
       sendSuccess(res, parsed, 'Resume parsed successfully');
     } catch (err) {
       next(err);

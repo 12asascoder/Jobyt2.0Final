@@ -44,8 +44,11 @@ model applications {
   status              application_status? @default(applied)
   status_updated_at   DateTime?           @default(now()) @db.Timestamptz(6)
   created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  resume_id           String?             @db.Uuid
+  application_answers Json                @default("[]")
   users               users               @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   jobs                jobs                @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pipeline_events     pipeline_events[]
 
   @@unique([job_id, applicant_id])
   @@index([applicant_id, created_at(sort: Desc)], map: "idx_applications_applicant")
@@ -77,32 +80,42 @@ model credit_transactions {
   description   String      @db.VarChar(255)
   reference_id  String?     @db.Uuid
   created_at    DateTime?   @default(now()) @db.Timestamptz(6)
+  status        String      @default("success") @db.VarChar(20)
   users         users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id, created_at(sort: Desc)], map: "idx_credit_tx_user")
 }
 
 model jobs {
-  id            String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  recruiter_id  String                   @db.Uuid
-  title         String                   @db.VarChar(255)
-  location      String?                  @db.VarChar(255)
-  salary_min    Int?
-  salary_max    Int?
-  type          job_type                 @default(full_time)
-  skills        String[]                 @default([])
-  description   String
-  status        job_status?              @default(draft)
-  is_boosted    Boolean?                 @default(false)
-  views_count   Int?                     @default(0)
-  deleted_at    DateTime?                @db.Timestamptz(6)
-  created_at    DateTime?                @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime?                @default(now()) @db.Timestamptz(6)
-  search_vector Unsupported("tsvector")?
-  applications  applications[]
-  conversations conversations[]
-  users         users                    @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  saved_jobs    saved_jobs[]
+  id                    String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  recruiter_id          String                   @db.Uuid
+  company_id            String?                  @db.Uuid
+  company_name          String                   @default("Unknown Company") @db.VarChar(255)
+  company_logo          String?                  @db.VarChar(500)
+  company_website       String?                  @db.VarChar(500)
+  company_location      String?                  @db.VarChar(255)
+  is_external_company   Boolean                  @default(false)
+  source                String                   @default("recruiter") @db.VarChar(30)
+  created_by            String?                  @db.Uuid
+  title                 String                   @db.VarChar(255)
+  location              String?                  @db.VarChar(255)
+  salary_min            Int?
+  salary_max            Int?
+  type                  job_type                 @default(full_time)
+  skills                String[]                 @default([])
+  description           String
+  status                job_status?              @default(draft)
+  is_boosted            Boolean?                 @default(false)
+  views_count           Int?                     @default(0)
+  deleted_at            DateTime?                @db.Timestamptz(6)
+  created_at            DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?                @default(now()) @db.Timestamptz(6)
+  search_vector         Unsupported("tsvector")?
+  application_questions Json                     @default("[]")
+  applications          applications[]
+  conversations         conversations[]
+  users                 users                    @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  saved_jobs            saved_jobs[]
 
   @@index([recruiter_id], map: "idx_jobs_recruiter")
   @@index([search_vector], map: "idx_jobs_search", type: Gin)
@@ -158,6 +171,19 @@ model plans {
   is_active  Boolean?   @default(true)
   created_at DateTime?  @default(now()) @db.Timestamptz(6)
   payments   payments[]
+}
+
+model pipeline_events {
+  id              String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  application_id  String              @db.Uuid
+  previous_status application_status?
+  new_status      application_status
+  changed_by_id   String?             @db.Uuid
+  notes           String?
+  created_at      DateTime?           @default(now()) @db.Timestamptz(6)
+  applications    applications        @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([application_id], map: "idx_pipeline_events_application")
 }
 
 model recruiter_profiles {

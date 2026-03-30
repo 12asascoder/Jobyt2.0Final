@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { UserRole } from '@/types';
 import { Spinner } from '@/components/ui';
@@ -13,25 +13,72 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, loading } = useAuthStore();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const hasEmail = Boolean(user?.email);
+  const isEmailFlowPage = pathname === ROUTES.addEmail || pathname === ROUTES.verifyEmail;
+  const isVerified = user?.email_verified !== false;
+
+  const routeByRole = (role: UserRole) =>
+    role === 'recruiter'
+      ? ROUTES.recruiterDashboard
+      : role === 'admin'
+        ? ROUTES.adminDashboard
+        : ROUTES.dashboard;
 
   useEffect(() => {
+    if (loading) {
+      return;
+    }
+
     if (!isAuthenticated) {
       router.replace(ROUTES.login);
       return;
     }
-    if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-      // Redirect to correct dashboard based on role
-      const dest =
-        user.role === 'recruiter' ? ROUTES.recruiterDashboard :
-        user.role === 'admin' ? ROUTES.adminDashboard :
-        ROUTES.dashboard;
-      router.replace(dest);
+
+    // Safety net: authenticated OAuth users with missing email must complete email first.
+    if (user && !hasEmail && !isEmailFlowPage) {
+      router.replace(ROUTES.addEmail);
+      return;
     }
-  }, [isAuthenticated, user, allowedRoles, router]);
+
+    if (user && hasEmail && !isVerified && pathname !== ROUTES.verifyEmail) {
+      router.replace(`${ROUTES.verifyEmail}?pending=1`);
+      return;
+    }
+
+    if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+      router.replace(routeByRole(user.role));
+    }
+  }, [loading, isAuthenticated, user, hasEmail, isVerified, isEmailFlowPage, pathname, allowedRoles, router]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (user && !hasEmail && !isEmailFlowPage) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (user && hasEmail && !isVerified && pathname !== ROUTES.verifyEmail) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Spinner size="lg" />

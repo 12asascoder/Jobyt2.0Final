@@ -37,8 +37,20 @@ export const ApplicantProfileModel = {
     data: Partial<Omit<ApplicantProfile, 'user_id' | 'created_at' | 'updated_at'>>,
   ): Promise<ApplicantProfile> {
     const fields = Object.keys(data);
-    const values = Object.values(data);
-    const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
+    const values = fields.map((field) => {
+      const value = (data as Record<string, unknown>)[field];
+      if ((field === 'experience' || field === 'education') && value !== undefined) {
+        return JSON.stringify(value);
+      }
+      return value;
+    });
+    const setClause = fields
+      .map((f, i) =>
+        f === 'experience' || f === 'education'
+          ? `${f} = $${i + 1}::jsonb`
+          : `${f} = $${i + 1}`,
+      )
+      .join(', ');
     const { rows } = await pool.query(
       `UPDATE applicant_profiles SET ${setClause}, updated_at = NOW() WHERE user_id = $${fields.length + 1} RETURNING *`,
       [...values, userId],

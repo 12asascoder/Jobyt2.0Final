@@ -1,6 +1,10 @@
 import { ResumeDeleteResult, ResumeListItem, ResumeModel } from '../models/resume.model';
+import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import { StorageService } from './storage.service';
 import { withTransaction } from '../utils/transaction';
+import fs from 'fs/promises';
+import path from 'path';
+import { parseResume } from '../utils/resumeParser';
 
 export interface ATSResult {
   score: number;
@@ -43,6 +47,137 @@ export const ResumeService = {
 
     const { user_id: _omitUserId, updated_at: _omitUpdatedAt, ...rest } = resume;
     return rest;
+  },
+
+  async getUserResumeById(userId: string, resumeId: string) {
+    const [resume, profile] = await Promise.all([
+      ResumeModel.findByUserAndId(userId, resumeId),
+      ApplicantProfileModel.findByUserId(userId),
+    ]);
+
+    if (!resume) {
+      throw Object.assign(new Error('Resume not found'), {
+        statusCode: 404,
+        code: 'RESUME_NOT_FOUND',
+      });
+    }
+
+    let parsedFromFile: {
+      name: string | null;
+      skills: string[];
+      experience: unknown[];
+      education: unknown[];
+    } = {
+      name: null,
+      skills: [],
+      experience: [],
+      education: [],
+    };
+
+    try {
+      const buffer = await ResumeService.loadResumeFileBuffer(resume.file_url);
+      const parsed = await parseResume(buffer, {
+        filename: resume.file_name,
+        mimeType: resume.mime_type || undefined,
+      });
+
+      parsedFromFile = {
+        name: parsed.name,
+        skills: Array.isArray(parsed.skills) ? parsed.skills : [],
+        experience: Array.isArray(parsed.experience) ? parsed.experience : [],
+        education: Array.isArray(parsed.education) ? parsed.education : [],
+      };
+    } catch (err) {
+      console.warn('Failed to parse resume file for detail view, falling back to profile data:', err);
+    }
+
+    const fallbackExperience = Array.isArray(profile?.experience) ? profile.experience : [];
+    const fallbackEducation = Array.isArray(profile?.education) ? profile.education : [];
+    const fallbackSkills = Array.isArray(profile?.skills) ? profile.skills : [];
+    const fallbackName = profile?.name ?? null;
+
+    return {
+      ...resume,
+      parsed: {
+        name: parsedFromFile.name ?? fallbackName,
+        skills: parsedFromFile.skills.length > 0 ? parsedFromFile.skills : fallbackSkills,
+        experience: parsedFromFile.experience.length > 0 ? parsedFromFile.experience : fallbackExperience,
+        education: parsedFromFile.education.length > 0 ? parsedFromFile.education : fallbackEducation,
+      },
+    };
+  },
+
+  async getResumeTextForUserResume(userId: string, resumeId: string): Promise<string> {
+    const resume = await ResumeModel.findByUserAndId(userId, resumeId);
+    if (!resume) {
+      throw Object.assign(new Error('Resume not found'), {
+        statusCode: 404,
+        code: 'RESUME_NOT_FOUND',
+      });
+    }
+
+    const buffer = await ResumeService.loadResumeFileBuffer(resume.file_url);
+    const lowerName = (resume.file_name || '').toLowerCase();
+    const mime = (resume.mime_type || '').toLowerCase();
+
+    if (mime.includes('pdf') || lowerName.endsWith('.pdf')) {
+      const pdfParse = require('pdf-parse');
+      const parsedPdf = await pdfParse(buffer);
+      const text = String(parsedPdf?.text || '').trim();
+      if (text) return text;
+    }
+
+    const parsed = await parseResume(buffer, {
+      filename: resume.file_name,
+      mimeType: resume.mime_type || undefined,
+    });
+
+    const parsedText = [
+      parsed.rawText,
+      parsed.name || '',
+      Array.isArray(parsed.skills) ? parsed.skills.join(', ') : '',
+      Array.isArray(parsed.experience)
+        ? parsed.experience
+            .map((item) => [item.role || '', item.company || ''].filter(Boolean).join(' at '))
+            .join('\n')
+        : '',
+      Array.isArray(parsed.education)
+        ? parsed.education
+            .map((item) => [item.degree || '', item.institution || ''].filter(Boolean).join(' - '))
+            .join('\n')
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .trim();
+
+    return parsedText;
+  },
+
+  async loadResumeFileBuffer(fileUrl: string): Promise<Buffer> {
+    if (!fileUrl) {
+      throw Object.assign(new Error('Resume file URL missing'), {
+        statusCode: 400,
+        code: 'RESUME_URL_MISSING',
+      });
+    }
+
+    if (fileUrl.startsWith('/uploads/')) {
+      const relativePath = fileUrl.replace(/^\/+/, '');
+      const fullPath = path.join(__dirname, '../../', relativePath);
+      return fs.readFile(fullPath);
+    }
+
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+      throw Object.assign(new Error('Failed to download resume file'), {
+        statusCode: 502,
+        code: 'RESUME_FILE_FETCH_FAILED',
+      });
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
   },
 
   async setDefaultResume(userId: string, resumeId: string): Promise<ResumeListItem> {

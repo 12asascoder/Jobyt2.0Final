@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
+import toast from 'react-hot-toast';
 import { Application, ApplicationStatus } from '@/types';
 import { useApplications } from '@/hooks/useApplications';
 import { Button, Spinner, Badge, Avatar } from '@/components/ui';
-import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, APPLICATION_STATUSES } from '@/constants';
+import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, APPLICATION_STATUSES, ROUTES } from '@/constants';
 import { formatDate } from '@/lib/utils';
+import { createConversation } from '@/lib/messages';
 
 interface ApplicantProfile {
   name: string | null;
@@ -27,6 +29,7 @@ import { ApplicationTimeline } from '@/components/applications/ApplicationTimeli
 
 export default function JobApplicationsPage() {
   const params = useParams();
+  const router = useRouter();
   const jobId = params.id as string;
   const { applications, total, isLoading, fetchJobApplications, updateStatus } = useApplications();
   const [selected, setSelected] = useState<ApplicationWithProfile | null>(null);
@@ -42,6 +45,15 @@ export default function JobApplicationsPage() {
   const handleStatusChange = async (appId: string, status: ApplicationStatus) => {
     await updateStatus(appId, status);
     if (selected?.id === appId) setSelected((prev) => prev ? { ...prev, status } : prev);
+  };
+
+  const handleMessageCandidate = async (recipientId: string) => {
+    try {
+      const conversationId = await createConversation(recipientId, jobId);
+      router.push(ROUTES.messageThread(conversationId));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to start conversation');
+    }
   };
 
   if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
@@ -86,15 +98,18 @@ export default function JobApplicationsPage() {
       ) : (
         <div className="space-y-3">
           {filtered.map((app) => (
+            (() => {
+              const appView = app as ApplicationWithProfile;
+              return (
             <div key={app.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center gap-4">
-                <Avatar name={(app as any).name ?? 'A'} size="md" />
+                <Avatar name={appView.name ?? 'A'} size="md" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-gray-900 text-lg">{(app as any).name ?? 'Applicant'}</p>
-                    {(app as any).matchScore !== undefined && (
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${(app as any).matchScore >= 80 ? 'bg-green-100 text-green-700' : (app as any).matchScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                        {(app as any).matchScore}% Match
+                    <p className="font-bold text-gray-900 text-lg">{appView.name ?? 'Applicant'}</p>
+                    {appView.matchScore !== undefined && (
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${appView.matchScore >= 80 ? 'bg-green-100 text-green-700' : appView.matchScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                        {appView.matchScore}% Match
                       </span>
                     )}
                   </div>
@@ -115,6 +130,13 @@ export default function JobApplicationsPage() {
                   ))}
                 </select>
                 <Button size="sm" variant="outline" onClick={() => setTimelineAppId(app.id)}>Timeline</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handleMessageCandidate(app.applicant_id)}
+                >
+                  Message Candidate
+                </Button>
                 {app.resume_snapshot_url && (
                   <a href={app.resume_snapshot_url} target="_blank" rel="noreferrer">
                     <Button size="sm" variant="outline">Resume</Button>
@@ -122,6 +144,8 @@ export default function JobApplicationsPage() {
                 )}
               </div>
             </div>
+              );
+            })()
           ))}
         </div>
       )}

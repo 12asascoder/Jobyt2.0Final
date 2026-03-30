@@ -73,6 +73,15 @@ export const AdminController = {
     }
   },
 
+  async createJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const job = await AdminService.createJob(req.user!.userId, req.body);
+      sendSuccess(res, job, 'Job created successfully', 201);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async closeJob(req: Request, res: Response, next: NextFunction) {
     try {
       await AdminService.closeJob(req.user!.userId, req.params.id as string, req.body.reason);

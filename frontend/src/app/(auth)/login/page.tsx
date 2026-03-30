@@ -4,29 +4,46 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
-import { ROUTES, APP_NAME } from '@/constants';
+import { ROUTES } from '@/constants';
 import { ApiError } from '@/lib/api';
-import { FaGoogle, FaApple, FaArrowRight } from 'react-icons/fa6';
+import { FaArrowRight } from 'react-icons/fa6';
 import Image from 'next/image';
+import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
+import { GitHubLoginButton } from '@/components/auth/GitHubLoginButton';
+import { LinkedInLoginButton } from '@/components/auth/LinkedInLoginButton';
+import { AuthTokens, AuthUser } from '@/types';
 
 export default function LoginPage() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
+  const setSession = useAuthStore((s) => s.setSession);
   const isLoading = useAuthStore((s) => s.isLoading);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  const routeByRole = (user: AuthUser) =>
+    user.role === 'recruiter'
+      ? ROUTES.recruiterDashboard
+      : user.role === 'admin'
+        ? ROUTES.adminDashboard
+        : ROUTES.dashboard;
+
+  const handleAuthSuccess = (tokens: AuthTokens, user: AuthUser) => {
+    setSession(tokens.accessToken, tokens.refreshToken, user);
+    if (!user.email) {
+      router.push(ROUTES.addEmail);
+      return;
+    }
+    router.push(routeByRole(user));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     try {
       const user = await login(email, password);
-      const dest =
-        user.role === 'recruiter' ? ROUTES.recruiterDashboard :
-          user.role === 'admin' ? ROUTES.adminDashboard :
-            ROUTES.dashboard;
-      router.push(dest);
+      router.push(routeByRole(user));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Invalid credentials. Please try again.');
     }
@@ -51,13 +68,15 @@ export default function LoginPage() {
           </div>
 
           {/* Social Logins */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <button className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all font-semibold shadow-sm text-sm">
-              <FaGoogle className="text-red-500 text-base" /> Google
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-2 bg-slate-900 border border-slate-900 text-white px-4 py-2 rounded-xl hover:bg-slate-800 transition-all font-semibold shadow-sm text-sm">
-              <FaApple className="text-white text-base mb-0.5" /> Apple
-            </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+            <GoogleLoginButton
+              onSuccess={handleAuthSuccess}
+              onRequiresEmail={() => router.push(ROUTES.addEmail)}
+              onRequiresVerification={() => router.push(`${ROUTES.verifyEmail}?pending=1`)}
+              onError={setError}
+            />
+            <GitHubLoginButton onError={setError} />
+            <LinkedInLoginButton onError={setError} className="sm:col-span-2 flex items-center justify-center gap-2 bg-[#0a66c2] border border-[#0a66c2] text-white px-4 py-2 rounded-xl hover:bg-[#08549d] transition-all font-semibold shadow-sm text-sm" />
           </div>
 
           <div className="relative flex items-center py-2 mb-6">

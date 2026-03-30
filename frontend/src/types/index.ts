@@ -3,8 +3,9 @@ export type UserRole = 'applicant' | 'recruiter' | 'admin';
 
 export interface AuthUser {
   id: string;
-  email: string;
+  email: string | null;
   role: UserRole;
+  email_verified?: boolean;
 }
 
 export interface AuthTokens {
@@ -59,6 +60,17 @@ export interface RecruiterProfile {
 // ── Jobs ──────────────────────────────────────────────────────────────────────
 export type JobType = 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
 export type JobStatus = 'draft' | 'active' | 'closed';
+export type ApplicationQuestionType = 'text' | 'textarea' | 'select' | 'rating' | 'link';
+
+export interface ApplicationQuestion {
+  id: string;
+  label: string;
+  type: ApplicationQuestionType;
+  required: boolean;
+  section?: string;
+  placeholder?: string;
+  options?: string[];
+}
 
 export interface Job {
   id: string;
@@ -69,10 +81,12 @@ export interface Job {
   salary_max: number | null;
   type: JobType;
   skills: string[];
+  application_questions?: ApplicationQuestion[];
   description: string;
   status: JobStatus;
   is_boosted: boolean;
   views_count: number;
+  application_count?: number;
   company_name?: string;
   created_at: string;
 }
@@ -85,6 +99,8 @@ export interface Application {
   id: string;
   job_id: string;
   applicant_id: string;
+  resume_id?: string | null;
+  application_answers?: Array<{ question_id: string; answer: string }>;
   cover_letter: string | null;
   resume_snapshot_url: string | null;
   status: ApplicationStatus;
@@ -112,12 +128,14 @@ export interface PipelineEvent {
 
 // ── Credits ───────────────────────────────────────────────────────────────────
 export type CreditType = 'credit' | 'debit';
+export type CreditTransactionStatus = 'success' | 'failed';
 
 export interface CreditTransaction {
   id: string;
   user_id: string;
   type: CreditType;
   amount: number;
+  status?: CreditTransactionStatus;
   balance_after: number;
   description: string;
   reference_id: string | null;
@@ -184,8 +202,8 @@ export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   error?: string;
-  errors?: any[];
-  details?: any;
+  errors?: Array<Record<string, unknown>>;
+  details?: unknown;
   data?: T;
 }
 
