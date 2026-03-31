@@ -19,6 +19,7 @@ interface AuthState {
   setSession: (accessToken: string, refreshToken: string, user: AuthUser) => void;
   login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
+  logoutWithApi: () => Promise<void>;
   initialize: () => Promise<void>;
 }
 
@@ -158,5 +159,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: false,
     });
     if (typeof window !== 'undefined') window.location.href = '/login';
+  },
+
+  logoutWithApi: async () => {
+    const refreshToken = authStorage.getRefreshToken();
+
+    try {
+      if (refreshToken) {
+        await api.post('/auth/logout', { refreshToken });
+      }
+    } catch {
+      // Local logout should still proceed if API logout fails.
+    } finally {
+      useAuthStore.getState().logout();
+    }
   },
 }));

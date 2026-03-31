@@ -9,6 +9,7 @@ import { ApplicationStatus } from '@/types';
 import { APPLICATION_STATUSES, APPLICATION_STATUS_LABELS } from '@/constants';
 import { Avatar, Button } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
+import { resolveAssetUrl } from '@/lib/assetUrl';
 import { ApplicationTimeline } from './ApplicationTimeline';
 
 // Components for DND
@@ -51,7 +52,7 @@ const SortableCandidateCard = ({ candidate, onClickPipeline }: { candidate: Cand
     >
       <div className="flex justify-between items-start gap-2 mb-2">
          <div className="flex items-center gap-2">
-           <Avatar name={candidate.name || 'U'} size="sm" src={candidate.photo_url || undefined} />
+           <Avatar name={candidate.name || 'U'} size="sm" src={resolveAssetUrl(candidate.photo_url) || undefined} />
            <p className="font-semibold text-sm text-gray-900 leading-tight line-clamp-1">{candidate.name}</p>
          </div>
       </div>
@@ -239,7 +240,7 @@ export const PipelineBoard = ({ jobId }: { jobId: string }) => {
             {activeCandidate ? (
               <div className="bg-white border-2 border-blue-500 text-left p-3 rounded-xl shadow-2xl opacity-90 scale-105 cursor-grabbing">
                 <div className="flex items-center gap-2 mb-2">
-                  <Avatar name={activeCandidate.name || 'U'} size="sm" src={activeCandidate.photo_url || undefined} />
+                  <Avatar name={activeCandidate.name || 'U'} size="sm" src={resolveAssetUrl(activeCandidate.photo_url) || undefined} />
                   <p className="font-semibold text-sm text-gray-900">{activeCandidate.name}</p>
                 </div>
               </div>

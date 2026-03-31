@@ -3,29 +3,68 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { ApiError, api } from '@/lib/api';
-import { ROUTES } from '@/constants';
-import { Card, CardBody, Spinner } from '@/components/ui';
+import { api, ApiError } from '@/lib/api';
+import { Spinner } from '@/components/ui';
+import { resolveAssetUrl } from '@/lib/assetUrl';
+import { FaMagnifyingGlass } from 'react-icons/fa6';
 
-type ApiParticipant = {
-  name?: string | null;
-  avatar?: string | null;
-};
-
-type ApiConversation = {
+interface User {
   id: string;
-  participant?: ApiParticipant;
-  recruiter_id?: string;
-  applicant_id?: string;
-  last_message?: string | null;
-  updated_at?: string | null;
-  last_message_at?: string | null;
-  unread?: boolean;
-};
+  name: string;
+  email: string;
+}
 
-type ConversationsPayload = {
-  conversations?: ApiConversation[];
-};
+interface ConversationDetail {
+  id: string;
+  recruiter_id: string;
+  applicant_id: string;
+  job_id: string | null;
+  recruiter?: User;
+  applicant?: User;
+  last_message_at: string;
+}
+
+interface Message {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  body: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+interface SendMessageData {
+  message?: Message;
+}
+
+interface Conversation {
+  id: string;
+  recruiter_id: string;
+  applicant_id: string;
+  job_id: string | null;
+  last_message_at: string;
+  last_message?: string;
+  participant?: {
+    id?: string;
+    name?: string | null;
+    email?: string | null;
+    avatar?: string | null;
+    logo_url?: string | null;
+  };
+  unread?: boolean;
+}
+
+interface PublicUserProfile {
+  id: string;
+  email?: string;
+  role?: string;
+  profile?: {
+    name?: string | null;
+    company_name?: string | null;
+    photo_url?: string | null;
+    logo_url?: string | null;
+  };
+}
 
 const getInitials = (name: string): string => {
   const parts = name.split(' ').filter(Boolean);
@@ -34,39 +73,93 @@ const getInitials = (name: string): string => {
   return `${parts[0].slice(0, 1)}${parts[1].slice(0, 1)}`.toUpperCase();
 };
 
-const toConversations = (payload: unknown): ApiConversation[] => {
-  if (!payload || typeof payload !== 'object') return [];
+const formatTime = (dateString: string) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '';
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
 
-  const wrapped = payload as {
-    data?: unknown;
-    conversations?: unknown;
-  };
+  if (diffMins < 1) return 'now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+};
 
-  const nestedData = wrapped.data as ConversationsPayload | ApiConversation[] | undefined;
-  const raw =
-    wrapped.conversations ??
-    (Array.isArray(nestedData) ? nestedData : nestedData?.conversations) ??
-    [];
+const formatDate = (value?: string | null) => {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'N/A';
+  return date.toLocaleDateString();
+};
 
-  if (!Array.isArray(raw)) return [];
-
-  return raw.filter(
-    (item): item is ApiConversation =>
-      Boolean(item && typeof item === 'object' && typeof (item as ApiConversation).id === 'string'),
-  );
+const toTime = (value?: string | null) => {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
 };
 
 export default function MessagesPage() {
   const router = useRouter();
 
-  const [conversations, setConversations] = useState<ApiConversation[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<ConversationDetail | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchConversations = useCallback(async () => {
-    setLoading(true);
     try {
-      const res = await api.get<ConversationsPayload | ApiConversation[]>('/messages/conversations');
-      setConversations(toConversations(res));
+      const res = await api.get<any>('/messages/conversations');
+      const rawConversations = Array.isArray(res.data?.conversations)
+        ? res.data.conversations
+        : Array.isArray(res.data)
+          ? res.data
+          : [];
+
+      const participantIds = [...new Set(
+        rawConversations
+          .map((conv: Conversation) => conv.recruiter_id)
+          .filter((id: string | undefined) => Boolean(id)),
+      )] as string[];
+
+      const profileEntries = await Promise.all(
+        participantIds.map(async (id) => {
+          try {
+            const profileRes = await api.get<PublicUserProfile>(`/users/${id}`);
+            return [id, profileRes.data] as const;
+          } catch {
+            return [id, null] as const;
+          }
+        }),
+      );
+
+      const profileMap = new Map(profileEntries);
+
+      const enrichedConversations = rawConversations.map((conv: Conversation) => {
+        const profile = profileMap.get(conv.recruiter_id);
+        const participantName = profile?.profile?.name || profile?.profile?.company_name || null;
+        return {
+          ...conv,
+          participant: {
+            id: conv.recruiter_id,
+            name: participantName,
+            email: profile?.email || null,
+            avatar: profile?.profile?.photo_url || null,
+            logo_url: profile?.profile?.logo_url || null,
+          },
+        };
+      });
+
+      setConversations(enrichedConversations);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to load conversations';
       toast.error(message);
@@ -76,74 +169,266 @@ export default function MessagesPage() {
     }
   }, []);
 
+  const fetchMessages = useCallback(async (conversationId: string) => {
+    if (!conversationId) return;
+    setMessagesLoading(true);
+    try {
+      const msgRes = await api.get<any>(`/messages/conversations/${conversationId}?page=1&limit=50`);
+
+      const selectedMeta = conversations.find((conv) => conv.id === conversationId);
+      setSelectedConversation(
+        selectedMeta
+          ? {
+              id: selectedMeta.id,
+              recruiter_id: selectedMeta.recruiter_id,
+              applicant_id: selectedMeta.applicant_id,
+              job_id: selectedMeta.job_id,
+              last_message_at: selectedMeta.last_message_at,
+            }
+          : null,
+      );
+
+      let msgs = msgRes.data?.messages || msgRes.data || [];
+      if (!Array.isArray(msgs)) msgs = [];
+      const sortedMsgs = msgs.sort((a: Message, b: Message) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      setMessages(sortedMsgs);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to load messages';
+      toast.error(message);
+      setSelectedConversation(null);
+      setMessages([]);
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, [conversations]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!newMessage.trim() || !selectedConvId) return;
+    setSendingMessage(true);
+    try {
+      const response = await api.post<SendMessageData>(`/messages/conversations/${selectedConvId}`, {
+        content: newMessage,
+      });
+      const createdMessage = response.data?.message;
+      if (createdMessage) {
+        setMessages((prev) => [...prev, createdMessage]);
+      }
+      setNewMessage('');
+      void fetchConversations();
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to send message';
+      toast.error(message);
+    } finally {
+      setSendingMessage(false);
+    }
+  }, [newMessage, selectedConvId, fetchConversations]);
+
   useEffect(() => {
     void fetchConversations();
   }, [fetchConversations]);
 
   const sortedConversations = useMemo(() => {
-    return [...conversations].sort((a, b) => {
-      const aTime = new Date(a.updated_at || a.last_message_at || 0).getTime();
-      const bTime = new Date(b.updated_at || b.last_message_at || 0).getTime();
-      return bTime - aTime;
-    });
-  }, [conversations]);
+    return [...conversations]
+      .sort((a, b) => toTime(b.last_message_at) - toTime(a.last_message_at))
+      .filter((conv) =>
+        (!searchQuery ||
+          conv.participant?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          conv.participant?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          conv.last_message?.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+  }, [conversations, searchQuery]);
+
+  const selectedConversationItem = useMemo(
+    () => conversations.find((conv) => conv.id === selectedConvId) || null,
+    [conversations, selectedConvId],
+  );
+
+  const selectedParticipant = selectedConversationItem?.participant;
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
-  if (sortedConversations.length === 0) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <Card>
-          <CardBody className="p-6 text-center space-y-1">
-            <p className="font-medium text-slate-900">No conversations yet</p>
-            <p className="text-sm text-slate-500">Messages from recruiters will appear here</p>
-          </CardBody>
-        </Card>
+      <div className="flex justify-center items-center h-96">
+        <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-2">
-      {sortedConversations.map((conv) => {
-        const name = conv.participant?.name?.trim() || 'Unknown user';
-        const avatar = conv.participant?.avatar?.trim() || '';
-        const timestamp = conv.updated_at || conv.last_message_at;
-
-        return (
-          <Card
-            key={conv.id}
-            className={`p-4 cursor-pointer transition hover:bg-slate-50 ${conv.unread ? 'bg-slate-50' : ''}`}
-            onClick={() => router.push(ROUTES.messageThread(conv.id))}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden text-sm font-semibold text-slate-700">
-                {avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={avatar} alt={name} className="h-full w-full object-cover" />
-                ) : (
-                  getInitials(name)
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-900 truncate">{name}</p>
-                <p className="text-sm text-slate-500 truncate">{conv.last_message || 'No messages yet'}</p>
-              </div>
-
-              <div className="text-xs text-slate-500 shrink-0">
-                {timestamp ? new Date(timestamp).toLocaleDateString() : '-'}
+    <div className="max-w-7xl mx-auto space-y-4 pb-6">
+      {/* Main Chat Container with Blue Border */}
+      <div className="rounded-xl border-4 border-blue-500 bg-white overflow-hidden">
+        <div className="flex h-[600px]">
+          {/* Left Sidebar - Conversations */}
+          <div className="w-1/4 border-r border-slate-200 flex flex-col bg-white">
+            {/* Search Bar */}
+            <div className="p-4 border-b border-slate-200">
+              <div className="relative">
+                <FaMagnifyingGlass className="absolute left-3 top-3 text-slate-400" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 rounded-full bg-black text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
-          </Card>
-        );
-      })}
+
+            {/* Conversations List */}
+            <div className="flex-1 overflow-y-auto">
+              {sortedConversations.length === 0 ? (
+                <div className="p-4 text-center text-slate-500 text-sm">
+                  <p className="font-semibold text-slate-700">Inbox is empty</p>
+                  <p className="mt-1">You have no conversations yet.</p>
+                </div>
+              ) : (
+                sortedConversations.map((conv) => {
+                  const participant = conv.participant;
+                  const isSelected = conv.id === selectedConvId;
+                  const avatarUrl = participant?.avatar || participant?.logo_url;
+
+                  return (
+                    <div
+                      key={conv.id}
+                      onClick={() => {
+                        setSelectedConvId(conv.id);
+                        void fetchMessages(conv.id);
+                      }}
+                      className={`p-3 border-b border-slate-100 cursor-pointer transition ${
+                        isSelected
+                          ? 'bg-lime-100 border-l-4 border-l-lime-300'
+                          : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden text-sm font-semibold flex-shrink-0">
+                          {avatarUrl ? (
+                            <img
+                              src={resolveAssetUrl(avatarUrl) || ''}
+                              alt={participant?.name || ''}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            getInitials(participant?.name || 'User')
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 truncate">
+                            {participant?.name || participant?.email || 'Conversation'}
+                          </p>
+                          <p className="text-xs text-slate-600 truncate">{conv.last_message || 'No messages yet'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Right Side - Messages & Info */}
+          <div className="flex-1 flex flex-col bg-white">
+            {selectedConvId && selectedConversation ? (
+              <>
+                {/* Header */}
+                <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900">
+                    {selectedParticipant?.name || selectedParticipant?.email || 'Conversation'}
+                  </h3>
+                </div>
+
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+                  {messagesLoading ? (
+                    <div className="flex justify-center items-center h-full">
+                      <Spinner />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-center text-slate-500 text-sm mt-12">No messages yet</div>
+                  ) : (
+                    messages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${
+                          msg.sender_id === selectedConversation.recruiter_id ? 'justify-end' : 'justify-start'
+                        }`}
+                      >
+                        <div
+                          className={`max-w-xs px-4 py-2 rounded-lg ${
+                            msg.sender_id === selectedConversation.recruiter_id
+                              ? 'bg-slate-200 text-slate-900 border border-slate-300'
+                              : 'bg-lime-300 text-black'
+                          }`}
+                        >
+                          <p className="text-sm break-words">{msg.body}</p>
+                          <p className="text-xs text-slate-500 mt-1">{formatTime(msg.created_at)}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Input Area */}
+                <div className="p-4 border-t border-slate-200 bg-white">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Type a message..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') handleSendMessage();
+                      }}
+                      disabled={sendingMessage}
+                      className="flex-1 px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={sendingMessage || !newMessage.trim()}
+                      className="px-4 py-2 rounded-lg bg-lime-300 text-black font-semibold text-sm hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      {sendingMessage ? 'Sending...' : 'Send'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* User Info Panels */}
+                <div className="grid grid-cols-2 gap-3 p-4 border-t border-slate-200 bg-slate-50">
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-700 mb-2">General Info</h4>
+                    <div className="space-y-1 text-xs text-slate-600">
+                      <p>
+                        <span className="font-semibold">Name:</span>{' '}
+                        {selectedParticipant?.name || 'N/A'}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Email:</span>{' '}
+                        {selectedParticipant?.email || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-700 mb-2">Details</h4>
+                    <div className="space-y-1 text-xs text-slate-600">
+                      <p>
+                        <span className="font-semibold">Joined:</span>{' '}
+                        {formatDate(selectedConversationItem?.last_message_at || selectedConversation.last_message_at)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center text-slate-500">
+                  <p className="text-lg font-semibold">Inbox is empty</p>
+                  <p className="text-sm mt-1">Start a conversation to see messages here.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

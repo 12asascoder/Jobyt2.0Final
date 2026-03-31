@@ -19,12 +19,35 @@ export interface BackendJob {
 
 type JobLike = Partial<BackendJob> & { _id?: string };
 
+const getCompanyName = (job: JobLike & Record<string, any>): string | undefined => {
+    const nestedCompanyName =
+        typeof job.company === 'object' && job.company
+            ? (job.company as Record<string, unknown>).name
+            : undefined;
+
+    const candidates = [
+        job.company_name,
+        job.companyName,
+        typeof nestedCompanyName === 'string' ? nestedCompanyName : undefined,
+        job.employer_name,
+        job.recruiter_company_name,
+    ];
+
+    const resolved = candidates.find(
+        (value) => typeof value === 'string' && value.trim().length > 0 && value.trim().toLowerCase() !== 'unknown company',
+    );
+
+    return typeof resolved === 'string' ? resolved.trim() : undefined;
+};
+
 // Normalize job data to ensure it has an id field
 export function normalizeJob(job: JobLike): BackendJob {
+    const companyName = getCompanyName(job as JobLike & Record<string, any>);
+
     return {
         id: job.id || job._id || '',
         title: job.title || '',
-        company_name: job.company_name,
+        company_name: companyName,
         location: job.location,
         type: job.type || 'full-time',
         salary_min: job.salary_min,

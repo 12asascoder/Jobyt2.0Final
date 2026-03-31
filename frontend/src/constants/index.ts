@@ -53,14 +53,16 @@ export const ROUTES = {
   messageThread: (id: string) => `/messages/${id}`,
   // Recruiter
   recruiterDashboard: '/recruiter/dashboard',
-  recruiterApplications: '/recruiter/applications',
-  recruiterApplicationDetail: (applicationId: string, jobId: string) => `/recruiter/applications/${applicationId}?jobId=${encodeURIComponent(jobId)}`,
   recruiterJobs: '/recruiter/jobs',
   recruiterNewJob: '/recruiter/jobs/new',
   recruiterJobDetail: (id: string) => `/recruiter/jobs/${id}`,
   recruiterJobApplications: (id: string) => `/recruiter/jobs/${id}/applications`,
+  recruiterApplications: '/recruiter/applications',
+  recruiterApplicationDetail: (id: string) => `/recruiter/applications/${id}`,
+  recruiterMessages: '/recruiter/messages',
   recruiterAnalytics: '/recruiter/analytics',
   recruiterCredits: '/recruiter/credits',
+  recruiterProfile: '/recruiter/profile',
   // Admin
   adminDashboard: '/admin/dashboard',
   adminUsers: '/admin/users',

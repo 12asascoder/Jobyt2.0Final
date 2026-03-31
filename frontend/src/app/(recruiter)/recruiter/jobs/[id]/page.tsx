@@ -16,20 +16,6 @@ interface InterviewQuestionsResponse {
   questions: string[];
 }
 
-const normalizeJobTypeForForm = (value: string): JobType => {
-  const normalized = value.replace('_', '-').toLowerCase();
-  if (
-    normalized === 'full-time' ||
-    normalized === 'part-time' ||
-    normalized === 'contract' ||
-    normalized === 'remote' ||
-    normalized === 'internship'
-  ) {
-    return normalized;
-  }
-  return 'full-time';
-};
-
 export default function RecruiterJobDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -103,7 +89,7 @@ export default function RecruiterJobDetailPage() {
         setForm({
           title: res.data.title,
           location: res.data.location ?? '',
-          type: normalizeJobTypeForForm(String(res.data.type)),
+          type: res.data.type,
           salary_min: res.data.salary_min?.toString() ?? '',
           salary_max: res.data.salary_max?.toString() ?? '',
           description: res.data.description,
@@ -124,7 +110,7 @@ export default function RecruiterJobDetailPage() {
       const payload = {
         title: form.title,
         location: form.location || undefined,
-        type: normalizeJobTypeForForm(String(form.type)),
+        type: form.type,
         salary_min: form.salary_min ? Number(form.salary_min) : undefined,
         salary_max: form.salary_max ? Number(form.salary_max) : undefined,
         description: form.description,
@@ -143,11 +129,8 @@ export default function RecruiterJobDetailPage() {
       };
       const res = await api.put<Job>(`/jobs/${jobId}`, payload);
       setJob(res.data);
-      toast.success('Listing changes saved');
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Save failed';
-      setError(message);
-      toast.error(message);
+      setError(err instanceof ApiError ? err.message : 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -190,16 +173,15 @@ export default function RecruiterJobDetailPage() {
   if (!job) return <p className="text-center text-gray-500">Job not found.</p>;
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-2xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Edit Listing</p>
-          <h1 className="text-4xl font-black tracking-tight text-slate-900">{job.title}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{job.title}</h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge variant={job.status === 'active' ? 'success' : job.status === 'draft' ? 'default' : 'danger'}>
               {job.status}
             </Badge>
-            <span className="text-sm text-slate-500">{job.views_count} views</span>
+            <span className="text-sm text-gray-400">{job.views_count} views</span>
           </div>
         </div>
         <div className="flex gap-2">
@@ -219,8 +201,8 @@ export default function RecruiterJobDetailPage() {
         </div>
       </div>
 
-      <Card className="bg-white border border-slate-200 rounded-2xl shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
-        <CardBody className="p-7">
+      <Card>
+        <CardBody className="p-6">
           {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
           {creditError && (
             <div className="mb-4">
@@ -234,17 +216,17 @@ export default function RecruiterJobDetailPage() {
               />
             </div>
           )}
-          <form onSubmit={handleSave} className="space-y-5">
+          <form onSubmit={handleSave} className="space-y-4">
             <Input label="Job Title *" value={form.title} onChange={(e) => set('title', e.target.value)} required />
 
             <div className="grid grid-cols-2 gap-4">
               <Input label="Location" value={form.location} onChange={(e) => set('location', e.target.value)} />
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Job Type *</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Job Type *</label>
                 <select
                   value={form.type}
                   onChange={(e) => set('type', e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 >
                   {JOB_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -259,33 +241,33 @@ export default function RecruiterJobDetailPage() {
             <Input label="Skills (comma separated)" value={form.skills} onChange={(e) => set('skills', e.target.value)} />
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Description *</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Description *</label>
               <textarea
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
                 rows={8}
                 required
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
+            <div className="rounded-xl border border-gray-200 p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">Application Questions</p>
-                  <p className="text-xs text-slate-500">Edit what candidates need to answer when they apply.</p>
+                  <p className="text-sm font-semibold text-gray-900">Application Questions</p>
+                  <p className="text-xs text-gray-500">Edit what candidates need to answer when they apply.</p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={addQuestion}>Add Question</Button>
               </div>
 
               {questions.length === 0 && (
-                <div className="rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs text-slate-600">
+                <div className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
                   No custom questions configured.
                 </div>
               )}
 
               {questions.map((question, index) => (
-                <div key={question.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-3">
+                <div key={question.id} className="rounded-lg border border-gray-200 p-3 space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Input
                       label="Question"
@@ -303,11 +285,11 @@ export default function RecruiterJobDetailPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Type</label>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Type</label>
                       <select
                         value={question.type}
                         onChange={(e) => updateQuestion(index, { type: e.target.value as ApplicationQuestion['type'] })}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
                       >
                         <option value="text">Short Text</option>
                         <option value="textarea">Long Text</option>
@@ -338,12 +320,12 @@ export default function RecruiterJobDetailPage() {
                   )}
 
                   <div className="flex items-center justify-between">
-                    <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                    <label className="inline-flex items-center gap-2 text-sm text-gray-700">
                       <input
                         type="checkbox"
                         checked={question.required}
                         onChange={(e) => updateQuestion(index, { required: e.target.checked })}
-                        className="h-4 w-4 rounded border-slate-300"
+                        className="h-4 w-4 rounded border-gray-300"
                       />
                       Required
                     </label>

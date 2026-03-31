@@ -1,12 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Job } from '@/types';
-import { Button, Spinner } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import { ROUTES } from '@/constants';
-import { FaEye, FaLocationDot, FaPenToSquare, FaTrash } from 'react-icons/fa6';
+import { FaPencil, FaTrash } from 'react-icons/fa6';
+import toast from 'react-hot-toast';
+
+interface ExtendedJob extends Job {
+  application_count?: number;
+}
 
 const formatRelative = (isoDate: string) => {
   const now = Date.now();
@@ -18,128 +23,165 @@ const formatRelative = (isoDate: string) => {
 
   if (diffMs < hour) {
     const mins = Math.max(1, Math.floor(diffMs / minute));
-    return `${mins} minutes ago`;
+    return `${mins}m ago`;
   }
   if (diffMs < day) {
     const hours = Math.floor(diffMs / hour);
-    return `${hours} hours ago`;
+    return `${hours}h ago`;
   }
   const days = Math.floor(diffMs / day);
-  return `${days} days ago`;
+  return `${days}d ago`;
 };
 
-const statusPillClass = (status: string) => {
-  const normalized = status.toLowerCase();
-  if (normalized === 'active') return 'bg-lime-300 text-black';
-  if (normalized === 'closed') return 'bg-slate-700 text-white';
-  return 'bg-slate-200 text-slate-700';
+const formatSalary = (min?: number | null, max?: number | null) => {
+  if (!min && !max) return '';
+  if (min && !max) return `₹${min.toLocaleString()}/month`;
+  if (!min && max) return `₹${max.toLocaleString()}/month`;
+  return `₹${min!.toLocaleString()}-${max!.toLocaleString()}/month`;
 };
 
 export default function RecruiterJobsPage() {
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<ExtendedJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
-  useEffect(() => {
-    api.getPaginated<Job>('/jobs/my/listings?limit=50')
-      .then((res) => setJobs(res.data))
-      .finally(() => setLoading(false));
+  const fetchJobs = useCallback(async () => {
+    try {
+      const res = await api.getPaginated<ExtendedJob>('/jobs/my/listings?limit=50');
+      setJobs(res.data ?? []);
+    } catch {
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const closeJob = async (id: string) => {
-    if (!confirm('Close this job listing? It will stop accepting new applications.')) return;
-    await api.patch(`/jobs/${id}/close`, {});
-    setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, status: 'closed' } : j)));
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
+  const handleDelete = async (id: string, title: string) => {
+    if (!confirm(`Close job "${title}"? This cannot be undone.`)) return;
+    
+    setDeleting(id);
+    try {
+      await api.delete(`/jobs/${id}`);
+      setJobs((prev) => prev.filter((j) => j.id !== id));
+      toast.success('Job listing closed');
+    } catch (err) {
+      toast.error('Failed to close job listing');
+    } finally {
+      setDeleting(null);
+    }
   };
 
-  const publishJob = async (id: string) => {
-    await api.patch<Job>(`/jobs/${id}/publish`, {});
-    setJobs((prev) => prev.map((j) => j.id === id ? { ...j, status: 'active' } : j));
-  };
-
-  if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-[1180px] mx-auto">
-      <div className="mb-4">
-        <h1 className="text-[46px] leading-[1.02] font-black tracking-tight text-slate-900">Job Listings</h1>
-        <p className="mt-1 text-[31px] leading-tight text-slate-700">Manage and track all your internship postings</p>
-      </div>
+    <div className="min-h-screen bg-white">
+      <div className="max-w-6xl mx-auto pb-6 pt-6 px-4">
+        <section className="mb-8">
+          <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Job Listings</h1>
+          <p className="mt-2 text-xl leading-tight text-black/80">Manage and track all your internship postings</p>
+        </section>
+
+        <div className="rounded-2xl p-6 space-y-4" style={{ backgroundColor: '#ece9e2' }}>
 
       {jobs.length === 0 ? (
-        <div className="rounded-[18px] border border-dashed border-slate-300 py-16 text-center bg-[#ece9e2]">
-          <p className="text-slate-500 mb-4">You haven&apos;t posted any jobs yet.</p>
-          <Link href={ROUTES.recruiterNewJob}><Button>Post Your First Job</Button></Link>
+        <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center bg-white">
+          <p className="text-sm text-slate-500 mb-4">You haven&apos;t posted any jobs yet.</p>
+          <Link href={ROUTES.recruiterNewJob} className="inline-block">
+            <button className="px-4 py-2 bg-black text-white rounded-lg hover:bg-slate-900">
+              Post Your First Job
+            </button>
+          </Link>
         </div>
       ) : (
-        <div className="rounded-[18px] bg-[#ece9e2] border border-[#e3dfd7] p-4 h-[620px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#111827_transparent]">
-          <div className="space-y-2.5">
-            {jobs.map((job) => (
-              <article key={job.id} className="rounded-[14px] bg-white px-5 py-4 border border-slate-100">
-                <div className="flex items-start justify-between gap-5">
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-[30px] leading-tight font-bold text-slate-900 truncate">{job.title}</h2>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-slate-600">
-                      <span className="inline-flex items-center gap-1.5">
-                        <FaLocationDot className="text-[10px]" />
-                        {job.location || 'Remote'}
-                      </span>
-                      <span className="text-slate-400">•</span>
-                      <span className="inline-flex rounded-full border border-slate-300 px-2 py-0.5 text-[10px] font-semibold leading-none text-slate-700">
-                        {job.type === 'remote' ? 'Remote' : 'Onsite'}
-                      </span>
-                      <span className="text-slate-400">•</span>
-                      <span>3 months</span>
-                    </div>
-                    <p className="mt-2 text-[13px] text-slate-600 line-clamp-1">
-                      {job.description}
-                    </p>
-                    <div className="mt-2.5 flex flex-wrap items-center gap-3 text-[12px] text-slate-500">
-                      <span>
-                        {job.salary_min ? `₹${job.salary_min.toLocaleString()}/month` : 'Salary not specified'}
-                      </span>
-                      <span>•</span>
-                      <span>{Number(job.application_count ?? 0)} applications</span>
-                      <span>•</span>
-                      <span>{Number(job.views_count ?? 0)} views</span>
-                      <span>•</span>
-                      <span>Posted {formatRelative(job.created_at)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 pt-1">
-                    <span className={`rounded-full px-3 py-1 text-[10px] font-black tracking-wide uppercase leading-none ${statusPillClass(job.status)}`}>
-                      {job.status}
-                    </span>
-                    {job.status !== 'closed' && (
-                      <>
-                        <button
-                          onClick={() => closeJob(job.id)}
-                          className="text-slate-700 hover:text-rose-600 transition-colors"
-                          title="Close listing"
-                        >
-                          <FaTrash className="text-[14px]" />
+        <div className="space-y-4">
+          {jobs.map((job) => (
+            <div key={job.id} className="rounded-xl border border-slate-200 bg-white p-6 hover:shadow-sm transition-shadow">
+              {/* Header Row: Title and Status Badge */}
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <h3 className="text-lg font-black text-slate-900 flex-1">{job.title}</h3>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${
+                    job.status === 'active' 
+                      ? 'bg-lime-300 text-black' 
+                      : job.status === 'draft'
+                      ? 'bg-slate-100 text-slate-700'
+                      : 'bg-slate-300 text-slate-700'
+                  }`}>
+                    {job.status.toUpperCase()}
+                  </span>
+                  {job.status !== 'closed' && (
+                    <>
+                      <Link href={ROUTES.recruiterJobDetail(job.id)}>
+                        <button className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                          <FaPencil className="text-xs" />
                         </button>
-                        <Link
-                          href={ROUTES.recruiterJobDetail(job.id)}
-                          className="text-slate-700 hover:text-black transition-colors"
-                          title="Edit listing"
-                        >
-                          <FaPenToSquare className="text-[14px]" />
-                        </Link>
-                      </>
-                    )}
-                    {job.status === 'draft' && (
-                      <Button size="sm" variant="secondary" onClick={() => publishJob(job.id)}>
-                        Publish
-                      </Button>
-                    )}
-                  </div>
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(job.id, job.title)}
+                        disabled={deleting === job.id}
+                        className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 flex items-center justify-center transition-colors"
+                      >
+                        <FaTrash className="text-xs" />
+                      </button>
+                    </>
+                  )}
                 </div>
-              </article>
-            ))}
-          </div>
+              </div>
+
+              {/* Location, Type, Duration Row */}
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-700 mb-2">
+                <span>{job.location || 'Remote'}</span>
+                {job.location && (
+                  <>
+                    <span className="text-slate-400">•</span>
+                    <span className="bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-xs font-medium">Remote</span>
+                  </>
+                )}
+                {job.duration && (
+                  <>
+                    <span className="text-slate-400">•</span>
+                    <span>{job.duration}</span>
+                  </>
+                )}
+              </div>
+
+              {/* Description */}
+              <p className="text-sm text-slate-600 mb-3 line-clamp-2">
+                {job.description}
+              </p>
+
+              {/* Footer: Stats and Actions */}
+              <div className="flex items-center">
+                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 font-medium">
+                  {(job.salary_min || job.salary_max) && (
+                    <>
+                      <span>{formatSalary(job.salary_min, job.salary_max)}</span>
+                      <span className="text-slate-400">•</span>
+                    </>
+                  )}
+                  <span>{job.application_count ?? 0} applications</span>
+                  <span className="text-slate-400">•</span>
+                  <span>{job.views_count} views</span>
+                  <span className="text-slate-400">•</span>
+                  <span>Posted {formatRelative(job.created_at)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

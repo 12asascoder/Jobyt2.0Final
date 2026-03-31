@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { ROUTES } from '@/constants';
 import { AuthGuard } from '@/components/providers/AuthGuard';
+import { Modal } from '@/components/ui';
+import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import {
   FaHouse,
@@ -13,11 +15,10 @@ import {
   FaPlus,
   FaComments,
   FaChartLine,
-  FaStar,
-  FaArrowRightFromBracket,
+  FaCreditCard,
   FaBell,
   FaMagnifyingGlass,
-  FaXmark,
+  FaArrowRightFromBracket,
 } from 'react-icons/fa6';
 
 interface RecruiterNavItem {
@@ -30,30 +31,59 @@ const recruiterNav: RecruiterNavItem[] = [
   { label: 'Home', href: ROUTES.recruiterDashboard, icon: FaHouse },
   { label: 'My Jobs', href: ROUTES.recruiterJobs, icon: FaBriefcase },
   { label: 'Post', href: ROUTES.recruiterNewJob, icon: FaPlus },
-  { label: 'Messages', href: ROUTES.messages, icon: FaComments },
+  { label: 'Messages', href: ROUTES.recruiterMessages, icon: FaComments },
   { label: 'Analytics', href: ROUTES.recruiterAnalytics, icon: FaChartLine },
+  { label: 'Credits', href: ROUTES.recruiterCredits, icon: FaCreditCard },
 ];
 
 function RecruiterFloatingSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { logout } = useAuthStore();
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { user, logoutWithApi } = useAuthStore();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [creditBalance, setCreditBalance] = useState(0);
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  useEffect(() => {
+    let mounted = true;
 
-  const confirmLogout = () => {
-    logout();
-    router.push('/');
+    const loadBalance = async () => {
+      try {
+        const res = await api.get<{ balance: number }>('/credits/balance');
+        if (mounted) {
+          setCreditBalance(res.data?.balance ?? 0);
+        }
+      } catch {
+        if (mounted) {
+          setCreditBalance(0);
+        }
+      }
+    };
+
+    loadBalance();
+    const timer = setInterval(loadBalance, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, []);
+
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true);
+    await logoutWithApi();
+    setIsLoggingOut(false);
   };
+
+  const userInitial = user?.email?.trim()?.charAt(0)?.toUpperCase() || 'U';
+  const profileActive = pathname === ROUTES.recruiterProfile || pathname.startsWith(`${ROUTES.recruiterProfile}/`);
 
   return (
     <>
-      <aside className="hidden lg:flex fixed left-4 xl:left-8 top-1/2 -translate-y-1/2 z-40 flex-col items-center gap-10">
+      <aside className="hidden lg:flex fixed left-4 xl:left-8 top-1/2 -translate-y-1/2 z-40 flex-col items-center">
         <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-0.5 shadow-2xl">
           {recruiterNav.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.href);
+            const active = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link
                 key={item.href}
@@ -68,43 +98,39 @@ function RecruiterFloatingSidebar() {
             );
           })}
         </div>
+      </aside>
 
-        <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-0.5 shadow-2xl">
+      <aside className="hidden lg:flex fixed left-4 xl:left-8 bottom-8 z-40 flex-col items-center">
+        <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-2 shadow-2xl">
           <Link
             href={ROUTES.recruiterCredits}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-              isActive(ROUTES.recruiterCredits)
-                ? 'bg-lime-400 text-black'
-                : 'text-white/60 hover:text-white hover:bg-white/10'
-            }`}
             title="Credits"
+            className="w-12 h-12 rounded-full flex items-center justify-center text-lime-300 hover:bg-white/10"
           >
-            <FaStar className="text-base" />
+            <FaCreditCard className="text-lg" />
           </Link>
+
           <button
-            onClick={() => setShowLogoutConfirm(true)}
-            className="w-12 h-12 rounded-full text-white/60 hover:text-red-400 flex items-center justify-center transition-colors"
-            title="Sign out"
+            type="button"
+            onClick={() => setShowLogoutModal(true)}
+            title="Logout"
+            className="w-12 h-12 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10"
           >
-            <FaArrowRightFromBracket className="text-base" />
+            <FaArrowRightFromBracket className="text-lg" />
           </button>
+
           <Link
-            href={ROUTES.profile}
-            className={`w-11 h-11 rounded-full overflow-hidden border-2 mt-1 transition-colors ${
-              isActive(ROUTES.profile)
-                ? 'border-[#c3ff3d]'
-                : 'border-white/20 hover:border-white/40'
-            }`}
+            href={ROUTES.recruiterProfile}
             title="Profile"
+            className={`w-10 h-10 rounded-full text-xs font-bold flex items-center justify-center border-2 transition-colors ${
+              profileActive
+                ? 'bg-lime-400 text-black border-lime-400'
+                : 'bg-blue-700 text-white border-black hover:bg-blue-600'
+            }`}
           >
-            <Image
-              src="https://i.pravatar.cc/80?img=47"
-              alt="Avatar"
-              width={44}
-              height={44}
-              className="object-cover"
-            />
+            {userInitial}
           </Link>
+          <p className="text-[10px] font-bold text-lime-300 leading-none">{creditBalance}</p>
         </div>
       </aside>
 
@@ -131,167 +157,60 @@ function RecruiterFloatingSidebar() {
         </div>
       </div>
 
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-black border border-[#222] rounded-2xl w-full max-w-sm p-8 text-center shadow-2xl font-brand">
-            <h3 className="text-2xl font-bold text-white mb-3 tracking-wide">Log Out?</h3>
-            <p className="text-white/60 text-sm mb-8 leading-relaxed">
-              Your progress is saved. Come back anytime to manage your jobs and applicants.
-            </p>
-            <div className="flex items-center justify-center gap-4">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="px-6 py-2.5 rounded-lg border border-white/20 text-white hover:border-white transition-colors text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmLogout}
-                className="px-6 py-2.5 rounded-lg bg-[#c3ff3d] text-black font-semibold hover:bg-[#aee62d] transition-colors text-sm"
-              >
-                Confirm
-              </button>
-            </div>
+      <Modal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} title="Log out?">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">You will be signed out from this device.</p>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowLogoutModal(false)}
+              className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
+              disabled={isLoggingOut}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmLogout}
+              className="px-4 py-2 rounded-lg bg-black text-lime-300 hover:bg-slate-900 disabled:opacity-60"
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? 'Logging out...' : 'Log out'}
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
     </>
   );
 }
 
 export default function RecruiterLayout({ children }: { children: React.ReactNode }) {
-  const [searchActive, setSearchActive] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [bellActive, setBellActive] = useState(false);
-  const pathname = usePathname();
-  const router = useRouter();
-
-  const handleSearchSubmit = (query: string) => {
-    router.push(`${ROUTES.recruiterJobs}?keyword=${encodeURIComponent(query)}`);
-    setSearchActive(false);
-    setSearchQuery('');
-  };
-
   return (
     <AuthGuard allowedRoles={['recruiter']}>
       <div className="min-h-screen bg-gradient-to-br from-[#f7f7f7] via-[#f9fbf4] to-[#eef7d8]">
-        {/* Header with Logo, Search, and Notifications */}
-        <header className="sticky top-0 z-50 w-full">
-          <div className="mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-10 h-16 md:h-20">
-            {/* Logo */}
-            <Link href={ROUTES.recruiterDashboard} className="flex items-center gap-2 shrink-0">
+        <header className="sticky top-0 z-30 px-4 sm:px-6 lg:px-10 py-4">
+          <div className="mx-auto flex items-center justify-between">
+            <Link href={ROUTES.recruiterDashboard} className="inline-flex items-center gap-2">
               <Image src="/logo.png" alt="Jobyt" width={28} height={28} className="object-contain" />
               <span className="font-display text-xl font-bold text-slate-900 tracking-tight">Jobyt</span>
             </Link>
 
-            {/* Right Actions */}
-            <div className="flex items-center gap-3">
-              {/* Desktop: Black outer pill with search + notification */}
-              <div className="hidden sm:flex">
-                {searchActive ? (
-                  /* STATE: Search active */
-                  <div className="flex items-center bg-[#1a1a1a] rounded-full h-14 p-1.5 gap-0 min-w-[300px]">
-                    {/* Lime search area */}
-                    <div className="flex items-center flex-1 bg-lime-400 rounded-full h-full px-4 gap-2.5">
-                      <FaMagnifyingGlass className="text-black/70 text-sm shrink-0" />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' && searchQuery.trim()) handleSearchSubmit(searchQuery.trim()); }}
-                        placeholder="Search jobs or applicants"
-                        autoFocus
-                        className="flex-1 bg-transparent text-black placeholder-black/40 text-sm font-semibold outline-none min-w-0"
-                      />
-                      <button
-                        onClick={() => { setSearchActive(false); setSearchQuery(''); }}
-                        className="text-black/50 hover:text-black transition-colors"
-                      >
-                        <FaXmark className="text-sm" />
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-1 ml-1 pl-1 relative">
-                      <button
-                        onClick={() => setBellActive(!bellActive)}
-                        className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                          bellActive ? 'bg-lime-400 text-black' : 'text-white/80 hover:text-white'
-                        }`}
-                      >
-                        <FaBell className="text-lg" />
-                      </button>
-                      {bellActive && <NotificationPopover />}
-                    </div>
-                  </div>
-                ) : (
-                  /* STATE: Default */
-                  <div className="flex items-center bg-[#1a1a1a] rounded-full h-14 px-2 gap-1 relative">
-                    <button
-                      onClick={() => setSearchActive(true)}
-                      className="w-11 h-11 rounded-full flex items-center justify-center text-white/80 hover:text-white transition-colors"
-                    >
-                      <FaMagnifyingGlass className="text-base" />
-                    </button>
-                    <button
-                      onClick={() => setBellActive(!bellActive)}
-                      className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
-                        bellActive ? 'bg-lime-400 text-black' : 'text-white/80 hover:text-white'
-                      }`}
-                    >
-                      <FaBell className="text-lg" />
-                    </button>
-                    {bellActive && <NotificationPopover />}
-                  </div>
-                )}
-              </div>
-
-              {/* Mobile: Search + Bell */}
-              <div className="sm:hidden relative">
-                <div className="flex items-center rounded-full h-14 p-1.5 bg-[#1a1a1a] transition-colors gap-1">
-                  {searchQuery ? (
-                    <div className="flex items-center flex-1 bg-lime-400 rounded-full h-full px-4 gap-2.5">
-                      <FaMagnifyingGlass className="text-black/70 text-sm shrink-0" />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value); setSearchActive(true); }}
-                        onKeyDown={(e) => { if (e.key === 'Enter' && searchQuery.trim()) handleSearchSubmit(searchQuery.trim()); }}
-                        placeholder="Search"
-                        className="flex-1 bg-transparent text-black placeholder-black/40 text-sm font-semibold outline-none min-w-0"
-                      />
-                      <button
-                        onClick={() => { setSearchQuery(''); setSearchActive(false); }}
-                        className="text-black/50 hover:text-black transition-colors"
-                      >
-                        <FaXmark className="text-sm" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center flex-1 px-3 gap-2.5">
-                      <FaMagnifyingGlass className="text-white/60 text-sm shrink-0" />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value); setSearchActive(true); }}
-                        onKeyDown={(e) => { if (e.key === 'Enter' && searchQuery.trim()) handleSearchSubmit(searchQuery.trim()); }}
-                        placeholder="Search"
-                        className="flex-1 bg-transparent text-white placeholder-white/40 text-sm font-medium outline-none min-w-0"
-                      />
-                    </div>
-                  )}
-                  {/* Bell inside search pill */}
-                  <div className="relative flex shrink-0">
-                    <button
-                      onClick={() => setBellActive(!bellActive)}
-                      className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
-                        bellActive ? 'bg-lime-400 text-black' : 'text-white/80 hover:text-white'
-                      }`}
-                    >
-                      <FaBell className="text-lg" />
-                    </button>
-                    {bellActive && <NotificationPopover />}
-                  </div>
-                </div>
-              </div>
+            <div className="inline-flex items-center gap-3">
+              <button
+                type="button"
+                className="inline-flex items-center gap-3 rounded-full bg-black text-white px-4 py-2"
+                title="Search and notifications"
+              >
+                <FaMagnifyingGlass className="text-sm" />
+                <FaBell className="text-sm" />
+              </button>
+              <Link
+                href={ROUTES.recruiterNewJob}
+                className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center"
+                title="Post a job"
+              >
+                <FaPlus className="text-sm" />
+              </Link>
             </div>
           </div>
         </header>
@@ -303,51 +222,5 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
         </main>
       </div>
     </AuthGuard>
-  );
-}
-
-function NotificationPopover() {
-  const [activeTab, setActiveTab] = useState('Today');
-  const tabs = ['Today', 'This Week', 'Earlier'];
-  const notifications = [
-    { id: 1, text: 'You have a new application for Software Engineering Intern.', read: false },
-    { id: 2, text: 'Your job posting "Marketing Intern" reached 100 views.', read: false },
-    { id: 3, text: 'You have a new message from a candidate.', read: true },
-    { id: 4, text: 'Your job "Data Science Intern" is closing soon.', read: true },
-    { id: 5, text: 'A candidate has withdrawn their application.', read: true },
-  ];
-  
-  return (
-    <div 
-      onClick={(e) => e.stopPropagation()} 
-      className="absolute right-0 top-14 sm:top-16 mt-1 w-[340px] max-w-[calc(100vw-32px)] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 p-5 z-50 animate-in fade-in slide-in-from-top-2 text-left cursor-auto"
-    >
-      <h3 className="text-xl font-display font-medium text-slate-900 mb-4">Notifications</h3>
-      
-      <div className="bg-black rounded-xl p-1.5 flex items-center justify-between mb-5">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              activeTab === tab 
-                ? 'bg-[#c1f237] text-black' 
-                : 'text-[#c1f237] hover:bg-white/10'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-        {notifications.map((notif) => (
-          <div key={notif.id} className="bg-[#f8f6f0] rounded-[16px] p-4 flex items-start gap-3">
-            <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${notif.read ? 'bg-[#d9d9d9]' : 'bg-[#c1f237]'}`} />
-            <p className="text-slate-700 text-[13px] leading-snug">{notif.text}</p>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }

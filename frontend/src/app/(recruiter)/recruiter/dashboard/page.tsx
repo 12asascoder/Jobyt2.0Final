@@ -6,7 +6,11 @@ import { api } from '@/lib/api';
 import { Spinner, Button } from '@/components/ui';
 import { ROUTES } from '@/constants';
 import { Job } from '@/types';
-import { FaEye, FaBriefcase } from 'react-icons/fa6';
+import {
+    FaArrowRight,
+    FaLocationDot,
+    FaEye,
+} from 'react-icons/fa6';
 
 interface RecruiterSummary {
     total_jobs: number;
@@ -14,6 +18,21 @@ interface RecruiterSummary {
     total_applications: number;
     total_hired: number;
     total_views: number;
+}
+
+interface RecruiterSummaryPayload {
+    summary: RecruiterSummary;
+}
+
+interface RecruiterApplicationsStats {
+    total: number;
+    applied: number;
+    in_review: number;
+    shortlisted: number;
+    interview: number;
+    offer: number;
+    hired: number;
+    rejected: number;
 }
 
 interface RecruiterApplicant {
@@ -26,17 +45,28 @@ interface RecruiterApplicant {
     created_at: string;
 }
 
+interface ExtendedJob extends Job {
+    application_count?: number;
+}
+
 const statusPillClass: Record<string, string> = {
-    PENDING: 'bg-amber-100 text-amber-600',
-    REVIEWED: 'bg-blue-100 text-blue-600',
-    INTERVIEWED: 'bg-lime-100 text-lime-600',
-    REJECTED: 'bg-rose-100 text-rose-600',
-    APPLIED: 'bg-amber-100 text-amber-600',
-    SCREENING: 'bg-blue-100 text-blue-600',
-    SHORTLISTED: 'bg-blue-100 text-blue-600',
-    INTERVIEW: 'bg-lime-100 text-lime-600',
-    SELECTED: 'bg-lime-100 text-lime-600',
-    HIRED: 'bg-lime-100 text-lime-600',
+    applied: 'bg-yellow-100 text-yellow-700',
+    in_review: 'bg-blue-100 text-blue-700',
+    shortlisted: 'bg-purple-100 text-purple-700',
+    interview: 'bg-orange-100 text-orange-700',
+    offer: 'bg-teal-100 text-teal-700',
+    hired: 'bg-emerald-100 text-emerald-700',
+    rejected: 'bg-rose-100 text-rose-700',
+};
+
+const statusLabelMap: Record<string, string> = {
+    applied: 'PENDING',
+    in_review: 'REVIEWED',
+    shortlisted: 'SHORTLISTED',
+    interview: 'INTERVIEWED',
+    offer: 'OFFER',
+    hired: 'HIRED',
+    rejected: 'REJECTED',
 };
 
 const formatRelative = (isoDate: string) => {
@@ -59,35 +89,44 @@ const formatRelative = (isoDate: string) => {
     return `${days}d ago`;
 };
 
-const formatStatusLabel = (status: string) => status.replace(/_/g, ' ').toUpperCase();
-
-const getStatusPillClass = (status: string) => {
-    const normalized = status.toUpperCase();
-    return statusPillClass[normalized] || 'bg-slate-100 text-slate-700';
-};
+const formatStatusLabel = (status: string) => {
+    return statusLabelMap[status] || status.toUpperCase();
+}
 
 export default function RecruiterDashboardPage() {
     const [balance, setBalance] = useState(0);
     const [summary, setSummary] = useState<RecruiterSummary | null>(null);
-    const [activeJobs, setActiveJobs] = useState<Job[]>([]);
+    const [appStats, setAppStats] = useState<RecruiterApplicationsStats | null>(null);
+    const [activeJobs, setActiveJobs] = useState<ExtendedJob[]>([]);
     const [recentApplicants, setRecentApplicants] = useState<RecruiterApplicant[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchData = useCallback(async () => {
         try {
-            const [credit, summaryRes, jobsRes, applicantsRes] = await Promise.all([
+            const [creditRes, summaryRes, statsRes, jobsRes, applicantsRes] = await Promise.allSettled([
                 api.get<{ balance: number }>('/credits/balance'),
-                api.get<{ summary: RecruiterSummary; top_jobs: Job[] }>('/analytics/summary'),
-                api.getPaginated<Job>('/jobs/my/listings?limit=5'),
+                api.get<RecruiterSummaryPayload>('/analytics/summary'),
+                api.get<RecruiterApplicationsStats>('/applications/recruiter/applicants/stats'),
+                api.getPaginated<ExtendedJob>('/jobs/my/listings?limit=5'),
                 api.getPaginated<RecruiterApplicant>('/applications/recruiter/applicants?limit=5'),
             ]);
 
-            setBalance(credit.data?.balance ?? 0);
-            setSummary(summaryRes.data?.summary ?? null);
-            setActiveJobs(jobsRes.data ?? []);
-            setRecentApplicants(applicantsRes.data ?? []);
-        } catch (err) {
-            console.error('Dashboard fetch error:', err);
+            const creditData = creditRes.status === 'fulfilled' ? creditRes.value : null;
+            const summaryData = summaryRes.status === 'fulfilled' ? summaryRes.value : null;
+            const statsData = statsRes.status === 'fulfilled' ? statsRes.value : null;
+            const jobsData = jobsRes.status === 'fulfilled' ? jobsRes.value : null;
+            const applicantsData = applicantsRes.status === 'fulfilled' ? applicantsRes.value : null;
+
+            const jobRows = jobsData?.data ?? [];
+            const preferredJobs = jobRows.filter((job) => job.status !== 'closed').slice(0, 5);
+
+            setBalance(creditData?.data?.balance ?? 0);
+            setSummary(summaryData?.data?.summary ?? null);
+            setAppStats(statsData?.data ?? null);
+            setActiveJobs((preferredJobs.length ? preferredJobs : jobRows).slice(0, 5));
+            setRecentApplicants((applicantsData?.data ?? []).slice(0, 5));
+        } catch {
+            // Keep the dashboard resilient if one endpoint fails.
         }
     }, []);
 
@@ -121,6 +160,12 @@ export default function RecruiterDashboardPage() {
         );
     }
 
+    const pendingReviews = (appStats?.applied ?? 0)
+        + (appStats?.in_review ?? 0)
+        + (appStats?.shortlisted ?? 0)
+        + (appStats?.interview ?? 0)
+        + (appStats?.offer ?? 0);
+
     const statCards = [
         {
             label: ['CREDIT', 'BALANCE'],
@@ -135,103 +180,88 @@ export default function RecruiterDashboardPage() {
             value: String(summary?.total_applications ?? 0),
         },
         {
-            label: ['TOTAL', 'VIEWS'],
-            value: String(summary?.total_views ?? 0),
+            label: ['PENDING', 'REVIEWS'],
+            value: String(pendingReviews),
         },
     ];
 
     return (
-        <div className="max-w-7xl mx-auto space-y-5 pb-6">
-            <section className="py-2">
-                <h1 className="text-2xl font-black tracking-tight text-black">Welcome back!</h1>
-                <p className="mt-1 text-lg leading-tight text-black/80">Here's what's happening with your internships</p>
+        <div className="max-w-7xl mx-auto space-y-6 pb-6">
+            <section>
+                <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Welcome back!</h1>
+                <p className="mt-2 text-xl leading-tight text-black/80">Here's what's happening with your internships</p>
             </section>
 
             <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                {statCards.map((stat) => (
-                    <article
-                        key={stat.label.join('-')}
-                        className="rounded-3xl bg-black text-lime-300 px-6 py-5 shadow-lg min-h-[100px] flex items-center"
-                    >
-                        <div className="flex items-end gap-4">
-                            <p className="text-5xl leading-none font-black tracking-tight">{stat.value}</p>
-                            <div className="pb-1">
-                                {stat.label.map((line) => (
-                                    <p key={line} className="text-xs uppercase tracking-widest font-bold leading-tight">
-                                        {line}
-                                    </p>
-                                ))}
+                {statCards.map((stat) => {
+                    return (
+                        <article key={stat.label.join('-')} className="rounded-2xl bg-black text-lime-300 px-5 py-4 shadow-xl min-h-[92px] flex items-center">
+                            <div className="flex items-end gap-4">
+                                <p className="text-[38px] leading-none font-black tracking-tight">{stat.value}</p>
+                                <div className="pb-1">
+                                    {stat.label.map((line) => (
+                                        <p key={line} className="text-[11px] uppercase tracking-[0.09em] font-bold leading-tight">
+                                            {line}
+                                        </p>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    </article>
-                ))}
+                        </article>
+                    );
+                })}
             </section>
 
             <section className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                <article className="rounded-2xl bg-[#ece9e2] border border-[#e3dfd7] shadow-sm p-5">
+                <article className="rounded-2xl bg-[#ece9e2] border border-black/5 shadow-sm p-4">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-bold text-slate-900">Recent Applications</h2>
-                        <Link href={ROUTES.recruiterApplications} className="text-sm font-semibold bg-black text-white px-4 py-2 rounded-full hover:bg-slate-800">
-                            View All
+                        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Recent Applications</h2>
+                        <Link href={ROUTES.recruiterApplications} className="rounded-full bg-black text-white text-xs font-semibold px-4 py-1.5 hover:bg-slate-900 inline-flex items-center gap-1">
+                            View All <FaArrowRight className="text-[10px]" />
                         </Link>
                     </div>
 
                     {recentApplicants.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center">
+                        <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center bg-white">
                             <p className="text-sm text-slate-500">No applications yet.</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
                             {recentApplicants.slice(0, 5).map((application) => (
-                                <div
-                                    key={application.id}
-                                    className="rounded-xl bg-white p-4 hover:bg-slate-50 transition-colors"
-                                >
-                                    <div className="flex items-start gap-4">
-                                        {application.photo_url ? (
-                                            <img
-                                                src={application.photo_url}
-                                                alt={application.name || 'Candidate'}
-                                                className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-                                            />
-                                        ) : (
-                                            <div className="w-16 h-16 rounded-full bg-slate-300 flex items-center justify-center flex-shrink-0">
-                                                <span className="text-lg font-semibold text-slate-600">
-                                                    {(application.name || 'C')[0].toUpperCase()}
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        <div className="flex-1">
-                                            <p className="font-bold text-slate-900 text-base">{application.name || 'Candidate'}</p>
-                                            <p className="text-sm text-slate-600 mt-0.5">{application.job_title}</p>
-                                            <p className="text-xs text-slate-500 mt-2">{formatRelative(application.created_at)}</p>
+                                <div key={application.id} className="rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-300 transition-colors">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-xl font-black text-slate-900">{application.name || 'Candidate'}</p>
+                                            <p className="text-sm text-slate-700 mt-0.5">{application.job_title}</p>
+                                            <p className="text-xs text-slate-500 mt-1 inline-flex items-center gap-1">
+                                                <FaLocationDot className="text-[10px]" />
+                                                {application.job_location || 'Remote'}
+                                            </p>
                                         </div>
-
                                         <span
-                                            className={`text-xs font-semibold px-3 py-1 rounded-full flex-shrink-0 whitespace-nowrap ${
-                                                getStatusPillClass(application.status)
+                                            className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                                                statusPillClass[application.status.toLowerCase()] || 'bg-slate-100 text-slate-700'
                                             }`}
                                         >
-                                            {formatStatusLabel(application.status)}
+                                            {formatStatusLabel(application.status.toLowerCase())}
                                         </span>
                                     </div>
+                                    <p className="text-[11px] text-slate-400 mt-3">Applied {formatRelative(application.created_at)}</p>
                                 </div>
                             ))}
                         </div>
                     )}
                 </article>
 
-                <article className="rounded-2xl bg-[#ece9e2] border border-[#e3dfd7] shadow-sm p-5">
+                <article className="rounded-2xl bg-[#ece9e2] border border-black/5 shadow-sm p-4">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-bold text-slate-900">Active Job Posts</h2>
-                        <Link href={ROUTES.recruiterJobs} className="text-sm font-semibold bg-black text-white px-4 py-2 rounded-full hover:bg-slate-800">
-                            View All
+                        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Active Job Posts</h2>
+                        <Link href={ROUTES.recruiterJobs} className="rounded-full bg-black text-white text-xs font-semibold px-4 py-1.5 hover:bg-slate-900 inline-flex items-center gap-1">
+                            View All <FaArrowRight className="text-[10px]" />
                         </Link>
                     </div>
 
                     {activeJobs.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center">
+                        <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center bg-white">
                             <p className="text-sm text-slate-500 mb-3">No jobs posted yet.</p>
                             <Link href={ROUTES.recruiterNewJob}>
                                 <Button>Post Your First Job</Button>
@@ -240,25 +270,30 @@ export default function RecruiterDashboardPage() {
                     ) : (
                         <div className="space-y-3">
                             {activeJobs.slice(0, 5).map((job) => (
-                                <div key={job.id} className="rounded-xl bg-white p-4 hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex-1">
-                                            <p className="font-bold text-slate-900 text-base">{job.title}</p>
-                                            <div className="mt-2 flex items-center gap-4 text-xs text-slate-600">
-                                                <span className="inline-flex items-center gap-1">
-                                                    <FaBriefcase className="text-[12px]" />
-                                                    {Number(job.application_count ?? 0)} applications
-                                                </span>
-                                                <span className="inline-flex items-center gap-1">
-                                                    <FaEye className="text-[12px]" />
-                                                    {Number(job.views_count ?? 0)} views
-                                                </span>
-                                            </div>
+                                <div key={job.id} className="rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-300 transition-colors">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-xl font-black text-slate-900">{job.title}</p>
+                                            <p className="text-xs text-slate-500 mt-1 inline-flex items-center gap-1">
+                                                <FaLocationDot className="text-[10px]" />
+                                                {job.location || 'Remote'}
+                                            </p>
                                         </div>
-
-                                        <span className="text-xs text-slate-500 flex-shrink-0 whitespace-nowrap">
-                                            {formatRelative(job.created_at)}
+                                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-lime-100 text-lime-800">
+                                            {job.status}
                                         </span>
+                                    </div>
+
+                                    <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                                        <span className="inline-flex items-center gap-2">
+                                            <span className="inline-flex items-center gap-1">
+                                                <FaEye className="text-[10px]" />
+                                                {job.views_count} views
+                                            </span>
+                                            <span>•</span>
+                                            <span>{job.application_count ?? 0} applications</span>
+                                        </span>
+                                        <span>Posted {formatRelative(job.created_at)}</span>
                                     </div>
                                 </div>
                             ))}

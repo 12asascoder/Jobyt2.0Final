@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { api, ApiError } from '@/lib/api';
-import { API_BASE } from '@/constants';
 import { useAuthStore } from '@/store/auth.store';
 import { ApplicantProfile, RecruiterProfile } from '@/types';
 import { Spinner, Avatar } from '@/components/ui';
@@ -11,15 +10,9 @@ import toast from 'react-hot-toast';
 import { FaPenToSquare, FaCheck } from 'react-icons/fa6';
 import { ResumeUploadCard } from '@/components/profile/ResumeUploadCard';
 import { ResumeListCard } from '@/components/profile/ResumeListCard';
+import { resolveAssetUrl } from '@/lib/assetUrl';
 
 type ProfileData = Partial<ApplicantProfile & RecruiterProfile>;
-
-const resolveAssetUrl = (url?: string | null): string | null => {
-  if (!url) return null;
-  if (/^https?:\/\//i.test(url)) return url;
-  const origin = API_BASE.replace(/\/api\/v1\/?$/, '');
-  return url.startsWith('/') ? `${origin}${url}` : `${origin}/${url}`;
-};
 
 export default function ProfilePage() {
   const { user } = useAuthStore();

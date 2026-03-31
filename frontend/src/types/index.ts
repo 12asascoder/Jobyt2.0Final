@@ -86,7 +86,6 @@ export interface Job {
   status: JobStatus;
   is_boosted: boolean;
   views_count: number;
-  application_count?: number;
   company_name?: string;
   created_at: string;
 }

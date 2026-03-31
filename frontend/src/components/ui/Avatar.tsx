@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface AvatarProps {
@@ -15,10 +15,21 @@ const getInitials = (name: string) =>
 
 export const Avatar = ({ src, name, size = 'md', className }: AvatarProps) => {
   const sizeClass = sizes[size];
-  if (src) {
+  const [showImage, setShowImage] = useState(Boolean(src));
+
+  useEffect(() => {
+    setShowImage(Boolean(src));
+  }, [src]);
+
+  if (src && showImage) {
     return (
       <div className={cn('relative overflow-hidden rounded-full bg-gray-200', sizeClass, className)}>
-        <Image src={src} alt={name || 'Avatar'} fill className="object-cover" />
+        <img
+          src={src}
+          alt={name || 'Avatar'}
+          className="h-full w-full object-cover"
+          onError={() => setShowImage(false)}
+        />
       </div>
     );
   }

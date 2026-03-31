@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
+import { api } from '@/lib/api';
+import { resolveAssetUrl } from '@/lib/assetUrl';
 import { ROUTES } from '@/constants';
 import {
     FaHouse,
@@ -35,10 +36,41 @@ const mainItems: SidebarItem[] = [
 export function DashboardSidebar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { logout } = useAuthStore();
+    const { logout, user } = useAuthStore();
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
     const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+    const avatarInitial = useMemo(() => {
+        const email = user?.email || '';
+        return email.trim().charAt(0).toUpperCase() || 'U';
+    }, [user?.email]);
+
+    useEffect(() => {
+        let mounted = true;
+
+        const loadProfileAvatar = async () => {
+            try {
+                const res = await api.get<any>('/users/me');
+                const profile = res.data?.profile;
+                const raw = profile?.photo_url || profile?.logo_url || null;
+                if (mounted) {
+                    setAvatarUrl(resolveAssetUrl(raw));
+                }
+            } catch {
+                if (mounted) {
+                    setAvatarUrl(null);
+                }
+            }
+        };
+
+        void loadProfileAvatar();
+
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     const handleLogout = () => {
         setShowLogoutConfirm(true);
@@ -98,13 +130,17 @@ export function DashboardSidebar() {
                             }`}
                         title="Profile"
                     >
-                        <Image
-                            src="https://i.pravatar.cc/80?img=47"
-                            alt="Avatar"
-                            width={44}
-                            height={44}
-                            className="object-cover"
-                        />
+                        {avatarUrl ? (
+                            <img
+                                src={avatarUrl}
+                                alt="Avatar"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-slate-700 text-white flex items-center justify-center text-sm font-semibold">
+                                {avatarInitial}
+                            </div>
+                        )}
                     </Link>
                 </div>
             </div>

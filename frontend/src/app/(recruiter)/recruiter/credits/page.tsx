@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
-import { CreditBalance } from '@/components/credits/CreditBalance';
-import { Spinner, Card, CardBody, CardHeader, Button } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import { CreditTransaction, Plan } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -26,12 +25,14 @@ export default function RecruiterCreditsPage() {
   useEffect(() => {
     Promise.all([
       api.get<{ balance: number }>('/credits/balance'),
-      api.getPaginated<CreditTransaction>('/credits/history'),
+      api.getPaginated<CreditTransaction>('/credits/ledger'),
       api.get<Plan[]>('/payments/plans'),
     ]).then(([bal, txns, plansRes]) => {
-      setBalance(bal.data.balance);
-      setTransactions(txns.data);
-      setPlans(plansRes.data);
+      setBalance(bal.data?.balance ?? 0);
+      setTransactions(txns.data ?? []);
+      setPlans(plansRes.data ?? []);
+    }).catch((err) => {
+      toast.error(err instanceof ApiError ? err.message : 'Could not load credits data');
     }).finally(() => setLoading(false));
   }, []);
 
@@ -47,81 +48,104 @@ export default function RecruiterCreditsPage() {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  const topPlans = plans.slice(0, 3);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Credits & Plans</h1>
-      <div className="rounded-xl bg-blue-50 border border-blue-200 p-4 text-sm text-blue-800">
-        💡 Publishing a job costs <strong>10 credits</strong>. Top up to keep posting.
-      </div>
-      <CreditBalance balance={balance} />
+    <div className="mx-auto max-w-[1120px]">
+      <h1 className="text-center text-[42px] leading-tight font-black tracking-tight text-slate-900 mb-4">Credits &amp; Plans</h1>
 
-      <div>
-        <h2 className="mb-3 font-semibold text-gray-800">Top Up Credits</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {plans.map((plan) => (
-            <Card key={plan.id} className="text-center">
-              <CardBody className="p-5">
-                <p className="text-lg font-bold text-gray-900">{plan.name}</p>
-                <p className="mt-1 text-3xl font-bold text-blue-600">{plan.credits.toLocaleString()}</p>
-                <p className="text-xs text-gray-400">credits</p>
-                <p className="mt-2 text-lg font-semibold text-gray-700">₹{plan.price}</p>
-                <Button
-                  className="mt-4 w-full"
-                  size="sm"
-                  isLoading={buyingPlan === plan.id}
-                  onClick={() => handleBuyPlan(plan.id)}
-                >
-                  Buy Plan
-                </Button>
-              </CardBody>
-            </Card>
-          ))}
+      <section className="mb-6 rounded-2xl bg-black text-lime-300 px-6 py-4 flex items-center justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-wider font-bold">Credit Balance</p>
+          <p className="text-5xl font-black leading-none mt-2">{balance.toLocaleString()}</p>
         </div>
-      </div>
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 420, behavior: 'smooth' })}
+          className="rounded-lg bg-lime-400 px-4 py-2 text-sm font-bold text-black hover:bg-lime-300"
+        >
+          Earn Credits
+        </button>
+      </section>
 
-      <Card>
-        <CardHeader><p className="font-semibold">Transaction History</p></CardHeader>
+      <h2 className="text-center text-[38px] font-black tracking-tight text-slate-900 mb-4">Credit Plans</h2>
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+        {(topPlans.length > 0 ? topPlans : [
+          { id: 'free', name: 'Free', credits: 200, price: 0, currency: 'INR' },
+          { id: 'pro', name: 'Pro', credits: 600, price: 299, currency: 'INR' },
+          { id: 'enterprise', name: 'Enterprise', credits: 1500, price: 699, currency: 'INR' },
+        ]).map((plan) => {
+          const isFree = Number(plan.price) === 0;
+          const isFallback = !plans.length;
+          const isLoadingPlan = buyingPlan === plan.id;
+
+          return (
+            <article key={plan.id} className="rounded-xl bg-black text-center px-6 py-7 min-h-[252px] flex flex-col items-center">
+              <h3 className="text-white text-4xl font-black mb-3">{plan.name}</h3>
+              <p className="text-lime-300 text-5xl font-black leading-none">{Number(plan.credits).toLocaleString()}</p>
+              <p className="text-lime-300 text-[10px] tracking-[0.2em] mt-1">CREDITS</p>
+              <p className="text-white text-xl mt-3">{isFree ? 'New User' : `Rs. ${Number(plan.price).toLocaleString()}/-`}</p>
+              <button
+                type="button"
+                disabled={isLoadingPlan || isFallback || isFree}
+                onClick={() => handleBuyPlan(plan.id)}
+                className={`mt-auto rounded-md px-4 py-2 text-sm font-bold w-[130px] ${
+                  isFree || isFallback
+                    ? 'bg-zinc-700 text-zinc-300 cursor-not-allowed'
+                    : 'bg-lime-400 text-black hover:bg-lime-300'
+                }`}
+              >
+                {isFree ? 'Credits Claimed' : isLoadingPlan ? 'Processing...' : 'Buy Now'}
+              </button>
+            </article>
+          );
+        })}
+      </section>
+
+      <h2 className="text-center text-[38px] font-black tracking-tight text-slate-900 mb-4">Transaction History</h2>
+      <section className="rounded-2xl bg-[#ece9e2] p-5 overflow-x-auto">
         {formattedTransactions.length === 0 ? (
-          <CardBody><p className="text-sm text-gray-400">No transactions yet.</p></CardBody>
+          <p className="text-sm text-slate-500">No transactions yet.</p>
         ) : (
-          <CardBody className="p-4 sm:p-6 overflow-x-auto">
-            <table className="w-full text-sm min-w-[680px]">
-              <thead className="text-slate-500">
-                <tr>
-                  <th className="text-left py-2">Transaction</th>
-                  <th className="text-left py-2">Transaction No.</th>
-                  <th className="text-left py-2">Date</th>
-                  <th className="text-left py-2">Status</th>
-                  <th className="text-left py-2">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {formattedTransactions.map((tx) => (
-                  <tr key={tx.id} className="border-t border-slate-100">
-                    <td className="py-3 text-slate-800">{tx.transaction}</td>
-                    <td className="py-3 text-slate-700">#{tx.transactionNo}</td>
-                    <td className="py-3 text-slate-700">{tx.date}</td>
-                    <td className="py-3">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          tx.status === 'success'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {tx.status === 'success' ? 'Success' : 'Failed'}
+          <table className="w-full text-sm min-w-[700px]">
+            <thead className="text-slate-600">
+              <tr>
+                <th className="text-left py-2">Transaction</th>
+                <th className="text-left py-2">Transaction No.</th>
+                <th className="text-left py-2">Date</th>
+                <th className="text-left py-2">Status</th>
+                <th className="text-left py-2">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {formattedTransactions.map((tx) => {
+                const success = tx.status === 'success';
+                return (
+                  <tr key={tx.id} className="border-t border-black/5">
+                    <td className="py-2.5 text-slate-800">{tx.transaction}</td>
+                    <td className="py-2.5 text-slate-700">#{tx.transactionNo}</td>
+                    <td className="py-2.5 text-slate-700">{tx.date}</td>
+                    <td className="py-2.5">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${success ? 'bg-lime-200 text-lime-900' : 'bg-rose-200 text-rose-900'}`}>
+                        {success ? 'Success' : 'Failed'}
                       </span>
                     </td>
-                    <td className="py-3 text-slate-800">{tx.total}</td>
+                    <td className="py-2.5 text-slate-800">{tx.total}</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardBody>
+                );
+              })}
+            </tbody>
+          </table>
         )}
-      </Card>
+      </section>
     </div>
   );
 }
