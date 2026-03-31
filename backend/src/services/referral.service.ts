@@ -1,6 +1,5 @@
 import { UserModel } from '../models/user.model';
 import { ReferralModel } from '../models/referral.model';
-import { ReferralRedemptionModel } from '../models/referralRedemption.model';
 import { AppError } from '../utils/appError';
 import { CreditService } from './credit.service';
 
@@ -34,7 +33,7 @@ export const ReferralService = {
 
   async redeemCode(userId: string, referralCode: string) {
     // Check if user already redeemed a code
-    const existingRedemption = await ReferralRedemptionModel.findByUserId(userId);
+    const existingRedemption = await ReferralModel.findByReferredId(userId);
     if (existingRedemption) {
       throw new AppError('You have already redeemed a referral code', 400);
     }
@@ -50,11 +49,15 @@ export const ReferralService = {
       throw new AppError('You cannot redeem your own referral code', 400);
     }
 
-    // Create redemption record
-    await ReferralRedemptionModel.create(userId, referrer.id);
+    // Create redemption record in existing referrals table (one per referred user).
+    const referral = await ReferralModel.create(referrer.id, userId);
 
     // Grant credits to both users
     await CreditService.grantCommunityReferralRewards(referrer.id, userId);
+
+    // Mark both sides as credited for dashboard consistency.
+    await ReferralModel.markReferrerCredited(referral.id);
+    await ReferralModel.markReferredCredited(referral.id);
 
     return {
       message: 'Referral code redeemed successfully!',
@@ -64,7 +67,7 @@ export const ReferralService = {
   },
 
   async getRedemptionStatus(userId: string) {
-    const redemption = await ReferralRedemptionModel.findByUserId(userId);
+    const redemption = await ReferralModel.findByReferredId(userId);
     return {
       has_redeemed: !!redemption,
       redeemed_at: redemption?.created_at || null,

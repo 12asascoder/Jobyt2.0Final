@@ -29,8 +29,15 @@ export function GoogleLoginButton({
 }: GoogleLoginButtonProps) {
   const initialized = useRef(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const roleRef = useRef<typeof role>(role);
+  const referralCodeRef = useRef(referralCode);
 
   const clientId = readPublicEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID');
+
+  useEffect(() => {
+    roleRef.current = role;
+    referralCodeRef.current = referralCode;
+  }, [role, referralCode]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -55,13 +62,16 @@ export function GoogleLoginButton({
 
   const handleGoogleResponse = async (credential: string) => {
     try {
-      console.log('[GoogleLoginButton] OAuth response received, role:', role);
-      saveOAuthRole(role);
+      const currentRole = roleRef.current;
+      const currentReferralCode = referralCodeRef.current;
+
+      console.log('[GoogleLoginButton] OAuth response received, role:', currentRole);
+      saveOAuthRole(currentRole);
       console.log('[GoogleLoginButton] Role saved to localStorage');
       const res = await api.post('/auth/google', {
         idToken: credential,
-        ...(referralCode?.trim() ? { referralCode: referralCode.trim() } : {}),
-        ...(role ? { role } : {}),
+        ...(currentReferralCode?.trim() ? { referralCode: currentReferralCode.trim() } : {}),
+        ...(currentRole ? { role: currentRole } : {}),
       });
 
       const parsed = parseOAuthResponse(res.data as OAuthResponseData);
@@ -172,7 +182,7 @@ export function GoogleLoginButton({
       window.clearTimeout(stopRetry);
       window.removeEventListener('resize', handleResize);
     };
-  }, [clientId, disabled, onError, referralCode]);
+  }, [clientId, disabled, onError]);
 
   return (
     <div className={buttonClass} aria-disabled={disabled}>

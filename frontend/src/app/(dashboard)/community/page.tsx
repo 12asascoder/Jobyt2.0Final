@@ -32,24 +32,27 @@ export default function CommunityPage() {
 
   // Check if user already redeemed a code
   useEffect(() => {
-    const fetchStatus = async () => {
+    const fetchData = async () => {
       try {
-        const [statusResponse, dashboardResponse] = await Promise.all([
-          api.get<RedemptionStatus>('/referrals/status'),
-          api.get<ReferralDashboard>('/referrals/dashboard'),
-        ]);
-
-        setHasRedeemed(Boolean(statusResponse.data?.has_redeemed));
-        setRedemptionDate(statusResponse.data?.redeemed_at ?? null);
+        const dashboardResponse = await api.get<ReferralDashboard>('/referrals/dashboard');
         setMyCode(dashboardResponse.data?.code ?? '');
       } catch (err) {
+        console.error('Failed to fetch referral dashboard:', err);
+      }
+
+      try {
+        const statusResponse = await api.get<RedemptionStatus>('/referrals/status');
+        setHasRedeemed(Boolean(statusResponse.data?.has_redeemed));
+        setRedemptionDate(statusResponse.data?.redeemed_at ?? null);
+      } catch (err) {
+        // Keep the page usable even if redemption status endpoint fails.
         console.error('Failed to fetch redemption status:', err);
       } finally {
         setStatusLoading(false);
       }
     };
 
-    fetchStatus();
+    fetchData();
   }, []);
 
   const handleRedeem = async (e: React.FormEvent) => {
