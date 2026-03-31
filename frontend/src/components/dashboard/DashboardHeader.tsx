@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import { FaBell, FaMagnifyingGlass, FaXmark, FaUser, FaArrowRightFromBracket } from 'react-icons/fa6';
+import { FaBell, FaMagnifyingGlass, FaXmark, FaUser, FaArrowRightFromBracket, FaBars, FaStar } from 'react-icons/fa6';
 
 interface DashboardHeaderProps {
     searchQuery: string;
@@ -22,13 +21,39 @@ export function DashboardHeader({
     onSearchSubmit,
 }: DashboardHeaderProps) {
     const [bellActive, setBellActive] = useState(false);
-    const [profileOpen, setProfileOpen] = useState(false);
-    const pathname = usePathname();
-    const hideSearch = pathname === '/profile' || pathname === '/referral';
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+    const lastScrollY = useRef(0);
+
+    useEffect(() => {
+        lastScrollY.current = window.scrollY;
+
+        const onScroll = () => {
+            const currentY = window.scrollY;
+            const delta = currentY - lastScrollY.current;
+
+            if (currentY <= 8) {
+                setIsHeaderVisible(true);
+            } else if (delta > 6) {
+                setIsHeaderVisible(false);
+            } else if (delta < -6) {
+                setIsHeaderVisible(true);
+            }
+
+            lastScrollY.current = currentY;
+        };
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
 
     return (
-        <header className="sticky top-0 z-50 w-full">
-            {/* ── Row 1: Logo + pill + Roadmap ── */}
+        <header
+            className={`fixed inset-x-0 top-0 z-50 w-full bg-[#f7f7f7]/95 backdrop-blur-sm border-b border-black/5 transition-all duration-300 ${
+                isHeaderVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+            }`}
+        >
+            {/* ── Row 1: Logo + search + notifications ── */}
             <div className="mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-10 h-16 md:h-20">
                 {/* Logo */}
                 <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
@@ -40,20 +65,7 @@ export function DashboardHeader({
                 <div className="flex items-center gap-3">
 
                     {/* ── Desktop/Tablet: Black outer pill with 3 states ── */}
-                    {hideSearch ? (
-                        <div className="hidden sm:flex items-center bg-[#1a1a1a] rounded-full h-14 px-2 gap-1 min-w-[100px] justify-end relative">
-                            <button
-                                onClick={() => setBellActive(!bellActive)}
-                                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
-                                    bellActive ? 'bg-lime-400 text-black' : 'text-white/80 hover:text-white'
-                                }`}
-                            >
-                                <FaBell className="text-lg" />
-                            </button>
-                            {bellActive && <NotificationPopover />}
-                        </div>
-                    ) : (
-                        <div className="hidden sm:flex">
+                    <div className="hidden sm:flex">
                         {searchActive ? (
                             /* STATE: Search active — black pill wrapping lime search + black bell */
                             <div className="flex items-center bg-[#1a1a1a] rounded-full h-14 p-1.5 gap-0 min-w-[300px]">
@@ -111,108 +123,92 @@ export function DashboardHeader({
                             </div>
                         )}
                     </div>
-                    )}
 
                     {/* Mobile: Profile Dropdown (Replaces Bell) */}
                     <div className="sm:hidden relative">
                         <button
-                            onClick={() => setProfileOpen(!profileOpen)}
+                            onClick={() => {
+                                setMobileMenuOpen((prev) => !prev);
+                                setBellActive(false);
+                            }}
                             className="w-11 h-11 bg-[#1a1a1a] rounded-full flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                            aria-label="Open menu"
                         >
-                            <FaUser className="text-sm" />
+                            {mobileMenuOpen ? <FaXmark className="text-base" /> : <FaBars className="text-sm" />}
                         </button>
 
-                        {/* Dropdown Menu */}
-                        {profileOpen && (
-                            <div className="absolute right-0 top-14 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
-                                <Link 
-                                    href="/profile" 
-                                    onClick={() => setProfileOpen(false)}
-                                    className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-lime-600 transition-colors"
-                                >
-                                    <FaUser className="text-slate-400" />
-                                    Profile
-                                </Link>
-                                <hr className="border-slate-100 my-1" />
-                                <button
-                                    onClick={() => {
-                                        // add logout logic here later if needed
-                                        setProfileOpen(false);
-                                    }}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
-                                >
-                                    <FaArrowRightFromBracket className="text-red-400" />
-                                    Logout
-                                </button>
+                        {/* Mobile Menu */}
+                        {mobileMenuOpen && (
+                            <div className="absolute right-0 top-14 mt-2 w-[min(88vw,340px)] bg-white rounded-2xl shadow-xl border border-slate-100 p-3 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                                <div className="flex items-center rounded-full h-12 p-1 bg-[#1a1a1a] gap-1 mb-3">
+                                    <div className="flex items-center flex-1 px-3 gap-2">
+                                        <FaMagnifyingGlass className="text-white/60 text-sm shrink-0" />
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => {
+                                                onSearchChange(e.target.value);
+                                                onSearchToggle(Boolean(e.target.value));
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && searchQuery.trim() && onSearchSubmit) {
+                                                    onSearchSubmit(searchQuery.trim());
+                                                    setMobileMenuOpen(false);
+                                                }
+                                            }}
+                                            placeholder="Search"
+                                            className="flex-1 bg-transparent text-white placeholder-white/40 text-sm font-medium outline-none min-w-0"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => setBellActive(!bellActive)}
+                                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                                            bellActive ? 'bg-lime-400 text-black' : 'text-white/80 hover:text-white'
+                                        }`}
+                                        aria-label="Toggle notifications"
+                                    >
+                                        <FaBell className="text-base" />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <Link
+                                        href="/credits"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-sm font-semibold text-slate-700"
+                                    >
+                                        <FaStar className="text-slate-400" />
+                                        Credits
+                                    </Link>
+
+                                    <Link
+                                        href="/profile"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-sm font-semibold text-slate-700"
+                                    >
+                                        <FaUser className="text-slate-400" />
+                                        Profile
+                                    </Link>
+
+                                    <button
+                                        onClick={() => {
+                                            setMobileMenuOpen(false);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                    >
+                                        <FaArrowRightFromBracket className="text-red-400" />
+                                        Logout
+                                    </button>
+                                </div>
+
+                                {bellActive && <NotificationPopover />}
                             </div>
                         )}
                     </div>
 
-                    {/* Roadmap Pill */}
-                    <Link
-                        href="#"
-                        className="hidden sm:flex items-center bg-[#1a1a1a] text-white rounded-full px-6 h-14 text-sm font-semibold hover:bg-black transition-colors"
-                    >
-                        Roadmap
-                    </Link>
                 </div>
             </div>
 
-            {/* ── Row 2: Mobile-only search bar + bell ── */}
-            {!hideSearch && (
-                <div className="sm:hidden px-4 pb-3">
-                    <div className="flex items-center rounded-full h-14 p-1.5 bg-[#1a1a1a] transition-colors gap-1">
-                    {searchQuery ? (
-                        /* Active: lime search inside black pill */
-                        <div className="flex items-center flex-1 bg-lime-400 rounded-full h-full px-4 gap-2.5">
-                            <FaMagnifyingGlass className="text-black/70 text-sm shrink-0" />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => { onSearchChange(e.target.value); onSearchToggle(true); }}
-                                onKeyDown={(e) => { if (e.key === 'Enter' && searchQuery.trim() && onSearchSubmit) onSearchSubmit(searchQuery.trim()); }}
-                                placeholder="Search"
-                                className="flex-1 bg-transparent text-black placeholder-black/40 text-sm font-semibold outline-none min-w-0"
-                            />
-                            <button
-                                onClick={() => { onSearchChange(''); onSearchToggle(false); }}
-                                className="text-black/50 hover:text-black transition-colors"
-                            >
-                                <FaXmark className="text-sm" />
-                            </button>
-                        </div>
-                    ) : (
-                        /* Default: white icons inside black pill */
-                        <div className="flex items-center flex-1 px-3 gap-2.5">
-                            <FaMagnifyingGlass className="text-white/60 text-sm shrink-0" />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => { onSearchChange(e.target.value); onSearchToggle(true); }}
-                                onKeyDown={(e) => { if (e.key === 'Enter' && searchQuery.trim() && onSearchSubmit) onSearchSubmit(searchQuery.trim()); }}
-                                placeholder="Search"
-                                className="flex-1 bg-transparent text-white placeholder-white/40 text-sm font-medium outline-none min-w-0"
-                            />
-                        </div>
-                    )}
-
-                    {/* Bell Icon inside the search pill */}
-                    <div className="relative flex shrink-0">
-                        <button
-                            onClick={() => setBellActive(!bellActive)}
-                            className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
-                                bellActive
-                                    ? 'bg-lime-400 text-black'
-                                    : 'text-white/80 hover:text-white'
-                            }`}
-                        >
-                            <FaBell className="text-lg" />
-                        </button>
-                        {bellActive && <NotificationPopover />}
-                    </div>
-                </div>
-            </div>
-            )}
         </header>
     );
 }

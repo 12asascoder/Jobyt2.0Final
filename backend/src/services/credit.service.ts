@@ -14,6 +14,10 @@ const REFERRAL_JOIN_BONUS = 25;
 const COMMUNITY_REFERRAL_REWARD = 20; // For referrer when code is redeemed
 const COMMUNITY_REFERRAL_BONUS = 10; // For user redeeming code
 
+// In-memory cache for credit balances (TTL: 10 seconds to avoid stale data)
+const creditBalanceCache = new Map<string, { balance: number; expiresAt: number }>();
+const CACHE_TTL = 10000; // 10 seconds
+
 async function addCreditsTx(
   client: PoolClient,
   userId: string,
@@ -40,6 +44,8 @@ async function addCreditsTx(
     description,
     reference_id: referenceId,
   });
+  // Invalidate cache after credit change
+  creditBalanceCache.delete(userId);
 }
 
 export type DeductCreditsResult = {
@@ -81,6 +87,8 @@ async function deductCreditsTx(
     description,
     reference_id: referenceId,
   });
+  // Invalidate cache after credit change
+  creditBalanceCache.delete(userId);
   return { transactionId: recorded.id, balanceAfter: recorded.balance_after };
 }
 
@@ -137,6 +145,13 @@ export const CreditService = {
   },
 
   async getBalance(userId: string): Promise<number> {
+    // Check cache first
+    const cached = creditBalanceCache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.balance;
+    }
+
+    // Cache miss or expired, fetch from DB
     const balance = await CreditModel.getBalance(userId);
     if (balance === null) {
       throw Object.assign(new Error('User not found'), {
@@ -144,7 +159,15 @@ export const CreditService = {
         code: 'USER_NOT_FOUND',
       });
     }
+
+    // Update cache
+    creditBalanceCache.set(userId, { balance, expiresAt: Date.now() + CACHE_TTL });
     return balance;
+  },
+
+  /** Helper to invalidate balance cache when credits change */
+  invalidateBalanceCache(userId: string): void {
+    creditBalanceCache.delete(userId);
   },
 
   /** Balance plus low-credit flag for API consumers (threshold from LOW_CREDIT_THRESHOLD). */

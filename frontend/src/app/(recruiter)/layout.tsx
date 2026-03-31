@@ -185,10 +185,41 @@ function RecruiterFloatingSidebar() {
 }
 
 export default function RecruiterLayout({ children }: { children: React.ReactNode }) {
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      const delta = currentY - lastY;
+
+      if (currentY <= 8) {
+        setIsHeaderVisible(true);
+      } else if (delta > 6) {
+        setIsHeaderVisible(false);
+      } else if (delta < -6) {
+        setIsHeaderVisible(true);
+      }
+
+      lastY = currentY;
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+
   return (
     <AuthGuard allowedRoles={['recruiter']}>
       <div className="min-h-screen bg-gradient-to-br from-[#f7f7f7] via-[#f9fbf4] to-[#eef7d8]">
-        <header className="sticky top-0 z-30 px-4 sm:px-6 lg:px-10 py-4">
+        <header
+          className={`fixed inset-x-0 top-0 z-40 px-4 sm:px-6 lg:px-10 py-4 bg-[#f7f7f7]/90 backdrop-blur-sm transition-transform duration-300 ${
+            isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+          }`}
+        >
           <div className="mx-auto flex items-center justify-between">
             <Link href={ROUTES.recruiterDashboard} className="inline-flex items-center gap-2">
               <Image src="/logo.png" alt="Jobyt" width={28} height={28} className="object-contain" />
@@ -217,7 +248,7 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
 
         <RecruiterFloatingSidebar />
 
-        <main className="lg:pl-24 xl:pl-28 pb-24 lg:pb-8 px-4 sm:px-6 lg:px-8">
+        <main className="pt-24 lg:pl-24 xl:pl-28 pb-24 lg:pb-8 px-4 sm:px-6 lg:px-8">
           {children}
         </main>
       </div>

@@ -4,7 +4,7 @@
   "description": "Hiring Platform REST API — Node.js + Express + TypeScript",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
+    "dev": "dotenv -o -e .env -- nodemon --watch src --ext ts --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "db:init": "dotenv -e .env -- ts-node src/scripts/dbInit.ts",

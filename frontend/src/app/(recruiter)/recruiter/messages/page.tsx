@@ -284,10 +284,14 @@ export default function MessagesPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-4 pb-6">
       {/* Main Chat Container with Blue Border */}
-      <div className="rounded-xl border-4 border-blue-500 bg-white overflow-hidden">
-        <div className="flex h-[600px]">
+      <div className="rounded-xl border-2 md:border-4 border-blue-500 bg-white overflow-hidden">
+        <div className="flex h-[calc(100dvh-12rem)] min-h-[540px] md:h-[600px]">
           {/* Left Sidebar - Conversations */}
-          <div className="w-1/4 border-r border-slate-200 flex flex-col bg-white">
+          <div
+            className={`border-r border-slate-200 flex flex-col bg-white w-full md:w-[360px] md:flex-shrink-0 ${
+              selectedConvId ? 'hidden md:flex' : 'flex'
+            }`}
+          >
             {/* Search Bar */}
             <div className="p-4 border-b border-slate-200">
               <div className="relative">
@@ -297,7 +301,7 @@ export default function MessagesPage() {
                   placeholder="Search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 rounded-full bg-black text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-9 pr-4 py-2.5 rounded-full bg-black text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -322,7 +326,7 @@ export default function MessagesPage() {
                         setSelectedConvId(conv.id);
                         router.replace(`${ROUTES.recruiterMessages}?conversationId=${conv.id}`);
                       }}
-                      className={`p-3 border-b border-slate-100 cursor-pointer transition ${
+                      className={`p-3 md:p-3.5 border-b border-slate-100 cursor-pointer transition ${
                         isSelected
                           ? 'bg-lime-100 border-l-4 border-l-lime-300'
                           : 'hover:bg-slate-50'
@@ -355,14 +359,26 @@ export default function MessagesPage() {
           </div>
 
           {/* Right Side - Messages & Info */}
-          <div className="flex-1 flex flex-col bg-white">
-            {selectedConvId && selectedConversation ? (
+          <div className={`flex-1 flex-col bg-white ${selectedConvId ? 'flex' : 'hidden md:flex'}`}>
+            {selectedConvId ? (
               <>
                 {/* Header */}
                 <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-                  <h3 className="font-bold text-slate-900">
-                    {selectedParticipant?.name || selectedParticipant?.email || 'Conversation'}
-                  </h3>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedConvId(null);
+                        router.replace(ROUTES.recruiterMessages);
+                      }}
+                      className="md:hidden inline-flex items-center rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700"
+                    >
+                      Back
+                    </button>
+                    <h3 className="font-bold text-slate-900 truncate">
+                      {selectedParticipant?.name || selectedParticipant?.email || 'Conversation'}
+                    </h3>
+                  </div>
                 </div>
 
                 <div className="flex-1 min-h-0 flex">
@@ -380,12 +396,12 @@ export default function MessagesPage() {
                           <div
                             key={msg.id}
                             className={`flex ${
-                              msg.sender_id === selectedConversation.recruiter_id ? 'justify-end' : 'justify-start'
+                              msg.sender_id === selectedConversationItem?.recruiter_id ? 'justify-end' : 'justify-start'
                             }`}
                           >
                             <div
-                              className={`max-w-xs px-4 py-2 rounded-lg ${
-                                msg.sender_id === selectedConversation.recruiter_id
+                              className={`max-w-[85%] md:max-w-xs px-4 py-2 rounded-lg ${
+                                msg.sender_id === selectedConversationItem?.recruiter_id
                                   ? 'bg-lime-300 text-black'
                                   : 'bg-white text-slate-900 border border-slate-200'
                               }`}
@@ -406,7 +422,7 @@ export default function MessagesPage() {
                           placeholder="Type a message..."
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyPress={(e) => {
+                          onKeyDown={(e) => {
                             if (e.key === 'Enter') handleSendMessage();
                           }}
                           disabled={sendingMessage}
@@ -436,14 +452,14 @@ export default function MessagesPage() {
                       </p>
                       <p className="text-xs text-slate-600 mt-1">
                         <span className="font-semibold">Last activity:</span>{' '}
-                        {formatDateTime(selectedConversationItem?.last_message_at || selectedConversation.last_message_at)}
+                        {formatDateTime(selectedConversationItem?.last_message_at || selectedConversation?.last_message_at)}
                       </p>
                     </div>
                   </aside>
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center">
+              <div className="hidden md:flex flex-1 items-center justify-center">
                 <div className="text-center text-slate-500">
                   <p className="text-lg font-semibold">Inbox is empty</p>
                   <p className="text-sm mt-1">Start a new message from the Applicants page.</p>

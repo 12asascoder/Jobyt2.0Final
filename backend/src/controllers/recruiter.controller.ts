@@ -52,4 +52,6 @@ export const RecruiterController = {
       next(err);
     }
   },
+
+
 };

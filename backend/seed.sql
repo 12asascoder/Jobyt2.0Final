@@ -23,18 +23,18 @@ VALUES
 ON CONFLICT (email) DO NOTHING;
 
 -- Recruiter Profiles
-INSERT INTO recruiter_profiles (user_id, name, company_name, industry, description)
-SELECT id, 'Alice Chen', 'Google', 'Technology', 'Google is a global technology leader focused on improving the ways people connect with information.'
+INSERT INTO recruiter_profiles (user_id, name, company_name, industry, description, updated_at)
+SELECT id, 'Alice Chen', 'Google', 'Technology', 'Google is a global technology leader focused on improving the ways people connect with information.', NOW()
 FROM users WHERE email = 'recruiter1@google.com'
 ON CONFLICT (user_id) DO NOTHING;
 
-INSERT INTO recruiter_profiles (user_id, name, company_name, industry, description)
-SELECT id, 'Bob Williams', 'Microsoft', 'Technology', 'Microsoft empowers every person and organization on the planet to achieve more through technology.'
+INSERT INTO recruiter_profiles (user_id, name, company_name, industry, description, updated_at)
+SELECT id, 'Bob Williams', 'Microsoft', 'Technology', 'Microsoft empowers every person and organization on the planet to achieve more through technology.', NOW()
 FROM users WHERE email = 'recruiter2@microsoft.com'
 ON CONFLICT (user_id) DO NOTHING;
 
-INSERT INTO recruiter_profiles (user_id, name, company_name, industry, description)
-SELECT id, 'Carol Singh', 'Amazon', 'E-commerce', 'Amazon is guided by four principles: customer obsession, passion for invention, commitment to operational excellence, and long-term thinking.'
+INSERT INTO recruiter_profiles (user_id, name, company_name, industry, description, updated_at)
+SELECT id, 'Carol Singh', 'Amazon', 'E-commerce', 'Amazon is guided by four principles: customer obsession, passion for invention, commitment to operational excellence, and long-term thinking.', NOW()
 FROM users WHERE email = 'recruiter3@amazon.com'
 ON CONFLICT (user_id) DO NOTHING;
 
@@ -84,14 +84,14 @@ ON CONFLICT DO NOTHING;
 
 -- Applications (John applies to the jobs)
 INSERT INTO applications (applicant_id, job_id, status, cover_letter)
-SELECT app.id, job.id, 'APPLIED', 'I am very interested in this role as it aligns with my experience and career goals.'
+SELECT app.id, job.id, 'applied', 'I am very interested in this role as it aligns with my experience and career goals.'
 FROM users app, jobs job
 WHERE app.email = 'john@example.com' AND job.recruiter_id = (SELECT id FROM users WHERE email = 'recruiter1@google.com')
 LIMIT 2
 ON CONFLICT DO NOTHING;
 
 INSERT INTO applications (applicant_id, job_id, status, cover_letter)
-SELECT app.id, job.id, 'APPLIED', 'I am very interested in this role as it aligns with my experience and career goals.'
+SELECT app.id, job.id, 'applied', 'I am very interested in this role as it aligns with my experience and career goals.'
 FROM users app, jobs job
 WHERE app.email = 'jane@example.com' AND job.recruiter_id = (SELECT id FROM users WHERE email = 'recruiter2@microsoft.com')
 LIMIT 2
