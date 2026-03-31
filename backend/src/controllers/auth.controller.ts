@@ -263,6 +263,16 @@ export const AuthController = {
     }
   },
 
+  async logout(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { refreshToken } = req.body ?? {};
+      const data = await AuthService.logout(refreshToken);
+      sendSuccess(res, data, 'Logout successful');
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async forgotPassword(req: Request, res: Response, next: NextFunction) {
     try {
       await AuthService.forgotPassword(req.body.email);

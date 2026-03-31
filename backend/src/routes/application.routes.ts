@@ -39,6 +39,14 @@ router.get(
   ApplicationController.recruiterApplicationsFiltered,
 );
 
+// Recruiter: view one application detail
+router.get(
+  '/recruiter/applicants/:id',
+  authorize('recruiter'),
+  employerGuard,
+  ApplicationController.recruiterApplicationById,
+);
+
 // Recruiter: get statistics for all applications
 router.get(
   '/recruiter/applicants/stats',
@@ -74,13 +82,13 @@ router.patch(
   authorize('recruiter'),
   employerGuard,
   body('status').isIn([
-    'APPLIED',
-    'SCREENING',
-    'SHORTLISTED',
-    'INTERVIEW',
-    'SELECTED',
-    'HIRED',
-    'REJECTED',
+    'applied',
+    'in_review',
+    'shortlisted',
+    'interview',
+    'offer',
+    'hired',
+    'rejected',
   ]),
   validate,
   ApplicationController.updateStatus,

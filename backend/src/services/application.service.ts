@@ -219,6 +219,14 @@ export const ApplicationService = {
     return ApplicationModel.getRecruiterApplicationStats(recruiterId);
   },
 
+  async getRecruiterApplicationDetail(recruiterId: string, applicationId: string) {
+    const application = await ApplicationModel.findRecruiterApplicationById(recruiterId, applicationId);
+    if (!application) {
+      throw Object.assign(new Error('Application not found'), { statusCode: 404 });
+    }
+    return application;
+  },
+
   async getEvents(user: { userId: string; role: string }, applicationId: string) {
     const application = await ApplicationModel.findById(applicationId);
     if (!application) throw Object.assign(new Error('Application not found'), { statusCode: 404 });

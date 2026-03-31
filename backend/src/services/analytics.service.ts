@@ -25,13 +25,13 @@ export const AnalyticsService = {
     );
 
     const statusOrder = [
-      'APPLIED',
-      'SCREENING',
-      'SHORTLISTED',
-      'INTERVIEW',
-      'SELECTED',
-      'HIRED',
-      'REJECTED',
+      'applied',
+      'in_review',
+      'shortlisted',
+      'interview',
+      'offer',
+      'hired',
+      'rejected',
     ];
     const map: Record<string, number> = {};
     rows.forEach((r) => {
@@ -64,7 +64,7 @@ export const AnalyticsService = {
          AVG(EXTRACT(EPOCH FROM (a.status_updated_at - a.created_at)) / 86400)::numeric(10,1) AS avg_days_to_hire
        FROM applications a
        JOIN jobs j ON j.id = a.job_id
-       WHERE j.recruiter_id = $1 AND a.status = 'HIRED'
+       WHERE j.recruiter_id = $1 AND a.status = 'hired'
        GROUP BY j.id, j.title
        ORDER BY avg_days_to_hire ASC`,
       [recruiterId],

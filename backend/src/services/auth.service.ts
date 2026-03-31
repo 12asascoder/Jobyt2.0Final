@@ -1,4 +1,5 @@
 import { randomBytes, createHash, timingSafeEqual } from 'crypto';
+import jwt from 'jsonwebtoken';
 import { UserModel } from '../models/user.model';
 import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import { RecruiterProfileModel } from '../models/recruiterProfile.model';
@@ -16,9 +17,11 @@ import { generateReferralCode } from '../utils/referralCode';
 import { UserRole, JwtPayload } from '../types';
 import prisma from '../config/prisma';
 import logger from '../config/logger';
+import redis from '../config/redis';
 import { UnauthorizedError } from '../utils/errors';
 
 const EMAIL_VERIFICATION_TTL_MS = 15 * 60 * 1000;
+const LOGOUT_REFRESH_PREFIX = 'auth:logout:refresh:';
 
 function hashVerificationToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -161,12 +164,66 @@ export const AuthService = {
   },
 
   async refreshToken(token: string) {
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const blacklistKey = `${LOGOUT_REFRESH_PREFIX}${tokenHash}`;
+
+    try {
+      if (redis.status === 'wait' || redis.status === 'end') {
+        await redis.connect();
+      }
+
+      const isBlacklisted = await redis.get(blacklistKey);
+      if (isBlacklisted) {
+        throw new UnauthorizedError('Invalid refresh token', 'INVALID_REFRESH_TOKEN');
+      }
+    } catch (err) {
+      if (err instanceof UnauthorizedError) {
+        throw err;
+      }
+
+      logger.warn('Refresh token blacklist check skipped', {
+        error: err,
+      });
+    }
+
     const payload = verifyToken(token);
     const user = await UserModel.findById(payload.userId);
     if (!user) throw Object.assign(new Error('User not found'), { statusCode: 401 });
 
     const newPayload: JwtPayload = { userId: user.id, email: user.email, role: user.role };
     return { accessToken: signAccessToken(newPayload) };
+  },
+
+  async logout(refreshToken?: string) {
+    if (!refreshToken || typeof refreshToken !== 'string' || !refreshToken.trim()) {
+      return { loggedOut: true };
+    }
+
+    const token = refreshToken.trim();
+
+    try {
+      const payload = verifyToken(token);
+      const decoded = jwt.decode(token) as jwt.JwtPayload | null;
+      const exp = typeof decoded?.exp === 'number' ? decoded.exp : null;
+      const now = Math.floor(Date.now() / 1000);
+      const ttlSeconds = exp ? Math.max(1, exp - now) : 7 * 24 * 60 * 60;
+
+      if (redis.status === 'wait' || redis.status === 'end') {
+        await redis.connect();
+      }
+
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+      const blacklistKey = `${LOGOUT_REFRESH_PREFIX}${tokenHash}`;
+      await redis.set(blacklistKey, '1', 'EX', ttlSeconds);
+
+      logger.info('User logged out', {
+        userId: payload.userId,
+      });
+    } catch {
+      // Always return success to keep logout idempotent and avoid token probing.
+    }
+
+    return { loggedOut: true };
   },
 
   async forgotPassword(email: string) {

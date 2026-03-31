@@ -130,6 +130,13 @@ router.post(
 );
 
 router.post(
+  '/logout',
+  body('refreshToken').optional().isString(),
+  validate,
+  AuthController.logout,
+);
+
+router.post(
   '/forgot-password',
   body('email').isEmail().normalizeEmail(),
   validate,

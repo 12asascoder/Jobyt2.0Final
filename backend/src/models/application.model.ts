@@ -73,6 +73,23 @@ export const ApplicationModel = {
     return rows[0] || null;
   },
 
+  async findRecruiterApplicationById(recruiterId: string, applicationId: string): Promise<any | null> {
+    const { rows } = await pool.query(
+      `SELECT a.*, u.email, ap.name, ap.photo_url, ap.phone, ap.skills, ap.education,
+              j.title as job_title, j.location as job_location, j.skills as job_skills,
+              COALESCE(r.file_url, a.resume_snapshot_url) as resume_url
+       FROM applications a
+       JOIN users u ON u.id = a.applicant_id
+       JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
+       JOIN jobs j ON j.id = a.job_id
+       LEFT JOIN resumes r ON r.id = a.resume_id
+       WHERE a.id = $1 AND j.recruiter_id = $2
+       LIMIT 1`,
+      [applicationId, recruiterId],
+    );
+    return rows[0] || null;
+  },
+
   async findByJobAndApplicant(
     jobId: string,
     applicantId: string,
@@ -272,9 +289,10 @@ export const ApplicationModel = {
         [recruiterId],
       ),
       pool.query(
-        `SELECT a.*, ap.name, ap.photo_url, ap.skills,
+        `SELECT a.*, u.email, ap.name, ap.photo_url, ap.phone, ap.skills, ap.education,
                 j.title as job_title, j.location as job_location
          FROM applications a
+         JOIN users u ON u.id = a.applicant_id
          JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
          JOIN jobs j ON j.id = a.job_id
          WHERE j.recruiter_id = $1
@@ -293,9 +311,10 @@ export const ApplicationModel = {
   ): Promise<{ applications: any[]; total: number }> {
     const offset = (page - 1) * limit;
     let query = `
-      SELECT a.*, ap.name, ap.photo_url, ap.skills, ap.experience_level,
+      SELECT a.*, u.email, ap.name, ap.photo_url, ap.phone, ap.skills, ap.education,
              j.title as job_title, j.location as job_location
       FROM applications a
+      JOIN users u ON u.id = a.applicant_id
       JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
       JOIN jobs j ON j.id = a.job_id
       WHERE j.recruiter_id = $1
@@ -326,9 +345,10 @@ export const ApplicationModel = {
 
     const countQuery = query.replace(/LIMIT \$\d+ OFFSET \$\d+$/, '');
     const countSql = `SELECT COUNT(*) FROM (${countQuery}) as counted`;
+    const countParams = params.slice(0, -2); // all params except limit and offset
 
     const [countRes, dataRes] = await Promise.all([
-      pool.query(countSql, params.slice(0, paramIndex - 2)),
+      pool.query(countSql, countParams),
       pool.query(query, params),
     ]);
 
@@ -348,13 +368,13 @@ export const ApplicationModel = {
     const { rows } = await pool.query(
       `SELECT 
          COUNT(*) as total,
-         SUM(CASE WHEN a.status = 'APPLIED' THEN 1 ELSE 0 END) as applied,
-         SUM(CASE WHEN a.status = 'SCREENING' THEN 1 ELSE 0 END) as in_review,
-         SUM(CASE WHEN a.status = 'SHORTLISTED' THEN 1 ELSE 0 END) as shortlisted,
-         SUM(CASE WHEN a.status = 'INTERVIEW' THEN 1 ELSE 0 END) as interview,
-         SUM(CASE WHEN a.status = 'SELECTED' THEN 1 ELSE 0 END) as offer,
-         SUM(CASE WHEN a.status = 'HIRED' THEN 1 ELSE 0 END) as hired,
-         SUM(CASE WHEN a.status = 'REJECTED' THEN 1 ELSE 0 END) as rejected
+         SUM(CASE WHEN a.status = 'applied' THEN 1 ELSE 0 END) as applied,
+         SUM(CASE WHEN a.status = 'in_review' THEN 1 ELSE 0 END) as in_review,
+         SUM(CASE WHEN a.status = 'shortlisted' THEN 1 ELSE 0 END) as shortlisted,
+         SUM(CASE WHEN a.status = 'interview' THEN 1 ELSE 0 END) as interview,
+         SUM(CASE WHEN a.status = 'offer' THEN 1 ELSE 0 END) as offer,
+         SUM(CASE WHEN a.status = 'hired' THEN 1 ELSE 0 END) as hired,
+         SUM(CASE WHEN a.status = 'rejected' THEN 1 ELSE 0 END) as rejected
        FROM applications a
        JOIN jobs j ON j.id = a.job_id
        WHERE j.recruiter_id = $1`,

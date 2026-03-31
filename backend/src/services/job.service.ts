@@ -263,23 +263,13 @@ export const JobService = {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
     if (!isUuid) throw notFound('Job');
 
-    let job = await JobModel.findById(id);
+    const job = await JobModel.findById(id);
     if (!job) throw notFound('Job');
 
     if (job.status === 'draft') {
       if (!userId || job.recruiter_id !== userId) {
         throw notFound('Job');
       }
-    }
-
-    // Count views only for non-owner access on non-draft jobs.
-    const isOwner = Boolean(userId) && job.recruiter_id === userId;
-    if (job.status !== 'draft' && !isOwner) {
-      await JobModel.incrementViews(id);
-      job = {
-        ...job,
-        views_count: Number(job.views_count ?? 0) + 1,
-      };
     }
 
     return job;

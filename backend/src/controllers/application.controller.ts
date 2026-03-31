@@ -30,12 +30,25 @@ export const ApplicationController = {
 
   async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
+      const normalizedStatus = String(req.body.status || '').toLowerCase();
       const application = await ApplicationService.updateStatus(
         req.user!,
         req.params.id as string,
-        req.body.status,
+        normalizedStatus as any,
       );
       sendSuccess(res, application, 'Status updated');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async recruiterApplicationById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const application = await ApplicationService.getRecruiterApplicationDetail(
+        req.user!.userId,
+        req.params.id as string,
+      );
+      sendSuccess(res, application, 'Application detail');
     } catch (err) {
       next(err);
     }
