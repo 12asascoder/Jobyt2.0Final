@@ -3,8 +3,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { Prisma, type users } from '@prisma/client';
 import prisma from '../config/prisma';
 import { CreditService } from './credit.service';
-import { ApplicantProfileModel } from '../models/applicantProfile.model';
-import { RecruiterProfileModel } from '../models/recruiterProfile.model';
+import { ProfileBootstrapService } from './profileBootstrap.service';
 import { generateReferralCode } from '../utils/referralCode';
 import { UnauthorizedError, ConflictError } from '../utils/errors';
 import { signAccessToken, signRefreshToken } from '../utils/jwt';
@@ -561,18 +560,13 @@ export const OAuthUserService = {
     console.info(`[OAuthUserService] action=${action} provider=${input.provider} email=${email}`);
 
     if (action === 'created') {
-      // Create profile based on user role, just like email/password signup does
       try {
-        if (input.role === 'applicant') {
-          await ApplicantProfileModel.create(user.id);
-        } else if (input.role === 'recruiter') {
-          await RecruiterProfileModel.create(user.id);
-        }
+        await ProfileBootstrapService.ensureRoleProfile(user.id, user.role as 'applicant' | 'recruiter' | 'admin');
       } catch (err) {
         logger.error('Failed to create profile for OAuth signup', {
           userId: user.id,
           provider: input.provider,
-          role: input.role,
+          role: user.role,
           error: err,
         });
         // Don't throw - profile creation failure should not block OAuth signup
@@ -919,6 +913,18 @@ export const OAuthAuthService = {
       isDummyEmail,
       isLowTrustProvider,
     });
+
+    try {
+      await ProfileBootstrapService.ensureRoleProfile(user.id, user.role as 'applicant' | 'recruiter' | 'admin');
+    } catch (err) {
+      logger.error('Failed to ensure role profile for OAuth user', {
+        userId: user.id,
+        provider,
+        role: user.role,
+        action,
+        error: err,
+      });
+    }
 
     if (action === 'created') {
       try {

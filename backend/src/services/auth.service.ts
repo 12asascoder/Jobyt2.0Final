@@ -1,10 +1,9 @@
 import { randomBytes, createHash, timingSafeEqual } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { UserModel } from '../models/user.model';
-import { ApplicantProfileModel } from '../models/applicantProfile.model';
-import { RecruiterProfileModel } from '../models/recruiterProfile.model';
 import { ReferralModel } from '../models/referral.model';
 import { CreditService } from './credit.service';
+import { ProfileBootstrapService } from './profileBootstrap.service';
 import { hashPassword, comparePassword } from '../utils/password';
 import { signAccessToken, signRefreshToken, verifyToken } from '../utils/jwt';
 import {
@@ -100,9 +99,8 @@ export const AuthService = {
       });
     }
 
-    // Create profile stub
-    if (role === 'applicant') await ApplicantProfileModel.create(user.id);
-    if (role === 'recruiter') await RecruiterProfileModel.create(user.id);
+    // Ensure role profile exists for new signups.
+    await ProfileBootstrapService.ensureRoleProfile(user.id, role);
 
     // Handle referral
     if (referralCode) {
@@ -155,6 +153,9 @@ export const AuthService = {
 
     const valid = await comparePassword(password, user.password_hash);
     if (!valid) throw Object.assign(new Error('Invalid credentials'), { statusCode: 401 });
+
+    // Self-heal legacy users that were created without role profile rows.
+    await ProfileBootstrapService.ensureRoleProfile(user.id, user.role);
 
     const payload: JwtPayload = { userId: user.id, email: user.email, role: user.role };
     const accessToken = signAccessToken(payload);

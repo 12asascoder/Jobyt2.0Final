@@ -15,7 +15,6 @@ import {
     FaGift,
     FaCircleUser,
     FaBriefcase,
-    FaPlus,
     FaChartLine,
     FaUsers,
     FaCoins,
@@ -41,7 +40,7 @@ const applicantNav: NavItem[] = [
 const recruiterNav: NavItem[] = [
     { label: 'Dashboard', href: ROUTES.recruiterDashboard, icon: FaHouse },
     { label: 'My Jobs', href: ROUTES.recruiterJobs, icon: FaBriefcase },
-    { label: 'Post a Job', href: ROUTES.recruiterNewJob, icon: FaPlus },
+    { label: 'Applicants', href: ROUTES.recruiterApplications, icon: FaGift },
     { label: 'Messages', href: ROUTES.recruiterMessages, icon: FaComments },
     { label: 'Analytics', href: ROUTES.recruiterAnalytics, icon: FaChartLine },
     { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },

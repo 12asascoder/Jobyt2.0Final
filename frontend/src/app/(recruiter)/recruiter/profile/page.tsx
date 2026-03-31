@@ -112,6 +112,15 @@ export default function RecruiterProfilePage() {
     }
   };
 
+  const handleNotificationClick = async (id: string, actionUrl?: string | null, read?: boolean) => {
+    if (!read) {
+      await handleMarkNotificationRead(id);
+    }
+    if (actionUrl) {
+      window.location.href = actionUrl;
+    }
+  };
+
   const profileInitials = useMemo(() => {
     const source = form.company_name || form.name || email || 'R';
     return source
@@ -291,7 +300,7 @@ export default function RecruiterProfilePage() {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => !item.read && handleMarkNotificationRead(item.id)}
+                    onClick={() => void handleNotificationClick(item.id, item.action_url, item.read)}
                     className={`w-full text-left rounded-xl border p-3 transition-colors ${item.read ? 'border-white/10 bg-white/5' : 'border-lime-400/30 bg-lime-400/10'}`}
                   >
                     <p className={`text-sm ${item.read ? 'text-white/90' : 'text-white font-semibold'}`}>{item.title}</p>

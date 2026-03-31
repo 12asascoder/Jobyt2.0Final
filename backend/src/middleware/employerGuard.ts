@@ -37,12 +37,14 @@ export const employerGuard = async (
       },
     });
 
-    // 4. Block access when the recruiter account has no profile row.
+    // 4. Self-heal recruiter profile if row is missing (legacy OAuth/local accounts).
     if (!recruiterProfile) {
-      res.status(403).json({
-        success: false,
-        message: 'Recruiter profile not found',
+      const created = await prisma.recruiter_profiles.create({
+        data: { user_id: user.userId },
       });
+
+      req.employer = created as unknown as any;
+      next();
       return;
     }
 

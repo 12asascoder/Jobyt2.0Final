@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FaBell, FaMagnifyingGlass, FaXmark, FaUser, FaArrowRightFromBracket, FaBars, FaStar } from 'react-icons/fa6';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface DashboardHeaderProps {
     searchQuery: string;
@@ -214,46 +215,59 @@ export function DashboardHeader({
 }
 
 const NotificationPopover = () => {
-    const [activeTab, setActiveTab] = useState('Today');
-    const tabs = ['Today', 'This Week', 'Earlier'];
-    const notifications = [
-        { id: 1, text: "You've been invited to an interview with Paysphere. Check your email for details.", read: false },
-        { id: 2, text: "Don't miss out! 3 internships you saved are closing soon.", read: false },
-        { id: 3, text: "You have a new message from a recruiter.", read: true },
-        { id: 4, text: "You've applied to 10 internships. Keep going!", read: true },
-        { id: 5, text: "We regret to inform you that your application was not selected this time.", read: true },
-    ];
+    const { notifications, unread, isLoading, fetchNotifications, markRead, markAllRead } = useNotifications();
+
+    useEffect(() => {
+        void fetchNotifications(1);
+    }, [fetchNotifications]);
+
+    const handleNotificationClick = async (id: string, actionUrl?: string | null, read?: boolean) => {
+        if (!read) {
+            await markRead(id);
+        }
+        if (actionUrl) {
+            window.location.href = actionUrl;
+        }
+    };
     
     return (
         <div 
             onClick={(e) => e.stopPropagation()} 
             className="absolute right-0 top-14 sm:top-16 mt-1 w-[340px] max-w-[calc(100vw-32px)] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 p-5 z-50 animate-in fade-in slide-in-from-top-2 text-left cursor-auto"
         >
-            <h3 className="text-xl font-display font-medium text-slate-900 mb-4">Notifications</h3>
-            
-            <div className="bg-black rounded-xl p-1.5 flex items-center justify-between mb-5">
-                {tabs.map((tab) => (
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-display font-medium text-slate-900">Notifications {unread > 0 ? `(${unread})` : ''}</h3>
+                {unread > 0 && (
                     <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                            activeTab === tab 
-                                ? 'bg-[#c1f237] text-black' 
-                                : 'text-[#c1f237] hover:bg-white/10'
-                        }`}
+                        onClick={() => void markAllRead()}
+                        className="text-xs font-semibold text-lime-700 hover:text-lime-800"
                     >
-                        {tab}
+                        Mark all read
                     </button>
-                ))}
+                )}
             </div>
 
             <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                {notifications.map((notif) => (
-                    <div key={notif.id} className="bg-[#f8f6f0] rounded-[16px] p-4 flex items-start gap-3">
-                        <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${notif.read ? 'bg-[#d9d9d9]' : 'bg-[#c1f237]'}`} />
-                        <p className="text-slate-700 text-[13px] leading-snug">{notif.text}</p>
-                    </div>
-                ))}
+                {isLoading ? (
+                    <p className="text-sm text-slate-500 py-4 text-center">Loading notifications...</p>
+                ) : notifications.length === 0 ? (
+                    <p className="text-sm text-slate-500 py-4 text-center">No notifications yet.</p>
+                ) : (
+                    notifications.map((notif) => (
+                        <button
+                            key={notif.id}
+                            type="button"
+                            onClick={() => void handleNotificationClick(notif.id, notif.action_url, notif.read)}
+                            className="w-full text-left bg-[#f8f6f0] rounded-[16px] p-4 flex items-start gap-3 hover:bg-[#f1eee6] transition-colors"
+                        >
+                            <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${notif.read ? 'bg-[#d9d9d9]' : 'bg-[#c1f237]'}`} />
+                            <div>
+                                <p className="text-slate-800 text-[13px] leading-snug font-semibold">{notif.title}</p>
+                                <p className="text-slate-600 text-[12px] leading-snug mt-1">{notif.body}</p>
+                            </div>
+                        </button>
+                    ))
+                )}
             </div>
         </div>
     );
