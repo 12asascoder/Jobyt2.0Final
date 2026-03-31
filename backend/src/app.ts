@@ -9,6 +9,13 @@ import { requestLogger } from './middleware/logger.middleware';
 
 const app = express();
 
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://jobyt.in',
+  'https://www.jobyt.in',
+];
+
 // Local resume/photo storage (STORAGE_TYPE=local); S3 URLs are absolute and do not use this
 const storageType = (process.env.STORAGE_TYPE || 'local').toLowerCase();
 if (storageType !== 's3') {
@@ -19,7 +26,7 @@ if (storageType !== 's3') {
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     credentials: true,
   }),
 );

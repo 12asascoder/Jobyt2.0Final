@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
 import { OAuthAuthService, type OAuthProvider } from '../services/oauth.service';
+import { OAuthStateService } from '../services/oauthState.service';
 import { sendSuccess } from '../utils/response';
 import { BadRequestError, UnauthorizedError } from '../utils/errors';
 import logger from '../config/logger';
-import redis from '../config/redis';
 
 export const AuthController = {
   async register(req: Request, res: Response, next: NextFunction) {
@@ -118,21 +118,13 @@ export const AuthController = {
 
       const normalizedCode = code.trim();
       const normalizedState = state.trim();
-      const stateKey = `oauth_state:github:${normalizedState}`;
-      const key = `oauth_code:github:${normalizedCode}`;
 
-      if (redis.status === 'wait' || redis.status === 'end') {
-        await redis.connect();
-      }
-
-      const stateExists = await redis.get(stateKey);
-      if (!stateExists) {
+      const stateValid = await OAuthStateService.consume('github', normalizedState);
+      if (!stateValid) {
         throw new UnauthorizedError('INVALID_STATE');
       }
 
-      await redis.del(stateKey);
-
-      const lock = await redis.set(key, 'used', 'EX', 300, 'NX');
+      const lock = await OAuthStateService.acquireCodeLock('github', normalizedCode, 300);
       if (!lock) {
         logger.warn('Replay attack prevented', {
           type: 'OAUTH_CODE',
@@ -183,23 +175,16 @@ export const AuthController = {
 
       const normalizedCode = code.trim();
       const normalizedState = state.trim();
-      const stateKey = `oauth_state:linkedin:${normalizedState}`;
       const codeKey = `oauth_code:linkedin:${normalizedCode}`;
 
-      if (redis.status === 'wait' || redis.status === 'end') {
-        await redis.connect();
-      }
-
-      const stateExists = await redis.get(stateKey);
-      if (!stateExists) {
+      const stateValid = await OAuthStateService.consume('linkedin', normalizedState);
+      if (!stateValid) {
         throw new UnauthorizedError('INVALID_STATE');
       }
-
-      await redis.del(stateKey);
       // TODO: Ensure frontend generates and stores state before redirecting to LinkedIn.
       // TODO: Move state generation/storage into a dedicated pre-auth endpoint.
 
-      const lock = await redis.set(codeKey, 'used', 'EX', 300, 'NX');
+      const lock = await OAuthStateService.acquireCodeLock('linkedin', normalizedCode, 300);
       if (!lock) {
         logger.warn('Replay attack prevented', {
           type: 'OAUTH_CODE',
@@ -236,13 +221,7 @@ export const AuthController = {
       }
 
       const normalizedState = state.trim();
-      const stateKey = `oauth_state:${provider}:${normalizedState}`;
-
-      if (redis.status === 'wait' || redis.status === 'end') {
-        await redis.connect();
-      }
-
-      const ok = await redis.set(stateKey, 'valid', 'EX', 600, 'NX');
+      const ok = await OAuthStateService.register(provider, normalizedState, 600);
       if (!ok) {
         throw new BadRequestError('Failed to register OAuth state', 'STATE_REGISTRATION_FAILED');
       }

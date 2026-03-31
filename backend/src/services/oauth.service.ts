@@ -41,37 +41,12 @@ type GithubEmailResponse = Array<{
   verified: boolean;
 }>;
 
-type LinkedinProfileResponse = {
-  id?: string;
-  localizedFirstName?: string;
-  localizedLastName?: string;
-  firstName?: {
-    localized?: Record<string, string>;
-  };
-  lastName?: {
-    localized?: Record<string, string>;
-  };
-  preferredLocale?: {
-    language?: string;
-    country?: string;
-  };
-  profilePicture?: {
-    'displayImage~'?: {
-      elements?: Array<{
-        identifiers?: Array<{
-          identifier?: string;
-        }>;
-      }>;
-    };
-  };
-};
-
-type LinkedinEmailResponse = {
-  elements?: Array<{
-    'handle~'?: {
-      emailAddress?: string;
-    };
-  }>;
+type LinkedinUserInfoResponse = {
+  sub?: string;
+  name?: string;
+  email?: string;
+  picture?: string;
+  email_verified?: boolean;
 };
 
 const GOOGLE_TOKEN_AUDIENCE = process.env.GOOGLE_CLIENT_ID;
@@ -86,7 +61,6 @@ const GOOGLE_CLIENT = new OAuth2Client(GOOGLE_TOKEN_AUDIENCE);
 
 const HTTP_TIMEOUT_MS = 10000;
 const MAX_REFERRAL_CODE_ATTEMPTS = 10;
-const SIGNUP_BONUS_CREDITS = 50;
 const REFERRAL_REWARD = 20;
 const REFERRAL_SIGNUP_BONUS = 10;
 
@@ -282,41 +256,6 @@ function ensureEnv(value: string | undefined, code: string, name: string): strin
   return value;
 }
 
-function pickLinkedinLocalizedValue(
-  localizedMap: Record<string, string> | undefined,
-  locale?: { language?: string; country?: string },
-): string | undefined {
-  if (!localizedMap) return undefined;
-
-  const localeKey = `${locale?.language || ''}_${locale?.country || ''}`;
-  if (localizedMap[localeKey]) return localizedMap[localeKey];
-
-  const firstValue = Object.values(localizedMap)[0];
-  return firstValue;
-}
-
-function extractLinkedinName(profile: LinkedinProfileResponse): string | null {
-  const directName = `${profile.localizedFirstName || ''} ${profile.localizedLastName || ''}`.trim();
-  if (directName) return directName;
-
-  const first = pickLinkedinLocalizedValue(profile.firstName?.localized, profile.preferredLocale);
-  const last = pickLinkedinLocalizedValue(profile.lastName?.localized, profile.preferredLocale);
-  const fallbackName = `${first || ''} ${last || ''}`.trim();
-
-  return fallbackName || null;
-}
-
-function extractLinkedinAvatar(profile: LinkedinProfileResponse): string | null {
-  const elements = profile.profilePicture?.['displayImage~']?.elements;
-  if (!elements?.length) return null;
-
-  const lastElement = elements[elements.length - 1];
-  const identifiers = lastElement.identifiers;
-  if (!identifiers?.length) return null;
-
-  return identifiers[0]?.identifier || null;
-}
-
 export const OAuthService = {
   async verifyGoogleToken(idToken: string): Promise<OAuthIdentity> {
     if (!idToken) {
@@ -506,41 +445,29 @@ export const OAuthService = {
         );
       }
 
-      const [profileResponse, emailResponse] = await Promise.all([
-        axios.get<LinkedinProfileResponse>('https://api.linkedin.com/v2/me', {
+      const userInfoResponse = await axios.get<LinkedinUserInfoResponse>(
+        'https://api.linkedin.com/v2/userinfo',
+        {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
           timeout: HTTP_TIMEOUT_MS,
-        }),
-        axios.get<LinkedinEmailResponse>(
-          'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-            timeout: HTTP_TIMEOUT_MS,
-          },
-        ),
-      ]);
+        },
+      );
 
-      const profile = profileResponse.data;
-      const email = emailResponse.data?.elements?.[0]?.['handle~']?.emailAddress || null;
+      const userInfo = userInfoResponse.data;
 
-      if (!profile?.id) {
+      if (!userInfo?.sub) {
         throw new UnauthorizedError('LinkedIn user id missing', 'LINKEDIN_USER_ID_MISSING');
       }
 
-      // LinkedIn treated as low-trust provider; email may not be verified.
-      // Email can be null; synthetic email will be generated in OAuthAuthService.login if needed.
-
       return {
-        email,
-        providerId: profile.id,
-        name: extractLinkedinName(profile),
-        avatar: extractLinkedinAvatar(profile),
+        email: userInfo.email || null,
+        providerId: userInfo.sub,
+        name: userInfo.name || null,
+        avatar: userInfo.picture || null,
         provider: 'linkedin',
-        emailVerified: false, // LinkedIn does not guarantee verified email
+        emailVerified: userInfo.email_verified === true,
       };
     } catch (error) {
       if (error instanceof UnauthorizedError) throw error;
@@ -645,8 +572,6 @@ export const OAuthAuthService = {
     const providerId = String(oauthUser.providerId ?? '').trim();
     const email = oauthUser.email ? normalizeEmail(oauthUser.email) : null;
 
-    const isLowTrustProvider = provider === 'linkedin';
-
     let emailVerified = false;
     if (provider === 'google') {
       // Google idToken is a JWT; email_verified is available in payload.
@@ -668,9 +593,11 @@ export const OAuthAuthService = {
     }
 
     if (provider === 'linkedin') {
-      // LinkedIn treated as low-trust provider → never auto-link to existing accounts
-      emailVerified = false;
+      // LinkedIn OIDC userinfo may return email_verified.
+      emailVerified = oauthUser.emailVerified === true;
     }
+
+    const isLowTrustProvider = provider === 'linkedin' && !emailVerified;
 
     if (!providerId) {
       throw new UnauthorizedError('INVALID_OAUTH_PROVIDER_ID', 'INVALID_OAUTH_PROVIDER_ID');
@@ -876,7 +803,7 @@ export const OAuthAuthService = {
                     linkedin_id: providerId,
                     is_verified: true,
                     is_email_dummy: false,
-                    email_verified: false,
+                    email_verified: emailVerified,
                   },
         });
 
@@ -957,32 +884,15 @@ export const OAuthAuthService = {
 
     if (action === 'created') {
       try {
-        // Safety check: avoid duplicate OAuth signup bonus in edge/retry scenarios.
-        const existingSignupBonus = await prisma.$queryRaw<Array<{ exists: number }>>`
-          SELECT 1 AS exists
-          FROM credit_transactions
-          WHERE user_id = ${user.id}
-            AND description LIKE 'Signup bonus — OAuth%'
-          LIMIT 1
-        `;
+        // Keep OAuth signups aligned with normal registration credit initialization.
+        await CreditService.grantRegistrationCredits(user.id);
 
-        const alreadyHasSignupBonus = existingSignupBonus.length > 0;
-
-        if (!alreadyHasSignupBonus) {
-          await CreditService.addCredits(
-            user.id,
-            SIGNUP_BONUS_CREDITS,
-            `Signup bonus — OAuth (${provider})`,
-          );
-
-          logger.info('Signup credits granted', {
-            userId: user.id,
-            provider,
-            amount: SIGNUP_BONUS_CREDITS,
-          });
-        }
+        logger.info('Registration credits granted for OAuth signup', {
+          userId: user.id,
+          provider,
+        });
       } catch (err) {
-        logger.error('Failed to grant signup credits', {
+        logger.error('Failed to grant registration credits for OAuth signup', {
           userId: user.id,
           provider,
           error: err,

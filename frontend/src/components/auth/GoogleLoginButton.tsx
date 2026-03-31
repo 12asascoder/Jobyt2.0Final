@@ -26,6 +26,7 @@ export function GoogleLoginButton({
   onError,
 }: GoogleLoginButtonProps) {
   const initialized = useRef(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const clientId = readPublicEnv('NEXT_PUBLIC_GOOGLE_CLIENT_ID');
 
@@ -46,7 +47,7 @@ export function GoogleLoginButton({
   const buttonClass = useMemo(
     () =>
       className ||
-      'flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all font-semibold shadow-sm text-sm disabled:opacity-60 disabled:cursor-not-allowed',
+      'relative flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all font-semibold shadow-sm text-sm disabled:opacity-60 disabled:cursor-not-allowed',
     [className],
   );
 
@@ -80,38 +81,102 @@ export function GoogleLoginButton({
     }
   };
 
-  const handleClick = () => {
+  useEffect(() => {
+    if (disabled) return;
+
     if (!clientId) {
       onError('Google OAuth is not configured. Missing NEXT_PUBLIC_GOOGLE_CLIENT_ID.');
       return;
     }
 
-    const googleApi = window.google?.accounts?.id;
-    if (!googleApi) {
-      onError('Google OAuth is not ready. Please try again.');
-      return;
-    }
-
-    if (!initialized.current) {
-      googleApi.initialize({
-        client_id: clientId,
-        callback: (response) => {
-          if (!response?.credential) {
-            onError('Login failed. Please try again.');
-            return;
+    const renderGoogleButton = () => {
+      const googleApi = window.google?.accounts?.id as
+        | {
+            initialize: (options: {
+              client_id: string;
+              callback: (response: { credential?: string }) => void;
+            }) => void;
+            renderButton: (
+              parent: HTMLElement,
+              options: {
+                type: string;
+                theme: string;
+                size: string;
+                text: string;
+                shape: string;
+                width: number;
+              },
+            ) => void;
           }
-          void handleGoogleResponse(response.credential);
-        },
-      });
-      initialized.current = true;
-    }
+        | undefined;
+      if (!googleApi || !containerRef.current) {
+        return false;
+      }
 
-    googleApi.prompt();
-  };
+      if (!initialized.current) {
+        googleApi.initialize({
+          client_id: clientId,
+          callback: (response) => {
+            if (!response?.credential) {
+              onError('Login failed. Please try again.');
+              return;
+            }
+            void handleGoogleResponse(response.credential);
+          },
+        });
+        initialized.current = true;
+      }
+
+      containerRef.current.innerHTML = '';
+      const buttonWidth = Math.max(160, Math.floor(containerRef.current.clientWidth - 8));
+      googleApi.renderButton(containerRef.current, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
+        shape: 'rectangular',
+        width: buttonWidth,
+      });
+
+      return true;
+    };
+
+    if (renderGoogleButton()) return;
+
+    const retry = window.setInterval(() => {
+      if (renderGoogleButton()) {
+        window.clearInterval(retry);
+      }
+    }, 200);
+
+    const handleResize = () => {
+      void renderGoogleButton();
+    };
+    window.addEventListener('resize', handleResize);
+
+    const stopRetry = window.setTimeout(() => {
+      window.clearInterval(retry);
+      if (!initialized.current) {
+        onError('Google OAuth is not ready. Please refresh and try again.');
+      }
+    }, 6000);
+
+    return () => {
+      window.clearInterval(retry);
+      window.clearTimeout(stopRetry);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [clientId, disabled, onError, referralCode]);
 
   return (
-    <button type="button" disabled={disabled} className={buttonClass} onClick={handleClick}>
+    <div className={buttonClass} aria-disabled={disabled}>
       <FaGoogle className="text-red-500 text-base" /> Google
-    </button>
+      <div className="absolute inset-0 overflow-hidden rounded-xl">
+        <div
+          ref={containerRef}
+          className={`h-full w-full ${disabled ? 'pointer-events-none' : 'pointer-events-auto'} opacity-0`}
+        />
+      </div>
+    </div>
   );
 }

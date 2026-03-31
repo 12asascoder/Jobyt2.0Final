@@ -4,10 +4,17 @@ import { verifyToken } from '../utils/jwt';
 
 let io: SocketServer;
 
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://jobyt.in',
+  'https://www.jobyt.in',
+];
+
 export const initSocket = (httpServer: HttpServer): SocketServer => {
   io = new SocketServer(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true,
     },

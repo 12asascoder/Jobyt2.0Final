@@ -26,8 +26,14 @@ export interface ParsedOAuthResult {
 }
 
 export const readPublicEnv = (name: string): string | undefined => {
-  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
-  return env?.[name];
+  const publicEnv: Record<string, string | undefined> = {
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+    NEXT_PUBLIC_GITHUB_CLIENT_ID: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID,
+    NEXT_PUBLIC_LINKEDIN_CLIENT_ID: process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID,
+    NEXT_PUBLIC_OAUTH_REDIRECT_URI: process.env.NEXT_PUBLIC_OAUTH_REDIRECT_URI,
+  };
+
+  return publicEnv[name];
 };
 
 export const parseOAuthResponse = (payload: OAuthResponseData | undefined): ParsedOAuthResult => {
@@ -122,7 +128,7 @@ export const beginOAuthRedirect = async (
   const clientId = readPublicEnv('NEXT_PUBLIC_LINKEDIN_CLIENT_ID');
   if (!clientId) throw new Error('LinkedIn OAuth is not configured. Missing NEXT_PUBLIC_LINKEDIN_CLIENT_ID.');
 
-  const scope = encodeURIComponent('r_liteprofile r_emailaddress');
+  const scope = encodeURIComponent('openid profile email');
   const url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${encodeURIComponent(clientId)}&state=${encodeURIComponent(state)}&redirect_uri=${redirectUri}&scope=${scope}`;
   window.location.href = url;
 };
