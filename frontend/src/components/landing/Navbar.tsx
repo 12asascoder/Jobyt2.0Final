@@ -128,12 +128,18 @@ export function Navbar() {
                         <>
                             <Link
                                 href={ROUTES.login}
+                                className="px-5 py-2 rounded-full text-black text-sm font-medium hover:underline transition"
+                            >
+                                Login
+                            </Link>
+                            <Link
+                                href={ROUTES.userSignup}
                                 className="px-5 py-2 rounded-full border-[1.5px] border-black text-black text-sm font-medium hover:bg-black hover:text-white transition"
                             >
                                 Sign Up
                             </Link>
                             <Link
-                                href={ROUTES.register}
+                                href={ROUTES.employerSignup}
                                 className="px-5 py-2 rounded-full border-[1.5px] border-lime-400 text-lime-700 text-sm font-medium hover:bg-lime-300 hover:text-black transition"
                             >
                                 Employer Sign Up
@@ -173,10 +179,13 @@ export function Navbar() {
                             </Link>
                         ) : (
                             <>
-                                <Link href={ROUTES.login} className="text-center border-[1.5px] border-black py-3 rounded-full text-sm font-medium">
+                                <Link href={ROUTES.login} className="text-center py-3 rounded-full text-sm font-medium border border-transparent">
+                                    Login
+                                </Link>
+                                <Link href={ROUTES.userSignup} className="text-center border-[1.5px] border-black py-3 rounded-full text-sm font-medium">
                                     Sign Up
                                 </Link>
-                                <Link href={ROUTES.register} className="text-center border-[1.5px] border-lime-400 text-lime-700 py-3 rounded-full text-sm font-medium">
+                                <Link href={ROUTES.employerSignup} className="text-center border-[1.5px] border-lime-400 text-lime-700 py-3 rounded-full text-sm font-medium">
                                     Employer Sign Up
                                 </Link>
                             </>

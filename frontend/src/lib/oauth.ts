@@ -5,6 +5,7 @@ export type OAuthProvider = 'google' | 'github' | 'linkedin';
 
 const OAUTH_STATE_KEY_PREFIX = 'oauth_state';
 const OAUTH_REFERRAL_KEY = 'oauth_referral_code';
+const OAUTH_ROLE_KEY = 'oauth_role';
 
 export interface OAuthResponseData {
   user?: AuthUser;
@@ -95,6 +96,27 @@ export const clearOAuthReferralCode = () => {
   localStorage.removeItem(OAUTH_REFERRAL_KEY);
 };
 
+export const saveOAuthRole = (role?: 'applicant' | 'recruiter') => {
+  if (typeof window === 'undefined') return;
+  if (role && (role === 'applicant' || role === 'recruiter')) {
+    localStorage.setItem(OAUTH_ROLE_KEY, role);
+    return;
+  }
+  localStorage.removeItem(OAUTH_ROLE_KEY);
+};
+
+export const getOAuthRole = () => {
+  if (typeof window === 'undefined') return undefined;
+  const value = localStorage.getItem(OAUTH_ROLE_KEY);
+  if (value === 'applicant' || value === 'recruiter') return value;
+  return undefined;
+};
+
+export const clearOAuthRole = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(OAUTH_ROLE_KEY);
+};
+
 const buildState = () => {
   if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
@@ -105,7 +127,9 @@ const buildState = () => {
 export const beginOAuthRedirect = async (
   provider: Exclude<OAuthProvider, 'google'>,
   referralCode?: string,
+  role?: 'applicant' | 'recruiter',
 ) => {
+  console.log('[beginOAuthRedirect] Starting OAuth flow with role:', role);
   const state = buildState();
   const baseRedirect = getOAuthRedirectUri();
   const callbackWithProvider = `${baseRedirect}${baseRedirect.includes('?') ? '&' : '?'}provider=${provider}`;
@@ -113,6 +137,8 @@ export const beginOAuthRedirect = async (
 
   saveOAuthState(provider, state);
   saveOAuthReferralCode(referralCode);
+  saveOAuthRole(role);
+  console.log('[beginOAuthRedirect] Role saved to localStorage:', role);
 
   await api.post('/auth/oauth/state', { provider, state });
 

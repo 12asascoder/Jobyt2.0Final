@@ -8,9 +8,10 @@ export default function EarnCreditsPage() {
 
   const earnTasks = [
     { title: 'Daily Streak', subtitle: 'Refreshes everyday at midnight', credits: 20, claimed: true },
-    { title: 'Refer & Earn', subtitle: 'For each friend that joins via your link', credits: 50, claimed: false },
+    { title: 'Refer & Earn', subtitle: 'For each friend that joins via your signup link', credits: 50, claimed: false },
     { title: 'Complete Profile', subtitle: 'Fill in all profile fields and upload a photo', credits: 150, claimed: false },
     { title: 'Upload Resume', subtitle: 'Upload your resume to unlock full features', credits: 100, claimed: false },
+    { title: 'Redeem Code', subtitle: 'Redeem a friend\'s referral code (one-time)', credits: 10, claimed: false },
   ];
 
   return (

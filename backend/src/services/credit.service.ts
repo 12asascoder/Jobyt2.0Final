@@ -11,6 +11,8 @@ const LOW_CREDIT_THRESHOLD = (() => {
 })();
 const REFERRAL_REWARD = 50; // configurable — move to DB/env
 const REFERRAL_JOIN_BONUS = 25;
+const COMMUNITY_REFERRAL_REWARD = 20; // For referrer when code is redeemed
+const COMMUNITY_REFERRAL_BONUS = 10; // For user redeeming code
 
 async function addCreditsTx(
   client: PoolClient,
@@ -208,6 +210,38 @@ export const CreditService = {
         referredId,
         REFERRAL_JOIN_BONUS,
         'Referral join bonus',
+        referrerId,
+      );
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
+  async grantCommunityReferralRewards(referrerId: string, userId: string): Promise<void> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Referrer reward
+      await addCreditsTx(
+        client,
+        referrerId,
+        COMMUNITY_REFERRAL_REWARD,
+        'Community referral reward — code redeemed',
+        userId,
+      );
+
+      // User redeeming code bonus
+      await addCreditsTx(
+        client,
+        userId,
+        COMMUNITY_REFERRAL_BONUS,
+        'Community referral bonus — code redeemed',
         referrerId,
       );
 

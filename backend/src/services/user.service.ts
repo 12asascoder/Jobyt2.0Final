@@ -8,6 +8,45 @@ import { AppError } from '../utils/appError';
 import { UserRole } from '../types';
 import type { ParsedResume } from '../utils/resumeParser';
 
+const APPLICANT_PROFILE_FIELDS = new Set([
+  'name',
+  'phone',
+  'photo_url',
+  'skills',
+  'experience',
+  'education',
+  'portfolio_url',
+  'github_url',
+  'linkedin_url',
+  'bio',
+]);
+
+const RECRUITER_PROFILE_FIELDS = new Set([
+  'name',
+  'company_name',
+  'company_email',
+  'industry',
+  'description',
+  'company_size',
+  'logo_url',
+  'website',
+  'location',
+]);
+
+const normalizeProfilePatch = (
+  data: Record<string, unknown>,
+  allowedFields: Set<string>,
+): Record<string, unknown> => {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (!allowedFields.has(key)) continue;
+
+    // Treat empty strings as null for optional profile text/URL fields.
+    out[key] = typeof value === 'string' && value.trim() === '' ? null : value;
+  }
+  return out;
+};
+
 // ── Profile completeness ────────────────────────────────────────────────────
 
 const computeApplicantCompleteness = (p: ApplicantProfile, hasResume: boolean): number => {
@@ -85,12 +124,24 @@ export const UserService = {
   ) {
     const raw = { ...data } as Record<string, unknown>;
     delete raw.resume_url;
+
+    const patch = normalizeProfilePatch(raw, APPLICANT_PROFILE_FIELDS) as Partial<
+      Omit<ApplicantProfile, 'user_id' | 'created_at' | 'updated_at'>
+    >;
+
     let profile = await ApplicantProfileModel.findByUserId(userId);
     if (!profile) profile = await ApplicantProfileModel.create(userId);
-    const updated = await ApplicantProfileModel.update(
-      userId,
-      raw as Partial<Omit<ApplicantProfile, 'user_id' | 'created_at' | 'updated_at'>>,
-    );
+
+    if (Object.keys(patch).length === 0) {
+      const hasResume = await ResumeModel.hasAnyResume(userId);
+      const defaultResume = await ResumeModel.findDefaultByUserId(userId);
+      return {
+        profile: { ...profile, resume_url: defaultResume?.file_url ?? null },
+        completeness: computeApplicantCompleteness(profile, hasResume),
+      };
+    }
+
+    const updated = await ApplicantProfileModel.update(userId, patch);
     const hasResume = await ResumeModel.hasAnyResume(userId);
     const defaultResume = await ResumeModel.findDefaultByUserId(userId);
     return {
@@ -103,9 +154,19 @@ export const UserService = {
     userId: string,
     data: Partial<Omit<RecruiterProfile, 'user_id' | 'created_at' | 'updated_at'>>,
   ) {
+    const patch = normalizeProfilePatch(
+      data as Record<string, unknown>,
+      RECRUITER_PROFILE_FIELDS,
+    ) as Partial<Omit<RecruiterProfile, 'user_id' | 'created_at' | 'updated_at'>>;
+
     let profile = await RecruiterProfileModel.findByUserId(userId);
     if (!profile) profile = await RecruiterProfileModel.create(userId);
-    const updated = await RecruiterProfileModel.update(userId, data);
+
+    if (Object.keys(patch).length === 0) {
+      return { profile, completeness: computeRecruiterCompleteness(profile) };
+    }
+
+    const updated = await RecruiterProfileModel.update(userId, patch);
     return { profile: updated, completeness: computeRecruiterCompleteness(updated) };
   },
 

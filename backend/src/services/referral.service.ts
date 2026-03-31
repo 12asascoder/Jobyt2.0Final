@@ -1,6 +1,8 @@
 import { UserModel } from '../models/user.model';
 import { ReferralModel } from '../models/referral.model';
+import { ReferralRedemptionModel } from '../models/referralRedemption.model';
 import { AppError } from '../utils/appError';
+import { CreditService } from './credit.service';
 
 export const ReferralService = {
   async getDashboard(userId: string) {
@@ -14,8 +16,8 @@ export const ReferralService = {
     const referralLink = `${process.env.FRONTEND_URL}/register?ref=${user.referral_code}`;
 
     return {
-      referral_code: user.referral_code,
-      referral_link: referralLink,
+      code: user.referral_code,
+      link: referralLink,
       total_referrals: referrals.length,
       successful_referrals: referrals.filter((r) => r.referrer_credited).length,
       pending_referrals: referrals.filter((r) => !r.referrer_credited).length,
@@ -27,6 +29,45 @@ export const ReferralService = {
         joined_at: r.created_at,
         credited: r.referrer_credited,
       })),
+    };
+  },
+
+  async redeemCode(userId: string, referralCode: string) {
+    // Check if user already redeemed a code
+    const existingRedemption = await ReferralRedemptionModel.findByUserId(userId);
+    if (existingRedemption) {
+      throw new AppError('You have already redeemed a referral code', 400);
+    }
+
+    // Find the referrer with this code
+    const referrer = await UserModel.findByReferralCode(referralCode);
+    if (!referrer) {
+      throw new AppError('Invalid referral code', 404);
+    }
+
+    // Prevent self-referral
+    if (referrer.id === userId) {
+      throw new AppError('You cannot redeem your own referral code', 400);
+    }
+
+    // Create redemption record
+    await ReferralRedemptionModel.create(userId, referrer.id);
+
+    // Grant credits to both users
+    await CreditService.grantCommunityReferralRewards(referrer.id, userId);
+
+    return {
+      message: 'Referral code redeemed successfully!',
+      credits_earned: 10,
+      referrer_name: referrer.email,
+    };
+  },
+
+  async getRedemptionStatus(userId: string) {
+    const redemption = await ReferralRedemptionModel.findByUserId(userId);
+    return {
+      has_redeemed: !!redemption,
+      redeemed_at: redemption?.created_at || null,
     };
   },
 };

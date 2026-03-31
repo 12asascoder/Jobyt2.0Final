@@ -49,7 +49,7 @@ export default function ReferralPage() {
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold mb-4 tracking-tight">Referral Program</h1>
         <p className="text-sm sm:text-[15px] leading-relaxed max-w-3xl font-medium">
-          Every user can take part in our internship referral program. For every person who joins the platform using your unique link, you&apos;ll earn credits.
+          Every user can take part in our internship referral program. For every person who joins the platform using your unique link, you&apos;ll earn 50 credits. You can also <a href="/community" className="text-[#a8e02d] hover:text-[#c3ff3d] underline">redeem a friend&apos;s code to earn 10 credits</a>.
         </p>
         <p className="text-sm sm:text-[15px] font-medium mt-4">
           Want to promote us? <a href="#" className="text-[#a8e02d] hover:text-[#c3ff3d] hover:underline transition-all">Download banners, sample messages, and logos to get started.</a>
@@ -111,26 +111,52 @@ export default function ReferralPage() {
         )}
       </div>
 
-      {/* Referral link */}
-      <div className="bg-[#0b0b0b] rounded-2xl p-5 sm:p-6 shadow-xl border border-gray-900">
-        <h2 className="text-lg sm:text-xl font-bold text-white mb-2 tracking-tight">Your Unique Referral Link</h2>
-        <p className="text-xs sm:text-[13px] text-gray-400 font-medium mb-4 sm:mb-6">
-          Earn 50 credits when a friend registers
-        </p>
-        
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-          <input
-            readOnly
-            value={data.link || ''}
-            className="flex-1 rounded-xl bg-[#222] border border-[#333] px-4 sm:px-5 py-3 sm:py-3.5 text-xs sm:text-[15px] font-mono text-gray-300 focus:outline-none placeholder-gray-600 truncate"
-            placeholder="Loading link..."
-          />
-          <button
-            onClick={() => copy(data.link || '')}
-            className="rounded-xl shrink-0 bg-[#c3ff3d] px-6 sm:px-10 py-3 sm:py-3.5 text-sm sm:text-[15px] font-bold text-black hover:bg-[#aee62d] transition-transform active:scale-95 text-center"
-          >
-            {copied ? 'Copied!' : 'Copy Link'}
-          </button>
+      {/* Referral code & link */}
+      <div className="space-y-6">
+        {/* Referral Code */}
+        <div className="bg-[#0b0b0b] rounded-2xl p-5 sm:p-6 shadow-xl border border-gray-900">
+          <h2 className="text-lg sm:text-xl font-bold text-white mb-2 tracking-tight">Your Referral Code</h2>
+          <p className="text-xs sm:text-[13px] text-gray-400 font-medium mb-4 sm:mb-6">
+            Share this code with friends
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <input
+              readOnly
+              value={data.code || ''}
+              className="flex-1 rounded-xl bg-[#222] border border-[#333] px-4 sm:px-5 py-3 sm:py-3.5 text-xs sm:text-[15px] font-mono font-bold text-[#c3ff3d] focus:outline-none placeholder-gray-600 text-center tracking-widest"
+              placeholder="Loading code..."
+            />
+            <button
+              onClick={() => copy(data.code || '')}
+              className="rounded-xl shrink-0 bg-[#c3ff3d] px-6 sm:px-10 py-3 sm:py-3.5 text-sm sm:text-[15px] font-bold text-black hover:bg-[#aee62d] transition-transform active:scale-95 text-center whitespace-nowrap"
+            >
+              {copied ? 'Copied!' : 'Copy Code'}
+            </button>
+          </div>
+        </div>
+
+        {/* Referral Link */}
+        <div className="bg-[#0b0b0b] rounded-2xl p-5 sm:p-6 shadow-xl border border-gray-900">
+          <h2 className="text-lg sm:text-xl font-bold text-white mb-2 tracking-tight">Your Referral Link</h2>
+          <p className="text-xs sm:text-[13px] text-gray-400 font-medium mb-4 sm:mb-6">
+            Or share this complete link (Earn 50 credits per signup)
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <input
+              readOnly
+              value={data.link || ''}
+              className="flex-1 rounded-xl bg-[#222] border border-[#333] px-4 sm:px-5 py-3 sm:py-3.5 text-xs sm:text-[15px] font-mono text-gray-300 focus:outline-none placeholder-gray-600 truncate"
+              placeholder="Loading link..."
+            />
+            <button
+              onClick={() => copy(data.link || '')}
+              className="rounded-xl shrink-0 bg-[#c3ff3d] px-6 sm:px-10 py-3 sm:py-3.5 text-sm sm:text-[15px] font-bold text-black hover:bg-[#aee62d] transition-transform active:scale-95 text-center whitespace-nowrap"
+            >
+              {copied ? 'Copied!' : 'Copy Link'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

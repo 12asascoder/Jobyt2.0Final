@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { ROUTES } from '@/constants';
 import { ApiError } from '@/lib/api';
@@ -15,6 +15,9 @@ import { AuthTokens, AuthUser } from '@/types';
 
 export default function LoginPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const isEmployerLogin = pathname.includes('employer-login');
+  const signupRoute = isEmployerLogin ? ROUTES.employerSignup : ROUTES.userSignup;
   const login = useAuthStore((s) => s.login);
   const setSession = useAuthStore((s) => s.setSession);
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -65,6 +68,35 @@ export default function LoginPage() {
             </Link>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome back</h1>
             <p className="text-slate-500 mt-2 font-medium">Log in to your account to continue</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <Link
+              href={ROUTES.login}
+              className={`text-center rounded-xl px-3 py-2 text-xs font-semibold border transition-colors ${
+                !isEmployerLogin
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              User Login
+            </Link>
+            <Link
+              href={ROUTES.employerLogin}
+              className={`text-center rounded-xl px-3 py-2 text-xs font-semibold border transition-colors ${
+                isEmployerLogin
+                  ? 'border-lime-400 bg-lime-300 text-slate-900'
+                  : 'border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              Employer Login
+            </Link>
+          </div>
+
+          <div className="text-center mb-5">
+            <Link href={signupRoute} className="text-xs font-semibold text-brand-blue hover:text-blue-700 transition-colors">
+              Don&apos;t have an account? Create one
+            </Link>
           </div>
 
           {/* Social Logins */}
@@ -135,7 +167,7 @@ export default function LoginPage() {
 
           <p className="mt-6 text-center text-[13px] font-medium text-slate-500">
             Don&apos;t have an account?{' '}
-            <Link href={ROUTES.register} className="font-bold text-brand-primary hover:text-orange-600 transition-colors">
+            <Link href={signupRoute} className="font-bold text-brand-primary hover:text-orange-600 transition-colors">
               Create an account
             </Link>
           </p>

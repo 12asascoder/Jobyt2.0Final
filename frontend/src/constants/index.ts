@@ -30,7 +30,10 @@ export const APPLICATION_STATUS_COLORS: Record<string, string> = {
 export const ROUTES = {
   home: '/',
   login: '/login',
+  employerLogin: '/employer-login',
   register: '/register',
+  userSignup: '/signup',
+  employerSignup: '/employer-signup',
   verifyEmail: '/verify-email',
   oauthCallback: '/oauth/callback',
   addEmail: '/add-email',
@@ -46,6 +49,7 @@ export const ROUTES = {
   credits: '/credits',
   notifications: '/notifications',
   referral: '/referral',
+    community: '/community',
   messages: '/messages',
   roadmaps: '/roadmaps',
   roadmapDetail: (slug: string) => `/roadmaps/${slug}`,

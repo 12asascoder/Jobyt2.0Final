@@ -47,7 +47,11 @@ export default function ProfilePage() {
           // Calculate missing fields for the checklist
           const missing = [];
           if (!p.photo_url && !p.logo_url) missing.push('Upload Your Photo');
-          if (!p.name || !p.phone || !p.location) missing.push('Fill details');
+          if (user?.role === 'recruiter') {
+            if (!p.name || !p.company_name || !p.location) missing.push('Fill details');
+          } else {
+            if (!p.name || !p.phone) missing.push('Fill details');
+          }
           if (user?.role === 'applicant' && !p.resume_url) missing.push('Upload Your Resume');
           setMissingFields(missing);
         }
@@ -61,7 +65,33 @@ export default function ProfilePage() {
 
   const onSubmit = async (data: ProfileData) => {
     try {
-      await api.put('/users/me', data);
+      const toNullable = (value: unknown) => {
+        if (typeof value !== 'string') return value ?? null;
+        const trimmed = value.trim();
+        return trimmed.length ? trimmed : null;
+      };
+
+      const payload =
+        user?.role === 'recruiter'
+          ? {
+              name: toNullable(data.name),
+              location: toNullable(data.location),
+              company_name: toNullable(data.company_name),
+              industry: toNullable(data.industry),
+              company_size: toNullable(data.company_size),
+              description: toNullable(data.description),
+              website: toNullable(data.website),
+            }
+          : {
+              name: toNullable(data.name),
+              phone: toNullable(data.phone),
+              bio: toNullable(data.bio),
+              portfolio_url: toNullable(data.portfolio_url),
+              github_url: toNullable(data.github_url),
+              linkedin_url: toNullable(data.linkedin_url),
+            };
+
+      await api.put('/users/me', payload);
       setEditBasic(false);
       setEditBio(false);
       setEditCompany(false);
@@ -148,13 +178,24 @@ export default function ProfilePage() {
                   <input disabled value={user?.email || ''} className="w-full bg-transparent text-gray-900 font-medium py-1 opacity-70" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 mb-1">Location</label>
-                  <input 
-                    {...register('location')} 
-                    disabled={!editBasic}
-                    className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 disabled:opacity-100" 
-                    placeholder="City, Country" 
-                  />
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">
+                    {user?.role === 'recruiter' ? 'Location' : 'Phone Number'}
+                  </label>
+                  {user?.role === 'recruiter' ? (
+                    <input
+                      {...register('location')}
+                      disabled={!editBasic}
+                      className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 disabled:opacity-100"
+                      placeholder="City, Country"
+                    />
+                  ) : (
+                    <input
+                      {...register('phone')}
+                      disabled={!editBasic}
+                      className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 disabled:opacity-100"
+                      placeholder="+91 98XXXXXXXX"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -200,6 +241,10 @@ export default function ProfilePage() {
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Industry</label>
                     <input {...register('industry')} disabled={!editCompany} className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 disabled:opacity-100" />
                   </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1">Company Size</label>
+                    <input {...register('company_size')} disabled={!editCompany} className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 disabled:opacity-100" placeholder="e.g. 11-50" />
+                  </div>
                   <div className="md:col-span-2">
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Description</label>
                     <textarea {...register('description')} disabled={!editCompany} rows={2} className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 resize-none disabled:opacity-100" />
@@ -229,6 +274,10 @@ export default function ProfilePage() {
                     <div>
                       <label className="block text-sm font-semibold text-gray-800 mb-2">LinkedIn Link</label>
                       <input {...register('linkedin_url')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-lg px-4 py-3 font-mono text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://linkedin.com/in/" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">GitHub Link</label>
+                      <input {...register('github_url')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-lg px-4 py-3 font-mono text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://github.com/username" />
                     </div>
                   </>
                 ) : (

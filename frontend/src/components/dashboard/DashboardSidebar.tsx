@@ -30,7 +30,7 @@ const mainItems: SidebarItem[] = [
     { icon: FaFileLines, href: ROUTES.applications, label: 'Applications' },
     { icon: FaBookmark, href: ROUTES.savedJobs, label: 'Saved Jobs' },
     { icon: FaComments, href: ROUTES.messages, label: 'Messages' },
-    { icon: FaUsers, href: ROUTES.referral, label: 'Community' },
+    { icon: FaUsers, href: ROUTES.community, label: 'Community' },
 ];
 
 export function DashboardSidebar() {

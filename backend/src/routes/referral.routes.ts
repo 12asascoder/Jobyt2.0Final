@@ -6,5 +6,7 @@ const router = Router();
 
 router.use(authenticate);
 router.get('/dashboard', ReferralController.getDashboard);
+router.post('/redeem', ReferralController.redeemCode);
+router.get('/status', ReferralController.getRedemptionStatus);
 
 export default router;

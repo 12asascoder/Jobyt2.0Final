@@ -5,15 +5,16 @@ import { beginOAuthRedirect } from '@/lib/oauth';
 
 interface LinkedInLoginButtonProps {
   referralCode?: string;
+  role?: 'applicant' | 'recruiter';
   disabled?: boolean;
   className?: string;
   onError: (message: string) => void;
 }
 
-export function LinkedInLoginButton({ referralCode, disabled, className, onError }: LinkedInLoginButtonProps) {
+export function LinkedInLoginButton({ referralCode, role, disabled, className, onError }: LinkedInLoginButtonProps) {
   const handleClick = async () => {
     try {
-      await beginOAuthRedirect('linkedin', referralCode);
+      await beginOAuthRedirect('linkedin', referralCode, role);
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     }

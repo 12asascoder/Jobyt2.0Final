@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 import { ROUTES, APP_NAME } from '@/constants';
-import { AuthTokens, AuthUser, UserRole } from '@/types';
+import { AuthTokens, AuthUser } from '@/types';
 import { FaArrowRight, FaEnvelopeCircleCheck } from 'react-icons/fa6';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/auth.store';
@@ -15,8 +15,15 @@ import { LinkedInLoginButton } from '@/components/auth/LinkedInLoginButton';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const isEmployerSignup = pathname.includes('employer-signup');
+  const roleFromRoute = isEmployerSignup ? 'recruiter' : 'applicant';
+  const loginRoute = isEmployerSignup ? ROUTES.employerLogin : ROUTES.login;
+
+  // DEBUG: Log the pathname and role detection
+  console.log('[RegisterPage] pathname:', pathname, 'isEmployerSignup:', isEmployerSignup, 'roleFromRoute:', roleFromRoute);
   const setSession = useAuthStore((s) => s.setSession);
-  const [form, setForm] = useState({ email: '', password: '', role: 'applicant' as UserRole, referralCode: '' });
+  const [form, setForm] = useState({ email: '', password: '', referralCode: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -37,7 +44,7 @@ export default function RegisterPage() {
     router.push(routeByRole(user));
   };
 
-  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,7 +52,10 @@ export default function RegisterPage() {
     setError('');
     setIsLoading(true);
     try {
-      await api.post('/auth/register', form);
+      await api.post('/auth/register', {
+        ...form,
+        role: roleFromRoute,
+      });
       setSuccess(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Registration failed. Please try again.');
@@ -109,7 +119,7 @@ export default function RegisterPage() {
               We&apos;ve sent a secure verification link to <strong className="text-slate-800">{form.email}</strong>. Click it to activate your account.
             </p>
             <button
-              onClick={() => router.push(ROUTES.login)}
+              onClick={() => router.push(loginRoute)}
               className="w-full bg-slate-900 text-white rounded-xl px-4 py-3 font-bold text-base hover:bg-slate-800 transition-all shadow-md group flex items-center justify-center gap-2"
             >
               Back to sign in <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
@@ -138,17 +148,48 @@ export default function RegisterPage() {
             <p className="text-slate-500 mt-1.5 font-medium text-sm">Join {APP_NAME} today. 150 free credits on sign-up!</p>
           </div>
 
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <Link
+              href={ROUTES.userSignup}
+              className={`text-center rounded-xl px-3 py-2 text-xs font-semibold border transition-colors ${
+                !isEmployerSignup
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              User Sign Up
+            </Link>
+            <Link
+              href={ROUTES.employerSignup}
+              className={`text-center rounded-xl px-3 py-2 text-xs font-semibold border transition-colors ${
+                isEmployerSignup
+                  ? 'border-lime-400 bg-lime-300 text-slate-900'
+                  : 'border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              Employer Sign Up
+            </Link>
+          </div>
+
+          <div className="text-center mb-5">
+            <Link href={loginRoute} className="text-xs font-semibold text-brand-blue hover:text-blue-700 transition-colors">
+              Already have an account? Sign in
+            </Link>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
             <GoogleLoginButton
               referralCode={form.referralCode}
+              role={roleFromRoute}
               onSuccess={handleAuthSuccess}
               onRequiresEmail={() => router.push(ROUTES.addEmail)}
               onRequiresVerification={() => router.push(`${ROUTES.verifyEmail}?pending=1`)}
               onError={setError}
             />
-            <GitHubLoginButton referralCode={form.referralCode} onError={setError} />
+            <GitHubLoginButton referralCode={form.referralCode} role={roleFromRoute} onError={setError} />
             <LinkedInLoginButton
               referralCode={form.referralCode}
+              role={roleFromRoute}
               onError={setError}
               className="sm:col-span-2 flex items-center justify-center gap-2 bg-[#0a66c2] border border-[#0a66c2] text-white px-4 py-2 rounded-xl hover:bg-[#08549d] transition-all font-semibold shadow-sm text-sm"
             />
@@ -193,17 +234,6 @@ export default function RegisterPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-[13px] font-bold text-slate-700 mb-1">I am a...</label>
-              <select
-                value={form.role}
-                onChange={set('role')}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 transition-all font-medium text-slate-900 appearance-none cursor-pointer text-sm"
-              >
-                <option value="applicant">Job seeker / Student</option>
-                <option value="recruiter">Recruiter / Employer</option>
-              </select>
-            </div>
 
             <div>
               <label className="block text-[13px] font-bold text-slate-700 mb-1 text-slate-500">Referral Code (optional)</label>
@@ -228,7 +258,7 @@ export default function RegisterPage() {
 
           <p className="mt-5 text-center text-[13px] font-medium text-slate-500">
             Already have an account?{' '}
-            <Link href={ROUTES.login} className="font-bold text-brand-primary hover:text-orange-600 transition-colors">
+            <Link href={loginRoute} className="font-bold text-brand-primary hover:text-orange-600 transition-colors">
               Sign in here
             </Link>
           </p>

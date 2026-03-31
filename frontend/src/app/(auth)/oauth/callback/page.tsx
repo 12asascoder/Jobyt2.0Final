@@ -9,7 +9,9 @@ import { useAuthStore } from '@/store/auth.store';
 import {
   clearOAuthReferralCode,
   clearOAuthState,
+  clearOAuthRole,
   getOAuthReferralCode,
+  getOAuthRole,
   OAuthResponseData,
   parseOAuthResponse,
   readOAuthState,
@@ -54,14 +56,21 @@ export default function OAuthCallbackPage() {
         clearOAuthState(provider);
 
         const referralCode = getOAuthReferralCode();
+        const role = getOAuthRole();
+
+        console.log('[OAuthCallbackPage] Retrieved from localStorage:', { role, referralCode });
 
         const res = await api.post(`/auth/${provider}`, {
           code,
           state,
           ...(referralCode ? { referralCode } : {}),
+          ...(role ? { role } : {}),
         });
 
+        console.log('[OAuthCallbackPage] POST payload sent:', { provider, code, state, referralCode, role });
+
         clearOAuthReferralCode();
+        clearOAuthRole();
 
         const parsed = parseOAuthResponse(res.data as OAuthResponseData);
 

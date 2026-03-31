@@ -70,9 +70,10 @@ export const AuthController = {
         typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
           ? req.body.referralCode.trim()
           : undefined;
+      const role = (req.body.role === 'recruiter' || req.body.role === 'applicant') ? req.body.role : undefined;
       const hasToken = typeof idToken === 'string' && idToken.length > 0;
 
-      logger.info('Google OAuth login attempt', { hasToken, ip: req.ip });
+      logger.info(`[googleLogin] Received OAuth request`, { hasToken, role, ip: req.ip });
 
       if (!hasToken || idToken.length < 50) {
         throw new UnauthorizedError('Invalid Google token', 'INVALID_GOOGLE_TOKEN');
@@ -80,7 +81,7 @@ export const AuthController = {
 
       let data;
       try {
-        data = await OAuthAuthService.login('google', idToken, referralCode);
+        data = await OAuthAuthService.login('google', idToken, referralCode, role);
       } catch (error) {
         if (error instanceof UnauthorizedError) {
           throw new UnauthorizedError('Invalid Google token', 'INVALID_GOOGLE_TOKEN');
@@ -101,12 +102,9 @@ export const AuthController = {
         typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
           ? req.body.referralCode.trim()
           : undefined;
+      const role = (req.body.role === 'recruiter' || req.body.role === 'applicant') ? req.body.role : undefined;
 
-      logger.info('GitHub OAuth login attempt', {
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-        timestamp: new Date().toISOString(),
-      });
+      logger.info(`[githubLogin] Received OAuth request`, { role, ip: req.ip });
 
       if (typeof code !== 'string' || !code.trim()) {
         throw new UnauthorizedError('INVALID_GITHUB_CODE', 'INVALID_GITHUB_CODE');
@@ -134,7 +132,7 @@ export const AuthController = {
         throw new UnauthorizedError('CODE_ALREADY_USED');
       }
 
-      const data = await OAuthAuthService.login('github', normalizedCode, referralCode);
+      const data = await OAuthAuthService.login('github', normalizedCode, referralCode, role);
 
       // TODO: Move OAuth provider handlers to strategy pattern if more providers are added.
       sendSuccess(res, data, 'Login successful');
@@ -154,6 +152,7 @@ export const AuthController = {
         typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
           ? req.body.referralCode.trim()
           : undefined;
+      const role = (req.body.role === 'recruiter' || req.body.role === 'applicant') ? req.body.role : undefined;
 
       logger.info('LinkedIn OAuth login attempt', {
         ip: req.ip,
@@ -194,7 +193,7 @@ export const AuthController = {
         throw new UnauthorizedError('CODE_ALREADY_USED');
       }
 
-      const result = await OAuthAuthService.login('linkedin', normalizedCode, referralCode);
+      const result = await OAuthAuthService.login('linkedin', normalizedCode, referralCode, role);
 
       // TODO: Move OAuth providers to a strategy-based handler when providers grow.
       return sendSuccess(res, result);

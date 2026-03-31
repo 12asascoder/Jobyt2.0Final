@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { FaGoogle } from 'react-icons/fa6';
 import { api } from '@/lib/api';
-import { OAuthResponseData, parseOAuthResponse, readPublicEnv } from '@/lib/oauth';
+import { OAuthResponseData, parseOAuthResponse, readPublicEnv, saveOAuthRole } from '@/lib/oauth';
 import { AuthTokens, AuthUser } from '@/types';
 
 interface GoogleLoginButtonProps {
   referralCode?: string;
+  role?: 'applicant' | 'recruiter';
   disabled?: boolean;
   className?: string;
   onSuccess: (tokens: AuthTokens, user: AuthUser) => void;
@@ -18,6 +19,7 @@ interface GoogleLoginButtonProps {
 
 export function GoogleLoginButton({
   referralCode,
+  role,
   disabled,
   className,
   onSuccess,
@@ -53,9 +55,13 @@ export function GoogleLoginButton({
 
   const handleGoogleResponse = async (credential: string) => {
     try {
+      console.log('[GoogleLoginButton] OAuth response received, role:', role);
+      saveOAuthRole(role);
+      console.log('[GoogleLoginButton] Role saved to localStorage');
       const res = await api.post('/auth/google', {
         idToken: credential,
         ...(referralCode?.trim() ? { referralCode: referralCode.trim() } : {}),
+        ...(role ? { role } : {}),
       });
 
       const parsed = parseOAuthResponse(res.data as OAuthResponseData);

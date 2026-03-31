@@ -33,6 +33,7 @@ const applicantNav: NavItem[] = [
     { label: 'Messages', href: ROUTES.messages, icon: FaComments },
     { label: 'Credits', href: ROUTES.credits, icon: FaCreditCard },
     { label: 'Referrals', href: ROUTES.referral, icon: FaGift },
+        { label: 'Community', href: ROUTES.community, icon: FaUsers },
     { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
     { label: 'Profile', href: ROUTES.profile, icon: FaCircleUser },
 ];

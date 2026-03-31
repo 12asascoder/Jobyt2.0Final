@@ -16,15 +16,15 @@ router.get('/me', UserController.getMyProfile);
 
 router.put(
   '/me',
-  body('name').optional().isString().trim(),
-  body('phone').optional().isMobilePhone('any'),
-  body('bio').optional().isString(),
+  body('name').optional({ nullable: true, checkFalsy: true }).isString().trim(),
+  body('phone').optional({ nullable: true, checkFalsy: true }).isMobilePhone('any'),
+  body('bio').optional({ nullable: true }).isString(),
   body('skills').optional().isArray(),
   body('experience').optional().isArray(),
   body('education').optional().isArray(),
-  body('company_name').optional().isString().trim(),
-  body('industry').optional().isString(),
-  body('website').optional().isURL(),
+  body('company_name').optional({ nullable: true, checkFalsy: true }).isString().trim(),
+  body('industry').optional({ nullable: true, checkFalsy: true }).isString(),
+  body('website').optional({ nullable: true, checkFalsy: true }).isURL(),
   validate,
   UserController.updateProfile,
 );

@@ -5,15 +5,16 @@ import { beginOAuthRedirect } from '@/lib/oauth';
 
 interface GitHubLoginButtonProps {
   referralCode?: string;
+  role?: 'applicant' | 'recruiter';
   disabled?: boolean;
   className?: string;
   onError: (message: string) => void;
 }
 
-export function GitHubLoginButton({ referralCode, disabled, className, onError }: GitHubLoginButtonProps) {
+export function GitHubLoginButton({ referralCode, role, disabled, className, onError }: GitHubLoginButtonProps) {
   const handleClick = async () => {
     try {
-      await beginOAuthRedirect('github', referralCode);
+      await beginOAuthRedirect('github', referralCode, role);
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     }

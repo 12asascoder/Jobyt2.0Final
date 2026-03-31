@@ -26,6 +26,7 @@ export interface OAuthUserInput {
   provider: OAuthProvider;
   name?: string | null;
   avatar?: string | null;
+  role?: 'applicant' | 'recruiter';
 }
 
 type GithubUserResponse = {
@@ -159,7 +160,7 @@ async function createOAuthUser(
       const baseData = {
         email: normalizeEmail(input.email),
         password_hash: null,
-        role: 'applicant' as const,
+        role: input.role || 'applicant' as const,
         referral_code: referralCode,
         auth_provider: input.provider,
         is_verified: true,
@@ -566,7 +567,8 @@ export const OAuthUserService = {
 };
 
 export const OAuthAuthService = {
-  async login(provider: OAuthProvider, tokenOrCode: string, referralCode?: string) {
+  async login(provider: OAuthProvider, tokenOrCode: string, referralCode?: string, role?: 'applicant' | 'recruiter') {
+    logger.info(`[OAuthAuthService.login] Starting OAuth login`, { provider, role });
     const oauthUser = await OAuthService.verify(provider, tokenOrCode);
 
     const providerId = String(oauthUser.providerId ?? '').trim();
@@ -643,13 +645,15 @@ export const OAuthAuthService = {
             const baseData = {
               email: null,
               password_hash: null,
-              role: 'applicant' as const,
+              role: role ?? ('applicant' as const),
               referral_code: referralCode,
               auth_provider: provider,
               is_verified: false,
               is_email_dummy: true, // Mark user as needing email completion
               email_verified: false,
             };
+
+            logger.info(`[OAuthAuthService.login] Creating new user (no email)`, { provider, role: baseData.role });
 
             switch (provider) {
               case 'google':
@@ -819,13 +823,15 @@ export const OAuthAuthService = {
           const baseData = {
             email,
             password_hash: null,
-            role: 'applicant' as const,
+            role: role ?? ('applicant' as const),
             referral_code: referralCode,
             auth_provider: provider,
             is_verified: true,
             is_email_dummy: false, // Email is real and verified
             email_verified: emailVerified,
           };
+
+          logger.info(`[OAuthAuthService.login] Creating new account with email`, { provider, role: baseData.role, email });
 
           switch (provider) {
             case 'google':
