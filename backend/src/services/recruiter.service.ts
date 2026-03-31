@@ -142,4 +142,19 @@ export const RecruiterService = {
       throw err;
     }
   },
+
+  /**
+   * Convert an applicant user to a recruiter
+   * 
+   * - Updates user role from 'applicant' to 'recruiter'
+   * - Creates a new recruiter profile with provided details
+   * - Atomically handles both operations
+   *
+   * @param userId - The user's ID to convert
+   * @param data - Profile data (company_name, company_email, etc.)
+   * @returns Created recruiter profile
+   * @throws {AppError} 400 if user is already a recruiter
+   * @throws {AppError} 409 if profile already exists or email in use
+   */
+
 };

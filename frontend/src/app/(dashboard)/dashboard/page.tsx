@@ -188,7 +188,7 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-between flex-wrap gap-4">
                             <div>
                                 <h1 className="font-display text-3xl md:text-4xl lg:text-[42px] font-extrabold text-[#1a1a1a] tracking-tight mb-2">
-                                    Explore Internships
+                                    Explore Opportunities
                                 </h1>
                                 <p className="text-slate-600 font-medium text-sm md:text-base">
                                     Find and apply to the best opportunities
