@@ -27,7 +27,7 @@ export const RecruiterProfileModel = {
 
   async create(userId: string): Promise<RecruiterProfile> {
     const { rows } = await pool.query(
-      `INSERT INTO recruiter_profiles (user_id) VALUES ($1) RETURNING *`,
+      `INSERT INTO recruiter_profiles (user_id, updated_at) VALUES ($1, NOW()) RETURNING *`,
       [userId],
     );
     return rows[0];

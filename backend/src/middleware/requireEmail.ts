@@ -1,5 +1,5 @@
 import { type Request, type Response, type NextFunction } from 'express';
-import prisma from '../config/prisma';
+import { UserModel } from '../models/user.model';
 
 /**
  * Middleware to enforce email requirement for specific endpoints.
@@ -16,10 +16,7 @@ export const requireEmail = (req: Request, res: Response, next: NextFunction) =>
   }
 
   void (async () => {
-    const user = await prisma.users.findUnique({
-      where: { id: userId },
-      select: { email: true, email_verified: true },
-    });
+    const user = await UserModel.findById(userId);
 
     if (!user?.email || !user.email_verified) {
       res.status(403).json({
