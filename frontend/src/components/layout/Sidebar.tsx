@@ -30,7 +30,6 @@ const applicantNav: NavItem[] = [
     { label: 'Applications', href: ROUTES.applications, icon: FaFileLines },
     { label: 'Saved Jobs', href: ROUTES.savedJobs, icon: FaBookmark },
     { label: 'Messages', href: ROUTES.messages, icon: FaComments },
-    { label: 'Credits', href: ROUTES.credits, icon: FaCreditCard },
     { label: 'Referrals', href: ROUTES.referral, icon: FaGift },
         { label: 'Community', href: ROUTES.community, icon: FaUsers },
     { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
@@ -40,11 +39,10 @@ const applicantNav: NavItem[] = [
 const recruiterNav: NavItem[] = [
     { label: 'Dashboard', href: ROUTES.recruiterDashboard, icon: FaHouse },
     { label: 'My Jobs', href: ROUTES.recruiterJobs, icon: FaBriefcase },
-    { label: 'Applicants', href: ROUTES.recruiterApplications, icon: FaGift },
+    { label: 'Applicants', href: ROUTES.recruiterApplications, icon: FaUsers },
     { label: 'Messages', href: ROUTES.recruiterMessages, icon: FaComments },
     { label: 'Analytics', href: ROUTES.recruiterAnalytics, icon: FaChartLine },
     { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
-    { label: 'Credits', href: ROUTES.recruiterCredits, icon: FaCreditCard },
 ];
 
 const adminNav: NavItem[] = [

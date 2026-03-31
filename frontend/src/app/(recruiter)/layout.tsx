@@ -2,23 +2,25 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ROUTES } from '@/constants';
 import { AuthGuard } from '@/components/providers/AuthGuard';
 import { Modal } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
+import { useNotifications } from '@/hooks/useNotifications';
 import {
   FaHouse,
   FaBriefcase,
-  FaPlus,
+  FaUsers,
   FaComments,
   FaChartLine,
   FaCreditCard,
   FaBell,
   FaMagnifyingGlass,
   FaArrowRightFromBracket,
+  FaXmark,
 } from 'react-icons/fa6';
 
 interface RecruiterNavItem {
@@ -30,10 +32,9 @@ interface RecruiterNavItem {
 const recruiterNav: RecruiterNavItem[] = [
   { label: 'Home', href: ROUTES.recruiterDashboard, icon: FaHouse },
   { label: 'My Jobs', href: ROUTES.recruiterJobs, icon: FaBriefcase },
-  { label: 'Post', href: ROUTES.recruiterNewJob, icon: FaPlus },
+  { label: 'Applicants', href: ROUTES.recruiterApplications, icon: FaUsers },
   { label: 'Messages', href: ROUTES.recruiterMessages, icon: FaComments },
   { label: 'Analytics', href: ROUTES.recruiterAnalytics, icon: FaChartLine },
-  { label: 'Credits', href: ROUTES.recruiterCredits, icon: FaCreditCard },
 ];
 
 function RecruiterFloatingSidebar() {
@@ -79,7 +80,7 @@ function RecruiterFloatingSidebar() {
 
   return (
     <>
-      <aside className="hidden lg:flex fixed left-4 xl:left-8 top-1/2 -translate-y-1/2 z-40 flex-col items-center">
+      <aside className="hidden lg:flex fixed left-4 xl:left-8 top-[calc(50%-2rem)] -translate-y-1/2 z-40 flex-col items-center">
         <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-0.5 shadow-2xl">
           {recruiterNav.map((item) => {
             const Icon = item.icon;
@@ -185,7 +186,17 @@ function RecruiterFloatingSidebar() {
 }
 
 export default function RecruiterLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [bellActive, setBellActive] = useState(false);
+
+  const handleSearchSubmit = (query: string) => {
+    router.push(`/recruiter/dashboard?keyword=${encodeURIComponent(query)}`);
+    setSearchActive(false);
+    setSearchQuery('');
+  };
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -226,24 +237,111 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
               <span className="font-display text-xl font-bold text-slate-900 tracking-tight">Jobyt</span>
             </Link>
 
-            <div className="inline-flex items-center gap-3">
+            {/* Right Actions — Desktop/Tablet */}
+            <div className="hidden sm:flex items-center gap-3">
+              {searchActive ? (
+                /* STATE: Search active — black pill wrapping lime search + black bell */
+                <div className="flex items-center bg-[#1a1a1a] rounded-full h-14 p-1.5 gap-0 min-w-[300px]">
+                  {/* Lime search area */}
+                  <div className="flex items-center flex-1 bg-lime-400 rounded-full h-full px-4 gap-2.5">
+                    <FaMagnifyingGlass className="text-black/70 text-sm shrink-0" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && searchQuery.trim()) handleSearchSubmit(searchQuery.trim()); }}
+                      placeholder="Search jobs, applicants..."
+                      autoFocus
+                      className="flex-1 bg-transparent text-black placeholder-black/40 text-sm font-semibold outline-none min-w-0"
+                    />
+                    <button
+                      onClick={() => { setSearchActive(false); setSearchQuery(''); }}
+                      className="text-black/50 hover:text-black transition-colors"
+                    >
+                      <FaXmark className="text-sm" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1 ml-1 pl-1 relative">
+                    <button
+                      onClick={() => setBellActive(!bellActive)}
+                      className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                        bellActive ? 'bg-lime-400 text-black' : 'text-white/80 hover:text-white'
+                      }`}
+                    >
+                      <FaBell className="text-lg" />
+                    </button>
+                    {bellActive && <RecruiterNotificationPopover />}
+                  </div>
+                </div>
+              ) : (
+                /* STATE: Default / Notification — solid black pill */
+                <div className="flex items-center bg-[#1a1a1a] rounded-full h-14 px-2 gap-1 relative">
+                  <button
+                    onClick={() => setSearchActive(true)}
+                    className="w-11 h-11 rounded-full flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                  >
+                    <FaMagnifyingGlass className="text-base" />
+                  </button>
+                  <button
+                    onClick={() => setBellActive(!bellActive)}
+                    className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
+                      bellActive
+                        ? 'bg-lime-400 text-black'
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                  >
+                    <FaBell className="text-lg" />
+                  </button>
+                  {bellActive && <RecruiterNotificationPopover />}
+                </div>
+              )}
+            </div>
+
+            {/* Mobile: Simplified search + notification */}
+            <div className="sm:hidden flex items-center gap-2 relative">
               <button
-                type="button"
-                className="inline-flex items-center gap-3 rounded-full bg-black text-white px-4 py-2"
-                title="Search and notifications"
+                onClick={() => setSearchActive(true)}
+                className="w-10 h-10 rounded-full bg-[#1a1a1a] text-white/80 flex items-center justify-center hover:text-white transition-colors"
+                title="Search"
               >
                 <FaMagnifyingGlass className="text-sm" />
+              </button>
+              <button
+                onClick={() => setBellActive(!bellActive)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                  bellActive ? 'bg-lime-400 text-black' : 'bg-[#1a1a1a] text-white/80 hover:text-white'
+                }`}
+                title="Notifications"
+              >
                 <FaBell className="text-sm" />
               </button>
-              <Link
-                href={ROUTES.recruiterNewJob}
-                className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center"
-                title="Post a job"
-              >
-                <FaPlus className="text-sm" />
-              </Link>
+              {bellActive && <RecruiterNotificationPopover />}
             </div>
           </div>
+
+          {/* Mobile Search Modal */}
+          {searchActive && (
+            <div className="mt-4 sm:hidden">
+              <div className="flex items-center bg-[#1a1a1a] rounded-full h-12 px-4 gap-2">
+                <FaMagnifyingGlass className="text-white/60 text-sm shrink-0" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && searchQuery.trim()) handleSearchSubmit(searchQuery.trim()); }}
+                  placeholder="Search jobs, applicants..."
+                  autoFocus
+                  className="flex-1 bg-transparent text-white placeholder-white/40 text-sm font-medium outline-none min-w-0"
+                />
+                <button
+                  onClick={() => { setSearchActive(false); setSearchQuery(''); }}
+                  className="text-white/50 hover:text-white transition-colors"
+                >
+                  <FaXmark className="text-sm" />
+                </button>
+              </div>
+            </div>
+          )}
         </header>
 
         <RecruiterFloatingSidebar />
@@ -255,3 +353,62 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
     </AuthGuard>
   );
 }
+
+const RecruiterNotificationPopover = () => {
+  const { notifications, unread, isLoading, fetchNotifications, markRead, markAllRead } = useNotifications();
+
+  useEffect(() => {
+    void fetchNotifications(1);
+  }, [fetchNotifications]);
+
+  const handleNotificationClick = async (id: string, actionUrl?: string | null, read?: boolean) => {
+    if (!read) {
+      await markRead(id);
+    }
+    if (actionUrl) {
+      window.location.href = actionUrl;
+    }
+  };
+  
+  return (
+    <div 
+      onClick={(e) => e.stopPropagation()} 
+      className="absolute right-0 top-14 sm:top-16 mt-1 w-[340px] max-w-[calc(100vw-32px)] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 p-5 z-50 animate-in fade-in slide-in-from-top-2 text-left cursor-auto"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-display font-medium text-slate-900">Notifications {unread > 0 ? `(${unread})` : ''}</h3>
+        {unread > 0 && (
+          <button
+            onClick={() => void markAllRead()}
+            className="text-xs font-semibold text-lime-700 hover:text-lime-800"
+          >
+            Mark all read
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+        {isLoading ? (
+          <p className="text-sm text-slate-500 py-4 text-center">Loading notifications...</p>
+        ) : notifications.length === 0 ? (
+          <p className="text-sm text-slate-500 py-4 text-center">No notifications yet.</p>
+        ) : (
+          notifications.map((notif) => (
+            <button
+              key={notif.id}
+              type="button"
+              onClick={() => void handleNotificationClick(notif.id, notif.action_url, notif.read)}
+              className="w-full text-left bg-[#f8f6f0] rounded-[16px] p-4 flex items-start gap-3 hover:bg-[#f1eee6] transition-colors"
+            >
+              <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${notif.read ? 'bg-[#d9d9d9]' : 'bg-[#c1f237]'}`} />
+              <div>
+                <p className="text-slate-800 text-[13px] leading-snug font-semibold">{notif.title}</p>
+                <p className="text-slate-600 text-[12px] leading-snug mt-1">{notif.body}</p>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};

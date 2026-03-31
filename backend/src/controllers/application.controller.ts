@@ -139,10 +139,11 @@ export const ApplicationController = {
       const status = req.query.status as string | undefined;
       const jobTitle = req.query.jobTitle as string | undefined;
       const applicantName = req.query.applicantName as string | undefined;
+      const jobId = req.query.jobId as string | undefined;
 
       const { applications, total } = await ApplicationService.getRecruiterApplicationsWithFilters(
         req.user!.userId,
-        { status: status as any, jobTitle, applicantName },
+        { status: status as any, jobTitle, applicantName, jobId },
         page,
         limit,
       );

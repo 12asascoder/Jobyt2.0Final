@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Spinner } from '@/components/ui';
 import { ROUTES } from '@/constants';
@@ -89,52 +89,109 @@ const getEducationDisplay = (education?: any[]) => {
 
 export default function RecruiterApplicationsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeRequestRef = useRef(0);
   const [applications, setApplications] = useState<RecruiterApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [openingConversationFor, setOpeningConversationFor] = useState<string | null>(null);
+  const selectedJobId = searchParams.get('jobId') || '';
 
   const fetchApplications = useCallback(async () => {
+    const requestId = ++activeRequestRef.current;
     setLoading(true);
     try {
+      if (selectedJobId) {
+        const res = await api.getPaginated<RecruiterApplication>(`/applications/jobs/${selectedJobId}?limit=100`);
+        const base = res.data ?? [];
+        const searchLower = searchQuery.trim().toLowerCase();
+
+        const filteredByStatus = base.filter((app) => {
+          const status = app.status?.toLowerCase() || '';
+          if (!selectedStatus) return true;
+          if (selectedStatus === 'rejected,hired,offer') {
+            return status === 'rejected' || status === 'hired' || status === 'offer';
+          }
+          return status === selectedStatus;
+        });
+
+        const filtered = filteredByStatus.filter((app) => {
+          if (!searchLower) return true;
+          const name = (app.name || '').toLowerCase();
+          const email = (app.email || '').toLowerCase();
+          const title = (app.job_title || '').toLowerCase();
+          return name.includes(searchLower) || email.includes(searchLower) || title.includes(searchLower);
+        });
+
+        if (requestId === activeRequestRef.current) {
+          setApplications(filtered);
+        }
+        return;
+      }
+
       const params = new URLSearchParams();
       
       // Handle multiple statuses for STATUS tab
       if (selectedStatus === 'rejected,hired,offer') {
-        const rejectedRes = await api.getPaginated<RecruiterApplication>(
-          `/applications/recruiter/applicants/filtered?status=rejected&limit=50`
-        );
-        const hiredRes = await api.getPaginated<RecruiterApplication>(
-          `/applications/recruiter/applicants/filtered?status=hired&limit=50`
-        );
-        const offerRes = await api.getPaginated<RecruiterApplication>(
-          `/applications/recruiter/applicants/filtered?status=offer&limit=50`
-        );
+        const rejectedParams = new URLSearchParams();
+        rejectedParams.append('status', 'rejected');
+        if (selectedJobId) rejectedParams.append('jobId', selectedJobId);
+
+        const hiredParams = new URLSearchParams();
+        hiredParams.append('status', 'hired');
+        if (selectedJobId) hiredParams.append('jobId', selectedJobId);
+
+        const offerParams = new URLSearchParams();
+        offerParams.append('status', 'offer');
+        if (selectedJobId) offerParams.append('jobId', selectedJobId);
+
+        const [rejectedRes, hiredRes, offerRes] = await Promise.all([
+          api.getPaginated<RecruiterApplication>(
+            `/applications/recruiter/applicants/filtered?${rejectedParams.toString()}&limit=50`
+          ),
+          api.getPaginated<RecruiterApplication>(
+            `/applications/recruiter/applicants/filtered?${hiredParams.toString()}&limit=50`
+          ),
+          api.getPaginated<RecruiterApplication>(
+            `/applications/recruiter/applicants/filtered?${offerParams.toString()}&limit=50`
+          ),
+        ]);
         const combined = [
           ...(rejectedRes.data ?? []),
           ...(hiredRes.data ?? []),
           ...(offerRes.data ?? []),
         ];
-        setApplications(combined);
+        if (requestId === activeRequestRef.current) {
+          setApplications(combined);
+        }
       } else {
         if (selectedStatus) params.append('status', selectedStatus);
         if (searchQuery) {
           params.append('jobTitle', searchQuery);
         }
+        if (selectedJobId) {
+          params.append('jobId', selectedJobId);
+        }
         
         const res = await api.getPaginated<RecruiterApplication>(
           `/applications/recruiter/applicants/filtered?${params.toString()}&limit=50`
         );
-        setApplications(res.data ?? []);
+        if (requestId === activeRequestRef.current) {
+          setApplications(res.data ?? []);
+        }
       }
     } catch (err) {
-      toast.error('Failed to load applications');
-      setApplications([]);
+      if (requestId === activeRequestRef.current) {
+        toast.error('Failed to load applications');
+        setApplications([]);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === activeRequestRef.current) {
+        setLoading(false);
+      }
     }
-  }, [selectedStatus, searchQuery]);
+  }, [selectedStatus, searchQuery, selectedJobId]);
 
   useEffect(() => {
     fetchApplications();

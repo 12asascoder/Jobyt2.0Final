@@ -311,7 +311,7 @@ export const ApplicationModel = {
 
   async findByRecruiterWithFilters(
     recruiterId: string,
-    filters: { status?: ApplicationStatus; jobTitle?: string; applicantName?: string },
+    filters: { status?: ApplicationStatus; jobTitle?: string; applicantName?: string; jobId?: string },
     page = 1,
     limit = 20,
   ): Promise<{ applications: any[]; total: number }> {
@@ -343,6 +343,12 @@ export const ApplicationModel = {
     if (filters.applicantName) {
       query += ` AND ap.name ILIKE $${paramIndex}`;
       params.push(`%${filters.applicantName}%`);
+      paramIndex++;
+    }
+
+    if (filters.jobId) {
+      query += ` AND j.id = $${paramIndex}`;
+      params.push(filters.jobId);
       paramIndex++;
     }
 

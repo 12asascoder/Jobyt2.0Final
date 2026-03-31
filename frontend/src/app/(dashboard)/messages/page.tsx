@@ -7,6 +7,7 @@ import { api, ApiError } from '@/lib/api';
 import { Spinner } from '@/components/ui';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import { FaArrowLeft, FaMagnifyingGlass } from 'react-icons/fa6';
+import { useAuthStore } from '@/store/auth.store';
 
 interface User {
   id: string;
@@ -105,6 +106,7 @@ const toTime = (value?: string | null) => {
 
 export default function MessagesPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
@@ -244,7 +246,6 @@ export default function MessagesPage() {
   );
 
   const selectedParticipant = selectedConversationItem?.participant;
-  const selectedRecruiterId = selectedConversation?.recruiter_id || selectedConversationItem?.recruiter_id;
 
   if (loading) {
     return (
@@ -348,85 +349,84 @@ export default function MessagesPage() {
                   </div>
                 </div>
 
-                {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
-                  {messagesLoading ? (
-                    <div className="flex justify-center items-center h-full">
-                      <Spinner />
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-center text-slate-500 text-sm mt-12">No messages yet</div>
-                  ) : (
-                    messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${
-                          msg.sender_id === selectedRecruiterId ? 'justify-end' : 'justify-start'
-                        }`}
-                      >
-                        <div
-                          className={`max-w-[85%] md:max-w-xs px-4 py-2 rounded-lg ${
-                            msg.sender_id === selectedRecruiterId
-                              ? 'bg-slate-200 text-slate-900 border border-slate-300'
-                              : 'bg-lime-300 text-black'
-                          }`}
-                        >
-                          <p className="text-sm break-words">{msg.body}</p>
-                          <p className="text-xs text-slate-500 mt-1">{formatTime(msg.created_at)}</p>
+                <div className="flex-1 min-h-0 flex">
+                  <div className="flex-1 min-h-0 flex flex-col">
+                    {/* Messages Area */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+                      {messagesLoading ? (
+                        <div className="flex justify-center items-center h-full">
+                          <Spinner />
                         </div>
+                      ) : messages.length === 0 ? (
+                        <div className="text-center text-slate-500 text-sm mt-12">No messages yet</div>
+                      ) : (
+                        messages.map((msg) => {
+                          // Align and color by logged-in applicant: own messages on right in green.
+                          // Recruiter messages stay on the left in gray.
+                          const isOwnMessage = msg.sender_id === user?.id;
+                          return (
+                            <div
+                              key={msg.id}
+                              className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <div
+                                className={`max-w-[85%] md:max-w-xs px-4 py-2 rounded-lg ${
+                                  isOwnMessage
+                                    ? 'bg-lime-300 text-black'
+                                    : 'bg-slate-200 text-slate-900 border border-slate-300'
+                                }`}
+                              >
+                                <p className="text-sm break-words">{msg.body}</p>
+                                <p className="text-xs text-slate-500 mt-1">{formatTime(msg.created_at)}</p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Input Area */}
+                    <div className="p-4 border-t border-slate-200 bg-white">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Type a message..."
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSendMessage();
+                          }}
+                          disabled={sendingMessage}
+                          className="flex-1 px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          onClick={handleSendMessage}
+                          disabled={sendingMessage || !newMessage.trim()}
+                          className="px-4 py-2 rounded-lg bg-lime-300 text-black font-semibold text-sm hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                          {sendingMessage ? 'Sending...' : 'Send'}
+                        </button>
                       </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Input Area */}
-                <div className="p-4 border-t border-slate-200 bg-white">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Type a message..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSendMessage();
-                      }}
-                      disabled={sendingMessage}
-                      className="flex-1 px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={sendingMessage || !newMessage.trim()}
-                      className="px-4 py-2 rounded-lg bg-lime-300 text-black font-semibold text-sm hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                    >
-                      {sendingMessage ? 'Sending...' : 'Send'}
-                    </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* User Info Panels */}
-                <div className="hidden md:grid grid-cols-2 gap-3 p-4 border-t border-slate-200 bg-slate-50">
-                  <div>
-                    <h4 className="text-xs font-semibold text-slate-700 mb-2">General Info</h4>
-                    <div className="space-y-1 text-xs text-slate-600">
-                      <p>
-                        <span className="font-semibold">Name:</span>{' '}
+                  {/* Right Side Info Panel */}
+                  <aside className="hidden lg:block w-72 border-l border-slate-200 bg-slate-50 p-4 overflow-y-auto">
+                    <h4 className="text-base font-bold text-slate-900 mb-3">General Info</h4>
+                    <div className="rounded-xl bg-white border border-slate-200 p-3 mb-3">
+                      <p className="text-sm font-semibold text-slate-900">
                         {selectedParticipant?.name || 'N/A'}
                       </p>
-                      <p>
+                      <p className="text-xs text-slate-600 mt-2">
                         <span className="font-semibold">Email:</span>{' '}
                         {selectedParticipant?.email || 'N/A'}
                       </p>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-semibold text-slate-700 mb-2">Details</h4>
-                    <div className="space-y-1 text-xs text-slate-600">
-                      <p>
+                      <p className="text-xs text-slate-600 mt-1">
                         <span className="font-semibold">Joined:</span>{' '}
-                        {formatDate(selectedConversationItem?.last_message_at || selectedConversation.last_message_at)}
+                        {formatDate(selectedConversationItem?.last_message_at || selectedConversation?.last_message_at)}
                       </p>
                     </div>
-                  </div>
+                  </aside>
                 </div>
               </>
             ) : (

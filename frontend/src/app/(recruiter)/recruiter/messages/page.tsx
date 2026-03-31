@@ -8,6 +8,7 @@ import { Spinner } from '@/components/ui';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import { FaMagnifyingGlass } from 'react-icons/fa6';
 import { ROUTES } from '@/constants';
+import { useAuthStore } from '@/store/auth.store';
 
 interface User {
   id: string;
@@ -108,6 +109,7 @@ export default function MessagesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialConversationId = searchParams.get('conversationId');
+  const { user } = useAuthStore();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
@@ -392,25 +394,26 @@ export default function MessagesPage() {
                       ) : messages.length === 0 ? (
                         <div className="text-center text-slate-500 text-sm mt-12">No messages yet</div>
                       ) : (
-                        messages.map((msg) => (
-                          <div
-                            key={msg.id}
-                            className={`flex ${
-                              msg.sender_id === selectedConversationItem?.recruiter_id ? 'justify-end' : 'justify-start'
-                            }`}
-                          >
+                        messages.map((msg) => {
+                          const isOwnMessage = msg.sender_id === user?.id;
+                          return (
                             <div
-                              className={`max-w-[85%] md:max-w-xs px-4 py-2 rounded-lg ${
-                                msg.sender_id === selectedConversationItem?.recruiter_id
-                                  ? 'bg-lime-300 text-black'
-                                  : 'bg-white text-slate-900 border border-slate-200'
-                              }`}
+                              key={msg.id}
+                              className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                             >
-                              <p className="text-sm break-words">{msg.body}</p>
-                              <p className="text-xs text-slate-500 mt-1">{formatTime(msg.created_at)}</p>
+                              <div
+                                className={`max-w-[85%] md:max-w-xs px-4 py-2 rounded-lg ${
+                                  isOwnMessage
+                                    ? 'bg-lime-300 text-black'
+                                    : 'bg-white text-slate-900 border border-slate-200'
+                                }`}
+                              >
+                                <p className="text-sm break-words">{msg.body}</p>
+                                <p className="text-xs text-slate-500 mt-1">{formatTime(msg.created_at)}</p>
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
 
