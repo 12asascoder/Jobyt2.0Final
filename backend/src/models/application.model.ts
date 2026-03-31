@@ -103,6 +103,12 @@ export const ApplicationModel = {
     return rows[0] || null;
   },
 
+  async countByJob(jobId: string, client?: PoolClient): Promise<number> {
+    const db = client ?? pool;
+    const { rows } = await db.query('SELECT COUNT(*) FROM applications WHERE job_id = $1', [jobId]);
+    return Number.parseInt(rows[0]?.count ?? '0', 10);
+  },
+
   async create(
     data: {
       job_id: string;

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { api, ApiError } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
-import { ApplicantProfile, RecruiterProfile } from '@/types';
+import { ApplicantProfile, RecruiterProfile, Notification as AppNotification } from '@/types';
 import { Spinner, Avatar } from '@/components/ui';
 import toast from 'react-hot-toast';
 import { FaPenToSquare, FaCheck } from 'react-icons/fa6';
@@ -33,35 +33,73 @@ export default function ProfilePage() {
   // Determine missing fields
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [resumeRefreshKey, setResumeRefreshKey] = useState(0);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const loadProfile = useCallback(async () => {
-    await api
-      .get<{ profile: ProfileData; completeness: number; email: string }>('/users/me')
-      .then((r) => {
-        reset(r.data.profile || {});
-        setCompleteness(r.data.completeness);
-        if (r.data.profile) {
-          const p = r.data.profile as ApplicantProfile & RecruiterProfile;
-          setPhotoUrl(resolveAssetUrl(p.photo_url || p.logo_url || null));
+    try {
+      const r = await api.get<{ profile: ProfileData; completeness: number; email: string }>('/users/me');
+      reset(r.data?.profile || {});
+      setCompleteness(r.data?.completeness || 0);
+      if (r.data?.profile) {
+        const p = r.data.profile as ApplicantProfile & RecruiterProfile;
+        setPhotoUrl(resolveAssetUrl(p.photo_url || p.logo_url || null));
 
-          // Calculate missing fields for the checklist
-          const missing = [];
-          if (!p.photo_url && !p.logo_url) missing.push('Upload Your Photo');
-          if (user?.role === 'recruiter') {
-            if (!p.name || !p.company_name || !p.location) missing.push('Fill details');
-          } else {
-            if (!p.name || !p.phone) missing.push('Fill details');
-          }
-          if (user?.role === 'applicant' && !p.resume_url) missing.push('Upload Your Resume');
-          setMissingFields(missing);
+        const missing = [];
+        if (!p.photo_url && !p.logo_url) missing.push('Upload Your Photo');
+        if (user?.role === 'recruiter') {
+          if (!p.name || !p.company_name || !p.location) missing.push('Fill details');
+        } else {
+          if (!p.name || !p.phone) missing.push('Fill details');
         }
-      })
-      .finally(() => setLoading(false));
+        if (user?.role === 'applicant' && !p.resume_url) missing.push('Upload Your Resume');
+        setMissingFields(missing);
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [reset, user]);
+
+  const loadNotifications = useCallback(async () => {
+    setNotificationsLoading(true);
+    try {
+      const res = await api.getPaginated<AppNotification>('/notifications?page=1&limit=5');
+      setNotifications(res.data || []);
+      setUnreadNotifications((res as unknown as { unread?: number }).unread || 0);
+    } catch {
+      // Keep profile usable if notifications are temporarily unavailable.
+      setNotifications([]);
+      setUnreadNotifications(0);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     void loadProfile();
-  }, [loadProfile]);
+    void loadNotifications();
+  }, [loadProfile, loadNotifications]);
+
+  const handleMarkNotificationRead = async (id: string) => {
+    try {
+      await api.patch(`/notifications/${id}/read`);
+      setNotifications((prev) => prev.map((item) => (item.id === id ? { ...item, read: true } : item)));
+      setUnreadNotifications((prev) => Math.max(0, prev - 1));
+    } catch {
+      toast.error('Failed to mark notification as read');
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    try {
+      await api.patch('/notifications/read-all');
+      setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+      setUnreadNotifications(0);
+    } catch {
+      toast.error('Failed to mark all notifications as read');
+    }
+  };
 
   const onSubmit = async (data: ProfileData) => {
     try {
@@ -340,6 +378,42 @@ export default function ProfilePage() {
                 </li>
               )}
             </ul>
+          </div>
+
+          <div className="bg-[#0b0b0b] rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-900">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-semibold text-lg">Notifications {unreadNotifications > 0 ? `(${unreadNotifications})` : ''}</h3>
+              {unreadNotifications > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAllNotificationsRead}
+                  className="text-xs text-[#c3ff3d] hover:text-[#aee62d] font-semibold"
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
+
+            {notificationsLoading ? (
+              <div className="py-6 flex justify-center"><Spinner size="sm" /></div>
+            ) : notifications.length === 0 ? (
+              <p className="text-sm text-gray-400">No notifications yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {notifications.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => !item.read && handleMarkNotificationRead(item.id)}
+                    className={`w-full text-left rounded-xl border p-3 transition-colors ${item.read ? 'border-gray-800 bg-black/30' : 'border-lime-400/30 bg-lime-400/10'}`}
+                  >
+                    <p className={`text-sm ${item.read ? 'text-gray-300' : 'text-white font-semibold'}`}>{item.title}</p>
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.body}</p>
+                    <p className="text-[11px] text-gray-500 mt-2">{new Date(item.created_at).toLocaleString()}</p>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Resume Upload + Parsing */}

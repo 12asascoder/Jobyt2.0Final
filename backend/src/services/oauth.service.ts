@@ -630,6 +630,12 @@ export const OAuthAuthService = {
 
       const existingByProvider = await findByProviderId();
       if (existingByProvider) {
+        if (role && existingByProvider.role !== role) {
+          throw new ConflictError(
+            `This ${provider} account is already linked to a ${existingByProvider.role} profile. Please use the ${existingByProvider.role} login route or a different OAuth account.`,
+            'OAUTH_ROLE_MISMATCH',
+          );
+        }
         // Provider already linked to a user → normal login
         return { user: existingByProvider, action: 'login' as const };
       }
@@ -697,6 +703,13 @@ export const OAuthAuthService = {
       const existingByEmail = await usersDelegate.findUnique({ where: { email } });
 
       if (existingByEmail) {
+        if (role && existingByEmail.role !== role) {
+          throw new ConflictError(
+            `An account with this email already exists as ${existingByEmail.role}. Please use the ${existingByEmail.role} login route or a different email.`,
+            'OAUTH_ROLE_MISMATCH',
+          );
+        }
+
         const existingByEmailWithOAuth = existingByEmail as unknown as Record<string, unknown>;
         // --------------- CONFLICT CHECK 3A ---------------
         // Does this user have the provider column already set with a DIFFERENT ID?

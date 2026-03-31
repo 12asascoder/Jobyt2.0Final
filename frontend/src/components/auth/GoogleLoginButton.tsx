@@ -11,6 +11,8 @@ interface GoogleLoginButtonProps {
   role?: 'applicant' | 'recruiter';
   disabled?: boolean;
   className?: string;
+  onStart?: () => void;
+  onComplete?: () => void;
   onSuccess: (tokens: AuthTokens, user: AuthUser) => void;
   onRequiresEmail?: () => void;
   onRequiresVerification?: () => void;
@@ -22,6 +24,8 @@ export function GoogleLoginButton({
   role,
   disabled,
   className,
+  onStart,
+  onComplete,
   onSuccess,
   onRequiresEmail,
   onRequiresVerification,
@@ -61,6 +65,7 @@ export function GoogleLoginButton({
   );
 
   const handleGoogleResponse = async (credential: string) => {
+    onStart?.();
     try {
       const currentRole = roleRef.current;
       const currentReferralCode = referralCodeRef.current;
@@ -94,6 +99,8 @@ export function GoogleLoginButton({
       onSuccess(parsed.tokens, parsed.user);
     } catch {
       onError('Login failed. Please try again.');
+    } finally {
+      onComplete?.();
     }
   };
 

@@ -25,6 +25,7 @@ export default function RegisterPage() {
   const setSession = useAuthStore((s) => s.setSession);
   const [form, setForm] = useState({ email: '', password: '', referralCode: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [oauthPending, setOauthPending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -177,19 +178,39 @@ export default function RegisterPage() {
             </Link>
           </div>
 
+          {oauthPending && (
+            <div className="mb-4 rounded-xl border border-lime-200 bg-lime-50 px-3 py-2 text-xs font-semibold text-lime-800 flex items-center gap-2">
+              <span className="inline-block h-3 w-3 rounded-full border-2 border-lime-700 border-t-transparent animate-spin" />
+              Creating your profile, please wait...
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
             <GoogleLoginButton
               referralCode={form.referralCode}
               role={roleFromRoute}
+              disabled={oauthPending}
+              onStart={() => setOauthPending(true)}
+              onComplete={() => setOauthPending(false)}
               onSuccess={handleAuthSuccess}
               onRequiresEmail={() => router.push(ROUTES.addEmail)}
               onRequiresVerification={() => router.push(`${ROUTES.verifyEmail}?pending=1`)}
               onError={setError}
             />
-            <GitHubLoginButton referralCode={form.referralCode} role={roleFromRoute} onError={setError} />
+            <GitHubLoginButton
+              referralCode={form.referralCode}
+              role={roleFromRoute}
+              disabled={oauthPending}
+              onStart={() => setOauthPending(true)}
+              onComplete={() => setOauthPending(false)}
+              onError={setError}
+            />
             <LinkedInLoginButton
               referralCode={form.referralCode}
               role={roleFromRoute}
+              disabled={oauthPending}
+              onStart={() => setOauthPending(true)}
+              onComplete={() => setOauthPending(false)}
               onError={setError}
               className="sm:col-span-2 flex items-center justify-center gap-2 bg-[#0a66c2] border border-[#0a66c2] text-white px-4 py-2 rounded-xl hover:bg-[#08549d] transition-all font-semibold shadow-sm text-sm"
             />
@@ -248,7 +269,7 @@ export default function RegisterPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || oauthPending}
               className="w-full mt-2 bg-slate-900 text-brand-primary rounded-xl px-4 py-3 font-bold text-base hover:bg-slate-800 transition-all shadow-[0_8px_20px_rgba(15,23,42,0.25)] hover:shadow-[0_12px_25px_rgba(15,23,42,0.35)] hover:-translate-y-0.5 disabled:opacity-70 disabled:hover:transform-none flex items-center justify-center gap-2 group"
             >
               {isLoading ? 'Creating account...' : 'Create Account'}

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { api, ApiError } from '@/lib/api';
 import { API_BASE } from '@/constants';
 import { Spinner } from '@/components/ui';
+import { Notification as AppNotification } from '@/types';
 
 interface RecruiterProfileForm {
   name: string;
@@ -50,11 +51,17 @@ export default function RecruiterProfilePage() {
   const [completeness, setCompleteness] = useState(0);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [form, setForm] = useState<RecruiterProfileForm>(emptyForm);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await api.get<ProfilePayload>('/users/me');
+        const [res, notificationsRes] = await Promise.all([
+          api.get<ProfilePayload>('/users/me'),
+          api.getPaginated<AppNotification>('/notifications?page=1&limit=5'),
+        ]);
         const payload = res.data ?? {};
         const profile = payload.profile ?? {};
 
@@ -70,15 +77,40 @@ export default function RecruiterProfilePage() {
           website: profile.website ?? '',
           description: profile.description ?? '',
         });
+
+        setNotifications(notificationsRes.data || []);
+        setUnreadNotifications((notificationsRes as unknown as { unread?: number }).unread || 0);
       } catch (err) {
         toast.error(err instanceof ApiError ? err.message : 'Failed to load profile');
       } finally {
         setLoading(false);
+        setNotificationsLoading(false);
       }
     };
 
+    setNotificationsLoading(true);
     void load();
   }, []);
+
+  const handleMarkNotificationRead = async (id: string) => {
+    try {
+      await api.patch(`/notifications/${id}/read`);
+      setNotifications((prev) => prev.map((item) => (item.id === id ? { ...item, read: true } : item)));
+      setUnreadNotifications((prev) => Math.max(0, prev - 1));
+    } catch {
+      toast.error('Failed to mark notification as read');
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    try {
+      await api.patch('/notifications/read-all');
+      setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+      setUnreadNotifications(0);
+    } catch {
+      toast.error('Failed to mark all notifications as read');
+    }
+  };
 
   const profileInitials = useMemo(() => {
     const source = form.company_name || form.name || email || 'R';
@@ -225,13 +257,51 @@ export default function RecruiterProfilePage() {
           </div>
         </section>
 
-        <aside className="rounded-2xl bg-black text-white p-5 h-fit">
-          <h2 className="text-lg font-bold mb-3">Profile Completion</h2>
-          <div className="w-full h-2 rounded-full bg-white/20 overflow-hidden">
-            <div className="h-full bg-lime-400" style={{ width: `${Math.min(100, Math.max(0, completeness))}%` }} />
+        <aside className="space-y-5 h-fit">
+          <div className="rounded-2xl bg-black text-white p-5">
+            <h2 className="text-lg font-bold mb-3">Profile Completion</h2>
+            <div className="w-full h-2 rounded-full bg-white/20 overflow-hidden">
+              <div className="h-full bg-lime-400" style={{ width: `${Math.min(100, Math.max(0, completeness))}%` }} />
+            </div>
+            <p className="text-3xl font-black text-lime-300 mt-3">{completeness}%</p>
+            <p className="text-xs text-white/70 mt-2">Completeness is calculated from your recruiter profile fields and logo.</p>
           </div>
-          <p className="text-3xl font-black text-lime-300 mt-3">{completeness}%</p>
-          <p className="text-xs text-white/70 mt-2">Completeness is calculated from your recruiter profile fields and logo.</p>
+
+          <div className="rounded-2xl bg-black text-white p-5 border border-gray-900">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold">Notifications {unreadNotifications > 0 ? `(${unreadNotifications})` : ''}</h2>
+              {unreadNotifications > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAllNotificationsRead}
+                  className="text-xs text-lime-300 hover:text-lime-200 font-semibold"
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
+
+            {notificationsLoading ? (
+              <div className="py-4 flex justify-center"><Spinner size="sm" /></div>
+            ) : notifications.length === 0 ? (
+              <p className="text-sm text-white/70">No notifications yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {notifications.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => !item.read && handleMarkNotificationRead(item.id)}
+                    className={`w-full text-left rounded-xl border p-3 transition-colors ${item.read ? 'border-white/10 bg-white/5' : 'border-lime-400/30 bg-lime-400/10'}`}
+                  >
+                    <p className={`text-sm ${item.read ? 'text-white/90' : 'text-white font-semibold'}`}>{item.title}</p>
+                    <p className="text-xs text-white/70 mt-1 line-clamp-2">{item.body}</p>
+                    <p className="text-[11px] text-white/50 mt-2">{new Date(item.created_at).toLocaleString()}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </aside>
       </div>
     </div>

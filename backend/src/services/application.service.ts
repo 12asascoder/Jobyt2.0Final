@@ -123,6 +123,21 @@ export const ApplicationService = {
         client,
       );
 
+      // 7) Milestone notification for recruiter on every 10 applications
+      const totalApplications = await ApplicationModel.countByJob(jobId, client);
+      if (totalApplications > 0 && totalApplications % 10 === 0) {
+        await NotificationModel.create(
+          {
+            user_id: job.recruiter_id,
+            type: 'application_submitted',
+            title: 'Application milestone reached',
+            body: `"${job.title}" has now reached ${totalApplications} applications.`,
+            action_url: `/recruiter/jobs/${jobId}/applications`,
+          },
+          client,
+        );
+      }
+
       return {
         ...application,
         creditsRemaining: balanceAfter,

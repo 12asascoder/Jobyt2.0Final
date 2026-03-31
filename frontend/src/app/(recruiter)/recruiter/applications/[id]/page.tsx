@@ -92,12 +92,12 @@ export default function ApplicationDetailPage() {
     setAccepting(true);
     try {
       await api.patch(`/applications/${applicationId}/status`, {
-        status: 'hired',
+        status: 'in_review',
       });
-      toast.success('Application accepted!');
+      toast.success('Application moved to reviewed!');
       router.push(ROUTES.recruiterApplications);
     } catch (err) {
-      toast.error('Failed to accept application');
+      toast.error('Failed to move application to reviewed');
     } finally {
       setAccepting(false);
     }
@@ -225,7 +225,7 @@ export default function ApplicationDetailPage() {
               disabled={accepting}
               className="w-full px-4 py-3 bg-lime-300 text-black font-bold rounded-full hover:bg-lime-400 disabled:opacity-50 transition-colors"
             >
-              {accepting ? 'Accepting...' : 'Accept Application'}
+              {accepting ? 'Moving...' : 'Accept Application'}
             </button>
           </div>
 
