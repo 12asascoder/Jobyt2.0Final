@@ -620,8 +620,8 @@ export const OAuthAuthService = {
 
     const isDummyEmail = !email;
 
-    const { user, action } = await prisma.$transaction(async (tx) => {
-      const usersDelegate = tx.users as unknown as {
+    const { user, action } = await (async () => {
+      const usersDelegate = prisma.users as unknown as {
         findUnique(args: { where: Record<string, unknown> }): Promise<users | null>;
         create(args: { data: Record<string, unknown> }): Promise<users>;
         update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<users>;
@@ -901,7 +901,7 @@ export const OAuthAuthService = {
       }
 
       throw new ConflictError('Could not generate unique referral code', 'REFERRAL_CODE_COLLISION');
-    });
+    })();
 
     // ============================================================================
     // Logging

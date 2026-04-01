@@ -39,12 +39,26 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// Stripe webhook needs raw body — must come BEFORE express.json()
-app.use('/api/v1/payments/webhook/stripe', express.raw({ type: 'application/json' }));
+// Razorpay webhook requires raw request body for signature verification.
+app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
 
 // Body parsing for everything else
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+const jsonParser = express.json({ limit: '10mb' });
+const urlencodedParser = express.urlencoded({ extended: true });
+
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/api/v1/payments/webhook')) {
+    return next();
+  }
+  return jsonParser(req, res, next);
+});
+
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/api/v1/payments/webhook')) {
+    return next();
+  }
+  return urlencodedParser(req, res, next);
+});
 
 // Structured request logging
 app.use(requestLogger);

@@ -18,7 +18,18 @@ redis.on('error', (err) => {
   // Keep this as a warning so local Docker can run without Redis.
   if (!hasLoggedRedisError) {
     hasLoggedRedisError = true;
-    console.warn('Redis connection error:', err);
+    const errorWithList = err as { errors?: unknown[] };
+    const aggregatedMessages = Array.isArray(errorWithList.errors)
+      ? errorWithList.errors
+          .map((item: unknown) => (item instanceof Error ? item.message : String(item)))
+          .join('; ')
+      : '';
+    const message =
+      aggregatedMessages ||
+      (err instanceof Error
+          ? err.message
+          : String(err));
+    console.warn(`Redis connection error: ${message}`);
   }
 });
 

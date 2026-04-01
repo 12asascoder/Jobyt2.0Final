@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { api, ApiError } from '@/lib/api';
 import { Spinner } from '@/components/ui';
 import { resolveAssetUrl } from '@/lib/assetUrl';
-import { FaMagnifyingGlass } from 'react-icons/fa6';
+import { FaArrowLeft, FaMagnifyingGlass } from 'react-icons/fa6';
 import { ROUTES } from '@/constants';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -238,6 +238,11 @@ export default function MessagesPage() {
       return;
     }
 
+    // On mobile, keep list-first UX and avoid auto-selecting a conversation.
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return;
+    }
+
     if (!selectedConvId && conversations.length > 0) {
       const firstValidConversation = conversations.find((conv) => {
         const participantName = conv.participant?.name?.trim();
@@ -373,9 +378,10 @@ export default function MessagesPage() {
                         setSelectedConvId(null);
                         router.replace(ROUTES.recruiterMessages);
                       }}
-                      className="md:hidden inline-flex items-center rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700"
+                      className="md:hidden inline-flex items-center justify-center w-8 h-8 rounded-full border border-slate-200 text-slate-700"
+                      aria-label="Back to conversations"
                     >
-                      Back
+                      <FaArrowLeft size={14} />
                     </button>
                     <h3 className="font-bold text-slate-900 truncate">
                       {selectedParticipant?.name || selectedParticipant?.email || 'Conversation'}

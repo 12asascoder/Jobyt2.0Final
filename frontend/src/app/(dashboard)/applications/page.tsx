@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApplications } from '@/hooks/useApplications';
 import { APPLICATION_STATUS_LABELS } from '@/constants';
 import { FaArrowUpRightFromSquare } from 'react-icons/fa6';
@@ -30,6 +31,7 @@ function formatDate(dateStr: string): string {
 }
 
 export default function ApplicationsPage() {
+    const router = useRouter();
     const { applications, isLoading, fetchMyApplications } = useApplications();
 
     useEffect(() => {
@@ -105,7 +107,11 @@ export default function ApplicationsPage() {
                                             </span>
                                         </div>
                                         <div className="col-span-2 flex justify-center">
-                                            <button className="w-9 h-9 rounded-lg bg-[#f4f1ea] hover:bg-[#e8e4dc] flex items-center justify-center transition-colors">
+                                            <button
+                                                onClick={() => router.push(`/jobs/${app.job_id}`)}
+                                                className="w-9 h-9 rounded-lg bg-[#f4f1ea] hover:bg-[#e8e4dc] flex items-center justify-center transition-colors"
+                                                aria-label="Open job details"
+                                            >
                                                 <FaArrowUpRightFromSquare className="text-xs text-[#1a1a1a]" />
                                             </button>
                                         </div>
@@ -147,7 +153,11 @@ export default function ApplicationsPage() {
                                     <span className="text-xs text-slate-400">
                                         Applied {formatDate(app.created_at)}
                                     </span>
-                                    <button className="w-8 h-8 rounded-lg bg-[#f4f1ea] flex items-center justify-center">
+                                    <button
+                                        onClick={() => router.push(`/jobs/${app.job_id}`)}
+                                        className="w-8 h-8 rounded-lg bg-[#f4f1ea] flex items-center justify-center"
+                                        aria-label="Open job details"
+                                    >
                                         <FaArrowUpRightFromSquare className="text-[10px] text-[#1a1a1a]" />
                                     </button>
                                 </div>

@@ -21,12 +21,28 @@ export const PaymentController = {
     }
   },
 
-  async stripeWebhook(req: Request, res: Response, next: NextFunction) {
+  async verifyCheckout(req: Request, res: Response, next: NextFunction) {
     try {
-      const signature = req.headers['stripe-signature'] as string;
-      // req.body is the raw Buffer when using express.raw() on this route
-      await PaymentService.handleStripeWebhook(req.body as Buffer, signature);
-      res.json({ received: true });
+      const data = await PaymentService.verifyCheckout({
+        razorpayOrderId: req.body.razorpay_order_id,
+        razorpayPaymentId: req.body.razorpay_payment_id,
+        razorpaySignature: req.body.razorpay_signature,
+      });
+      sendSuccess(res, data, 'Payment verified');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async handleWebhook(req: Request, res: Response, next: NextFunction) {
+    try {
+      const signature = req.headers['x-razorpay-signature'];
+      const rawBody = Buffer.isBuffer(req.body)
+        ? req.body.toString('utf8')
+        : JSON.stringify(req.body ?? {});
+
+      const data = await PaymentService.handleWebhookEvent(rawBody, signature);
+      sendSuccess(res, data, 'Webhook received');
     } catch (err) {
       next(err);
     }
