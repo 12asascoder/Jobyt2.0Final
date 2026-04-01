@@ -103,8 +103,11 @@ export const UserService = {
     }
 
     if (role === 'recruiter') {
-      const profile = await RecruiterProfileModel.findByUserId(userId);
-      const completeness = profile ? computeRecruiterCompleteness(profile) : 0;
+      let profile = await RecruiterProfileModel.findByUserId(userId);
+      if (!profile) {
+        profile = await RecruiterProfileModel.create(userId);
+      }
+      const completeness = computeRecruiterCompleteness(profile);
       return {
         email: user.email,
         role: user.role,

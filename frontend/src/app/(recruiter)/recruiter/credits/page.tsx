@@ -8,6 +8,65 @@ import { CreditTransaction, Plan } from '@/types';
 import toast from 'react-hot-toast';
 import { ROUTES } from '@/constants';
 
+type RazorpayCheckoutResponse = {
+  paymentId: string;
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  plan: {
+    id: string;
+    name: string;
+    credits: number;
+  };
+};
+
+type RazorpaySuccessResponse = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  handler: (response: RazorpaySuccessResponse) => Promise<void>;
+  theme: {
+    color: string;
+  };
+};
+
+type RazorpayInstance = {
+  on: (event: 'payment.failed', handler: () => void) => void;
+  open: () => void;
+};
+
+type RazorpayConstructor = new (options: RazorpayOptions) => RazorpayInstance;
+
+declare global {
+  interface Window {
+    Razorpay?: RazorpayConstructor;
+  }
+}
+
+const loadRazorpayScript = async (): Promise<boolean> => {
+  if (typeof window === 'undefined') return false;
+  if (window.Razorpay) return true;
+
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export default function RecruiterCreditsPage() {
   const router = useRouter();
   const [balance, setBalance] = useState(0);
@@ -16,13 +75,19 @@ export default function RecruiterCreditsPage() {
   const [loading, setLoading] = useState(true);
   const [buyingPlan, setBuyingPlan] = useState<string | null>(null);
 
+  const formatSignedAmount = (amount: number, type?: string) => {
+    if (type === 'debit') return `-${Math.abs(amount)}`;
+    if (type === 'credit') return `+${Math.abs(amount)}`;
+    return `${amount > 0 ? '+' : ''}${amount}`;
+  };
+
   const formattedTransactions = transactions.map((t) => ({
     id: t.id,
     transaction: t.description || t.type,
     transactionNo: t.id.slice(0, 10),
     date: new Date(t.created_at).toLocaleDateString(),
     status: t.status || 'success',
-    total: Math.abs(t.amount),
+    total: formatSignedAmount(t.amount, t.type),
   }));
 
   useEffect(() => {
@@ -42,8 +107,49 @@ export default function RecruiterCreditsPage() {
   const handleBuyPlan = async (planId: string) => {
     setBuyingPlan(planId);
     try {
-      const res = await api.post<{ checkoutUrl: string }>('/payments/checkout', { planId });
-      if (res.data.checkoutUrl) window.location.href = res.data.checkoutUrl;
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Unable to load Razorpay checkout. Please try again.');
+      }
+
+      const res = await api.post<RazorpayCheckoutResponse>('/payments/checkout', { planId });
+      const checkout = res.data;
+      if (!checkout) {
+        throw new Error('Invalid checkout response from server');
+      }
+
+      if (!window.Razorpay) {
+        throw new Error('Razorpay SDK not available after script load');
+      }
+
+      const razorpay = new window.Razorpay({
+        key: checkout.keyId,
+        amount: checkout.amount,
+        currency: checkout.currency,
+        name: 'Jobyt',
+        description: `${checkout.plan.name} - ${checkout.plan.credits} Credits`,
+        order_id: checkout.razorpayOrderId,
+        handler: async (response: RazorpaySuccessResponse) => {
+          await api.post('/payments/verify', response);
+          toast.success(`${checkout.plan.credits} credits added successfully`);
+
+          const [bal, txns] = await Promise.all([
+            api.get<{ balance: number }>('/credits/balance'),
+            api.getPaginated<CreditTransaction>('/credits/ledger'),
+          ]);
+          setBalance(bal.data?.balance ?? 0);
+          setTransactions(txns.data ?? []);
+        },
+        theme: {
+          color: '#84cc16',
+        },
+      });
+
+      razorpay.on('payment.failed', () => {
+        toast.error('Payment failed. Please try again.');
+      });
+
+      razorpay.open();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Checkout failed');
     } finally {
@@ -81,13 +187,8 @@ export default function RecruiterCreditsPage() {
 
       <h2 className="text-center text-[38px] font-black tracking-tight text-slate-900 mb-4">Credit Plans</h2>
       <section className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        {(topPlans.length > 0 ? topPlans : [
-          { id: 'free', name: 'Free', credits: 200, price: 0, currency: 'INR' },
-          { id: 'pro', name: 'Pro', credits: 600, price: 299, currency: 'INR' },
-          { id: 'enterprise', name: 'Enterprise', credits: 1500, price: 699, currency: 'INR' },
-        ]).map((plan) => {
+        {topPlans.map((plan) => {
           const isFree = Number(plan.price) === 0;
-          const isFallback = !plans.length;
           const isLoadingPlan = buyingPlan === plan.id;
 
           return (
@@ -98,10 +199,10 @@ export default function RecruiterCreditsPage() {
               <p className="text-white text-xl mt-3">{isFree ? 'New User' : `Rs. ${Number(plan.price).toLocaleString()}/-`}</p>
               <button
                 type="button"
-                disabled={isLoadingPlan || isFallback || isFree}
+                disabled={isLoadingPlan || isFree}
                 onClick={() => handleBuyPlan(plan.id)}
                 className={`mt-auto rounded-md px-4 py-2 text-sm font-bold w-[130px] ${
-                  isFree || isFallback
+                  isFree
                     ? 'bg-zinc-700 text-zinc-300 cursor-not-allowed'
                     : 'bg-lime-400 text-black hover:bg-lime-300'
                 }`}
@@ -111,6 +212,12 @@ export default function RecruiterCreditsPage() {
             </article>
           );
         })}
+        {topPlans.length === 0 && (
+          <div className="col-span-full rounded-xl bg-black/90 p-10 text-center">
+            <p className="text-white/70 text-lg font-medium">No credit plans available at the moment.</p>
+            <p className="text-white/40 mt-2">Check back soon for new plans.</p>
+          </div>
+        )}
       </section>
 
       <h2 className="text-center text-[38px] font-black tracking-tight text-slate-900 mb-4">Transaction History</h2>
@@ -125,7 +232,7 @@ export default function RecruiterCreditsPage() {
                 <th className="text-left py-2">Transaction No.</th>
                 <th className="text-left py-2">Date</th>
                 <th className="text-left py-2">Status</th>
-                <th className="text-left py-2">Total</th>
+                <th className="text-left py-2">+/-</th>
               </tr>
             </thead>
             <tbody>

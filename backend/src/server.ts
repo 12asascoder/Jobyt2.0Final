@@ -18,8 +18,8 @@ async function startServer() {
       await redis.ping();
       console.log('Redis connected');
     } catch (err) {
-      console.warn('Redis not available, continuing without Redis connection');
-      console.warn(err);
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`Redis not available, continuing without Redis connection (${message})`);
     }
 
     // Create HTTP server (required for Socket.io)

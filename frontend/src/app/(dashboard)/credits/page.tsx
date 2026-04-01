@@ -7,6 +7,65 @@ import { Spinner, Card, CardBody } from '@/components/ui';
 import { CreditTransaction, Plan } from '@/types';
 import toast from 'react-hot-toast';
 
+type RazorpayCheckoutResponse = {
+  paymentId: string;
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  plan: {
+    id: string;
+    name: string;
+    credits: number;
+  };
+};
+
+type RazorpaySuccessResponse = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  handler: (response: RazorpaySuccessResponse) => Promise<void>;
+  theme: {
+    color: string;
+  };
+};
+
+type RazorpayInstance = {
+  on: (event: 'payment.failed', handler: () => void) => void;
+  open: () => void;
+};
+
+type RazorpayConstructor = new (options: RazorpayOptions) => RazorpayInstance;
+
+declare global {
+  interface Window {
+    Razorpay?: RazorpayConstructor;
+  }
+}
+
+const loadRazorpayScript = async (): Promise<boolean> => {
+  if (typeof window === 'undefined') return false;
+  if (window.Razorpay) return true;
+
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export default function CreditsPage() {
   const router = useRouter();
   const [balance, setBalance] = useState(0);
@@ -15,13 +74,19 @@ export default function CreditsPage() {
   const [loading, setLoading] = useState(true);
   const [buyingPlan, setBuyingPlan] = useState<string | null>(null);
 
+  const formatSignedAmount = (amount: number, type?: string) => {
+    if (type === 'debit') return `-${Math.abs(amount)}`;
+    if (type === 'credit') return `+${Math.abs(amount)}`;
+    return `${amount > 0 ? '+' : ''}${amount}`;
+  };
+
   const formattedTransactions = transactions.map((t) => ({
     id: t.id,
     transaction: t.description || t.type,
     transactionNo: t.id.slice(0, 10),
     date: new Date(t.created_at).toLocaleDateString(),
     status: t.status || 'success',
-    total: Math.abs(t.amount),
+    total: formatSignedAmount(t.amount, t.type),
   }));
 
   useEffect(() => {
@@ -41,8 +106,46 @@ export default function CreditsPage() {
   const handleBuyPlan = async (planId: string) => {
     setBuyingPlan(planId);
     try {
-      const res = await api.post<{ checkoutUrl: string }>('/payments/checkout', { planId });
-      if (res.data.checkoutUrl) window.location.href = res.data.checkoutUrl;
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Unable to load Razorpay checkout. Please try again.');
+      }
+
+      const res = await api.post<RazorpayCheckoutResponse>('/payments/checkout', { planId });
+      const checkout = res.data;
+
+      if (!window.Razorpay) {
+        throw new Error('Razorpay SDK not available after script load');
+      }
+
+      const razorpay = new window.Razorpay({
+        key: checkout.keyId,
+        amount: checkout.amount,
+        currency: checkout.currency,
+        name: 'Jobyt',
+        description: `${checkout.plan.name} - ${checkout.plan.credits} Credits`,
+        order_id: checkout.razorpayOrderId,
+        handler: async (response: RazorpaySuccessResponse) => {
+          await api.post('/payments/verify', response);
+          toast.success(`${checkout.plan.credits} credits added successfully`);
+
+          const [bal, txns] = await Promise.all([
+            api.get<{ balance: number }>('/credits/balance'),
+            api.getPaginated<CreditTransaction>('/credits/ledger'),
+          ]);
+          setBalance(bal.data.balance);
+          setTransactions(txns.data);
+        },
+        theme: {
+          color: '#84cc16',
+        },
+      });
+
+      razorpay.on('payment.failed', () => {
+        toast.error('Payment failed. Please try again.');
+      });
+
+      razorpay.open();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Checkout failed');
     } finally {
@@ -128,7 +231,7 @@ export default function CreditsPage() {
                     <th className="text-left py-2">Transaction No.</th>
                     <th className="text-left py-2">Date</th>
                     <th className="text-left py-2">Status</th>
-                    <th className="text-left py-2">Total</th>
+                    <th className="text-left py-2">+/-</th>
                   </tr>
                 </thead>
 

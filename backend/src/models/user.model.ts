@@ -7,6 +7,7 @@ export interface User {
   password_hash: string;
   role: UserRole;
   is_verified: boolean;
+  email_verified: boolean;
   verify_token: string | null;
   reset_token: string | null;
   reset_token_expires_at: Date | null;

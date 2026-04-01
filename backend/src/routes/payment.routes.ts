@@ -7,12 +7,18 @@ import { validate } from '../middleware/validate';
 const router = Router();
 
 router.get('/plans', PaymentController.getPlans);
-
-// Webhook — raw body needed for signature verification
-router.post('/webhook/stripe', PaymentController.stripeWebhook);
+router.post('/webhook', PaymentController.handleWebhook);
 
 router.use(authenticate);
 router.post('/checkout', body('planId').isUUID(), validate, PaymentController.initiateCheckout);
+router.post(
+	'/verify',
+	body('razorpay_order_id').isString().notEmpty(),
+	body('razorpay_payment_id').isString().notEmpty(),
+	body('razorpay_signature').isString().notEmpty(),
+	validate,
+	PaymentController.verifyCheckout,
+);
 router.get('/history', PaymentController.getHistory);
 
 export default router;
