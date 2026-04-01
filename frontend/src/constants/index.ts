@@ -71,5 +71,8 @@ export const ROUTES = {
   adminDashboard: '/admin/dashboard',
   adminUsers: '/admin/users',
   adminJobs: '/admin/jobs',
+  adminJobDetail: (id: string) => `/admin/jobs/${id}`,
+  adminPostJob: '/admin/jobs/post',
+  adminJobApprovals: '/admin/jobs/approvals',
   adminCredits: '/admin/credits',
 };

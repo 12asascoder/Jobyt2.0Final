@@ -11,7 +11,7 @@ export const AuthController = {
     try {
       const { email, password, role, referralCode } = req.body;
       const data = await AuthService.register(email, password, role, referralCode);
-      sendSuccess(res, data, 'Registration successful. Please verify your email.', 201);
+      sendSuccess(res, data, 'Registration successful.', 201);
     } catch (err) {
       next(err);
     }

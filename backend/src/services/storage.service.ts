@@ -5,6 +5,8 @@ import { getCloudinary } from '../config/cloudinary';
 
 export interface UploadResult {
   url: string;
+  resourceType?: string;
+  publicId?: string;
 }
 
 const isPdf = (mimeType: string): boolean => mimeType === 'application/pdf';
@@ -35,13 +37,17 @@ async function cloudinaryUpload(
   try {
     const uploadResult = await cloudinary.uploader.upload(tempPath, {
       folder: resolveCloudinaryFolder(folder, file.mimetype),
-      resource_type: isPdf(file.mimetype) ? 'raw' : 'image',
+      resource_type: 'auto',
       use_filename: true,
       unique_filename: true,
       overwrite: false,
     });
 
-    return { url: uploadResult.secure_url };
+    return {
+      url: uploadResult.secure_url,
+      resourceType: uploadResult.resource_type,
+      publicId: uploadResult.public_id,
+    };
   } catch (err) {
     throw Object.assign(new Error('Cloudinary upload failed'), {
       statusCode: 502,

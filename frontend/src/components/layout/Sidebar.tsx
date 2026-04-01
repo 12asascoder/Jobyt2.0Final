@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { ROUTES } from '@/constants';
@@ -49,6 +50,8 @@ const adminNav: NavItem[] = [
     { label: 'Dashboard', href: ROUTES.adminDashboard, icon: FaHouse },
     { label: 'Users', href: ROUTES.adminUsers, icon: FaUsers },
     { label: 'Jobs', href: ROUTES.adminJobs, icon: FaBriefcase },
+    { label: 'Post Job', href: ROUTES.adminPostJob, icon: FaBriefcase },
+    { label: 'Approvals', href: ROUTES.adminJobApprovals, icon: FaChartLine },
     { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
     { label: 'Credits', href: ROUTES.adminCredits, icon: FaCoins },
 ];
@@ -113,11 +116,9 @@ export const Sidebar = () => {
             {/* Bottom Branding */}
             <div className="mt-auto pt-4 border-t border-slate-800 px-3">
                 <div className="flex items-center gap-2 opacity-40">
-                    <div className="relative w-4 h-4">
-                        <div className="absolute inset-0 border-[3px] border-brand-primary rounded-full border-t-transparent -rotate-45" />
-                    </div>
+                    <Image src="/logo.png" alt="Jobyt" width={16} height={16} className="object-contain" />
                     <span className="font-display text-xs font-bold text-white tracking-tight">
-                        jobyt<span className="text-brand-primary">.</span>
+                        Jobyt
                     </span>
                 </div>
             </div>

@@ -125,34 +125,30 @@ export default function AdminDashboardPage() {
     ];
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8">
-            {/* Title */}
-            <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-                    Admin Dashboard
-                </h1>
-                <p className="text-slate-500 mt-1">Platform overview and analytics</p>
-            </div>
+        <div className="max-w-7xl mx-auto space-y-6 pb-6">
+            <section>
+                <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Admin Dashboard</h1>
+                <p className="mt-2 text-xl leading-tight text-black/80">Platform overview and analytics</p>
+            </section>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {statCards.map((stat) => {
                     const Icon = stat.icon;
                     return (
                         <div
                             key={stat.label}
-                            className="relative overflow-hidden rounded-2xl bg-white border border-slate-100 p-5 shadow-sm hover:shadow-md transition-shadow group"
+                            className="relative overflow-hidden rounded-2xl bg-black text-lime-300 px-5 py-4 shadow-xl min-h-[104px] group"
                         >
-                            <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${stat.gradient} opacity-10 rounded-full -translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform`} />
+                            <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${stat.gradient} opacity-25 rounded-full -translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform`} />
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-xl ${stat.bgLight} flex items-center justify-center`}>
-                                    <Icon className={`text-xl ${stat.textColor}`} />
+                                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
+                                    <Icon className="text-xl text-lime-300" />
                                 </div>
                                 <div>
-                                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                    <p className="text-[11px] font-bold text-lime-300/80 uppercase tracking-[0.09em]">
                                         {stat.label}
                                     </p>
-                                    <p className="text-2xl font-extrabold text-slate-900 mt-0.5">
+                                    <p className="text-3xl font-black tracking-tight mt-0.5 text-white">
                                         {stat.value}
                                     </p>
                                 </div>
@@ -160,18 +156,17 @@ export default function AdminDashboardPage() {
                         </div>
                     );
                 })}
-            </div>
+            </section>
 
-            {/* Daily Activity */}
             {daily.length > 0 && (
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="p-6 pb-4 flex items-center gap-2">
-                        <FaChartLine className="text-brand-primary" />
-                        <h2 className="font-bold text-slate-900">Daily Activity (Last 7 Days)</h2>
+                <section className="rounded-2xl bg-[#ece9e2] border border-black/5 shadow-sm overflow-hidden">
+                    <div className="p-5 pb-4 flex items-center gap-2">
+                        <FaChartLine className="text-slate-900" />
+                        <h2 className="text-2xl font-black tracking-tight text-slate-900">Daily Activity (Last 7 Days)</h2>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 tracking-wider">
+                            <thead className="bg-black text-[11px] font-bold uppercase text-lime-300 tracking-[0.09em]">
                                 <tr>
                                     <th className="px-6 py-3 text-left">Date</th>
                                     <th className="px-6 py-3 text-right">New Users</th>
@@ -179,10 +174,10 @@ export default function AdminDashboardPage() {
                                     <th className="px-6 py-3 text-right">Applications</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-200 bg-white">
                                 {daily.slice(-7).reverse().map((d) => (
-                                    <tr key={d.date} className="hover:bg-slate-50/70 transition-colors">
-                                        <td className="px-6 py-3.5 text-slate-600 font-medium">{formatDate(d.date)}</td>
+                                    <tr key={d.date} className="hover:bg-slate-50 transition-colors">
+                                        <td className="px-6 py-3.5 text-slate-700 font-semibold">{formatDate(d.date)}</td>
                                         <td className="px-6 py-3.5 text-right">
                                             <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 font-semibold text-xs">
                                                 {d.new_users}
@@ -203,7 +198,7 @@ export default function AdminDashboardPage() {
                             </tbody>
                         </table>
                     </div>
-                </div>
+                </section>
             )}
         </div>
     );

@@ -23,7 +23,31 @@ export interface Payment {
   created_at: Date;
 }
 
+const DEFAULT_PLANS: Array<{ name: string; credits: number; price: number; currency: string }> = [
+  { name: 'Starter', credits: 60, price: 59, currency: 'INR' },
+  { name: 'Pro', credits: 150, price: 119, currency: 'INR' },
+  { name: 'Premium', credits: 250, price: 179, currency: 'INR' },
+];
+
 export const PaymentModel = {
+  async ensureDefaultPlans(): Promise<void> {
+    const { rows } = await pool.query(
+      `SELECT 1 FROM plans WHERE is_active = TRUE LIMIT 1`,
+    );
+
+    if (rows.length > 0) {
+      return;
+    }
+
+    for (const plan of DEFAULT_PLANS) {
+      await pool.query(
+        `INSERT INTO plans (name, credits, price, currency, is_active)
+         VALUES ($1, $2, $3, $4, TRUE)`,
+        [plan.name, plan.credits, plan.price, plan.currency],
+      );
+    }
+  },
+
   async getActivePlans(): Promise<Plan[]> {
     const { rows } = await pool.query(
       `SELECT * FROM plans WHERE is_active = TRUE ORDER BY price ASC`,

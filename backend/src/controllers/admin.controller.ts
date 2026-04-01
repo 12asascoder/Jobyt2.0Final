@@ -82,6 +82,15 @@ export const AdminController = {
     }
   },
 
+  async getJobById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const job = await AdminService.getJobById(req.params.id as string);
+      sendSuccess(res, job);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async closeJob(req: Request, res: Response, next: NextFunction) {
     try {
       await AdminService.closeJob(req.user!.userId, req.params.id as string, req.body.reason);
@@ -165,6 +174,41 @@ export const AdminController = {
       const limit = parseInt(req.query.limit as string) || 50;
       const { logs, total } = await AdminService.getAuditLog(page, limit);
       sendPaginated(res, logs, total, page, limit);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // ── Job Approval ────────────────────────────────────────────────────────────────
+  async getPendingApprovalJobs(req: Request, res: Response, next: NextFunction) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const search = req.query.search as string | undefined;
+      const { jobs, total } = await AdminService.getPendingApprovalJobs(page, limit, search);
+      sendPaginated(res, jobs, total, page, limit);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async approveJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const job = await AdminService.approveJob(req.user!.userId, req.params.id as string);
+      sendSuccess(res, job, 'Job approved successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async rejectJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { reason } = req.body as { reason: string };
+      if (!reason?.trim()) {
+        return res.status(400).json({ error: 'Rejection reason is required' });
+      }
+      const job = await AdminService.rejectJob(req.user!.userId, req.params.id as string, reason);
+      sendSuccess(res, job, 'Job rejected');
     } catch (err) {
       next(err);
     }

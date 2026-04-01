@@ -5,6 +5,7 @@ import { AdminAuditLogModel } from '../models/adminAuditLog.model';
 import { NotificationModel } from '../models/notification.model';
 import { RecruiterProfile } from '../models/recruiterProfile.model';
 import { CreditService } from './credit.service';
+import { NotificationService } from './notification.service';
 import { AppError } from '../utils/appError';
 import prisma from '../config/prisma';
 import pool from '../config/database';
@@ -77,6 +78,12 @@ export const AdminService = {
 
   async listJobs(filters: { status?: string; search?: string; page: number; limit: number }) {
     return JobModel.adminList(filters);
+  },
+
+  async getJobById(jobId: string) {
+    const job = await JobModel.findById(jobId);
+    if (!job) throw new AppError('Job not found', 404);
+    return job;
   },
 
   async closeJob(adminId: string, jobId: string, reason: string) {
@@ -264,15 +271,45 @@ export const AdminService = {
   },
 
   async getDailyStats(days = 30) {
+    const safeDays = Math.max(1, Math.min(365, Number(days) || 30));
     const { rows } = await pool.query(
-      `SELECT
-         DATE(created_at) AS date,
-         COUNT(*) FILTER (WHERE role = 'applicant')::int AS new_applicants,
-         COUNT(*) FILTER (WHERE role = 'recruiter')::int AS new_recruiters
-       FROM users
-       WHERE created_at >= NOW() - INTERVAL '${days} days'
-       GROUP BY DATE(created_at)
-       ORDER BY date ASC`,
+      `WITH day_series AS (
+         SELECT generate_series(
+           CURRENT_DATE - ($1::int - 1),
+           CURRENT_DATE,
+           INTERVAL '1 day'
+         )::date AS day
+       ),
+       users_daily AS (
+         SELECT DATE(created_at) AS day, COUNT(*)::int AS count
+         FROM users
+         WHERE created_at >= CURRENT_DATE - ($1::int - 1)
+         GROUP BY DATE(created_at)
+       ),
+       jobs_daily AS (
+         SELECT DATE(created_at) AS day, COUNT(*)::int AS count
+         FROM jobs
+         WHERE created_at >= CURRENT_DATE - ($1::int - 1)
+           AND deleted_at IS NULL
+         GROUP BY DATE(created_at)
+       ),
+       applications_daily AS (
+         SELECT DATE(created_at) AS day, COUNT(*)::int AS count
+         FROM applications
+         WHERE created_at >= CURRENT_DATE - ($1::int - 1)
+         GROUP BY DATE(created_at)
+       )
+       SELECT
+         ds.day AS date,
+         COALESCE(ud.count, 0)::int AS new_users,
+         COALESCE(jd.count, 0)::int AS new_jobs,
+         COALESCE(ad.count, 0)::int AS new_applications
+       FROM day_series ds
+       LEFT JOIN users_daily ud ON ud.day = ds.day
+       LEFT JOIN jobs_daily jd ON jd.day = ds.day
+       LEFT JOIN applications_daily ad ON ad.day = ds.day
+       ORDER BY ds.day ASC`,
+      [safeDays],
     );
     return rows;
   },
@@ -281,5 +318,73 @@ export const AdminService = {
 
   async getAuditLog(page: number, limit: number) {
     return AdminAuditLogModel.findAll(page, limit);
+  },
+
+  // ── Job Approval ───────────────────────────────────────────────────────────────
+
+  async getPendingApprovalJobs(page: number, limit: number, search?: string) {
+    return JobModel.getPendingApprovalJobs({
+      page,
+      limit,
+      search,
+    });
+  },
+
+  async approveJob(adminId: string, jobId: string) {
+    const job = await JobModel.findById(jobId);
+    if (!job) throw new AppError('Job not found', 404);
+
+    if (job.source === 'recruiter') {
+      try {
+        await CreditService.deductJobPostingCredits(job.recruiter_id);
+      } catch {
+        throw new AppError('Cannot approve job: recruiter has insufficient credits', 422);
+      }
+    }
+
+    const approvedJob = await JobModel.approveJobByAdmin(jobId, adminId);
+
+    await AdminAuditLogModel.create({
+      admin_id: adminId,
+      action: 'APPROVE_JOB',
+      target_type: 'job',
+      target_id: jobId,
+      reason: `Approved job: ${job.title}`,
+    });
+
+    await NotificationService.send(
+      job.recruiter_id,
+      'application_status',
+      'Job approved',
+      `Your job "${job.title}" has been approved and is now visible to applicants.`,
+      `/recruiter/jobs/${jobId}`,
+    );
+
+    return approvedJob;
+  },
+
+  async rejectJob(adminId: string, jobId: string, reason: string) {
+    const job = await JobModel.findById(jobId);
+    if (!job) throw new AppError('Job not found', 404);
+
+    const rejectedJob = await JobModel.rejectJobByAdmin(jobId, adminId);
+
+    await AdminAuditLogModel.create({
+      admin_id: adminId,
+      action: 'REJECT_JOB',
+      target_type: 'job',
+      target_id: jobId,
+      reason: `Rejected job: ${job.title}. Reason: ${reason}`,
+    });
+
+    await NotificationService.send(
+      job.recruiter_id,
+      'application_status',
+      'Job rejected',
+      `Your job "${job.title}" was rejected by admin. Reason: ${reason}`,
+      `/recruiter/jobs/${jobId}`,
+    );
+
+    return rejectedJob;
   },
 };

@@ -51,7 +51,7 @@ export const UserModel = {
     email: string;
     password_hash: string;
     role: UserRole;
-    verify_token: string;
+    verify_token?: string | null;
     referral_code: string;
   }): Promise<User> {
     const { rows } = await pool.query(
@@ -123,7 +123,7 @@ export const UserModel = {
     const [countRes, dataRes] = await Promise.all([
       pool.query(`SELECT COUNT(*) FROM users ${where}`, params),
       pool.query(
-        `SELECT id, email, role, is_verified, credit_balance, banned_at, created_at FROM users ${where}
+        `SELECT id, email, role, is_verified as email_verified, credit_balance, banned_at, created_at FROM users ${where}
          ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, filters.limit, offset],
       ),
@@ -150,7 +150,19 @@ export const UserModel = {
         (SELECT COUNT(*) FROM jobs WHERE deleted_at IS NULL)::int AS "total_jobs",
         (SELECT COUNT(*) FROM jobs WHERE status = 'active' AND deleted_at IS NULL)::int AS "active_jobs",
         (SELECT COUNT(*) FROM applications)::int AS "total_applications",
-        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'success')::int AS "total_revenue",
+        (
+          SELECT COALESCE(
+            SUM(
+              CASE
+                WHEN status = 'success' THEN amount
+                WHEN status = 'refunded' THEN -amount
+                ELSE 0
+              END
+            ),
+            0
+          )
+          FROM payments
+        )::double precision AS "total_revenue",
         (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 day')::int AS "new_users_today"
     `);
     return rows[0];

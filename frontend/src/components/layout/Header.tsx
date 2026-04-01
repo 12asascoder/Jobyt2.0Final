@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuthStore } from '@/store/auth.store';
 import { ROUTES } from '@/constants';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -30,12 +31,8 @@ export const Header = () => {
             <div className="mx-auto flex h-16 max-w-full items-center justify-between px-6">
                 {/* Logo */}
                 <Link href="/" className="shrink-0 flex items-center cursor-pointer group">
-                    <div className="relative w-5 h-5 mr-1.5 transition-transform duration-500 group-hover:rotate-180">
-                        <div className="absolute inset-0 border-[4px] border-brand-primary rounded-full border-t-transparent -rotate-45" />
-                    </div>
-                    <span className="font-display font-extrabold text-xl tracking-tight text-slate-900">
-                        jobyt<span className="text-brand-primary">.</span>
-                    </span>
+                    <Image src="/logo.png" alt="Jobyt" width={22} height={22} className="mr-2 object-contain" />
+                    <span className="font-display text-xl font-bold text-slate-900 tracking-tight">Jobyt</span>
                 </Link>
 
                 {/* Right Actions */}

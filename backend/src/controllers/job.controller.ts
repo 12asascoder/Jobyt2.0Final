@@ -15,11 +15,16 @@ export const JobController = {
       const salaryMinRaw = req.query.salary_min;
       const salaryMaxRaw = req.query.salary_max;
       const skillsRaw = req.query.skills;
+      const excludeAppliedRaw = req.query.exclude_applied;
 
       const keyword = typeof keywordRaw === 'string' ? keywordRaw.trim() : undefined;
       const location = typeof locationRaw === 'string' ? locationRaw.trim() : undefined;
       const salary_min = typeof salaryMinRaw === 'string' ? Number(salaryMinRaw) : undefined;
       const salary_max = typeof salaryMaxRaw === 'string' ? Number(salaryMaxRaw) : undefined;
+      const excludeApplied =
+        typeof excludeAppliedRaw === 'string' && ['1', 'true', 'yes'].includes(excludeAppliedRaw.toLowerCase());
+      const excludeAppliedForApplicantId =
+        excludeApplied && req.user?.role === 'applicant' ? req.user.userId : undefined;
 
       const normalizedSkills = (() => {
         if (!skillsRaw) return undefined;
@@ -45,6 +50,8 @@ export const JobController = {
         salary_min,
         salary_max,
         skills: normalizedSkills,
+        excludeAppliedForApplicantId,
+        onlyApproved: req.user?.role === 'applicant',
       });
 
       sendPaginated(res, jobs, pagination.total, pagination.page, pagination.limit, 'Jobs fetched successfully');

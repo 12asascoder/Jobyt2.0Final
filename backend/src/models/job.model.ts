@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 
 export type JobType = 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
 export type JobStatus = 'draft' | 'active' | 'closed';
+export type JobApprovalStatus = 'pending_approval' | 'approved' | 'rejected';
 export type JobSource = 'admin_external' | 'recruiter' | 'admin_company';
 
 export interface JobCompany {
@@ -47,6 +48,9 @@ export interface Job {
   skills: string[];
   description: string;
   status: JobStatus;
+  job_approval_status: JobApprovalStatus;
+  approved_by: string | null;
+  approved_at: Date | null;
   is_boosted: boolean;
   views_count: number;
   deleted_at: Date | null;
@@ -217,6 +221,7 @@ export const JobModel = {
     const createdBy = data.created_by ?? data.recruiter_id;
     const questions = normalizeQuestions(data.application_questions);
     const hasQuestionsColumn = await hasApplicationQuestionsColumn();
+    const approvalStatus = source === 'recruiter' ? 'pending_approval' : 'approved';
 
     if (!companyName || !companyId) {
       const profileRes = await pool.query(
@@ -254,9 +259,10 @@ export const JobModel = {
             company_location,
             is_external_company,
             source,
-            created_by${hasQuestionsColumn ? ', application_questions' : ''}
+            created_by,
+            job_approval_status${hasQuestionsColumn ? ', application_questions' : ''}
           )
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17${hasQuestionsColumn ? ',$18' : ''})
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18${hasQuestionsColumn ? ',$19' : ''})
           RETURNING *`,
         [
           data.recruiter_id,
@@ -276,6 +282,7 @@ export const JobModel = {
           isExternalCompany,
           source,
           createdBy,
+          approvalStatus,
           ...(hasQuestionsColumn ? [JSON.stringify(questions)] : []),
         ],
       )
@@ -296,9 +303,10 @@ export const JobModel = {
             company_location,
             is_external_company,
             source,
-            created_by${hasQuestionsColumn ? ', application_questions' : ''}
+            created_by,
+            job_approval_status${hasQuestionsColumn ? ', application_questions' : ''}
           )
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16${hasQuestionsColumn ? ',$17' : ''})
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17${hasQuestionsColumn ? ',$18' : ''})
           RETURNING *`,
         [
           data.recruiter_id,
@@ -317,6 +325,7 @@ export const JobModel = {
           isExternalCompany,
           source,
           createdBy,
+          approvalStatus,
           ...(hasQuestionsColumn ? [JSON.stringify(questions)] : []),
         ],
       );
@@ -626,6 +635,8 @@ export const JobModel = {
     salary_min?: number;
     salary_max?: number;
     skills?: string[];
+    excludeAppliedForApplicantId?: string;
+    onlyApproved?: boolean;
     limit: number;
     offset: number;
   }): Promise<{ rows: Job[]; total: number }> {
@@ -671,6 +682,22 @@ export const JobModel = {
     if (filters.skills && filters.skills.length > 0) {
       conditions.push(`jobs.skills @> $${index++}::text[]`);
       values.push(filters.skills);
+    }
+
+    if (filters.excludeAppliedForApplicantId) {
+      conditions.push(`NOT EXISTS (
+        SELECT 1
+        FROM applications a
+        WHERE a.job_id = jobs.id
+          AND a.applicant_id = $${index++}
+      )`);
+      values.push(filters.excludeAppliedForApplicantId);
+    }
+
+    // For applicants, only show approved jobs
+    if (filters.onlyApproved) {
+      conditions.push(`jobs.job_approval_status = $${index++}`);
+      values.push('approved');
     }
 
     const whereClause = `WHERE ${conditions.join(' AND ')}`;
@@ -776,6 +803,72 @@ export const JobModel = {
       params.push(filters.status);
       idx++;
     }
+    if (filters.search) {
+      conditions.push(`j.title ILIKE $${idx}`);
+      params.push(`%${filters.search}%`);
+      idx++;
+    }
+
+    const where = conditions.join(' AND ');
+    const offset = (filters.page - 1) * filters.limit;
+
+    const [countRes, dataRes] = await Promise.all([
+      pool.query(`SELECT COUNT(*) FROM jobs j WHERE ${where}`, params),
+      pool.query(
+        `SELECT
+          j.*,
+          COALESCE(j.company_id, rp.id) AS company_id,
+          COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS company_name,
+          COALESCE(j.company_logo, rp.logo_url) AS company_logo,
+          COALESCE(j.company_website, rp.website) AS company_website,
+          COALESCE(j.company_location, j.location, rp.location) AS company_location
+         FROM jobs j
+         LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
+         WHERE ${where} ORDER BY j.created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
+        [...params, filters.limit, offset],
+      ),
+    ]);
+
+    return { jobs: dataRes.rows.map(mapJobRow), total: parseInt(countRes.rows[0].count) };
+  },
+
+  async approveJobByAdmin(jobId: string, adminId: string): Promise<Job> {
+    const { rows } = await pool.query(
+      `UPDATE jobs 
+       SET status = 'active', job_approval_status = 'approved', approved_by = $1, approved_at = NOW(), updated_at = NOW()
+       WHERE id = $2 AND deleted_at IS NULL 
+       RETURNING *`,
+      [adminId, jobId],
+    );
+    if (!rows[0]) {
+      throw Object.assign(new Error('Job not found'), { statusCode: 404 });
+    }
+    return mapJobRow(rows[0]);
+  },
+
+  async rejectJobByAdmin(jobId: string, adminId: string): Promise<Job> {
+    const { rows } = await pool.query(
+      `UPDATE jobs 
+       SET status = 'closed', job_approval_status = 'rejected', approved_by = $1, approved_at = NOW(), updated_at = NOW()
+       WHERE id = $2 AND deleted_at IS NULL 
+       RETURNING *`,
+      [adminId, jobId],
+    );
+    if (!rows[0]) {
+      throw Object.assign(new Error('Job not found'), { statusCode: 404 });
+    }
+    return mapJobRow(rows[0]);
+  },
+
+  async getPendingApprovalJobs(filters: {
+    page: number;
+    limit: number;
+    search?: string;
+  }): Promise<{ jobs: Job[]; total: number }> {
+    const conditions: string[] = ['j.deleted_at IS NULL', `j.job_approval_status = 'pending_approval'`];
+    const params: unknown[] = [];
+    let idx = 1;
+
     if (filters.search) {
       conditions.push(`j.title ILIKE $${idx}`);
       params.push(`%${filters.search}%`);

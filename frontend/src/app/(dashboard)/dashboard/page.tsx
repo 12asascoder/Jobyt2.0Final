@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { Job } from '@/types';
-import { API_BASE } from '@/constants';
 import {
     BackendJob,
     JobCardGrid,
@@ -13,11 +12,6 @@ import {
     getJobTypeLabel,
     normalizeJob,
 } from '@/components/ui/JobCard';
-
-interface JobsApiResult {
-    success: boolean;
-    data?: BackendJob[];
-}
 
 const AVAILABLE_SKILLS = ['React', 'Figma', 'Python', 'Marketing', 'UI/UX', 'SQL', 'Node.js'];
 const WORK_TYPES = ['Remote', 'Hybrid', 'On-site'];
@@ -74,12 +68,11 @@ export default function DashboardPage() {
     }, [fetchStats]);
 
     useEffect(() => {
-        fetch(`${API_BASE}/jobs?limit=50&sort=date`)
-            .then((res) => res.json())
-            .then((data: JobsApiResult) => {
-                if (data.success && data.data?.length > 0) {
+        api.getPaginated<BackendJob>('/jobs?limit=50&exclude_applied=true')
+            .then((response) => {
+                if (response.success && response.data?.length > 0) {
                     // Normalize all jobs to ensure they have valid id fields
-                    const normalizedJobs = data.data.map((job) => normalizeJob(job));
+                    const normalizedJobs = response.data.map((job) => normalizeJob(job));
                     setJobs(normalizedJobs);
                 } else {
                     setJobs([]);

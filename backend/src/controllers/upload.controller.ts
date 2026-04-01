@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { StorageService } from '../services/storage.service';
+import { sendSuccess } from '../utils/response';
 
 export const UploadController = {
   async upload(req: Request, res: Response, next: NextFunction) {
@@ -10,7 +11,7 @@ export const UploadController = {
       }
 
       const result = await StorageService.uploadAny(req.file);
-      res.status(200).json({ url: result.url });
+      sendSuccess(res, { url: result.url }, 'Upload successful');
     } catch (err) {
       next(err);
     }

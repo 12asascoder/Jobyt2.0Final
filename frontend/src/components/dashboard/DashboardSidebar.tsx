@@ -70,7 +70,7 @@ export function DashboardSidebar() {
         return () => {
             mounted = false;
         };
-    }, []);
+    }, [pathname, user?.role]);
 
     const handleLogout = () => {
         setShowLogoutConfirm(true);

@@ -8,6 +8,7 @@ import { ROUTES } from '@/constants';
 import { AuthGuard } from '@/components/providers/AuthGuard';
 import { Modal } from '@/components/ui';
 import { api } from '@/lib/api';
+import { resolveAssetUrl } from '@/lib/assetUrl';
 import { useAuthStore } from '@/store/auth.store';
 import { useNotifications } from '@/hooks/useNotifications';
 import {
@@ -22,6 +23,34 @@ import {
   FaArrowRightFromBracket,
   FaXmark,
 } from 'react-icons/fa6';
+
+type RecruiterSearchJob = {
+  id: string;
+  title: string;
+};
+
+type RecruiterSearchApplicant = {
+  id: string;
+  name: string | null;
+  email?: string | null;
+  job_title?: string | null;
+};
+
+type RecruiterSearchResult =
+  | {
+      key: string;
+      type: 'job';
+      label: string;
+      meta: string;
+      href: string;
+    }
+  | {
+      key: string;
+      type: 'applicant';
+      label: string;
+      meta: string;
+      href: string;
+    };
 
 interface RecruiterNavItem {
   label: string;
@@ -43,6 +72,32 @@ function RecruiterFloatingSidebar() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [creditBalance, setCreditBalance] = useState(0);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadProfileAvatar = async () => {
+      try {
+        const res = await api.get<any>('/users/me');
+        const profile = res.data?.profile;
+        const raw = profile?.logo_url || profile?.photo_url || null;
+        if (mounted) {
+          setAvatarUrl(resolveAssetUrl(raw));
+        }
+      } catch {
+        if (mounted) {
+          setAvatarUrl(null);
+        }
+      }
+    };
+
+    void loadProfileAvatar();
+
+    return () => {
+      mounted = false;
+    };
+  }, [pathname, user?.role]);
 
   useEffect(() => {
     let mounted = true;
@@ -123,13 +178,17 @@ function RecruiterFloatingSidebar() {
           <Link
             href={ROUTES.recruiterProfile}
             title="Profile"
-            className={`w-10 h-10 rounded-full text-xs font-bold flex items-center justify-center border-2 transition-colors ${
+            className={`w-10 h-10 rounded-full overflow-hidden text-xs font-bold flex items-center justify-center border-2 transition-colors ${
               profileActive
                 ? 'bg-lime-400 text-black border-lime-400'
                 : 'bg-blue-700 text-white border-black hover:bg-blue-600'
             }`}
           >
-            {userInitial}
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              userInitial
+            )}
           </Link>
           <p className="text-[10px] font-bold text-lime-300 leading-none">{creditBalance}</p>
         </div>
@@ -190,13 +249,98 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<RecruiterSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [bellActive, setBellActive] = useState(false);
 
-  const handleSearchSubmit = (query: string) => {
-    router.push(`/recruiter/dashboard?keyword=${encodeURIComponent(query)}`);
+  const closeSearch = () => {
     setSearchActive(false);
     setSearchQuery('');
+    setSearchResults([]);
   };
+
+  const handleSearchResultSelect = (result: RecruiterSearchResult) => {
+    router.push(result.href);
+    closeSearch();
+  };
+
+  const handleSearchSubmit = (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    if (searchResults.length > 0) {
+      handleSearchResultSelect(searchResults[0]);
+      return;
+    }
+
+    router.push(`/recruiter/dashboard?keyword=${encodeURIComponent(trimmed)}`);
+    closeSearch();
+  };
+
+  useEffect(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!searchActive || query.length < 2) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSearchLoading(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const [jobsRes, applicantsRes] = await Promise.all([
+          api.getPaginated<RecruiterSearchJob>('/jobs/my/listings?limit=100'),
+          api.getPaginated<RecruiterSearchApplicant>('/applications/recruiter/applicants?limit=100'),
+        ]);
+
+        if (cancelled) return;
+
+        const jobs = (jobsRes.data || [])
+          .filter((job) => (job.title || '').toLowerCase().includes(query))
+          .slice(0, 5)
+          .map<RecruiterSearchResult>((job) => ({
+            key: `job:${job.id}`,
+            type: 'job',
+            label: job.title,
+            meta: 'Job Posting',
+            href: ROUTES.recruiterJobDetail(job.id),
+          }));
+
+        const applicants = (applicantsRes.data || [])
+          .filter((applicant) => {
+            const name = (applicant.name || '').toLowerCase();
+            const email = (applicant.email || '').toLowerCase();
+            const jobTitle = (applicant.job_title || '').toLowerCase();
+            return name.includes(query) || email.includes(query) || jobTitle.includes(query);
+          })
+          .slice(0, 5)
+          .map<RecruiterSearchResult>((applicant) => ({
+            key: `applicant:${applicant.id}`,
+            type: 'applicant',
+            label: applicant.name || applicant.email || 'Applicant',
+            meta: applicant.job_title ? `Applicant • ${applicant.job_title}` : 'Applicant',
+            href: ROUTES.recruiterApplicationDetail(applicant.id),
+          }));
+
+        setSearchResults([...jobs, ...applicants].slice(0, 8));
+      } catch {
+        if (!cancelled) {
+          setSearchResults([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setSearchLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchActive, searchQuery]);
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -241,7 +385,7 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
             <div className="hidden sm:flex items-center gap-3">
               {searchActive ? (
                 /* STATE: Search active — black pill wrapping lime search + black bell */
-                <div className="flex items-center bg-[#1a1a1a] rounded-full h-14 p-1.5 gap-0 min-w-[300px]">
+                <div className="flex items-center bg-[#1a1a1a] rounded-full h-14 p-1.5 gap-0 min-w-[300px] relative">
                   {/* Lime search area */}
                   <div className="flex items-center flex-1 bg-lime-400 rounded-full h-full px-4 gap-2.5">
                     <FaMagnifyingGlass className="text-black/70 text-sm shrink-0" />
@@ -255,7 +399,7 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
                       className="flex-1 bg-transparent text-black placeholder-black/40 text-sm font-semibold outline-none min-w-0"
                     />
                     <button
-                      onClick={() => { setSearchActive(false); setSearchQuery(''); }}
+                      onClick={closeSearch}
                       className="text-black/50 hover:text-black transition-colors"
                     >
                       <FaXmark className="text-sm" />
@@ -272,6 +416,30 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
                     </button>
                     {bellActive && <RecruiterNotificationPopover />}
                   </div>
+
+                  {(searchLoading || searchResults.length > 0 || searchQuery.trim().length >= 2) && (
+                    <div className="absolute left-0 right-0 top-[62px] bg-white border border-slate-200 rounded-2xl shadow-xl p-2 z-[60]">
+                      {searchLoading ? (
+                        <p className="px-3 py-2 text-xs text-slate-500">Searching...</p>
+                      ) : searchResults.length === 0 ? (
+                        <p className="px-3 py-2 text-xs text-slate-500">No matches found.</p>
+                      ) : (
+                        <div className="space-y-1 max-h-72 overflow-y-auto">
+                          {searchResults.map((result) => (
+                            <button
+                              key={result.key}
+                              type="button"
+                              onClick={() => handleSearchResultSelect(result)}
+                              className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors"
+                            >
+                              <p className="text-sm font-semibold text-slate-900">{result.label}</p>
+                              <p className="text-xs text-slate-500 mt-0.5">{result.meta}</p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* STATE: Default / Notification — solid black pill */
@@ -334,12 +502,36 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
                   className="flex-1 bg-transparent text-white placeholder-white/40 text-sm font-medium outline-none min-w-0"
                 />
                 <button
-                  onClick={() => { setSearchActive(false); setSearchQuery(''); }}
+                  onClick={closeSearch}
                   className="text-white/50 hover:text-white transition-colors"
                 >
                   <FaXmark className="text-sm" />
                 </button>
               </div>
+
+              {(searchLoading || searchResults.length > 0 || searchQuery.trim().length >= 2) && (
+                <div className="mt-2 rounded-2xl bg-white border border-slate-200 shadow-xl p-2">
+                  {searchLoading ? (
+                    <p className="px-3 py-2 text-xs text-slate-500">Searching...</p>
+                  ) : searchResults.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-slate-500">No matches found.</p>
+                  ) : (
+                    <div className="space-y-1 max-h-64 overflow-y-auto">
+                      {searchResults.map((result) => (
+                        <button
+                          key={result.key}
+                          type="button"
+                          onClick={() => handleSearchResultSelect(result)}
+                          className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors"
+                        >
+                          <p className="text-sm font-semibold text-slate-900">{result.label}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{result.meta}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </header>

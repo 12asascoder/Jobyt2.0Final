@@ -21,6 +21,7 @@ import { UnauthorizedError } from '../utils/errors';
 
 const EMAIL_VERIFICATION_TTL_MS = 15 * 60 * 1000;
 const LOGOUT_REFRESH_PREFIX = 'auth:logout:refresh:';
+const AUTO_VERIFY_EMAIL_ON_REGISTER = process.env.AUTO_VERIFY_EMAIL_ON_REGISTER !== 'false';
 
 function hashVerificationToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -57,7 +58,7 @@ export const AuthService = {
     if (existing) throw Object.assign(new Error('Email already registered'), { statusCode: 409 });
 
     const password_hash = await hashPassword(password);
-    const verify_token = randomBytes(32).toString('hex');
+    const verify_token = AUTO_VERIFY_EMAIL_ON_REGISTER ? null : randomBytes(32).toString('hex');
     const MAX_REFERRAL_CODE_ATTEMPTS = 10;
     let lastErr: unknown;
     let user:
@@ -110,11 +111,29 @@ export const AuthService = {
       }
     }
 
+    if (AUTO_VERIFY_EMAIL_ON_REGISTER) {
+      await UserModel.verify(user.id);
+
+      // Keep registration credit/referral behavior aligned with verified users.
+      await CreditService.grantRegistrationCredits(user.id);
+      const referral = await ReferralModel.findByReferredId(user.id);
+      if (referral && !referral.referrer_credited) {
+        await CreditService.grantReferralRewards(referral.referrer_id, user.id);
+      }
+
+      return {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        message: 'Email auto-verified for now. Re-enable verification by setting AUTO_VERIFY_EMAIL_ON_REGISTER=false.',
+      };
+    }
+
     // Send verification email
     await sendEmail({
       to: email,
       subject: 'Verify your Hiring Platform account',
-      html: verificationEmailHtml(email, verify_token),
+      html: verificationEmailHtml(email, verify_token as string),
     });
 
     return { id: user.id, email: user.email, role: user.role };

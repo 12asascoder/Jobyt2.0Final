@@ -145,25 +145,49 @@ export default function RecruiterJobDetailPage() {
   if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
   if (!job) return <p className="text-center text-gray-500">Job not found.</p>;
 
+  const primaryStatusLabel = job.job_approval_status === 'pending_approval'
+    ? 'under review'
+    : job.job_approval_status === 'rejected'
+      ? 'rejected'
+      : job.status;
+
+  const canPublish = job.status === 'draft' && (!job.job_approval_status || job.job_approval_status === 'approved');
+
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{job.title}</h1>
           <div className="mt-1 flex items-center gap-2">
-            <Badge variant={job.status === 'active' ? 'success' : job.status === 'draft' ? 'default' : 'danger'}>
-              {job.status}
+            <Badge variant={job.status === 'active' ? 'success' : primaryStatusLabel === 'under review' ? 'warning' : primaryStatusLabel === 'rejected' ? 'danger' : 'default'}>
+              {primaryStatusLabel}
             </Badge>
             <span className="text-sm text-gray-400">{job.views_count} views</span>
           </div>
+
+          {job.job_approval_status === 'pending_approval' && (
+            <div className="mt-3 rounded-lg border border-lime-300/40 bg-black p-3">
+              <p className="text-sm font-semibold text-lime-300">
+                This job is under admin review and is not visible to applicants yet.
+              </p>
+            </div>
+          )}
+
+          {job.job_approval_status === 'rejected' && (
+            <div className="mt-3 rounded-lg border border-lime-300/40 bg-black p-3">
+              <p className="text-sm font-semibold text-lime-300">
+                This job was rejected by admin. Update details and resubmit for review.
+              </p>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Link href={`${ROUTES.recruiterApplications}?jobId=${encodeURIComponent(jobId)}`}>
             <Button variant="outline" size="sm">View Applications</Button>
           </Link>
-          {job.status === 'draft' && (
+          {canPublish && (
             <Button size="sm" isLoading={publishing} onClick={handlePublish}>
-              Publish (10 credits)
+              Submit For Review
             </Button>
           )}
         </div>

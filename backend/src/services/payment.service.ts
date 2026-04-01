@@ -40,6 +40,7 @@ const verifyWebhookSignature = (payload: string, signatureHeader: unknown) => {
 
 export const PaymentService = {
   async getPlans() {
+    await PaymentModel.ensureDefaultPlans();
     return PaymentModel.getActivePlans();
   },
 

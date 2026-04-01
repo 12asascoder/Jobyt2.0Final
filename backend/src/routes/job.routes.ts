@@ -11,7 +11,7 @@ import { CREDIT_COSTS } from '../config/creditCosts';
 const router = Router();
 
 // Public
-router.get('/', JobController.getJobs);
+router.get('/', optionalAuth, JobController.getJobs);
 router.get('/:id', optionalAuth, JobController.getJobById);
 router.post('/match', body('userSkills').isArray(), body('jobSkills').isArray(), validate, JobController.getMatchScore);
 router.post('/skill-gap', body('userSkills').isArray(), body('requiredSkills').isArray(), validate, JobController.getSkillGap);

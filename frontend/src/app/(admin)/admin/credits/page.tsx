@@ -48,13 +48,16 @@ export default function AdminCreditsPage() {
   if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Credit Management</h1>
+    <div className="max-w-7xl mx-auto space-y-5 pb-6">
+      <section>
+        <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Credit Management</h1>
+        <p className="mt-2 text-xl leading-tight text-black/80">Adjust balances and audit transaction history.</p>
+      </section>
 
       {/* Manual adjustment */}
-      <Card>
+      <Card className="rounded-2xl bg-[#ece9e2] border border-black/5 shadow-sm">
         <CardBody className="p-6">
-          <h2 className="mb-4 font-semibold text-gray-800">Manual Credit Adjustment</h2>
+          <h2 className="mb-4 text-2xl font-black tracking-tight text-slate-900">Manual Credit Adjustment</h2>
           <form onSubmit={handleAdjust} className="space-y-3">
             <Input
               label="User ID"
@@ -86,15 +89,15 @@ export default function AdminCreditsPage() {
       </Card>
 
       {/* All transactions */}
-      <Card>
+      <Card className="rounded-2xl bg-[#ece9e2] border border-black/5 shadow-sm">
         <CardBody className="p-6">
-          <h2 className="mb-4 font-semibold text-gray-800">Recent Transactions (All Users)</h2>
+          <h2 className="mb-4 text-2xl font-black tracking-tight text-slate-900">Recent Transactions (All Users)</h2>
           {transactions.length === 0 ? (
-            <p className="text-sm text-gray-400">No transactions yet.</p>
+            <p className="text-sm text-slate-500">No transactions yet.</p>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-gray-100">
+            <div className="overflow-hidden rounded-xl border border-black/5 bg-white">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs font-medium uppercase text-gray-500">
+                <thead className="bg-black text-[11px] font-bold uppercase text-lime-300 tracking-[0.09em]">
                   <tr>
                     <th className="px-4 py-2 text-left">Description</th>
                     <th className="px-4 py-2 text-right">Amount</th>
@@ -102,17 +105,17 @@ export default function AdminCreditsPage() {
                     <th className="px-4 py-2 text-left">Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-slate-100">
                   {transactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 text-gray-800">{tx.description}</td>
+                    <tr key={tx.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-2 text-slate-900 font-medium">{tx.description}</td>
                       <td className="px-4 py-2 text-right">
                         <Badge variant={tx.type === 'credit' ? 'success' : 'danger'}>
                           {tx.type === 'credit' ? '+' : '-'}{tx.amount}
                         </Badge>
                       </td>
-                      <td className="px-4 py-2 text-right text-gray-500">{tx.balance_after}</td>
-                      <td className="px-4 py-2 text-gray-400">{formatDate(tx.created_at)}</td>
+                      <td className="px-4 py-2 text-right text-slate-600">{tx.balance_after}</td>
+                      <td className="px-4 py-2 text-slate-500">{formatDate(tx.created_at)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -7,6 +7,7 @@ import { ApplicationQuestion, Job, JobType } from '@/types';
 import { Button, Input, Card, CardBody } from '@/components/ui';
 import { ROUTES, JOB_TYPES } from '@/constants';
 import { InsufficientCreditsCard } from '@/components/credits/InsufficientCreditsCard';
+import toast from 'react-hot-toast';
 
 export default function NewJobPage() {
   const router = useRouter();
@@ -18,7 +19,6 @@ export default function NewJobPage() {
     salary_max: '',
     description: '',
     skills: '',
-    publish: false,
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -75,10 +75,10 @@ export default function NewJobPage() {
               .filter(Boolean),
           }))
           .filter((question) => question.label.length > 0),
-        publish: form.publish,
       };
       const res = await api.post<Job>('/jobs', payload);
-      router.push(ROUTES.recruiterJobDetail(res.data.id));
+      toast.success('Job submitted for review. It will go live after admin approval.');
+      router.push(ROUTES.recruiterDashboard);
     } catch (err) {
       if (err instanceof ApiError) {
         const creditData = err.data as
@@ -114,6 +114,12 @@ export default function NewJobPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Post a New Job</h1>
+
+      <div className="mb-6 rounded-lg border border-lime-300/40 bg-black p-4">
+        <p className="text-sm font-semibold text-lime-300">
+          All job postings are reviewed by the admin team before appearing on the platform.
+        </p>
+      </div>
 
       <Card>
         <CardBody className="p-6">
@@ -286,25 +292,22 @@ export default function NewJobPage() {
               ))}
             </div>
 
-            <div className="flex items-center gap-2 rounded-lg bg-blue-50 p-3">
-              <input
-                type="checkbox"
-                id="publish"
-                checked={form.publish}
-                onChange={(e) => set('publish', e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300"
-              />
-              <label htmlFor="publish" className="text-sm text-blue-800">
-                Publish immediately (costs 10 credits)
-              </label>
+            <div className="rounded-lg border border-lime-300/40 bg-black p-3">
+              <p className="text-sm font-semibold text-lime-300">
+                Submit job for review. 10 credits will be deducted when the admin approves this job.
+              </p>
             </div>
 
             <div className="flex gap-3 pt-2">
-              <Button type="submit" isLoading={loading} className="flex-1">
-                {form.publish ? 'Post & Publish Job' : 'Save as Draft'}
+              <Button
+                type="submit"
+                isLoading={loading}
+                className="flex-1 bg-black text-lime-300 hover:bg-slate-900"
+              >
+                Submit For Review
               </Button>
               <Button type="button" variant="outline" onClick={() => router.back()}>
-                Cancel
+                Back
               </Button>
             </div>
           </form>

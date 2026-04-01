@@ -92,7 +92,15 @@ def course_recommender(course_list):
 
 
 # sql connector
-connection = pymysql.connect(host='localhost',user='root',password='root@MySQL4admin',db='cv')
+DB_HOST = os.getenv('RESUME_ANALYZER_DB_HOST', 'localhost')
+DB_USER = os.getenv('RESUME_ANALYZER_DB_USER', 'root')
+DB_PASSWORD = os.getenv('RESUME_ANALYZER_DB_PASSWORD', '')
+DB_NAME = os.getenv('RESUME_ANALYZER_DB_NAME', 'cv')
+
+ADMIN_USERNAME = os.getenv('RESUME_ANALYZER_ADMIN_USERNAME', '')
+ADMIN_PASSWORD = os.getenv('RESUME_ANALYZER_ADMIN_PASSWORD', '')
+
+connection = pymysql.connect(host=DB_HOST, user=DB_USER, password=DB_PASSWORD, db=DB_NAME)
 cursor = connection.cursor()
 
 
@@ -646,7 +654,7 @@ def run():
             <b>Feedback -</b> <br/>
             A place where user can suggest some feedback about the tool.<br/><br/>
             <b>Admin -</b> <br/>
-            For login use <b>admin</b> as username and <b>admin@resume-analyzer</b> as password.<br/>
+            Admin login credentials are configured through environment variables.<br/>
             It will load all the required stuffs and perform analysis.
         </p><br/><br/>
 
@@ -668,9 +676,12 @@ def run():
         ad_password = st.text_input("Password", type='password')
 
         if st.button('Login'):
+            if not ADMIN_USERNAME or not ADMIN_PASSWORD:
+                st.error("Admin credentials are not configured. Set RESUME_ANALYZER_ADMIN_USERNAME and RESUME_ANALYZER_ADMIN_PASSWORD.")
+                return
             
             ## Credentials 
-            if ad_user == 'admin' and ad_password == 'admin@resume-analyzer':
+            if ad_user == ADMIN_USERNAME and ad_password == ADMIN_PASSWORD:
                 
                 ### Fetch miscellaneous data from user_data(table) and convert it into dataframe
                 cursor.execute('''SELECT ID, ip_add, resume_score, convert(Predicted_Field using utf8), convert(User_level using utf8), city, state, country from user_data''')

@@ -91,9 +91,6 @@ export const JobService = {
       throw Object.assign(new Error('You already have an active or draft job with this title'), { statusCode: 409 });
     }
 
-    if (data.status === 'active') {
-      await CreditService.deductJobPostingCredits(recruiterId);
-    }
     const applicationQuestions = JobService.validateApplicationQuestions(data.application_questions);
     return JobModel.create({
       recruiter_id: recruiterId,
@@ -112,8 +109,7 @@ export const JobService = {
     if (job.status === 'active')
       throw Object.assign(new Error('Job is already active'), { statusCode: 400 });
 
-    await CreditService.deductJobPostingCredits(recruiterId);
-    return JobModel.update(jobId, { status: 'active' });
+    return JobModel.update(jobId, { status: 'active', job_approval_status: 'pending_approval' });
   },
 
   async closeJob(jobId: string, recruiterId: string) {
@@ -169,6 +165,8 @@ export const JobService = {
     salary_min?: number;
     salary_max?: number;
     skills?: string[];
+    excludeAppliedForApplicantId?: string;
+    onlyApproved?: boolean;
   }) {
     // Normalize pagination safely.
     const normalizedPage = Number(filters.page);
@@ -193,6 +191,8 @@ export const JobService = {
       salary_min?: number;
       salary_max?: number;
       skills?: string[];
+      excludeAppliedForApplicantId?: string;
+      onlyApproved?: boolean;
     } = {};
     const allowedStatus: JobStatus[] = ['draft', 'active', 'closed'];
 
@@ -242,6 +242,14 @@ export const JobService = {
 
     if (filters.skills && filters.skills.length > 0) {
       queryFilters.skills = filters.skills;
+    }
+
+    if (filters.excludeAppliedForApplicantId) {
+      queryFilters.excludeAppliedForApplicantId = filters.excludeAppliedForApplicantId;
+    }
+
+    if (filters.onlyApproved) {
+      queryFilters.onlyApproved = true;
     }
 
     const result = await JobModel.findAll({ ...queryFilters, limit, offset });

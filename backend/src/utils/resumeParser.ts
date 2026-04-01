@@ -185,8 +185,13 @@ async function parseResumeWithPython(
     contentType: options.mimeType || 'application/octet-stream',
   });
 
+  const parserHeaders = form.getHeaders();
+  if (process.env.PYTHON_RESUME_PARSER_API_KEY) {
+    parserHeaders['X-API-Key'] = process.env.PYTHON_RESUME_PARSER_API_KEY;
+  }
+
   const response = await axios.post<PythonParserResponse>(parserUrl, form, {
-    headers: form.getHeaders(),
+    headers: parserHeaders,
     timeout: Number(process.env.PYTHON_RESUME_PARSER_TIMEOUT_MS || 8000),
     maxBodyLength: Infinity,
   });

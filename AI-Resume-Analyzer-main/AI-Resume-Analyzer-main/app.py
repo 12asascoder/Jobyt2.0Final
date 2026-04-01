@@ -1,8 +1,9 @@
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 import os
 import re
 import shutil
 import tempfile
+from typing import Optional
 
 from pdfminer.high_level import extract_text
 
@@ -12,6 +13,11 @@ except Exception:
     PyResumeParser = None
 
 app = FastAPI()
+
+
+MAX_FILE_SIZE_BYTES = int(os.getenv("RESUME_PARSER_MAX_FILE_SIZE_BYTES", str(10 * 1024 * 1024)))
+ALLOW_ONLY_PDF = os.getenv("RESUME_PARSER_ALLOW_ONLY_PDF", "true").lower() in {"1", "true", "yes", "on"}
+API_KEY = os.getenv("RESUME_PARSER_API_KEY", "").strip()
 
 
 COMMON_SKILLS = [
@@ -127,11 +133,25 @@ def _fallback_parse(file_path: str):
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {
+        "ok": True,
+        "max_file_size_bytes": MAX_FILE_SIZE_BYTES,
+        "allow_only_pdf": ALLOW_ONLY_PDF,
+        "pyresparser_enabled": PyResumeParser is not None,
+    }
 
 
 @app.post("/parse")
-async def parse_resume(file: UploadFile = File(...)):
+async def parse_resume(
+    file: UploadFile = File(...),
+    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
+):
+    if API_KEY and x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid parser API key")
+
+    if ALLOW_ONLY_PDF and file.content_type not in {"application/pdf", "application/x-pdf"}:
+        raise HTTPException(status_code=415, detail="Only PDF files are supported")
+
     suffix = os.path.splitext(file.filename or "resume.pdf")[1] or ".pdf"
     temp_path = None
 
@@ -139,6 +159,13 @@ async def parse_resume(file: UploadFile = File(...)):
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             temp_path = tmp.name
             shutil.copyfileobj(file.file, tmp)
+
+        file_size = os.path.getsize(temp_path)
+        if file_size > MAX_FILE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Max allowed size is {MAX_FILE_SIZE_BYTES} bytes",
+            )
 
         if PyResumeParser is not None:
             try:

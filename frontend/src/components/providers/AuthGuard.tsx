@@ -16,6 +16,8 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
   const { user, isAuthenticated, loading } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
+  const isEmployerArea = pathname.startsWith('/recruiter') || pathname.startsWith('/admin');
+  const unauthenticatedRoute = isEmployerArea ? ROUTES.employerLogin : ROUTES.login;
 
   const hasEmail = Boolean(user?.email);
   const isEmailFlowPage = pathname === ROUTES.addEmail || pathname === ROUTES.verifyEmail;
@@ -34,7 +36,7 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
     }
 
     if (!isAuthenticated) {
-      router.replace(ROUTES.login);
+      router.replace(unauthenticatedRoute);
       return;
     }
 
@@ -52,7 +54,7 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
       router.replace(routeByRole(user.role));
     }
-  }, [loading, isAuthenticated, user, hasEmail, isVerified, isEmailFlowPage, pathname, allowedRoles, router]);
+  }, [loading, isAuthenticated, user, hasEmail, isVerified, isEmailFlowPage, pathname, allowedRoles, router, unauthenticatedRoute]);
 
   if (loading) {
     return (

@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { Job } from '@/types';
 import { Spinner } from '@/components/ui';
 import { ROUTES } from '@/constants';
-import { FaPencil, FaTrash } from 'react-icons/fa6';
+import { FaPencil, FaTrash, FaPlus } from 'react-icons/fa6';
 import toast from 'react-hot-toast';
 
 interface ExtendedJob extends Job {
@@ -38,6 +38,25 @@ const formatSalary = (min?: number | null, max?: number | null) => {
   if (min && !max) return `₹${min.toLocaleString()}/month`;
   if (!min && max) return `₹${max.toLocaleString()}/month`;
   return `₹${min!.toLocaleString()}-${max!.toLocaleString()}/month`;
+};
+
+const getJobStatusDisplay = (job: ExtendedJob) => {
+  if (job.job_approval_status === 'pending_approval') {
+    return { label: 'UNDER REVIEW', className: 'bg-black text-lime-300' };
+  }
+  if (job.job_approval_status === 'rejected') {
+    return { label: 'REJECTED', className: 'bg-black text-lime-300' };
+  }
+  if (job.job_approval_status === 'approved') {
+    return { label: 'ACTIVE', className: 'bg-lime-300 text-black' };
+  }
+  if (job.status === 'active') {
+    return { label: 'ACTIVE', className: 'bg-lime-300 text-black' };
+  }
+  if (job.status === 'draft') {
+    return { label: 'DRAFT', className: 'bg-slate-100 text-slate-700' };
+  }
+  return { label: 'CLOSED', className: 'bg-slate-300 text-slate-700' };
 };
 
 export default function RecruiterJobsPage() {
@@ -86,14 +105,15 @@ export default function RecruiterJobsPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto pb-6 pt-6 px-4">
-        <section className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <section className="mb-8 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Job Listings</h1>
             <p className="mt-2 text-xl leading-tight text-black/80">Manage and track all your internship postings</p>
           </div>
-          <Link href={ROUTES.recruiterNewJob} className="self-start sm:self-auto">
-            <button className="px-4 py-2.5 bg-black text-white rounded-lg hover:bg-slate-900 font-semibold whitespace-nowrap">
-              Create New Job
+          <Link href={ROUTES.recruiterNewJob} className="shrink-0">
+            <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-black text-lime-300 rounded-lg hover:bg-slate-900 font-semibold whitespace-nowrap">
+              <FaPlus className="text-xs" />
+              Post New Job
             </button>
           </Link>
         </section>
@@ -111,23 +131,24 @@ export default function RecruiterJobsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {jobs.map((job) => (
+          {jobs.map((job) => {
+            const statusDisplay = getJobStatusDisplay(job);
+            return (
             <div key={job.id} className="rounded-xl border border-slate-200 bg-white p-6 hover:shadow-sm transition-shadow">
               {/* Header Row: Title and Status Badge */}
               <div className="flex items-start justify-between gap-4 mb-2">
                 <h3 className="text-lg font-black text-slate-900 flex-1">{job.title}</h3>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${
-                    job.status === 'active' 
-                      ? 'bg-lime-300 text-black' 
-                      : job.status === 'draft'
-                      ? 'bg-slate-100 text-slate-700'
-                      : 'bg-slate-300 text-slate-700'
-                  }`}>
-                    {job.status.toUpperCase()}
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${statusDisplay.className}`}>
+                    {statusDisplay.label}
                   </span>
                   {job.status !== 'closed' && (
                     <>
+                      <Link href={ROUTES.recruiterJobDetail(job.id)}>
+                        <button className="px-3 h-8 rounded-lg bg-black text-lime-300 hover:bg-slate-900 text-xs font-bold transition-colors">
+                          View Details
+                        </button>
+                      </Link>
                       <Link href={ROUTES.recruiterJobDetail(job.id)}>
                         <button className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors">
                           <FaPencil className="text-xs" />
@@ -184,7 +205,7 @@ export default function RecruiterJobsPage() {
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
         </div>

@@ -107,6 +107,9 @@ model jobs {
   status                job_status?              @default(draft)
   is_boosted            Boolean?                 @default(false)
   views_count           Int?                     @default(0)
+  job_approval_status   String?                  @default("approved") @db.VarChar(30)
+  approved_by           String?                  @db.Uuid
+  approved_at           DateTime?                @db.Timestamptz(6)
   deleted_at            DateTime?                @db.Timestamptz(6)
   created_at            DateTime?                @default(now()) @db.Timestamptz(6)
   updated_at            DateTime?                @default(now()) @db.Timestamptz(6)
@@ -118,6 +121,7 @@ model jobs {
   saved_jobs            saved_jobs[]
 
   @@index([recruiter_id], map: "idx_jobs_recruiter")
+  @@index([job_approval_status], map: "idx_jobs_approval_status")
   @@index([search_vector], map: "idx_jobs_search", type: Gin)
   @@index([skills], map: "idx_jobs_skills", type: Gin)
 }

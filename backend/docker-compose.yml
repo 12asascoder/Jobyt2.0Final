@@ -16,11 +16,29 @@ services:
       DB_PORT: "5432"
       REDIS_PORT: "6379"
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hiring_platform
+      PYTHON_RESUME_PARSER_URL: http://resume-parser:8000/parse
+      PYTHON_RESUME_PARSER_TIMEOUT_MS: "8000"
+      PYTHON_RESUME_PARSER_API_KEY: ${PYTHON_RESUME_PARSER_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      resume-parser:
+        condition: service_started
+    restart: unless-stopped
+
+  resume-parser:
+    build:
+      context: ../AI-Resume-Analyzer-main/AI-Resume-Analyzer-main
+      dockerfile: Dockerfile
+    container_name: internship-resume-parser
+    environment:
+      RESUME_PARSER_API_KEY: ${PYTHON_RESUME_PARSER_API_KEY:-}
+      RESUME_PARSER_MAX_FILE_SIZE_BYTES: "10485760"
+      RESUME_PARSER_ALLOW_ONLY_PDF: "true"
+    ports:
+      - "8000:8000"
     restart: unless-stopped
 
   postgres:

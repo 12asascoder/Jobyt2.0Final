@@ -176,6 +176,52 @@ docker-compose up --build
 - Postgres and Redis start automatically
 - Run `npm run db:init` once to apply the schema
 
+### Resume Analyzer Service Integration
+
+This repo supports integrating the FastAPI-based resume parser from [AI-Resume-Analyzer-main/AI-Resume-Analyzer-main](AI-Resume-Analyzer-main/AI-Resume-Analyzer-main).
+
+1. Configure backend env values:
+
+```env
+PYTHON_RESUME_PARSER_URL=http://localhost:8000/parse
+PYTHON_RESUME_PARSER_TIMEOUT_MS=8000
+PYTHON_RESUME_PARSER_API_KEY=your_shared_parser_secret
+```
+
+2. Configure parser service env values (from [AI-Resume-Analyzer-main/AI-Resume-Analyzer-main/.env.example](AI-Resume-Analyzer-main/AI-Resume-Analyzer-main/.env.example)):
+
+```env
+RESUME_PARSER_API_KEY=your_shared_parser_secret
+RESUME_PARSER_MAX_FILE_SIZE_BYTES=10485760
+RESUME_PARSER_ALLOW_ONLY_PDF=true
+```
+
+3. Run parser locally:
+
+```bash
+cd AI-Resume-Analyzer-main/AI-Resume-Analyzer-main
+pip install -r requirements-parser.txt
+uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+4. Or run via docker-compose from [backend/docker-compose.yml](backend/docker-compose.yml), which now includes `resume-parser` and wires backend to it automatically.
+
+### Kubernetes Deployment (Production)
+
+Production manifests were added for the parser service:
+
+1. Parser Deployment + Service + Secret:
+  [backend/deploy/k8s/resume-parser.yaml](backend/deploy/k8s/resume-parser.yaml)
+2. Backend deployment env patch for parser integration:
+  [backend/deploy/k8s/backend-resume-parser-env.patch.yaml](backend/deploy/k8s/backend-resume-parser-env.patch.yaml)
+
+Apply in order:
+
+```bash
+kubectl apply -f backend/deploy/k8s/resume-parser.yaml
+kubectl apply -f backend/deploy/k8s/backend-resume-parser-env.patch.yaml
+```
+
 ---
 
 ## Roadmap Ingestion System

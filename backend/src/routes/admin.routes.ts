@@ -119,6 +119,16 @@ router.patch(
   AdminController.verifyRecruiter,
 );
 
+// ── Job Approval ────────────────────────────────────────────────────────────────
+router.get('/jobs/pending-approval', AdminController.getPendingApprovalJobs);
+router.patch('/jobs/:id/approve-job', AdminController.approveJob);
+router.patch('/jobs/:id/reject-job', 
+  body('reason').notEmpty().withMessage('Rejection reason is required'),
+  validate,
+  AdminController.rejectJob
+);
+router.get('/jobs/:id', AdminController.getJobById);
+
 // ── Metrics & Audit ────────────────────────────────────────────────────────────────
 router.get('/metrics', AdminController.getMetrics);
 router.get('/audit-log', AdminController.getAuditLog);

@@ -46,23 +46,11 @@ type ResumeResponse = {
 
 const resolveResumeUrl = (url?: string | null): string | null => {
   if (!url) return null;
-
-  const normalizeCloudinaryPdfUrl = (value: string): string => {
-    const isCloudinary = value.includes('res.cloudinary.com');
-    const isPdf = /\.pdf(?:$|[?#])/i.test(value);
-    if (!isCloudinary || !isPdf) return value;
-
-    // Cloudinary PDFs can be unreachable when stored under image/upload.
-    // raw/upload is the canonical delivery path for document files.
-    return value.replace('/image/upload/', '/raw/upload/');
-  };
-
-  if (/^https?:\/\//i.test(url)) return normalizeCloudinaryPdfUrl(url);
+  if (/^https?:\/\//i.test(url)) return url;
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
   const origin = apiBase.replace(/\/api\/v1\/?$/, '');
-  const absoluteUrl = url.startsWith('/') ? `${origin}${url}` : `${origin}/${url}`;
-  return normalizeCloudinaryPdfUrl(absoluteUrl);
+  return url.startsWith('/') ? `${origin}${url}` : `${origin}/${url}`;
 };
 
 const isPdfLike = (resume: ResumeDetail): boolean => {
@@ -329,12 +317,12 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
             <h2 className="text-lg font-semibold text-slate-900">Preview</h2>
 
             {canPreview ? (
-              <object
-                data={resumePreviewUrl || ''}
-                type="application/pdf"
+              <>
+              <iframe
+                src={resumePreviewUrl || ''}
                 className="w-full h-[600px] rounded-lg border border-slate-200"
                 aria-label="Resume Preview"
-              >
+              />
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
                   <p className="text-sm text-slate-700">Inline preview is unavailable in this browser.</p>
                   {resume.file_url && (
@@ -343,7 +331,7 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
                     </a>
                   )}
                 </div>
-              </object>
+              </>
             ) : (
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
                 <p className="text-sm text-slate-700">Preview is unavailable for this file type.</p>

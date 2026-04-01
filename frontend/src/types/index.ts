@@ -84,9 +84,15 @@ export interface Job {
   application_questions?: ApplicationQuestion[];
   description: string;
   status: JobStatus;
+  job_approval_status?: 'pending_approval' | 'approved' | 'rejected';
   is_boosted: boolean;
   views_count: number;
   company_name?: string;
+  company_logo?: string | null;
+  company_website?: string | null;
+  company_location?: string | null;
+  is_external_company?: boolean;
+  source?: 'admin_external' | 'recruiter' | 'admin_company';
   created_at: string;
 }
 

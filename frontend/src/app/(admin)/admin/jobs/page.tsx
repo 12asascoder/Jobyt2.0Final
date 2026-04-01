@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Job } from '@/types';
 import { Spinner, Badge, Button, Input } from '@/components/ui';
@@ -15,7 +15,7 @@ export default function AdminJobsPage() {
   const [page, setPage] = useState(1);
   const [acting, setActing] = useState<string | null>(null);
 
-  const fetchJobs = async (q = search, p = page) => {
+  const fetchJobs = useCallback(async (q: string, p: number) => {
     setLoading(true);
     try {
       const res = await api.getPaginated<Job>(`/admin/jobs?page=${p}&limit=20${q ? `&search=${encodeURIComponent(q)}` : ''}`);
@@ -24,14 +24,16 @@ export default function AdminJobsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchJobs(); }, []);
+  useEffect(() => {
+    void fetchJobs('', 1);
+  }, [fetchJobs]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    fetchJobs(search, 1);
+    void fetchJobs(search, 1);
   };
 
   const closeJob = async (jobId: string) => {
@@ -65,27 +67,31 @@ export default function AdminJobsPage() {
   };
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Job Moderation</h1>
+    <div className="max-w-7xl mx-auto space-y-5 pb-6">
+      <section>
+        <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Job Moderation</h1>
+        <p className="mt-2 text-xl leading-tight text-black/80">Review and moderate all posted jobs.</p>
+      </section>
 
-      <form onSubmit={handleSearch} className="mb-4 flex gap-2">
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search jobs..."
-          className="max-w-sm"
-        />
-        <Button type="submit" size="sm">Search</Button>
-      </form>
-
-      <p className="mb-3 text-sm text-gray-500">{total} jobs</p>
+      <section className="rounded-2xl bg-[#ece9e2] border border-black/5 shadow-sm p-4">
+        <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search jobs..."
+            className="sm:max-w-sm"
+          />
+          <Button type="submit" size="sm" className="sm:w-auto">Search</Button>
+          <p className="sm:ml-auto text-sm font-semibold text-slate-600">{total} jobs</p>
+        </form>
+      </section>
 
       {loading ? (
         <div className="flex justify-center py-12"><Spinner size="lg" /></div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs font-medium uppercase text-gray-500">
+            <thead className="bg-black text-[11px] font-bold uppercase text-lime-300 tracking-[0.09em]">
               <tr>
                 <th className="px-4 py-3 text-left">Title</th>
                 <th className="px-4 py-3 text-left">Company</th>
@@ -95,18 +101,30 @@ export default function AdminJobsPage() {
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {jobs.map((job) => (
-                <tr key={job.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{job.title}</td>
-                  <td className="px-4 py-3 text-gray-500">{job.company_name ?? '—'}</td>
+                <tr key={job.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-semibold text-slate-900">{job.title}</td>
+                  <td className="px-4 py-3 text-slate-600">{job.company_name ?? '—'}</td>
                   <td className="px-4 py-3">
-                    <Badge variant={job.status === 'active' ? 'success' : job.status === 'draft' ? 'default' : 'danger'}>
-                      {job.status}
+                    <Badge
+                      variant={
+                        job.job_approval_status === 'approved' || job.status === 'active'
+                          ? 'success'
+                          : job.job_approval_status === 'rejected' || job.status === 'closed'
+                            ? 'danger'
+                            : 'default'
+                      }
+                    >
+                      {job.job_approval_status === 'approved'
+                        ? 'active'
+                        : job.job_approval_status === 'rejected'
+                          ? 'closed'
+                          : job.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-500">{job.views_count}</td>
-                  <td className="px-4 py-3 text-gray-400">{formatDate(job.created_at)}</td>
+                  <td className="px-4 py-3 text-right text-slate-600">{job.views_count}</td>
+                  <td className="px-4 py-3 text-slate-500">{formatDate(job.created_at)}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       {job.status === 'active' && (
@@ -128,9 +146,9 @@ export default function AdminJobsPage() {
 
       {total > 20 && (
         <div className="mt-4 flex justify-center gap-2">
-          <Button size="sm" variant="outline" disabled={page === 1} onClick={() => { setPage(page - 1); fetchJobs(search, page - 1); }}>Prev</Button>
-          <span className="self-center text-sm text-gray-500">Page {page}</span>
-          <Button size="sm" variant="outline" disabled={page * 20 >= total} onClick={() => { setPage(page + 1); fetchJobs(search, page + 1); }}>Next</Button>
+          <Button size="sm" variant="outline" disabled={page === 1} onClick={() => { setPage(page - 1); void fetchJobs(search, page - 1); }}>Prev</Button>
+          <span className="self-center text-sm text-slate-600 font-semibold">Page {page}</span>
+          <Button size="sm" variant="outline" disabled={page * 20 >= total} onClick={() => { setPage(page + 1); void fetchJobs(search, page + 1); }}>Next</Button>
         </div>
       )}
     </div>
