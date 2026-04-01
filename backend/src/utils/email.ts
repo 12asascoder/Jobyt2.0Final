@@ -13,9 +13,12 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
 
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT || '587');
+  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const from = process.env.EMAIL_FROM;
+  const connectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || '30000');
+  const greetingTimeout = Number(process.env.SMTP_GREETING_TIMEOUT_MS || '15000');
 
   if (!host || !user || !pass || !from) {
     console.log(`\n📧 [DEV EMAIL] ─────────────────────────────────`);
@@ -31,7 +34,9 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
   const transporter = nodemailer.createTransport({
     host,
     port,
-    secure: port === 465,
+    secure,
+    connectionTimeout,
+    greetingTimeout,
     auth: {
       user,
       pass,

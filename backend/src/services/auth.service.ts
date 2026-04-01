@@ -129,11 +129,17 @@ export const AuthService = {
       };
     }
 
-    // Send verification email
-    await sendEmail({
+    // Send verification email without blocking registration response.
+    // This prevents SMTP timeouts from making the signup request appear stuck.
+    void sendEmail({
       to: email,
       subject: 'Verify your Hiring Platform account',
       html: verificationEmailHtml(email, verify_token as string),
+    }).catch((err) => {
+      logger.error('Failed to send registration verification email', {
+        email,
+        error: err,
+      });
     });
 
     return { id: user.id, email: user.email, role: user.role };
@@ -255,10 +261,15 @@ export const AuthService = {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await UserModel.setResetToken(user.id, token, expiresAt);
 
-    await sendEmail({
+    void sendEmail({
       to: email,
       subject: 'Reset your Hiring Platform password',
       html: passwordResetEmailHtml(email, token),
+    }).catch((err) => {
+      logger.error('Failed to send forgot-password email', {
+        email,
+        error: err,
+      });
     });
   },
 
@@ -304,10 +315,16 @@ export const AuthService = {
       select: { id: true, email: true, role: true },
     });
 
-    await sendEmail({
+    void sendEmail({
       to: normalizedEmail,
       subject: 'Verify your email address',
       html: oauthEmailVerificationHtml(normalizedEmail, token),
+    }).catch((err) => {
+      logger.error('Failed to send OAuth verification email', {
+        email: normalizedEmail,
+        userId,
+        error: err,
+      });
     });
 
     logger.info('Email verification initiated', { userId, email: normalizedEmail });
@@ -414,10 +431,16 @@ export const AuthService = {
       },
     });
 
-    await sendEmail({
+    void sendEmail({
       to: user.email,
       subject: 'Verify your email address',
       html: oauthEmailVerificationHtml(user.email, token),
+    }).catch((err) => {
+      logger.error('Failed to resend OAuth verification email', {
+        email: user.email,
+        userId: user.id,
+        error: err,
+      });
     });
 
     logger.info('Email verification initiated', { userId: user.id, email: user.email });
