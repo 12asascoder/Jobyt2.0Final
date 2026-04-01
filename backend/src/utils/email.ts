@@ -1,4 +1,6 @@
-// Email utility — SendGrid integration (stub, to be wired with SENDGRID_API_KEY)
+import nodemailer from 'nodemailer';
+
+// Email utility — SMTP integration
 
 interface EmailOptions {
   to: string;
@@ -9,10 +11,39 @@ interface EmailOptions {
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
   if (process.env.NODE_ENV === 'test') return;
 
-  // TODO: replace stub with SendGrid SDK call
-  // import sgMail from '@sendgrid/mail';
-  // sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
-  // await sgMail.send({ from: process.env.EMAIL_FROM!, ...options });
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT || '587');
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const from = process.env.EMAIL_FROM;
+
+  if (!host || !user || !pass || !from) {
+    console.log(`\n📧 [DEV EMAIL] ─────────────────────────────────`);
+    console.log(`   To:      ${options.to}`);
+    console.log(`   Subject: ${options.subject}`);
+    const links = options.html.match(/href="([^"]+)"/g);
+    if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
+    console.log(`   Note:    SMTP env vars missing, email not sent.`);
+    console.log(`────────────────────────────────────────────────\n`);
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: {
+      user,
+      pass,
+    },
+  });
+
+  await transporter.sendMail({
+    from,
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+  });
 
   console.log(`\n📧 [DEV EMAIL] ─────────────────────────────────`);
   console.log(`   To:      ${options.to}`);
