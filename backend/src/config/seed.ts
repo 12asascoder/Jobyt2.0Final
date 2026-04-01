@@ -63,7 +63,7 @@ async function seed() {
       const res = await client.query(
         `
         INSERT INTO users (email, password_hash, role, is_verified, referral_code, credit_balance)
-        VALUES ($1, $2, 'recruiter', TRUE, $3, 500)
+        VALUES ($1, $2, 'recruiter', TRUE, $3, 50)
         ON CONFLICT (email) DO NOTHING
         RETURNING id
       `,
@@ -90,11 +90,11 @@ async function seed() {
         [userId, r.name, r.company, r.industry, r.description],
       );
 
-      // Credit transaction for the 500 credits
+      // Credit transaction for seeded starting credits
       await client.query(
         `
         INSERT INTO credit_transactions (user_id, type, amount, balance_after, description)
-        SELECT $1, 'credit', 500, 500, 'Seed: initial recruiter credits'
+        SELECT $1, 'credit', 50, 50, 'Seed: initial recruiter credits'
         WHERE NOT EXISTS (
           SELECT 1 FROM credit_transactions WHERE user_id = $1 AND description = 'Seed: initial recruiter credits'
         )
@@ -126,7 +126,7 @@ async function seed() {
       const res = await client.query(
         `
         INSERT INTO users (email, password_hash, role, is_verified, referral_code, credit_balance)
-        VALUES ($1, $2, 'applicant', TRUE, $3, 150)
+        VALUES ($1, $2, 'applicant', TRUE, $3, 50)
         ON CONFLICT (email) DO NOTHING
         RETURNING id
       `,

@@ -25,6 +25,7 @@ interface AuthState {
 
 type AuthMePayload = {
   id: string;
+  userId?: string;
   email: string | null;
   role: AuthUser['role'];
   email_verified?: boolean;
@@ -34,22 +35,26 @@ const isAuthMePayload = (value: unknown): value is AuthMePayload => {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<AuthMePayload>;
   const hasValidEmail = candidate.email === null || typeof candidate.email === 'string';
+  const hasId = typeof candidate.id === 'string' || typeof candidate.userId === 'string';
 
   return (
-    typeof candidate.id === 'string' &&
+    hasId &&
     typeof candidate.role === 'string' &&
     hasValidEmail
   );
 };
 
 const extractAuthUser = (payload: unknown): AuthUser | null => {
-  // Supports both: { data: { user } } and { user } backend shapes.
-  const wrapped = payload as { data?: { user?: unknown }; user?: unknown };
-  const candidate = wrapped?.data?.user ?? wrapped?.user;
+  // Supports: { data: { user } }, { user }, and { data: { userId, email, role } }.
+  const wrapped = payload as { data?: { user?: unknown } | unknown; user?: unknown };
+  const candidate =
+    (wrapped?.data as { user?: unknown } | undefined)?.user ??
+    wrapped?.user ??
+    wrapped?.data;
   if (!isAuthMePayload(candidate)) return null;
 
   return {
-    id: candidate.id,
+    id: candidate.id || candidate.userId || '',
     email: candidate.email,
     role: candidate.role,
     email_verified: candidate.email_verified,

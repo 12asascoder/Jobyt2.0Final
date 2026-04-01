@@ -96,7 +96,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="absolute -bottom-8 -right-8 bg-white text-slate-900 rounded-2xl p-4 shadow-xl border border-slate-100 flex items-center gap-4 animate-float">
-          <div className="bg-brand-blue/10 text-brand-blue p-2 rounded-xl text-xl font-black">150+</div>
+          <div className="bg-brand-blue/10 text-brand-blue p-2 rounded-xl text-xl font-black">50+</div>
           <div>
             <p className="font-extrabold text-sm">Free Credits</p>
             <p className="text-slate-500 text-xs font-semibold">On successful signup</p>
@@ -146,7 +146,7 @@ export default function RegisterPage() {
               </span>
             </Link>
             <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Create an account</h1>
-            <p className="text-slate-500 mt-1.5 font-medium text-sm">Join {APP_NAME} today. 150 free credits on sign-up!</p>
+            <p className="text-slate-500 mt-1.5 font-medium text-sm">Join {APP_NAME} today. 50 free credits on sign-up!</p>
           </div>
 
           <div className="grid grid-cols-2 gap-2 mb-4">

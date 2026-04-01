@@ -17,7 +17,7 @@ interface ErrorPayload {
 
 interface RefreshResponsePayload {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
 }
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
@@ -54,7 +54,9 @@ const getStoredRefreshToken = (): string | null => {
 const saveTokens = (tokens: RefreshResponsePayload) => {
   if (typeof window === 'undefined') return;
   localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+  if (tokens.refreshToken) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+  }
   tokenStore.set(tokens.accessToken);
 };
 
@@ -87,19 +89,21 @@ const parseRefreshTokens = (payload: unknown): RefreshResponsePayload | null => 
   if (!payload || typeof payload !== 'object') return null;
 
   const direct = payload as Partial<RefreshResponsePayload>;
-  if (typeof direct.accessToken === 'string' && typeof direct.refreshToken === 'string') {
-    return { accessToken: direct.accessToken, refreshToken: direct.refreshToken };
+  if (typeof direct.accessToken === 'string') {
+    return {
+      accessToken: direct.accessToken,
+      refreshToken: typeof direct.refreshToken === 'string' ? direct.refreshToken : undefined,
+    };
   }
 
   const wrapped = payload as { data?: Partial<RefreshResponsePayload> };
   if (
     wrapped.data &&
-    typeof wrapped.data.accessToken === 'string' &&
-    typeof wrapped.data.refreshToken === 'string'
+    typeof wrapped.data.accessToken === 'string'
   ) {
     return {
       accessToken: wrapped.data.accessToken,
-      refreshToken: wrapped.data.refreshToken,
+      refreshToken: typeof wrapped.data.refreshToken === 'string' ? wrapped.data.refreshToken : undefined,
     };
   }
 
@@ -190,6 +194,9 @@ apiClient.interceptors.response.use(
       if (!tokens) {
         throw new ApiError('Invalid refresh token response', 500, 'INVALID_REFRESH_RESPONSE');
       }
+
+      // Backend may rotate only access token. Preserve existing refresh token when omitted.
+      tokens.refreshToken = tokens.refreshToken || getStoredRefreshToken() || undefined;
 
       saveTokens(tokens);
       processRefreshQueue(null, tokens.accessToken);

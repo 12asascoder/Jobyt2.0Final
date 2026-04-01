@@ -142,12 +142,19 @@ export default function RecruiterProfilePage() {
     setUploadingLogo(true);
     try {
       const fd = new FormData();
-      fd.append('photo', file);
-      const res = await api.post<{ url: string }>('/users/me/photo', fd, {
+      fd.append('file', file);
+      const uploadRes = await api.post<{ url: string }>('/upload', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      const nextUrl = toAbsoluteUrl(res.data?.url);
+      const uploadedUrl = uploadRes.data?.url;
+      if (!uploadedUrl) {
+        throw new Error('Upload succeeded but URL is missing');
+      }
+
+      await api.put('/users/me', { logo_url: uploadedUrl });
+
+      const nextUrl = toAbsoluteUrl(uploadedUrl);
       setLogoUrl(nextUrl);
       toast.success('Logo updated');
     } catch (err) {

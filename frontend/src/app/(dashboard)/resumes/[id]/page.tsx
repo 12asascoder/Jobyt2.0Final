@@ -46,12 +46,23 @@ type ResumeResponse = {
 
 const resolveResumeUrl = (url?: string | null): string | null => {
   if (!url) return null;
-  if (/^https?:\/\//i.test(url)) return url;
+
+  const normalizeCloudinaryPdfUrl = (value: string): string => {
+    const isCloudinary = value.includes('res.cloudinary.com');
+    const isPdf = /\.pdf(?:$|[?#])/i.test(value);
+    if (!isCloudinary || !isPdf) return value;
+
+    // Cloudinary PDFs can be unreachable when stored under image/upload.
+    // raw/upload is the canonical delivery path for document files.
+    return value.replace('/image/upload/', '/raw/upload/');
+  };
+
+  if (/^https?:\/\//i.test(url)) return normalizeCloudinaryPdfUrl(url);
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
   const origin = apiBase.replace(/\/api\/v1\/?$/, '');
-  if (url.startsWith('/')) return `${origin}${url}`;
-  return `${origin}/${url}`;
+  const absoluteUrl = url.startsWith('/') ? `${origin}${url}` : `${origin}/${url}`;
+  return normalizeCloudinaryPdfUrl(absoluteUrl);
 };
 
 const isPdfLike = (resume: ResumeDetail): boolean => {
@@ -170,6 +181,7 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
 
   const canPreview = Boolean(resume?.file_url) && Boolean(resume && isPdfLike(resume));
   const resumeUrl = resolveResumeUrl(resume?.file_url);
+  const resumePreviewUrl = resumeUrl ? `${resumeUrl}#view=FitH` : null;
 
   useEffect(() => {
     let canceled = false;
@@ -317,11 +329,21 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
             <h2 className="text-lg font-semibold text-slate-900">Preview</h2>
 
             {canPreview ? (
-              <iframe
-                src={resumeUrl || ''}
+              <object
+                data={resumePreviewUrl || ''}
+                type="application/pdf"
                 className="w-full h-[600px] rounded-lg border border-slate-200"
-                title="Resume Preview"
-              />
+                aria-label="Resume Preview"
+              >
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+                  <p className="text-sm text-slate-700">Inline preview is unavailable in this browser.</p>
+                  {resume.file_url && (
+                    <a href={resumeUrl || '#'} target="_blank" rel="noreferrer">
+                      <Button variant="outline">Open Resume in New Tab</Button>
+                    </a>
+                  )}
+                </div>
+              </object>
             ) : (
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
                 <p className="text-sm text-slate-700">Preview is unavailable for this file type.</p>

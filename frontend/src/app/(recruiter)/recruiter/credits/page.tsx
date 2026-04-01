@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 import { Spinner } from '@/components/ui';
 import { CreditTransaction, Plan } from '@/types';
 import toast from 'react-hot-toast';
+import { ROUTES } from '@/constants';
 
 export default function RecruiterCreditsPage() {
+  const router = useRouter();
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -69,7 +72,7 @@ export default function RecruiterCreditsPage() {
         </div>
         <button
           type="button"
-          onClick={() => window.scrollTo({ top: 420, behavior: 'smooth' })}
+          onClick={() => router.push('/recruiter/credits/earn')}
           className="rounded-lg bg-lime-400 px-4 py-2 text-sm font-bold text-black hover:bg-lime-300"
         >
           Earn Credits

@@ -168,16 +168,42 @@ export const ResumeService = {
       return fs.readFile(fullPath);
     }
 
-    const response = await fetch(fileUrl);
-    if (!response.ok) {
-      throw Object.assign(new Error('Failed to download resume file'), {
-        statusCode: 502,
-        code: 'RESUME_FILE_FETCH_FAILED',
-      });
+    const buildCandidateUrls = (url: string): string[] => {
+      const variants = new Set<string>([url]);
+
+      const isCloudinary = url.includes('res.cloudinary.com');
+      const isPdf = /\.pdf(?:$|[?#])/i.test(url);
+
+      if (isCloudinary && isPdf) {
+        variants.add(url.replace('/image/upload/', '/raw/upload/'));
+        variants.add(url.replace('/raw/upload/', '/image/upload/'));
+      }
+
+      return Array.from(variants);
+    };
+
+    const candidateUrls = buildCandidateUrls(fileUrl);
+    let lastStatus: number | null = null;
+
+    for (const candidateUrl of candidateUrls) {
+      const response = await fetch(candidateUrl);
+      if (!response.ok) {
+        lastStatus = response.status;
+        continue;
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      return Buffer.from(arrayBuffer);
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    throw Object.assign(new Error('Failed to download resume file'), {
+      statusCode: 502,
+      code: 'RESUME_FILE_FETCH_FAILED',
+      details: {
+        attemptedUrls: candidateUrls,
+        lastStatus,
+      },
+    });
   },
 
   async setDefaultResume(userId: string, resumeId: string): Promise<ResumeListItem> {

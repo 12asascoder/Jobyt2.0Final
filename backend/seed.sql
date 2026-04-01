@@ -10,16 +10,16 @@ ON CONFLICT (email) DO NOTHING;
 -- Recruiter Accounts
 INSERT INTO users (email, password_hash, role, is_verified, referral_code, credit_balance)
 VALUES 
-  ('recruiter1@google.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'recruiter', TRUE, 'REF_REC_001', 500),
-  ('recruiter2@microsoft.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'recruiter', TRUE, 'REF_REC_002', 500),
-  ('recruiter3@amazon.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'recruiter', TRUE, 'REF_REC_003', 500)
+  ('recruiter1@google.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'recruiter', TRUE, 'REF_REC_001', 50),
+  ('recruiter2@microsoft.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'recruiter', TRUE, 'REF_REC_002', 50),
+  ('recruiter3@amazon.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'recruiter', TRUE, 'REF_REC_003', 50)
 ON CONFLICT (email) DO NOTHING;
 
 -- Applicant Accounts  
 INSERT INTO users (email, password_hash, role, is_verified, referral_code, credit_balance)
 VALUES
-  ('john@example.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'applicant', TRUE, 'REF_APP_001', 150),
-  ('jane@example.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'applicant', TRUE, 'REF_APP_002', 150)
+  ('john@example.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'applicant', TRUE, 'REF_APP_001', 50),
+  ('jane@example.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'applicant', TRUE, 'REF_APP_002', 50)
 ON CONFLICT (email) DO NOTHING;
 
 -- Recruiter Profiles
@@ -99,7 +99,7 @@ ON CONFLICT DO NOTHING;
 
 -- Credit transactions for recruiters
 INSERT INTO credit_transactions (user_id, type, amount, balance_after, description)
-SELECT u.id, 'credit', 500, 500, 'Seed: initial recruiter credits'
+SELECT u.id, 'credit', 50, 50, 'Seed: initial recruiter credits'
 FROM users u WHERE u.email IN ('recruiter1@google.com', 'recruiter2@microsoft.com', 'recruiter3@amazon.com')
 ON CONFLICT DO NOTHING;
 

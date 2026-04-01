@@ -6,6 +6,7 @@ import { withTransaction } from '../utils/transaction';
 import { CreditService } from './credit.service';
 import { CREDIT_COSTS } from '../config/creditCosts';
 import { ResumeModel } from '../models/resume.model';
+import { ProfileRequirementsService } from './profileRequirements.service';
 
 export const ApplicationService = {
   async apply(
@@ -18,6 +19,8 @@ export const ApplicationService = {
       answers?: Array<{ question_id: string; answer: string }>;
     },
   ) {
+    await ProfileRequirementsService.assertApplicantCanApply(applicantId);
+
     return withTransaction(async (client) => {
       // 1) Job validation (transaction-scoped)
       const job = await JobModel.findById(jobId, client);

@@ -49,17 +49,20 @@ const normalizeProfilePatch = (
 
 // ── Profile completeness ────────────────────────────────────────────────────
 
-const computeApplicantCompleteness = (p: ApplicantProfile, hasResume: boolean): number => {
-  let score = 0;
-  if (p.name) score += 10;
-  if (p.phone) score += 5;
-  if (p.photo_url) score += 10;
-  if (p.bio) score += 10;
-  if (p.skills?.length >= 3) score += 15;
-  if ((p.experience as unknown[])?.length >= 1) score += 20;
-  if ((p.education as unknown[])?.length >= 1) score += 15;
-  if (hasResume) score += 15;
-  return Math.min(score, 100);
+const computeApplicantCompleteness = (p: ApplicantProfile, email?: string | null): number => {
+  const checks = [
+    Boolean(p.name?.trim()),
+    Boolean(email?.trim()),
+    Boolean(p.phone?.trim()),
+    Boolean(p.bio?.trim()),
+    Boolean(p.portfolio_url?.trim()),
+    Boolean(p.linkedin_url?.trim()),
+    Boolean(p.github_url?.trim()),
+    Boolean(p.photo_url?.trim()),
+  ];
+
+  const completed = checks.filter(Boolean).length;
+  return Math.round((completed / checks.length) * 100);
 };
 
 const computeRecruiterCompleteness = (p: RecruiterProfile): number => {
@@ -84,14 +87,11 @@ export const UserService = {
 
     if (role === 'applicant') {
       const profile = await ApplicantProfileModel.findByUserId(userId);
-      const [defaultResume, hasResume] = await Promise.all([
-        ResumeModel.findDefaultByUserId(userId),
-        ResumeModel.hasAnyResume(userId),
-      ]);
+      const defaultResume = await ResumeModel.findDefaultByUserId(userId);
       const profileOut = profile
         ? { ...profile, resume_url: defaultResume?.file_url ?? null }
         : null;
-      const completeness = profile ? computeApplicantCompleteness(profile, hasResume) : 0;
+      const completeness = profile ? computeApplicantCompleteness(profile, user.email) : 0;
       return {
         email: user.email,
         role: user.role,
@@ -133,20 +133,20 @@ export const UserService = {
     if (!profile) profile = await ApplicantProfileModel.create(userId);
 
     if (Object.keys(patch).length === 0) {
-      const hasResume = await ResumeModel.hasAnyResume(userId);
+      const user = await UserModel.findById(userId);
       const defaultResume = await ResumeModel.findDefaultByUserId(userId);
       return {
         profile: { ...profile, resume_url: defaultResume?.file_url ?? null },
-        completeness: computeApplicantCompleteness(profile, hasResume),
+        completeness: computeApplicantCompleteness(profile, user?.email ?? null),
       };
     }
 
     const updated = await ApplicantProfileModel.update(userId, patch);
-    const hasResume = await ResumeModel.hasAnyResume(userId);
+    const user = await UserModel.findById(userId);
     const defaultResume = await ResumeModel.findDefaultByUserId(userId);
     return {
       profile: { ...updated, resume_url: defaultResume?.file_url ?? null },
-      completeness: computeApplicantCompleteness(updated, hasResume),
+      completeness: computeApplicantCompleteness(updated, user?.email ?? null),
     };
   },
 

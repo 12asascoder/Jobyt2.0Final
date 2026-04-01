@@ -13,6 +13,7 @@ import analyticsRoutes from './analytics.routes';
 import pipelineRoutes from './pipeline.routes';
 import recruiterRoutes from './recruiter.routes';
 import roadmapRoutes from './roadmap.routes';
+import uploadRoutes from './upload.routes';
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.use('/analytics', analyticsRoutes);
 router.use('/pipeline', pipelineRoutes);
 router.use('/recruiter', recruiterRoutes);
 router.use('/roadmaps', roadmapRoutes);
+router.use('/upload', uploadRoutes);
 
 export default router;
 

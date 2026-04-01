@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { api, ApiError } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
-import { ApplicantProfile, RecruiterProfile, Notification as AppNotification } from '@/types';
+import { ApplicantProfile, RecruiterProfile } from '@/types';
 import { Spinner, Avatar } from '@/components/ui';
 import toast from 'react-hot-toast';
 import { FaPenToSquare, FaCheck } from 'react-icons/fa6';
@@ -33,9 +33,6 @@ export default function ProfilePage() {
   // Determine missing fields
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [resumeRefreshKey, setResumeRefreshKey] = useState(0);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -46,69 +43,44 @@ export default function ProfilePage() {
         const p = r.data.profile as ApplicantProfile & RecruiterProfile;
         setPhotoUrl(resolveAssetUrl(p.photo_url || p.logo_url || null));
 
-        const missing = [];
-        if (!p.photo_url && !p.logo_url) missing.push('Upload Your Photo');
+        const missing: string[] = [];
         if (user?.role === 'recruiter') {
-          if (!p.name || !p.company_name || !p.location) missing.push('Fill details');
+          if (!p.name) missing.push('Full Name');
+          if (!r.data?.email) missing.push('Email');
+          if (!p.company_name) missing.push('Company Name');
+          if (!p.location) missing.push('Location');
+          if (!p.logo_url) missing.push('Profile Picture');
         } else {
-          if (!p.name || !p.phone) missing.push('Fill details');
+          if (!p.name) missing.push('Full Name');
+          if (!r.data?.email) missing.push('Email');
+          if (!p.phone) missing.push('Phone Number');
+          if (!p.bio) missing.push('Bio');
+          if (!p.portfolio_url) missing.push('Portfolio Link');
+          if (!p.linkedin_url) missing.push('LinkedIn Link');
+          if (!p.github_url) missing.push('GitHub Link');
+          if (!p.photo_url) missing.push('Profile Picture');
         }
-        if (user?.role === 'applicant' && !p.resume_url) missing.push('Upload Your Resume');
         setMissingFields(missing);
+      } else if (user?.role === 'applicant') {
+        setMissingFields([
+          'Full Name',
+          'Email',
+          'Phone Number',
+          'Bio',
+          'Portfolio Link',
+          'LinkedIn Link',
+          'GitHub Link',
+          'Profile Picture',
+        ]);
       }
     } finally {
       setLoading(false);
     }
   }, [reset, user]);
 
-  const loadNotifications = useCallback(async () => {
-    setNotificationsLoading(true);
-    try {
-      const res = await api.getPaginated<AppNotification>('/notifications?page=1&limit=5');
-      setNotifications(res.data || []);
-      setUnreadNotifications((res as unknown as { unread?: number }).unread || 0);
-    } catch {
-      // Keep profile usable if notifications are temporarily unavailable.
-      setNotifications([]);
-      setUnreadNotifications(0);
-    } finally {
-      setNotificationsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     void loadProfile();
-    void loadNotifications();
-  }, [loadProfile, loadNotifications]);
-
-  const handleMarkNotificationRead = async (id: string) => {
-    try {
-      await api.patch(`/notifications/${id}/read`);
-      setNotifications((prev) => prev.map((item) => (item.id === id ? { ...item, read: true } : item)));
-      setUnreadNotifications((prev) => Math.max(0, prev - 1));
-    } catch {
-      toast.error('Failed to mark notification as read');
-    }
-  };
-
-  const handleNotificationClick = async (id: string, actionUrl?: string | null, read?: boolean) => {
-    if (!read) {
-      await handleMarkNotificationRead(id);
-    }
-    if (actionUrl) {
-      window.location.href = actionUrl;
-    }
-  };
-
-  const handleMarkAllNotificationsRead = async () => {
-    try {
-      await api.patch('/notifications/read-all');
-      setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
-      setUnreadNotifications(0);
-    } catch {
-      toast.error('Failed to mark all notifications as read');
-    }
-  };
+  }, [loadProfile]);
 
   const onSubmit = async (data: ProfileData) => {
     try {
@@ -154,16 +126,18 @@ export default function ProfilePage() {
     if (!file) return;
     setUploading(true);
     const form = new FormData();
-    form.append('photo', file);
+    form.append('file', file);
     try {
-      const res = await api.post<{ url: string }>('/users/me/photo', form, {
+      const uploadRes = await api.post<{ url: string }>('/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      const uploadedUrl = res.data?.url;
+      const uploadedUrl = uploadRes.data?.url;
       if (!uploadedUrl) {
         throw new Error('Photo upload succeeded but URL is missing.');
       }
+
+      await api.put('/users/me', { photo_url: uploadedUrl });
 
       setPhotoUrl(resolveAssetUrl(uploadedUrl));
       toast.success('Photo updated!');
@@ -373,56 +347,47 @@ export default function ProfilePage() {
                 <span className="text-lime-400">Setup Account</span>
               </li>
               <li className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Upload Your Photo') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                <span className={missingFields.includes('Upload Your Photo') ? 'text-gray-400' : 'text-lime-400'}>Upload Your Photo</span>
+                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Full Name') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                <span className={missingFields.includes('Full Name') ? 'text-gray-400' : 'text-lime-400'}>Full Name</span>
               </li>
               <li className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Fill details') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                <span className={missingFields.includes('Fill details') ? 'text-gray-400' : 'text-lime-400'}>Fill details</span>
+                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Email') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                <span className={missingFields.includes('Email') ? 'text-gray-400' : 'text-lime-400'}>Email</span>
               </li>
-              {user?.role === 'applicant' && (
+              {user?.role === 'applicant' ? (
+                <>
+                  <li className="flex items-center gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Phone Number') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                    <span className={missingFields.includes('Phone Number') ? 'text-gray-400' : 'text-lime-400'}>Phone Number</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Bio') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                    <span className={missingFields.includes('Bio') ? 'text-gray-400' : 'text-lime-400'}>Bio</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Portfolio Link') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                    <span className={missingFields.includes('Portfolio Link') ? 'text-gray-400' : 'text-lime-400'}>Portfolio Link</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('LinkedIn Link') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                    <span className={missingFields.includes('LinkedIn Link') ? 'text-gray-400' : 'text-lime-400'}>LinkedIn Link</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('GitHub Link') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                    <span className={missingFields.includes('GitHub Link') ? 'text-gray-400' : 'text-lime-400'}>GitHub Link</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Profile Picture') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                    <span className={missingFields.includes('Profile Picture') ? 'text-gray-400' : 'text-lime-400'}>Profile Picture</span>
+                  </li>
+                </>
+              ) : (
                 <li className="flex items-center gap-3">
-                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Upload Your Resume') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                  <span className={missingFields.includes('Upload Your Resume') ? 'text-gray-400' : 'text-lime-400'}>Upload Your Resume</span>
+                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Profile Picture') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                  <span className={missingFields.includes('Profile Picture') ? 'text-gray-400' : 'text-lime-400'}>Profile Picture</span>
                 </li>
               )}
             </ul>
-          </div>
-
-          <div className="bg-[#0b0b0b] rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-900">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-semibold text-lg">Notifications {unreadNotifications > 0 ? `(${unreadNotifications})` : ''}</h3>
-              {unreadNotifications > 0 && (
-                <button
-                  type="button"
-                  onClick={handleMarkAllNotificationsRead}
-                  className="text-xs text-[#c3ff3d] hover:text-[#aee62d] font-semibold"
-                >
-                  Mark all read
-                </button>
-              )}
-            </div>
-
-            {notificationsLoading ? (
-              <div className="py-6 flex justify-center"><Spinner size="sm" /></div>
-            ) : notifications.length === 0 ? (
-              <p className="text-sm text-gray-400">No notifications yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {notifications.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => void handleNotificationClick(item.id, item.action_url, item.read)}
-                    className={`w-full text-left rounded-xl border p-3 transition-colors ${item.read ? 'border-gray-800 bg-black/30' : 'border-lime-400/30 bg-lime-400/10'}`}
-                  >
-                    <p className={`text-sm ${item.read ? 'text-gray-300' : 'text-white font-semibold'}`}>{item.title}</p>
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.body}</p>
-                    <p className="text-[11px] text-gray-500 mt-2">{new Date(item.created_at).toLocaleString()}</p>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Resume Upload + Parsing */}

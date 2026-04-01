@@ -3,7 +3,7 @@ import { PoolClient } from 'pg';
 import { CreditModel } from '../models/credit.model';
 import { CreditStatus } from '../models/credit.model';
 
-const REGISTRATION_CREDITS = parseInt(process.env.REGISTRATION_CREDIT_AMOUNT || '150');
+const REGISTRATION_CREDITS = parseInt(process.env.REGISTRATION_CREDIT_AMOUNT || '50');
 const JOB_POST_COST = parseInt(process.env.JOB_POSTING_CREDIT_COST || '10');
 const LOW_CREDIT_THRESHOLD = (() => {
   const n = parseInt(process.env.LOW_CREDIT_THRESHOLD ?? '10', 10);
@@ -13,6 +13,8 @@ const REFERRAL_REWARD = 50; // configurable — move to DB/env
 const REFERRAL_JOIN_BONUS = 25;
 const COMMUNITY_REFERRAL_REWARD = 20; // For referrer when code is redeemed
 const COMMUNITY_REFERRAL_BONUS = 10; // For user redeeming code
+const COMPLETE_PROFILE_BONUS = 10;
+const INSTAGRAM_FOLLOW_BONUS = 10;
 
 // In-memory cache for credit balances (TTL: 10 seconds to avoid stale data)
 const creditBalanceCache = new Map<string, { balance: number; expiresAt: number }>();
@@ -279,5 +281,61 @@ export const CreditService = {
 
   async grantPlanCredits(userId: string, credits: number, paymentId: string): Promise<void> {
     await CreditService.addCredits(userId, credits, 'Subscription plan credits', paymentId);
+  },
+
+  async grantCompleteProfileBonus(userId: string): Promise<{ awarded: boolean; amount: number }> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const existing = await client.query(
+        `SELECT 1 FROM credit_transactions
+         WHERE user_id = $1
+           AND description = 'Complete profile bonus'`,
+        [userId],
+      );
+
+      if ((existing.rowCount ?? 0) > 0) {
+        await client.query('ROLLBACK');
+        return { awarded: false, amount: 0 };
+      }
+
+      await addCreditsTx(client, userId, COMPLETE_PROFILE_BONUS, 'Complete profile bonus');
+      await client.query('COMMIT');
+      return { awarded: true, amount: COMPLETE_PROFILE_BONUS };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
+  async grantInstagramFollowBonus(userId: string): Promise<{ awarded: boolean; amount: number }> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const existing = await client.query(
+        `SELECT 1 FROM credit_transactions
+         WHERE user_id = $1
+           AND description = 'Instagram follow bonus'`,
+        [userId],
+      );
+
+      if ((existing.rowCount ?? 0) > 0) {
+        await client.query('ROLLBACK');
+        return { awarded: false, amount: 0 };
+      }
+
+      await addCreditsTx(client, userId, INSTAGRAM_FOLLOW_BONUS, 'Instagram follow bonus');
+      await client.query('COMMIT');
+      return { awarded: true, amount: INSTAGRAM_FOLLOW_BONUS };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   },
 };

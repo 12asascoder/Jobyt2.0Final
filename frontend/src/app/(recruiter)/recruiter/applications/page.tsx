@@ -96,6 +96,7 @@ export default function RecruiterApplicationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [openingConversationFor, setOpeningConversationFor] = useState<string | null>(null);
+  const [updatingStatusFor, setUpdatingStatusFor] = useState<string | null>(null);
   const selectedJobId = searchParams.get('jobId') || '';
 
   const fetchApplications = useCallback(async () => {
@@ -222,6 +223,32 @@ export default function RecruiterApplicationsPage() {
       setOpeningConversationFor(null);
     }
   }, [router]);
+
+  const handleUpdateApplicationStatus = useCallback(async (applicationId: string, status: 'interview' | 'rejected' | 'hired') => {
+    setUpdatingStatusFor(`${applicationId}:${status}`);
+    try {
+      await api.patch(`/applications/${applicationId}/status`, { status });
+
+      setApplications((prev) =>
+        prev.map((application) =>
+          application.id === applicationId ? { ...application, status } : application,
+        ),
+      );
+
+      if (status === 'interview') {
+        toast.success('Moved to interview stage');
+      } else if (status === 'hired') {
+        toast.success('Candidate accepted');
+      } else {
+        toast.success('Application rejected');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update application status';
+      toast.error(message);
+    } finally {
+      setUpdatingStatusFor(null);
+    }
+  }, []);
 
   return (
     <div>
@@ -371,11 +398,37 @@ export default function RecruiterApplicationsPage() {
                   </Link>
                   {(app.status.toLowerCase() === 'applied' || app.status.toLowerCase() === 'in_review') && (
                     <>
-                      <button className="px-4 py-2 bg-lime-300 text-black text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors">
-                        Interview
+                      <button
+                        onClick={() => void handleUpdateApplicationStatus(app.id, 'interview')}
+                        disabled={updatingStatusFor === `${app.id}:interview`}
+                        className="px-4 py-2 bg-lime-300 text-black text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {updatingStatusFor === `${app.id}:interview` ? 'Updating...' : 'Interview'}
                       </button>
-                      <button className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors">
-                        Reject
+                      <button
+                        onClick={() => void handleUpdateApplicationStatus(app.id, 'rejected')}
+                        disabled={updatingStatusFor === `${app.id}:rejected`}
+                        className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {updatingStatusFor === `${app.id}:rejected` ? 'Updating...' : 'Reject'}
+                      </button>
+                    </>
+                  )}
+                  {app.status.toLowerCase() === 'interview' && (
+                    <>
+                      <button
+                        onClick={() => void handleUpdateApplicationStatus(app.id, 'hired')}
+                        disabled={updatingStatusFor === `${app.id}:hired`}
+                        className="px-4 py-2 bg-lime-300 text-black text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {updatingStatusFor === `${app.id}:hired` ? 'Updating...' : 'Accept'}
+                      </button>
+                      <button
+                        onClick={() => void handleUpdateApplicationStatus(app.id, 'rejected')}
+                        disabled={updatingStatusFor === `${app.id}:rejected`}
+                        className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {updatingStatusFor === `${app.id}:rejected` ? 'Updating...' : 'Reject'}
                       </button>
                     </>
                   )}

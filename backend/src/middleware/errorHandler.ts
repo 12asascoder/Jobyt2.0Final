@@ -85,6 +85,16 @@ export const errorHandler = (
       isOperational = true;
       message = 'Token expired';
       errorCode = 'TOKEN_EXPIRED';
+    } else if (anyErr.name === 'MulterError') {
+      statusCode = 400;
+      isOperational = true;
+      const multerCode = typeof anyErr.code === 'string' ? anyErr.code : 'MULTER_ERROR';
+      errorCode = multerCode;
+      if (multerCode === 'LIMIT_FILE_SIZE') {
+        message = 'Uploaded file is too large';
+      } else {
+        message = err.message || 'Invalid upload payload';
+      }
     }
   }
 

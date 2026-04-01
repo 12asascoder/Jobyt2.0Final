@@ -86,9 +86,16 @@ export default function RecruiterJobsPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto pb-6 pt-6 px-4">
-        <section className="mb-8">
-          <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Job Listings</h1>
-          <p className="mt-2 text-xl leading-tight text-black/80">Manage and track all your internship postings</p>
+        <section className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Job Listings</h1>
+            <p className="mt-2 text-xl leading-tight text-black/80">Manage and track all your internship postings</p>
+          </div>
+          <Link href={ROUTES.recruiterNewJob} className="self-start sm:self-auto">
+            <button className="px-4 py-2.5 bg-black text-white rounded-lg hover:bg-slate-900 font-semibold whitespace-nowrap">
+              Create New Job
+            </button>
+          </Link>
         </section>
 
         <div className="rounded-2xl p-6 space-y-4" style={{ backgroundColor: '#ece9e2' }}>

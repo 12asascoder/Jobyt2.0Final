@@ -1,83 +1,106 @@
 import fs from 'fs/promises';
+import os from 'os';
 import path from 'path';
-import { deleteFromS3, uploadToS3 } from '../utils/s3';
+import { getCloudinary } from '../config/cloudinary';
 
 export interface UploadResult {
   url: string;
 }
 
-function isLocalStorage(): boolean {
-  const storageType = (process.env.STORAGE_TYPE || 'local').toLowerCase();
-  return storageType !== 's3';
+const isPdf = (mimeType: string): boolean => mimeType === 'application/pdf';
+
+const createTempFileFromBuffer = async (file: Express.Multer.File): Promise<string> => {
+  const tmpDir = path.join(os.tmpdir(), 'hiring-platform-uploads');
+  await fs.mkdir(tmpDir, { recursive: true });
+
+  const safeName = path.basename(file.originalname).replace(/[^\w.\-]+/g, '_') || 'upload';
+  const tempPath = path.join(tmpDir, `${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`);
+  await fs.writeFile(tempPath, file.buffer);
+  return tempPath;
+};
+
+const resolveCloudinaryFolder = (folder: string, mimeType: string): string => {
+  if (isPdf(mimeType)) return 'resumes';
+  if (folder === 'logos' || folder === 'photos' || folder === 'profile-images') return 'profile-images';
+  return folder || 'uploads';
+};
+
+async function cloudinaryUpload(
+  file: Express.Multer.File,
+  folder: string,
+): Promise<UploadResult> {
+  const cloudinary = getCloudinary();
+  const tempPath = await createTempFileFromBuffer(file);
+
+  try {
+    const uploadResult = await cloudinary.uploader.upload(tempPath, {
+      folder: resolveCloudinaryFolder(folder, file.mimetype),
+      resource_type: isPdf(file.mimetype) ? 'raw' : 'image',
+      use_filename: true,
+      unique_filename: true,
+      overwrite: false,
+    });
+
+    return { url: uploadResult.secure_url };
+  } catch (err) {
+    throw Object.assign(new Error('Cloudinary upload failed'), {
+      statusCode: 502,
+      code: 'CLOUDINARY_UPLOAD_FAILED',
+      details: err,
+    });
+  } finally {
+    await fs.unlink(tempPath).catch(() => undefined);
+  }
 }
 
-async function localUploadResume(file: Express.Multer.File): Promise<UploadResult> {
-  const uploadDir = path.join(__dirname, '../../uploads/resumes');
-  await fs.mkdir(uploadDir, { recursive: true });
+const extractCloudinaryPublicId = (url: string): string | null => {
+  if (!url.includes('res.cloudinary.com')) return null;
+  const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-zA-Z0-9]+(?:\?.*)?$/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+};
 
-  const safeName = path.basename(file.originalname).replace(/[^\w.\-]+/g, '_') || 'resume';
-  const filename = `${Date.now()}-${safeName}`;
-  const filepath = path.join(uploadDir, filename);
+async function deleteFromCloudinary(url: string): Promise<void> {
+  const publicId = extractCloudinaryPublicId(url);
+  if (!publicId) return;
 
-  await fs.writeFile(filepath, file.buffer);
-
-  return {
-    url: `/uploads/resumes/${filename}`,
-  };
-}
-
-async function s3UploadResume(file: Express.Multer.File): Promise<UploadResult> {
-  const url = await uploadToS3(file.buffer, file.originalname, file.mimetype, 'resumes');
-  return { url };
-}
-
-async function localUploadPhoto(file: Express.Multer.File, folder: string): Promise<UploadResult> {
-  const uploadDir = path.join(__dirname, `../../uploads/${folder}`);
-  await fs.mkdir(uploadDir, { recursive: true });
-
-  const safeName = path.basename(file.originalname).replace(/[^\w.\-]+/g, '_') || 'photo';
-  const filename = `${Date.now()}-${safeName}`;
-  const filepath = path.join(uploadDir, filename);
-
-  await fs.writeFile(filepath, file.buffer);
-
-  return {
-    url: `/uploads/${folder}/${filename}`,
-  };
-}
-
-async function s3UploadPhoto(file: Express.Multer.File, folder: string): Promise<UploadResult> {
-  const url = await uploadToS3(file.buffer, file.originalname, file.mimetype, folder);
-  return { url };
+  const cloudinary = getCloudinary();
+  // Try common resource types to support both images and raw files (e.g., PDF resumes).
+  await cloudinary.uploader.destroy(publicId, { resource_type: 'image' }).catch(() => undefined);
+  await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' }).catch(() => undefined);
 }
 
 export const StorageService = {
   async uploadResume(file: Express.Multer.File): Promise<UploadResult> {
-    if (isLocalStorage()) {
-      return localUploadResume(file);
-    }
-    return s3UploadResume(file);
+    return cloudinaryUpload(file, 'resumes');
   },
 
   async uploadPhoto(file: Express.Multer.File, folder: string): Promise<UploadResult> {
-    if (isLocalStorage()) {
-      return localUploadPhoto(file, folder);
-    }
-    return s3UploadPhoto(file, folder);
+    return cloudinaryUpload(file, folder || 'profile-images');
+  },
+
+  async uploadAny(file: Express.Multer.File): Promise<UploadResult> {
+    const folder = isPdf(file.mimetype) ? 'resumes' : 'profile-images';
+    return cloudinaryUpload(file, folder);
   },
 
   async deleteByUrl(url: string): Promise<void> {
     if (!url) return;
 
-    if (isLocalStorage()) {
-      // URLs are served as /uploads/<relative path>; map them to backend/uploads/<relative path>.
-      if (!url.startsWith('/uploads/')) return;
+    // Legacy cleanup support for old local file URLs.
+    if (url.startsWith('/uploads/')) {
       const relativePath = url.replace('/uploads/', '');
       const fullPath = path.join(__dirname, '../../uploads', relativePath);
       await fs.unlink(fullPath).catch(() => undefined);
       return;
     }
 
-    await deleteFromS3(url).catch(() => undefined);
+    // Legacy cleanup support for old S3 URLs.
+    if (url.includes('amazonaws.com')) {
+      const { deleteFromS3 } = await import('../utils/s3');
+      await deleteFromS3(url).catch(() => undefined);
+      return;
+    }
+
+    await deleteFromCloudinary(url).catch(() => undefined);
   },
 };

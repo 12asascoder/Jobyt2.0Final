@@ -8,6 +8,7 @@ import {
 import { CreditService } from './credit.service';
 import { UserModel } from '../models/user.model';
 import { AppError, badRequest, notFound } from '../utils/appError';
+import { ProfileRequirementsService } from './profileRequirements.service';
 
 export const JobService = {
   validateApplicationQuestions(questions: unknown): JobApplicationQuestion[] {
@@ -83,6 +84,8 @@ export const JobService = {
       throw new AppError('Recruiter account is banned', 403);
     }
 
+    await ProfileRequirementsService.assertRecruiterCanPostJob(recruiterId);
+
     const isDuplicate = await JobModel.checkDuplicate(recruiterId, data.title);
     if (isDuplicate) {
       throw Object.assign(new Error('You already have an active or draft job with this title'), { statusCode: 409 });
@@ -100,6 +103,8 @@ export const JobService = {
   },
 
   async publishJob(recruiterId: string, jobId: string) {
+    await ProfileRequirementsService.assertRecruiterCanPostJob(recruiterId);
+
     const job = await JobModel.findById(jobId);
     if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
     if (job.recruiter_id !== recruiterId)

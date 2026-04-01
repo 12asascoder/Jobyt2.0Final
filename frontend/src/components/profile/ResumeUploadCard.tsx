@@ -19,14 +19,12 @@ interface ResumeUploadCardProps {
   className?: string;
 }
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const ACCEPTED_MIME_TYPES = new Set([
   'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]);
 
-const ACCEPTED_EXTENSIONS = ['.pdf', '.doc', '.docx'];
+const ACCEPTED_EXTENSIONS = ['.pdf'];
 
 const hasAcceptedExtension = (fileName: string): boolean => {
   const lower = fileName.toLowerCase();
@@ -82,7 +80,7 @@ export function ResumeUploadCard({ onSuccess, className }: ResumeUploadCardProps
     const isExtensionAccepted = hasAcceptedExtension(selected.name);
 
     if (!isMimeAccepted && !isExtensionAccepted) {
-      setError('Please upload a PDF, DOC, or DOCX file.');
+      setError('Please upload a PDF file.');
       resetSelection();
       return;
     }
@@ -94,7 +92,7 @@ export function ResumeUploadCard({ onSuccess, className }: ResumeUploadCardProps
     }
 
     if (selected.size > MAX_FILE_SIZE_BYTES) {
-      setError('Max file size is 5MB.');
+      setError('Max file size is 10MB.');
       resetSelection();
       return;
     }
@@ -158,13 +156,13 @@ export function ResumeUploadCard({ onSuccess, className }: ResumeUploadCardProps
       <CardBody className="space-y-4">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">Upload Resume</h3>
-          <p className="mt-1 text-sm text-slate-500">PDF, DOC, or DOCX. Max size 5MB.</p>
+          <p className="mt-1 text-sm text-slate-500">PDF only. Max size 10MB.</p>
         </div>
 
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.doc,.docx"
+          accept=".pdf"
           onChange={handleFileChange}
           disabled={isUploading}
           className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
