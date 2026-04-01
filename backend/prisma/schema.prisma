@@ -8,7 +8,7 @@ datasource db {
 }
 
 model admin_audit_log {
-  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   admin_id    String    @db.Uuid
   action      String    @db.VarChar(100)
   target_type String?   @db.VarChar(50)
@@ -36,7 +36,7 @@ model applicant_profiles {
 }
 
 model applications {
-  id                  String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   job_id              String              @db.Uuid
   applicant_id        String              @db.Uuid
   cover_letter        String?
@@ -56,7 +56,7 @@ model applications {
 }
 
 model conversations {
-  id                                      String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                                      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   recruiter_id                            String     @db.Uuid
   applicant_id                            String     @db.Uuid
   job_id                                  String?    @db.Uuid
@@ -72,7 +72,7 @@ model conversations {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model credit_transactions {
-  id            String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id       String      @db.Uuid
   type          credit_type
   amount        Int
@@ -87,7 +87,7 @@ model credit_transactions {
 }
 
 model jobs {
-  id                    String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   recruiter_id          String                   @db.Uuid
   company_id            String?                  @db.Uuid
   company_name          String                   @default("Unknown Company") @db.VarChar(255)
@@ -127,7 +127,7 @@ model jobs {
 }
 
 model messages {
-  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   conversation_id String        @db.Uuid
   sender_id       String        @db.Uuid
   body            String
@@ -140,7 +140,7 @@ model messages {
 }
 
 model notifications {
-  id         String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id    String            @db.Uuid
   type       notification_type
   title      String            @db.VarChar(255)
@@ -154,7 +154,7 @@ model notifications {
 }
 
 model payments {
-  id          String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id     String          @db.Uuid
   plan_id     String?         @db.Uuid
   amount      Decimal         @db.Decimal(10, 2)
@@ -167,7 +167,7 @@ model payments {
 }
 
 model plans {
-  id         String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String     @db.VarChar(100)
   credits    Int
   price      Decimal    @db.Decimal(10, 2)
@@ -178,7 +178,7 @@ model plans {
 }
 
 model pipeline_events {
-  id              String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   application_id  String              @db.Uuid
   previous_status application_status?
   new_status      application_status
@@ -191,7 +191,7 @@ model pipeline_events {
 }
 
 model recruiter_profiles {
-  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id       String   @unique @db.Uuid
   name          String?  @db.VarChar(255)
   company_name  String?  @db.VarChar(255)
@@ -209,7 +209,7 @@ model recruiter_profiles {
 }
 
 model referrals {
-  id                                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   referrer_id                        String    @db.Uuid
   referred_id                        String    @unique @db.Uuid
   referrer_credited                  Boolean?  @default(false)
@@ -220,7 +220,7 @@ model referrals {
 }
 
 model referral_redemptions {
-  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id     String    @unique @db.Uuid
   referrer_id String    @db.Uuid
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
@@ -243,7 +243,7 @@ model saved_jobs {
 /// Uploaded resume files (S3/CloudFront URL + metadata). One row per file; use is_default for application default.
 /// DB enforces ≤1 default per user: partial unique index unique_default_resume_per_user (see migration 20260323150000).
 model resumes {
-  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id    String   @db.Uuid
   file_url   String   @db.VarChar(500)
   file_name  String   @db.VarChar(255)
@@ -259,7 +259,7 @@ model resumes {
 }
 
 model users {
-  id                                              String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                                              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                                           String?               @unique @db.VarChar(255)
   password_hash                                   String?               @db.VarChar(255)
   auth_provider                                   auth_provider         @default(local)
@@ -357,3 +357,4 @@ enum user_role {
   recruiter
   admin
 }
+

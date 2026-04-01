@@ -1,6 +1,6 @@
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "pipeline_events" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "application_id" UUID NOT NULL,
     "previous_status" "application_status",
     "new_status" "application_status" NOT NULL,
@@ -29,3 +29,4 @@ BEGIN
     END IF;
 END
 $$;
+

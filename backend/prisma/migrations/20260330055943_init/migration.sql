@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- CreateEnum
 CREATE TYPE "auth_provider" AS ENUM ('local', 'google', 'github', 'linkedin');
 
@@ -24,7 +26,7 @@ CREATE TYPE "user_role" AS ENUM ('applicant', 'recruiter', 'admin');
 
 -- CreateTable
 CREATE TABLE "admin_audit_log" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "admin_id" UUID NOT NULL,
     "action" VARCHAR(100) NOT NULL,
     "target_type" VARCHAR(50),
@@ -56,7 +58,7 @@ CREATE TABLE "applicant_profiles" (
 
 -- CreateTable
 CREATE TABLE "applications" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "job_id" UUID NOT NULL,
     "applicant_id" UUID NOT NULL,
     "cover_letter" TEXT,
@@ -70,7 +72,7 @@ CREATE TABLE "applications" (
 
 -- CreateTable
 CREATE TABLE "conversations" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "recruiter_id" UUID NOT NULL,
     "applicant_id" UUID NOT NULL,
     "job_id" UUID,
@@ -82,7 +84,7 @@ CREATE TABLE "conversations" (
 
 -- CreateTable
 CREATE TABLE "credit_transactions" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "type" "credit_type" NOT NULL,
     "amount" INTEGER NOT NULL,
@@ -96,7 +98,7 @@ CREATE TABLE "credit_transactions" (
 
 -- CreateTable
 CREATE TABLE "jobs" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "recruiter_id" UUID NOT NULL,
     "company_id" UUID,
     "company_name" VARCHAR(255) NOT NULL DEFAULT 'Unknown Company',
@@ -126,7 +128,7 @@ CREATE TABLE "jobs" (
 
 -- CreateTable
 CREATE TABLE "messages" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "conversation_id" UUID NOT NULL,
     "sender_id" UUID NOT NULL,
     "body" TEXT NOT NULL,
@@ -138,7 +140,7 @@ CREATE TABLE "messages" (
 
 -- CreateTable
 CREATE TABLE "notifications" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "type" "notification_type" NOT NULL,
     "title" VARCHAR(255) NOT NULL,
@@ -152,7 +154,7 @@ CREATE TABLE "notifications" (
 
 -- CreateTable
 CREATE TABLE "payments" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "plan_id" UUID,
     "amount" DECIMAL(10,2) NOT NULL,
@@ -166,7 +168,7 @@ CREATE TABLE "payments" (
 
 -- CreateTable
 CREATE TABLE "plans" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" VARCHAR(100) NOT NULL,
     "credits" INTEGER NOT NULL,
     "price" DECIMAL(10,2) NOT NULL,
@@ -179,7 +181,7 @@ CREATE TABLE "plans" (
 
 -- CreateTable
 CREATE TABLE "recruiter_profiles" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "name" VARCHAR(255),
     "company_name" VARCHAR(255),
@@ -199,7 +201,7 @@ CREATE TABLE "recruiter_profiles" (
 
 -- CreateTable
 CREATE TABLE "referrals" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "referrer_id" UUID NOT NULL,
     "referred_id" UUID NOT NULL,
     "referrer_credited" BOOLEAN DEFAULT false,
@@ -220,7 +222,7 @@ CREATE TABLE "saved_jobs" (
 
 -- CreateTable
 CREATE TABLE "resumes" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "file_url" VARCHAR(500) NOT NULL,
     "file_name" VARCHAR(255) NOT NULL,
@@ -235,7 +237,7 @@ CREATE TABLE "resumes" (
 
 -- CreateTable
 CREATE TABLE "users" (
-    "id" UUID NOT NULL DEFAULT uuid_generate_v4(),
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "email" VARCHAR(255),
     "password_hash" VARCHAR(255),
     "auth_provider" "auth_provider" NOT NULL DEFAULT 'local',
@@ -378,3 +380,4 @@ ALTER TABLE "saved_jobs" ADD CONSTRAINT "saved_jobs_job_id_fkey" FOREIGN KEY ("j
 
 -- AddForeignKey
 ALTER TABLE "resumes" ADD CONSTRAINT "resumes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
