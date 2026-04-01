@@ -36,6 +36,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Relax for development
   message: { success: false, message: 'Too many requests, please try again later.' },
+  trust: 1, // Trust one proxy layer (Railway)
 });
 app.use('/api', limiter);
 

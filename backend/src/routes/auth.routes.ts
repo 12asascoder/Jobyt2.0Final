@@ -12,6 +12,7 @@ const oauthAuthLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  trust: 1, // Trust one proxy layer (Railway)
   message: {
     success: false,
     message: 'Too many OAuth login attempts. Please try again later.',
@@ -24,6 +25,7 @@ const emailVerificationLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  trust: 1, // Trust one proxy layer (Railway)
   message: {
     success: false,
     message: 'Too many verification attempts. Please try again in a minute.',
@@ -36,6 +38,7 @@ const resendVerificationLimiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
+  trust: 1, // Trust one proxy layer (Railway)
   message: {
     success: false,
     message: 'Too many resend requests. Please try again in a minute.',
