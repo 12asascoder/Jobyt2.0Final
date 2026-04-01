@@ -43,12 +43,18 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
     },
   });
 
-  await transporter.sendMail({
-    from,
-    to: options.to,
-    subject: options.subject,
-    html: options.html,
-  });
+  try {
+    await transporter.sendMail({
+      from,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    });
+  } catch (err) {
+    console.error('\n📧 [SMTP ERROR] Email delivery failed');
+    console.error(err);
+    return;
+  }
 
   console.log(`\n📧 [DEV EMAIL] ─────────────────────────────────`);
   console.log(`   To:      ${options.to}`);
