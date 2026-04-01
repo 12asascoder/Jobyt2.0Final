@@ -9,6 +9,9 @@ import { requestLogger } from './middleware/logger.middleware';
 
 const app = express();
 
+// Required when running behind a reverse proxy (e.g. Railway) so client IPs are resolved correctly.
+app.set('trust proxy', 1);
+
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
@@ -36,7 +39,6 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Relax for development
   message: { success: false, message: 'Too many requests, please try again later.' },
-  trust: 1, // Trust one proxy layer (Railway)
 });
 app.use('/api', limiter);
 

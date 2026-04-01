@@ -4,22 +4,22 @@
 
 -- Admin Account
 INSERT INTO users (email, password_hash, role, is_verified, referral_code, credit_balance)
-VALUES ('admin@hiringplatform.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'admin', TRUE, 'REF_ADMIN_001', 0)
+VALUES ('admin@hiringplatform.com', '$2b$12$FkbOij02FjKfYlkwmCobX.W6doU8Tf19IbVFUQS7LcLszAoyKvsve', 'admin', TRUE, 'REF_ADMIN_001', 0)
 ON CONFLICT (email) DO NOTHING;
 
 -- Recruiter Accounts
 INSERT INTO users (email, password_hash, role, is_verified, referral_code, credit_balance)
 VALUES 
-  ('recruiter1@google.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'recruiter', TRUE, 'REF_REC_001', 50),
-  ('recruiter2@microsoft.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'recruiter', TRUE, 'REF_REC_002', 50),
-  ('recruiter3@amazon.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'recruiter', TRUE, 'REF_REC_003', 50)
+  ('recruiter1@google.com', '$2b$12$FkbOij02FjKfYlkwmCobX.W6doU8Tf19IbVFUQS7LcLszAoyKvsve', 'recruiter', TRUE, 'REF_REC_001', 50),
+  ('recruiter2@microsoft.com', '$2b$12$FkbOij02FjKfYlkwmCobX.W6doU8Tf19IbVFUQS7LcLszAoyKvsve', 'recruiter', TRUE, 'REF_REC_002', 50),
+  ('recruiter3@amazon.com', '$2b$12$FkbOij02FjKfYlkwmCobX.W6doU8Tf19IbVFUQS7LcLszAoyKvsve', 'recruiter', TRUE, 'REF_REC_003', 50)
 ON CONFLICT (email) DO NOTHING;
 
 -- Applicant Accounts  
 INSERT INTO users (email, password_hash, role, is_verified, referral_code, credit_balance)
 VALUES
-  ('john@example.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'applicant', TRUE, 'REF_APP_001', 50),
-  ('jane@example.com', '$2b$12$TXQmB6ZLwcVdYO6n5JPVu.8SsgPkKDhJbjgKfNjVy6ZNfFKd3F6bi', 'applicant', TRUE, 'REF_APP_002', 50)
+  ('john@example.com', '$2b$12$FkbOij02FjKfYlkwmCobX.W6doU8Tf19IbVFUQS7LcLszAoyKvsve', 'applicant', TRUE, 'REF_APP_001', 50),
+  ('jane@example.com', '$2b$12$FkbOij02FjKfYlkwmCobX.W6doU8Tf19IbVFUQS7LcLszAoyKvsve', 'applicant', TRUE, 'REF_APP_002', 50)
 ON CONFLICT (email) DO NOTHING;
 
 -- Recruiter Profiles
