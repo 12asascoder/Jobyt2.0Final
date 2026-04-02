@@ -4,18 +4,31 @@ import { verifyToken } from '../utils/jwt';
 
 let io: SocketServer;
 
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://hiring-platform-mu.vercel.app',
-  'https://jobyt.in',
-  'https://www.jobyt.in',
-];
+const allowedOrigins = new Set(
+  [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://jobyt.in',
+    'https://www.jobyt.in',
+    process.env.FRONTEND_URL,
+  ].filter((origin): origin is string => Boolean(origin && origin.trim()))
+);
+
+const isAllowedOrigin = (origin: string): boolean => {
+  if (allowedOrigins.has(origin)) return true;
+  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
+};
 
 export const initSocket = (httpServer: HttpServer): SocketServer => {
   io = new SocketServer(httpServer, {
     cors: {
-      origin: allowedOrigins,
+      origin: (origin, callback) => {
+        if (!origin || isAllowedOrigin(origin)) {
+          callback(null, true);
+          return;
+        }
+        callback(new Error(`Socket CORS blocked for origin: ${origin}`));
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },

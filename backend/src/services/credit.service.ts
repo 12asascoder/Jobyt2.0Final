@@ -9,8 +9,8 @@ const LOW_CREDIT_THRESHOLD = (() => {
   const n = parseInt(process.env.LOW_CREDIT_THRESHOLD ?? '10', 10);
   return Number.isFinite(n) && n >= 0 ? n : 10;
 })();
-const REFERRAL_REWARD = 50; // configurable — move to DB/env
-const REFERRAL_JOIN_BONUS = 25;
+const REFERRAL_REWARD = 20;
+const REFERRAL_JOIN_BONUS = 10;
 const COMMUNITY_REFERRAL_REWARD = 20; // For referrer when code is redeemed
 const COMMUNITY_REFERRAL_BONUS = 10; // For user redeeming code
 const COMPLETE_PROFILE_BONUS = 10;

@@ -243,6 +243,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   }, {});
 
   const handleApply = async () => {
+    if (!selectedResumeId) {
+      toast.error('Please select a resume before applying');
+      return;
+    }
+
     for (const question of dynamicQuestions) {
       if (!question.required) continue;
       const answer = (questionAnswers[question.id] || '').trim();
@@ -256,7 +261,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     try {
       await api.post<{ creditsRemaining?: number }>(`/applications/jobs/${id}`, {
         cover_letter: coverLetter,
-        resume_id: selectedResumeId || undefined,
+        resume_id: selectedResumeId,
         answers: dynamicQuestions
           .map((question) => ({
             question_id: question.id,
@@ -543,7 +548,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   </select>
                 ) : (
                   <p className="inline-block rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                    No resume found. Please upload one from profile.
+                    No resume found. Upload a resume from profile to apply.
                   </p>
                 )}
               </div>
@@ -621,10 +626,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               <div className="mt-5 flex flex-wrap gap-3">
                 <button
                   onClick={handleApply}
-                  disabled={applying || hasApplied}
+                  disabled={applying || hasApplied || !selectedResumeId}
                   className="rounded-full bg-[#bbf52f] px-7 py-2.5 text-sm font-extrabold text-black disabled:bg-gray-300"
                 >
-                  {hasApplied ? 'Already Applied' : applying ? 'Submitting...' : 'Submit Application'}
+                  {hasApplied ? 'Already Applied' : applying ? 'Submitting...' : !selectedResumeId ? 'Select Resume First' : 'Submit Application'}
                 </button>
                 {!hasApplied && (
                   <button
@@ -755,7 +760,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             </div>
             {resumes.length === 0 ? (
               <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                No resume found. You can still apply, but uploading a resume is strongly recommended.
+                No resume found. Upload a resume from profile to proceed with application.
               </p>
             ) : (
               <div className="space-y-2">
@@ -1019,10 +1024,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           <div className="flex gap-3 pt-2">
             <button
               onClick={handleApply}
-              disabled={applying}
+              disabled={applying || !selectedResumeId}
               className="flex-1 bg-lime-400 text-[#1a1a1a] font-bold py-3 px-4 rounded-xl hover:bg-lime-500 disabled:opacity-50 transition-all duration-200 active:scale-95"
             >
-              {applying ? 'Applying...' : 'Confirm & Apply'}
+              {applying ? 'Applying...' : !selectedResumeId ? 'Select Resume First' : 'Confirm & Apply'}
             </button>
             <button
               onClick={() => setShowModal(false)}

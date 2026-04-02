@@ -15,7 +15,7 @@ export const ApplicationService = {
     data: {
       cover_letter?: string;
       resume_snapshot_url?: string;
-      resume_id?: string;
+      resume_id: string;
       answers?: Array<{ question_id: string; answer: string }>;
     },
   ) {
@@ -32,15 +32,20 @@ export const ApplicationService = {
       if (existing)
         throw Object.assign(new Error('You have already applied to this job'), { statusCode: 409 });
 
-      const selectedResumeId = data.resume_id || null;
-      if (selectedResumeId) {
-        const resume = await ResumeModel.findByUserAndId(applicantId, selectedResumeId);
-        if (!resume) {
-          throw Object.assign(new Error('Selected resume not found'), {
-            statusCode: 404,
-            code: 'RESUME_NOT_FOUND',
-          });
-        }
+      const selectedResumeId = String(data.resume_id || '').trim();
+      if (!selectedResumeId) {
+        throw Object.assign(new Error('Please select a resume before applying'), {
+          statusCode: 422,
+          code: 'RESUME_REQUIRED',
+        });
+      }
+
+      const resume = await ResumeModel.findByUserAndId(applicantId, selectedResumeId);
+      if (!resume) {
+        throw Object.assign(new Error('Selected resume not found'), {
+          statusCode: 404,
+          code: 'RESUME_NOT_FOUND',
+        });
       }
 
       const jobQuestions = Array.isArray(job.application_questions) ? job.application_questions : [];
@@ -91,7 +96,7 @@ export const ApplicationService = {
             applicant_id: applicantId,
             cover_letter: data.cover_letter,
             resume_snapshot_url: data.resume_snapshot_url,
-            resume_id: selectedResumeId || undefined,
+            resume_id: selectedResumeId,
             application_answers: filteredAnswers,
           },
           client,

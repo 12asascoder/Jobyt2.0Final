@@ -119,6 +119,8 @@ export const AuthService = {
       const referral = await ReferralModel.findByReferredId(user.id);
       if (referral && !referral.referrer_credited) {
         await CreditService.grantReferralRewards(referral.referrer_id, user.id);
+        await ReferralModel.markReferrerCredited(referral.id);
+        await ReferralModel.markReferredCredited(referral.id);
       }
 
       return {
@@ -160,7 +162,8 @@ export const AuthService = {
     const referral = await ReferralModel.findByReferredId(user.id);
     if (referral && !referral.referrer_credited) {
       await CreditService.grantReferralRewards(referral.referrer_id, user.id);
-      // mark credited (handled inside grantReferralRewards via referral model)
+      await ReferralModel.markReferrerCredited(referral.id);
+      await ReferralModel.markReferredCredited(referral.id);
     }
 
     return { message: 'Email verified successfully' };

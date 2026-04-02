@@ -5,7 +5,7 @@ import { ApplicationService } from '../services/application.service';
 async function runTests() {
   console.log('--- Starting Credit Deduction Integration Tests ---');
   let client;
-  let recruiterId: string, applicantId: string, jobId: string;
+  let recruiterId: string, applicantId: string, jobId: string, resumeId: string;
 
   try {
     client = await pool.connect();
@@ -20,6 +20,13 @@ async function runTests() {
     // Create applicant
     const appRes = await client.query("INSERT INTO users (email, password_hash, role, referral_code, credit_balance) VALUES ('cred_app@test.com', 'pwd', 'applicant', 'APP123', 1) RETURNING id");
     applicantId = appRes.rows[0].id;
+
+    // Create applicant resume required for apply endpoint
+    const resumeRes = await client.query(
+      "INSERT INTO resumes (user_id, file_url, file_name, is_default) VALUES ($1, $2, $3, true) RETURNING id",
+      [applicantId, 'https://example.com/mock-resume.pdf', 'mock-resume.pdf']
+    );
+    resumeId = resumeRes.rows[0].id;
     
     // Create job
     const jobRes = await client.query(
@@ -29,7 +36,10 @@ async function runTests() {
     jobId = jobRes.rows[0].id;
 
     console.log('2. Test 1: Successful Job Application (1 credit applied).');
-    const applyRes1 = await ApplicationService.apply(applicantId, jobId, { cover_letter: 'Hello' });
+    const applyRes1 = await ApplicationService.apply(applicantId, jobId, {
+      cover_letter: 'Hello',
+      resume_id: resumeId,
+    });
     
     // Check ledger
     const ledger1 = await client.query("SELECT * FROM credit_transactions WHERE user_id = $1", [applicantId]);
@@ -48,7 +58,10 @@ async function runTests() {
     console.log('3. Test 2: Out of Credits block limit.');
     let hit402 = false;
     try {
-      await ApplicationService.apply(applicantId, jobId2, { cover_letter: 'I have 0 credits left' });
+      await ApplicationService.apply(applicantId, jobId2, {
+        cover_letter: 'I have 0 credits left',
+        resume_id: resumeId,
+      });
     } catch (err: any) {
       if (err.statusCode === 402) {
          hit402 = true;
@@ -74,7 +87,7 @@ async function runTests() {
     let duplicateErrors = 0;
 
     const promises = Array.from({ length: 5 }).map(() => 
-       ApplicationService.apply(applicantId, jobId3, {})
+       ApplicationService.apply(applicantId, jobId3, { resume_id: resumeId })
         .then(() => successfulApps++)
         .catch(err => {
           if (err.statusCode === 409) duplicateErrors++;

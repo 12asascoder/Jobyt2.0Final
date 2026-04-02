@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import routes from './routes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import { requestLogger } from './middleware/logger.middleware';
@@ -12,13 +11,45 @@ const app = express();
 // Required when running behind a reverse proxy (e.g. Railway) so client IPs are resolved correctly.
 app.set('trust proxy', 1);
 
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://hiring-platform-mu.vercel.app',
-  'https://jobyt.in',
-  'https://www.jobyt.in',
-];
+const allowedOrigins = new Set(
+  [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://jobyt.in',
+    'https://www.jobyt.in',
+    process.env.FRONTEND_URL,
+  ].filter((origin): origin is string => Boolean(origin && origin.trim()))
+);
+
+const isAllowedOrigin = (origin: string): boolean => {
+  if (allowedOrigins.has(origin)) return true;
+
+  // Allow Vercel deployments (preview + production domains).
+  if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) {
+    return true;
+  }
+
+  return false;
+};
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow non-browser/server-to-server calls with no Origin header.
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
 
 // Local resume/photo storage (STORAGE_TYPE=local); S3 URLs are absolute and do not use this
 const storageType = (process.env.STORAGE_TYPE || 'local').toLowerCase();
@@ -28,20 +59,7 @@ if (storageType !== 's3') {
 
 // Security middleware
 app.use(helmet());
-app.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-  }),
-);
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Relax for development
-  message: { success: false, message: 'Too many requests, please try again later.' },
-});
-app.use('/api', limiter);
+app.use(cors(corsOptions));
 
 // Razorpay webhook requires raw request body for signature verification.
 app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));

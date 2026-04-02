@@ -65,7 +65,7 @@ router.post(
   authorize('applicant'),
   requireCredits(CREDIT_COSTS.APPLY_JOB),
   body('cover_letter').optional().isString(),
-  body('resume_id').optional().isUUID().withMessage('resume_id must be a valid UUID'),
+  body('resume_id').notEmpty().withMessage('resume_id is required').isUUID().withMessage('resume_id must be a valid UUID'),
   body('answers').optional().isArray().withMessage('answers must be an array'),
   body('answers.*.question_id').optional().isString().trim().notEmpty(),
   body('answers.*.answer').optional().isString(),

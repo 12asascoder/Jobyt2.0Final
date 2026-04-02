@@ -3,6 +3,7 @@ import { Job } from '@/types';
 import { Badge, Card, CardBody } from '@/components/ui';
 import { formatSalaryRange, formatDate } from '@/lib/utils';
 import { ROUTES } from '@/constants';
+import { resolveAssetUrl } from '@/lib/assetUrl';
 
 interface JobCardProps {
   job: Job;
@@ -13,7 +14,21 @@ export const JobCard = ({ job, actions }: JobCardProps) => (
   <Card className="hover:shadow-md transition-shadow">
     <CardBody>
       <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
+        <div className="flex flex-1 items-start gap-3">
+          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-slate-200">
+            {resolveAssetUrl(job.company_logo) ? (
+              <img
+                src={resolveAssetUrl(job.company_logo) || ''}
+                alt={job.company_name ? `${job.company_name} logo` : 'Company logo'}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-xs font-bold text-slate-600">
+                {(job.company_name || job.title).slice(0, 2).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
           <Link href={ROUTES.jobDetail(job.id)} className="text-base font-semibold text-gray-900 hover:text-blue-600">
             {job.title}
           </Link>
@@ -33,6 +48,7 @@ export const JobCard = ({ job, actions }: JobCardProps) => (
               {job.skills.length > 5 && <Badge variant="default">+{job.skills.length - 5}</Badge>}
             </div>
           )}
+          </div>
         </div>
 
         <div className="shrink-0 text-right">

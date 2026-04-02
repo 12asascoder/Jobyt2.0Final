@@ -2,11 +2,17 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { resolveAssetUrl } from '@/lib/assetUrl';
 
 export interface BackendJob {
     id: string;
     title: string;
     company_name?: string;
+    company_logo?: string | null;
+    company?: {
+        name?: string;
+        logo?: string | null;
+    };
     location: string | null;
     type: 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
     salary_min: number | null;
@@ -40,14 +46,38 @@ const getCompanyName = (job: JobLike & Record<string, any>): string | undefined 
     return typeof resolved === 'string' ? resolved.trim() : undefined;
 };
 
+const getCompanyLogo = (job: JobLike & Record<string, any>): string | null => {
+    const nestedLogo =
+        typeof job.company === 'object' && job.company
+            ? (job.company as Record<string, unknown>).logo
+            : undefined;
+
+    const candidates = [
+        job.company_logo,
+        job.companyLogo,
+        typeof nestedLogo === 'string' ? nestedLogo : undefined,
+        job.logo_url,
+    ];
+
+    const resolved = candidates.find((value) => typeof value === 'string' && value.trim().length > 0);
+    return typeof resolved === 'string' ? resolved.trim() : null;
+};
+
 // Normalize job data to ensure it has an id field
 export function normalizeJob(job: JobLike): BackendJob {
-    const companyName = getCompanyName(job as JobLike & Record<string, any>);
+    const typedJob = job as JobLike & Record<string, any>;
+    const companyName = getCompanyName(typedJob);
+    const companyLogo = getCompanyLogo(typedJob);
 
     return {
         id: job.id || job._id || '',
         title: job.title || '',
         company_name: companyName,
+        company_logo: companyLogo,
+        company: {
+            name: companyName,
+            logo: companyLogo,
+        },
         location: job.location ?? null,
         type: job.type || 'full-time',
         salary_min: job.salary_min ?? null,
@@ -223,6 +253,7 @@ export function JobCard({
     const isRemote = job.type === 'remote' || (job.location?.toLowerCase().includes('remote') ?? false);
     const badgeText = getBadgeText(job);
     const name = job.company_name || job.title;
+    const companyLogo = resolveAssetUrl(job.company_logo || job.company?.logo || null);
     const salaryLabel = formatSalary(job.salary_min, job.salary_max);
     const salaryUnit = getSalaryUnit(job.salary_min, job.salary_max);
     const locationLabel = job.location || 'Remote';
@@ -308,9 +339,17 @@ export function JobCard({
                         flexShrink: 0, overflow: 'hidden',
                     }}
                 >
-                    <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1 }}>
-                        {avatarInitials(name)}
-                    </span>
+                    {companyLogo ? (
+                        <img
+                            src={companyLogo}
+                            alt={`${name} logo`}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                    ) : (
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1 }}>
+                            {avatarInitials(name)}
+                        </span>
+                    )}
                 </div>
 
                 <div style={{ flex: 1, paddingTop: 1 }}>

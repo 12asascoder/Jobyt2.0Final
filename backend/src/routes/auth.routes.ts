@@ -1,47 +1,10 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import { body, query } from 'express-validator';
 import { AuthController } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
 const router = Router();
-
-const oauthAuthLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Too many OAuth login attempts. Please try again later.',
-    error: 'RATE_LIMITED',
-  },
-});
-
-const emailVerificationLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Too many verification attempts. Please try again in a minute.',
-    error: 'RATE_LIMITED',
-  },
-});
-
-const resendVerificationLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 3,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Too many resend requests. Please try again in a minute.',
-    error: 'RATE_LIMITED',
-  },
-});
 
 const oauthCredentialPresence = body().custom((value) => {
   const payload = (value ?? {}) as {
@@ -72,7 +35,6 @@ router.get('/verify-email', query('token').notEmpty(), validate, AuthController.
 
 router.post(
   '/verify-email',
-  emailVerificationLimiter,
   body('token').notEmpty().isString(),
   validate,
   AuthController.verifyEmailPost,
@@ -88,7 +50,6 @@ router.post(
 
 router.post(
   '/oauth/state',
-  oauthAuthLimiter,
   body('provider').isIn(['github', 'linkedin']),
   body('state').notEmpty().isString().isLength({ min: 16, max: 128 }),
   validate,
@@ -97,7 +58,6 @@ router.post(
 
 router.post(
   '/google',
-  oauthAuthLimiter,
   oauthCredentialPresence,
   body('idToken').notEmpty().isString(),
   validate,
@@ -106,7 +66,6 @@ router.post(
 
 router.post(
   '/github',
-  oauthAuthLimiter,
   body('code').notEmpty().isString(),
   body('state').notEmpty().isString(),
   validate,
@@ -115,7 +74,6 @@ router.post(
 
 router.post(
   '/linkedin',
-  oauthAuthLimiter,
   body('code').notEmpty().isString(),
   body('state').notEmpty().isString(),
   validate,
@@ -157,7 +115,6 @@ router.get('/me', authenticate, AuthController.me);
 router.post(
   '/add-email',
   authenticate,
-  emailVerificationLimiter,
   body('email').isEmail().normalizeEmail(),
   validate,
   AuthController.addEmail,
@@ -166,7 +123,6 @@ router.post(
 router.post(
   '/resend-verification',
   authenticate,
-  resendVerificationLimiter,
   validate,
   AuthController.resendVerification,
 );
