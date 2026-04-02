@@ -39,20 +39,21 @@ router.get(
   ApplicationController.recruiterApplicationsFiltered,
 );
 
+// Recruiter: get statistics for all applications.
+// Keep this before '/recruiter/applicants/:id' to avoid treating 'stats' as an ID.
+router.get(
+  '/recruiter/applicants/stats',
+  authorize('recruiter'),
+  employerGuard,
+  ApplicationController.recruiterApplicationsStats,
+);
+
 // Recruiter: view one application detail
 router.get(
   '/recruiter/applicants/:id',
   authorize('recruiter'),
   employerGuard,
   ApplicationController.recruiterApplicationById,
-);
-
-// Recruiter: get statistics for all applications
-router.get(
-  '/recruiter/applicants/stats',
-  authorize('recruiter'),
-  employerGuard,
-  ApplicationController.recruiterApplicationsStats,
 );
 
 // Applicant: check if applied to a job

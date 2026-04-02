@@ -48,7 +48,7 @@ const resolveResumeUrl = (url?: string | null): string | null => {
   if (!url) return null;
   if (/^https?:\/\//i.test(url)) return url;
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://hiringplatform-production-180d.up.railway.app/api/v1';
   const origin = apiBase.replace(/\/api\/v1\/?$/, '');
   return url.startsWith('/') ? `${origin}${url}` : `${origin}/${url}`;
 };
