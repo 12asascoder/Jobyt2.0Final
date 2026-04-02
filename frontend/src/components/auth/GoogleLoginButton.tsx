@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { FaGoogle } from 'react-icons/fa6';
 import { api } from '@/lib/api';
 import { OAuthResponseData, parseOAuthResponse, readPublicEnv, saveOAuthRole } from '@/lib/oauth';
 import { AuthTokens, AuthUser } from '@/types';
@@ -60,7 +59,7 @@ export function GoogleLoginButton({
   const buttonClass = useMemo(
     () =>
       className ||
-      'relative flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all font-semibold shadow-sm text-sm disabled:opacity-60 disabled:cursor-not-allowed',
+      'relative flex-1 min-h-[42px] rounded-xl border border-slate-200 bg-white px-1 py-1 shadow-sm',
     [className],
   );
 
@@ -193,11 +192,10 @@ export function GoogleLoginButton({
 
   return (
     <div className={buttonClass} aria-disabled={disabled}>
-      <FaGoogle className="text-red-500 text-base" /> Google
-      <div className="absolute inset-0 overflow-hidden rounded-xl">
+      <div className="overflow-hidden rounded-lg">
         <div
           ref={containerRef}
-          className={`h-full w-full ${disabled ? 'pointer-events-none' : 'pointer-events-auto'} opacity-0`}
+          className={`h-full w-full ${disabled ? 'pointer-events-none opacity-60' : 'pointer-events-auto'}`}
         />
       </div>
     </div>

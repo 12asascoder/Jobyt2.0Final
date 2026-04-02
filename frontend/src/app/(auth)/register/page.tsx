@@ -28,6 +28,14 @@ export default function RegisterPage() {
   const [oauthPending, setOauthPending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [requiresEmailVerification, setRequiresEmailVerification] = useState(true);
+
+  type RegisterResponse = {
+    id: string;
+    email: string;
+    role: 'applicant' | 'recruiter' | 'admin';
+    emailVerificationRequired?: boolean;
+  };
 
   const routeByRole = (user: AuthUser) =>
     user.role === 'recruiter'
@@ -53,10 +61,13 @@ export default function RegisterPage() {
     setError('');
     setIsLoading(true);
     try {
-      await api.post('/auth/register', {
+      const response = await api.post<RegisterResponse>('/auth/register', {
         ...form,
         role: roleFromRoute,
       });
+
+      const verificationRequired = response.data?.emailVerificationRequired ?? true;
+      setRequiresEmailVerification(verificationRequired);
       setSuccess(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Registration failed. Please try again.');
@@ -115,10 +126,18 @@ export default function RegisterPage() {
             <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
               <FaEnvelopeCircleCheck className="text-4xl text-green-500" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-3 tracking-tight">Check your email</h2>
-            <p className="text-slate-500 font-medium mb-8 leading-relaxed">
-              We&apos;ve sent a secure verification link to <strong className="text-slate-800">{form.email}</strong>. Click it to activate your account.
-            </p>
+            <h2 className="text-2xl font-bold text-slate-900 mb-3 tracking-tight">
+              {requiresEmailVerification ? 'Check your email' : 'Account created'}
+            </h2>
+            {requiresEmailVerification ? (
+              <p className="text-slate-500 font-medium mb-8 leading-relaxed">
+                We&apos;ve sent a secure verification link to <strong className="text-slate-800">{form.email}</strong>. Click it to activate your account.
+              </p>
+            ) : (
+              <p className="text-slate-500 font-medium mb-8 leading-relaxed">
+                Your account has been created and email is already verified. Please sign in to continue.
+              </p>
+            )}
             <button
               onClick={() => router.push(loginRoute)}
               className="w-full bg-slate-900 text-white rounded-xl px-4 py-3 font-bold text-base hover:bg-slate-800 transition-all shadow-md group flex items-center justify-center gap-2"

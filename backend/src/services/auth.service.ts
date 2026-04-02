@@ -125,6 +125,7 @@ export const AuthService = {
         id: user.id,
         email: user.email,
         role: user.role,
+        emailVerificationRequired: false,
         message: 'Email auto-verified for now. Re-enable verification by setting AUTO_VERIFY_EMAIL_ON_REGISTER=false.',
       };
     }
@@ -136,7 +137,7 @@ export const AuthService = {
       html: verificationEmailHtml(email, verify_token as string),
     });
 
-    return { id: user.id, email: user.email, role: user.role };
+    return { id: user.id, email: user.email, role: user.role, emailVerificationRequired: true };
   },
 
   async verifyEmail(token: string) {

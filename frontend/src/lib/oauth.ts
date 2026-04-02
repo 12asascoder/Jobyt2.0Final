@@ -58,7 +58,27 @@ export const parseOAuthResponse = (payload: OAuthResponseData | undefined): Pars
 
 export const getOAuthRedirectUri = () => {
   if (typeof window === 'undefined') return '';
-  return readPublicEnv('NEXT_PUBLIC_OAUTH_REDIRECT_URI') || `${window.location.origin}/oauth/callback`;
+  const fallback = `${window.location.origin}/oauth/callback`;
+  const configured = readPublicEnv('NEXT_PUBLIC_OAUTH_REDIRECT_URI');
+
+  if (!configured) return fallback;
+
+  try {
+    const configuredUrl = new URL(configured);
+    const currentHost = window.location.hostname.toLowerCase();
+    const configuredHost = configuredUrl.hostname.toLowerCase();
+    const runningOnLocalhost = currentHost === 'localhost' || currentHost === '127.0.0.1';
+    const configuredIsLocalhost = configuredHost === 'localhost' || configuredHost === '127.0.0.1';
+
+    // Prevent stale production builds from using localhost OAuth callbacks.
+    if (!runningOnLocalhost && configuredIsLocalhost) {
+      return fallback;
+    }
+  } catch {
+    return fallback;
+  }
+
+  return configured;
 };
 
 export const saveOAuthState = (provider: Exclude<OAuthProvider, 'google'>, state: string) => {
