@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
+import { SessionProvider } from 'next-auth/react';
 import { useAuthStore } from '@/store/auth.store';
 import { Spinner } from '@/components/ui';
 
@@ -22,7 +23,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <>
+    <SessionProvider>
       {children}
       <Toaster
         position="top-right"
@@ -32,6 +33,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
           success: { iconTheme: { primary: '#2563eb', secondary: '#fff' } },
         }}
       />
-    </>
+    </SessionProvider>
   );
 }

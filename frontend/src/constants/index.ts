@@ -36,6 +36,7 @@ export const ROUTES = {
   employerSignup: '/employer-signup',
   verifyEmail: '/verify-email',
   oauthCallback: '/oauth/callback',
+  oauthGoogleBridge: '/oauth/google-bridge',
   addEmail: '/add-email',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
