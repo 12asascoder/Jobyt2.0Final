@@ -7,6 +7,7 @@ let io: SocketServer;
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
+  'https://hiring-platform-mu.vercel.app',
   'https://jobyt.in',
   'https://www.jobyt.in',
 ];
