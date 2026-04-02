@@ -56,11 +56,11 @@ export const Header = () => {
                         {/* User Avatar */}
                         <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center text-brand-primary text-sm font-bold shadow-md">
-                                {user.email[0].toUpperCase()}
+                                {(user.email?.[0] || 'U').toUpperCase()}
                             </div>
                             <div className="hidden sm:block">
                                 <p className="text-sm font-semibold text-slate-800 leading-none">
-                                    {user.email.split('@')[0]}
+                                    {user.email?.split('@')[0] || 'User'}
                                 </p>
                                 <p className="text-[11px] text-slate-400 capitalize mt-0.5">{user.role}</p>
                             </div>

@@ -34,7 +34,7 @@ export default function AnalyticsPage() {
     const fetchAnalytics = async () => {
       try {
         const response = await api.get<AnalyticsData>('/analytics/summary');
-        setData(response.data);
+        setData(response.data ?? null);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to fetch analytics';
         toast.error(message);

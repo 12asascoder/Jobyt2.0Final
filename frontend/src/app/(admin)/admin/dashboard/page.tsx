@@ -43,8 +43,10 @@ export default function AdminDashboardPage() {
     const fetchData = useCallback(async () => {
         try {
             const res = await api.get<MetricsResponse>('/admin/metrics');
-            setMetrics(res.data.metrics);
-            setDaily(res.data.daily_stats ?? []);
+            const payload = res.data;
+            if (!payload) return;
+            setMetrics(payload.metrics);
+            setDaily(payload.daily_stats ?? []);
         } catch { /* silent */ }
     }, []);
 

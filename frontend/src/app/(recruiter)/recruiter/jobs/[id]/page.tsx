@@ -58,17 +58,19 @@ export default function RecruiterJobDetailPage() {
   useEffect(() => {
     api.get<Job>(`/jobs/${jobId}`)
       .then((res) => {
-        setJob(res.data);
+        const payload = res.data;
+        if (!payload) return;
+        setJob(payload);
         setForm({
-          title: res.data.title,
-          location: res.data.location ?? '',
-          type: res.data.type,
-          salary_min: res.data.salary_min?.toString() ?? '',
-          salary_max: res.data.salary_max?.toString() ?? '',
-          description: res.data.description,
-          skills: res.data.skills.join(', '),
+          title: payload.title,
+          location: payload.location ?? '',
+          type: payload.type,
+          salary_min: payload.salary_min?.toString() ?? '',
+          salary_max: payload.salary_max?.toString() ?? '',
+          description: payload.description,
+          skills: payload.skills.join(', '),
         });
-        setQuestions(Array.isArray(res.data.application_questions) ? res.data.application_questions : []);
+        setQuestions(Array.isArray(payload.application_questions) ? payload.application_questions : []);
       })
       .finally(() => setLoading(false));
   }, [jobId]);
@@ -101,7 +103,9 @@ export default function RecruiterJobDetailPage() {
           .filter((question) => question.label.length > 0),
       };
       const res = await api.put<Job>(`/jobs/${jobId}`, payload);
-      setJob(res.data);
+      if (res.data) {
+        setJob(res.data);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Save failed');
     } finally {

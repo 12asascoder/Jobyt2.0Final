@@ -123,7 +123,7 @@ export const PipelineBoard = ({ jobId }: { jobId: string }) => {
   const fetchBoard = useCallback(async () => {
     try {
       const res = await api.get<BoardData>(`/pipeline/board/${jobId}`);
-      setBoard(res.data);
+      setBoard(res.data ?? null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch board';
       toast.error(message);

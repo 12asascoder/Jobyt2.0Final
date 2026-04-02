@@ -113,7 +113,7 @@ function getCompanyName(job: Job): string {
   const normalizedCamel = maybe.companyName?.trim();
 
   const isUnknown = (value?: string | null) =>
-    Boolean(value) && value.toLowerCase() === 'unknown company';
+    typeof value === 'string' && value.toLowerCase() === 'unknown company';
 
   return (
     (!isUnknown(normalizedPrimary) ? normalizedPrimary : '') ||
@@ -179,9 +179,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       api.get<{ resumes: ResumeListItem[] }>('/users/me/resumes').catch(() => ({ data: { resumes: [] } })),
     ])
       .then(([jobRes, checkRes, resumeRes]) => {
-        setJob(jobRes.data);
-        setHasApplied(checkRes.data.hasApplied);
-        const availableResumes = Array.isArray(resumeRes.data.resumes) ? resumeRes.data.resumes : [];
+        setJob(jobRes.data ?? null);
+        setHasApplied(checkRes.data?.hasApplied ?? false);
+        const availableResumes = Array.isArray(resumeRes.data?.resumes) ? resumeRes.data.resumes : [];
         setResumes(availableResumes);
         const defaultResume = availableResumes.find((resume) => resume.is_default);
         if (defaultResume) {
@@ -202,22 +202,22 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       setLoadingInsights(true);
       try {
         const meRes = await api.get<UserProfilePayload>('/users/me');
-        const userSkills = meRes.data.profile?.skills || [];
+        const userSkills = meRes.data?.profile?.skills || [];
 
         if (job.skills.length > 0) {
           const matchRes = await api.post<MatchResponse>('/jobs/match', {
             userSkills,
             jobSkills: job.skills,
           });
-          setMatchScore(matchRes.data.matchScore);
-          setMatchedSkills(matchRes.data.matchedSkills);
-          setMissingSkills(matchRes.data.missingSkills);
+          setMatchScore(matchRes.data?.matchScore ?? null);
+          setMatchedSkills(matchRes.data?.matchedSkills ?? []);
+          setMissingSkills(matchRes.data?.missingSkills ?? []);
 
           const gapRes = await api.post<SkillGapResponse>('/jobs/skill-gap', {
             userSkills,
             requiredSkills: job.skills,
           });
-          setSkillSuggestions(gapRes.data.suggestions);
+          setSkillSuggestions(gapRes.data?.suggestions ?? {});
         }
       } catch (err) {
         console.error('Failed to fetch AI insights:', err);
@@ -327,7 +327,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       setGeneratingRoadmap(true);
       setShowRoadmapModal(true);
       const res = await api.post<RoadmapResponse>('/roadmaps/generate', { missingSkills });
-      setRoadmap(res.data.roadmap);
+      setRoadmap(res.data?.roadmap ?? null);
     } catch (err) {
       toast.error('Failed to generate roadmap');
       setShowRoadmapModal(false);
@@ -381,6 +381,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         }
 
         const res = await api.post<AtsScoreReport>('/users/me/resume-score', payload);
+        if (!res.data) throw new Error('ATS scoring failed');
         data = res.data;
       }
       setAtsScore(data);
@@ -884,14 +885,14 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 {/* Feedback Areas */}
                 {atsScore.feedback && (
                   <div className="space-y-3">
-                    {atsScore.missingKeywords?.length > 0 && (
+                    {(atsScore.missingKeywords ?? []).length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                           <span className="text-xs font-bold text-red-900">Missing Keywords (TF-IDF Priority)</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5 pl-3.5">
-                          {atsScore.missingKeywords.map((kw: string) => (
+                          {(atsScore.missingKeywords ?? []).map((kw: string) => (
                             <span key={kw} className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold border border-red-200">
                               {kw}
                             </span>
@@ -900,26 +901,26 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       </div>
                     )}
 
-                    {atsScore.feedback.weakAreas?.length > 0 && (
+                    {(atsScore.feedback.weakAreas ?? []).length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
                           <span className="text-xs font-bold text-orange-900">Weak Content Areas</span>
                         </div>
                         <ul className="list-disc pl-7 text-[10px] font-semibold text-orange-800 space-y-0.5">
-                          {atsScore.feedback.weakAreas.map((w: string, i: number) => <li key={i}>{w}</li>)}
+                          {(atsScore.feedback.weakAreas ?? []).map((w: string, i: number) => <li key={i}>{w}</li>)}
                         </ul>
                       </div>
                     )}
 
-                    {atsScore.feedback.improvements?.length > 0 && (
+                    {(atsScore.feedback.improvements ?? []).length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                           <span className="text-xs font-bold text-green-900">Suggested Improvements</span>
                         </div>
                         <ul className="list-disc pl-7 text-[10px] font-semibold text-green-800 space-y-0.5">
-                          {atsScore.feedback.improvements.map((imp: string, i: number) => <li key={i}>{imp}</li>)}
+                          {(atsScore.feedback.improvements ?? []).map((imp: string, i: number) => <li key={i}>{imp}</li>)}
                         </ul>
                       </div>
                     )}

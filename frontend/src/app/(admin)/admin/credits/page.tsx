@@ -17,7 +17,7 @@ export default function AdminCreditsPage() {
 
   const fetchTransactions = async () => {
     const res = await api.getPaginated<CreditTransaction>('/admin/credits?limit=50');
-    setTransactions(res.data);
+    setTransactions(res.data ?? []);
   };
 
   useEffect(() => {

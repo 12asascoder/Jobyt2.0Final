@@ -141,15 +141,19 @@ export const useAuthStore = create<AuthState>((set) => ({
         '/auth/login',
         { email, password }
       );
-      authStorage.saveTokens({ accessToken: res.data.accessToken, refreshToken: res.data.refreshToken });
-      tokenStore.set(res.data.accessToken);
+      const payload = res.data;
+      if (!payload) {
+        throw new Error('Invalid login response');
+      }
+      authStorage.saveTokens({ accessToken: payload.accessToken, refreshToken: payload.refreshToken });
+      tokenStore.set(payload.accessToken);
       set({
-        user: res.data.user,
-        accessToken: res.data.accessToken,
-        refreshToken: res.data.refreshToken,
+        user: payload.user,
+        accessToken: payload.accessToken,
+        refreshToken: payload.refreshToken,
         isAuthenticated: true,
       });
-      return res.data.user;
+      return payload.user;
     } finally {
       set({ isLoading: false });
     }

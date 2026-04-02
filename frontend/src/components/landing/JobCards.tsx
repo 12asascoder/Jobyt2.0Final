@@ -98,9 +98,10 @@ export function JobCards() {
                 return res.json();
             })
             .then((data: JobsApiResult) => {
-                if (data.success && data.data?.length > 0) {
+                const jobsData = data.data ?? [];
+                if (data.success && jobsData.length > 0) {
                     // Normalize all jobs to ensure they have valid id fields
-                    const normalizedJobs = data.data.map((job) => normalizeJob(job));
+                    const normalizedJobs = jobsData.map((job) => normalizeJob(job));
                     setJobs(normalizedJobs);
                 } else {
                     setJobs(HARDCODED_JOBS);

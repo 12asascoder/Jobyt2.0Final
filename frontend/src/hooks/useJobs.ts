@@ -32,8 +32,8 @@ export const useJobs = () => {
           .map(([k, v]) => [k, String(v)])
       );
       const res = await api.getPaginated<Job>(`/jobs?${params}`);
-      setJobs(res.data);
-      setTotal(res.pagination.total);
+      setJobs(res.data ?? []);
+      setTotal(res.pagination?.total ?? 0);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load jobs');
     } finally {

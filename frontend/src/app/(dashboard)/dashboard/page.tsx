@@ -55,10 +55,10 @@ export default function DashboardPage() {
                 api.getPaginated<unknown>('/applications/my?limit=1'),
                 api.get<unknown[]>('/users/me/saved-jobs'),
             ]);
-            setBalance(credit.data.balance);
+            setBalance(credit.data?.balance ?? 0);
             setStats({
-                applications: apps.pagination.total,
-                saved: (saved.data as unknown[]).length,
+                applications: apps.pagination?.total ?? 0,
+                saved: (saved.data ?? []).length,
             });
         } catch { /* silent */ }
     }, []);
@@ -70,9 +70,10 @@ export default function DashboardPage() {
     useEffect(() => {
         api.getPaginated<BackendJob>('/jobs?limit=50&exclude_applied=true')
             .then((response) => {
-                if (response.success && response.data?.length > 0) {
+                const jobsData = response.data ?? [];
+                if (response.success && jobsData.length > 0) {
                     // Normalize all jobs to ensure they have valid id fields
-                    const normalizedJobs = response.data.map((job) => normalizeJob(job));
+                    const normalizedJobs = jobsData.map((job) => normalizeJob(job));
                     setJobs(normalizedJobs);
                 } else {
                     setJobs([]);

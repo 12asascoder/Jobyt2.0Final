@@ -13,8 +13,8 @@ export const useApplications = () => {
     setIsLoading(true);
     try {
       const res = await api.getPaginated<Application>(`/applications/my?page=${page}`);
-      setApplications(res.data);
-      setTotal(res.pagination.total);
+      setApplications(res.data ?? []);
+      setTotal(res.pagination?.total ?? 0);
     } finally {
       setIsLoading(false);
     }
@@ -24,8 +24,8 @@ export const useApplications = () => {
     setIsLoading(true);
     try {
       const res = await api.getPaginated<Application>(`/applications/jobs/${jobId}?page=${page}`);
-      setApplications(res.data);
-      setTotal(res.pagination.total);
+      setApplications(res.data ?? []);
+      setTotal(res.pagination?.total ?? 0);
     } finally {
       setIsLoading(false);
     }
@@ -33,7 +33,7 @@ export const useApplications = () => {
 
   const updateStatus = useCallback(async (applicationId: string, status: ApplicationStatus) => {
     const res = await api.patch<Application>(`/applications/${applicationId}/status`, { status });
-    setApplications((prev) => prev.map((a) => (a.id === applicationId ? res.data : a)));
+    setApplications((prev) => prev.map((a) => (a.id === applicationId && res.data ? res.data : a)));
   }, []);
 
   return { applications, total, isLoading, fetchMyApplications, fetchJobApplications, updateStatus };

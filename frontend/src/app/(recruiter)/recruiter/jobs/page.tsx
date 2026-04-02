@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 
 interface ExtendedJob extends Job {
   application_count?: number;
+  duration?: string | null;
 }
 
 const formatRelative = (isoDate: string) => {

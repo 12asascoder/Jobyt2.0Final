@@ -29,7 +29,7 @@ export default function ReferralPage() {
 
   useEffect(() => {
     api.get<ReferralDashboard>('/referrals/dashboard')
-      .then((res) => setData(res.data))
+      .then((res) => setData(res.data ?? null))
       .finally(() => setLoading(false));
   }, []);
 

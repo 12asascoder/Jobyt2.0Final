@@ -95,9 +95,9 @@ export default function CreditsPage() {
       api.getPaginated<CreditTransaction>('/credits/ledger'),
       api.get<Plan[]>('/payments/plans'),
     ]).then(([bal, txns, plansRes]) => {
-      setBalance(bal.data.balance);
-      setTransactions(txns.data);
-      setPlans(plansRes.data);
+      setBalance(bal.data?.balance ?? 0);
+      setTransactions(txns.data ?? []);
+      setPlans(plansRes.data ?? []);
     }).catch(() => {
       // fail silently for ui demonstration
     }).finally(() => setLoading(false));
@@ -113,6 +113,9 @@ export default function CreditsPage() {
 
       const res = await api.post<RazorpayCheckoutResponse>('/payments/checkout', { planId });
       const checkout = res.data;
+      if (!checkout) {
+        throw new Error('Unable to initialize checkout. Please try again.');
+      }
 
       if (!window.Razorpay) {
         throw new Error('Razorpay SDK not available after script load');
@@ -133,8 +136,8 @@ export default function CreditsPage() {
             api.get<{ balance: number }>('/credits/balance'),
             api.getPaginated<CreditTransaction>('/credits/ledger'),
           ]);
-          setBalance(bal.data.balance);
-          setTransactions(txns.data);
+          setBalance(bal.data?.balance ?? 0);
+          setTransactions(txns.data ?? []);
         },
         theme: {
           color: '#84cc16',

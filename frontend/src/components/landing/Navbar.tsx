@@ -133,7 +133,7 @@ export function Navbar() {
                                 className="flex items-center gap-2 bg-black text-white rounded-full pl-1.5 pr-4.5 py-1.5 text-sm font-medium hover:opacity-85 transition"
                             >
                                 <div className="w-7 h-7 rounded-full bg-lime-300 text-lime-900 flex items-center justify-center text-xs font-bold">
-                                    {user.email[0].toUpperCase()}
+                                    {(user.email?.[0] || 'U').toUpperCase()}
                                 </div>
                                 Dashboard
                             </Link>

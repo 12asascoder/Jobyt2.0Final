@@ -27,8 +27,8 @@ export default function AdminUsersPage() {
     setLoading(true);
     try {
       const res = await api.getPaginated<AdminUser>(`/admin/users?page=${p}&limit=20${q ? `&search=${encodeURIComponent(q)}` : ''}`);
-      setUsers(res.data);
-      setTotal(res.pagination.total);
+      setUsers(res.data ?? []);
+      setTotal(res.pagination?.total ?? 0);
     } finally {
       setLoading(false);
     }

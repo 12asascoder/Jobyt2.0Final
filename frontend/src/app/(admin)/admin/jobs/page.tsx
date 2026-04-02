@@ -19,8 +19,8 @@ export default function AdminJobsPage() {
     setLoading(true);
     try {
       const res = await api.getPaginated<Job>(`/admin/jobs?page=${p}&limit=20${q ? `&search=${encodeURIComponent(q)}` : ''}`);
-      setJobs(res.data);
-      setTotal(res.pagination.total);
+      setJobs(res.data ?? []);
+      setTotal(res.pagination?.total ?? 0);
     } finally {
       setLoading(false);
     }

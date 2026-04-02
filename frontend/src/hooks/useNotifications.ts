@@ -13,7 +13,7 @@ export const useNotifications = () => {
     setIsLoading(true);
     try {
       const res = await api.getPaginated<Notification>(`/notifications?page=${page}`);
-      setNotifications(res.data);
+      setNotifications(res.data ?? []);
       setUnread((res as unknown as { unread: number }).unread ?? 0);
     } finally {
       setIsLoading(false);

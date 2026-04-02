@@ -24,7 +24,7 @@ export const ApplicationTimeline = ({ applicationId }: ApplicationTimelineProps)
         if (active) setLoading(true);
         const res = await api.get<PipelineEvent[]>(`/applications/${applicationId}/events`);
         if (!active) return;
-        setEvents(res.data);
+        setEvents(res.data ?? []);
         setError(null);
       } catch (err) {
         if (!active) return;
