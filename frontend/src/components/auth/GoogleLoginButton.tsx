@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
+import { FaGoogle } from 'react-icons/fa6';
 import { api } from '@/lib/api';
 import { OAuthResponseData, parseOAuthResponse, readPublicEnv, saveOAuthRole } from '@/lib/oauth';
 import { AuthTokens, AuthUser } from '@/types';
@@ -59,7 +60,7 @@ export function GoogleLoginButton({
   const buttonClass = useMemo(
     () =>
       className ||
-      'relative flex-1 min-h-[42px] rounded-xl border border-slate-200 bg-white px-1 py-1 shadow-sm',
+      'relative flex-1 min-h-[42px] rounded-xl border border-slate-200 bg-white p-0.5 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50',
     [className],
   );
 
@@ -124,9 +125,9 @@ export function GoogleLoginButton({
                 type: string;
                 theme: string;
                 size: string;
-                text: string;
+                text?: string;
                 shape: string;
-                width: number;
+                width?: number;
               },
             ) => void;
           }
@@ -150,14 +151,13 @@ export function GoogleLoginButton({
       }
 
       containerRef.current.innerHTML = '';
-      const buttonWidth = Math.max(160, Math.floor(containerRef.current.clientWidth - 8));
       googleApi.renderButton(containerRef.current, {
         type: 'standard',
         theme: 'outline',
         size: 'large',
-        text: 'signin_with',
+        text: 'continue_with',
         shape: 'rectangular',
-        width: buttonWidth,
+        width: Math.max(160, Math.floor(containerRef.current.clientWidth)),
       });
 
       return true;
@@ -192,11 +192,15 @@ export function GoogleLoginButton({
 
   return (
     <div className={buttonClass} aria-disabled={disabled}>
-      <div className="overflow-hidden rounded-lg">
+      <div className="relative overflow-hidden rounded-[10px] bg-white">
         <div
           ref={containerRef}
-          className={`h-full w-full ${disabled ? 'pointer-events-none opacity-60' : 'pointer-events-auto'}`}
+          className={`absolute inset-0 ${disabled ? 'pointer-events-none opacity-60' : 'pointer-events-auto opacity-0'}`}
         />
+        <div className="flex h-[38px] w-full items-center justify-center gap-2 text-sm font-semibold text-slate-700 pointer-events-none">
+          <FaGoogle className="text-red-500 text-base" />
+          <span>Google</span>
+        </div>
       </div>
     </div>
   );

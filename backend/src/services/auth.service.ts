@@ -101,7 +101,7 @@ export const AuthService = {
     }
 
     // Ensure role profile exists for new signups.
-    await ProfileBootstrapService.ensureRoleProfile(user.id, role);
+    await ProfileBootstrapService.ensureRoleProfileWithSql(user.id, role);
 
     // Handle referral
     if (referralCode) {
@@ -181,7 +181,7 @@ export const AuthService = {
     if (!valid) throw Object.assign(new Error('Invalid credentials'), { statusCode: 401 });
 
     // Self-heal legacy users that were created without role profile rows.
-    await ProfileBootstrapService.ensureRoleProfile(user.id, user.role);
+    await ProfileBootstrapService.ensureRoleProfileWithSql(user.id, user.role);
 
     const payload: JwtPayload = { userId: user.id, email: user.email, role: user.role };
     const accessToken = signAccessToken(payload);
