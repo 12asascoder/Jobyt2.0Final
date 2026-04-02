@@ -39,9 +39,11 @@ export function Navbar() {
     const navLinks = [
         { href: '/', label: 'Home' },
         { href: '/internships', label: 'Internships' },
-        { href: '/about', label: 'About Us' },
+        { href: 'https://www.spazorlabs.com/', label: 'About Us' },
         { href: '/#pricing', label: 'Prices' },
     ];
+
+    const isExternal = (href: string) => href.startsWith('http');
 
     const isActive = (href: string) => {
         // Hash-anchor link (e.g. /#pricing)
@@ -74,7 +76,7 @@ export function Navbar() {
             ? 'bg-white/95 backdrop-blur-xl border-b border-black/8'
             : 'bg-transparent border-b border-transparent'
             }`}>
-            <div className="max-w-350 mx-auto px-4 md:px-6 lg:px-8 flex items-center justify-between h-15">
+            <div className="relative max-w-350 mx-auto px-4 md:px-6 lg:px-8 flex items-center h-15">
 
                 {/* LOGO */}
                 <Link href="/" className="flex items-center gap-2">
@@ -89,25 +91,37 @@ export function Navbar() {
                 </Link>
 
                 {/* CENTER PILL */}
-                <div className="hidden lg:flex items-center bg-black rounded-full px-1.5 h-10.5 font-navbar">
+                <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center bg-black rounded-full px-1.5 h-10.5 font-navbar">
                     {navLinks.map(({ href, label }) => (
-                        <Link
-                            key={href}
-                            href={href}
-                            onClick={() => handleNavClick(href)}
-                            className={`text-sm px-4.5 h-full flex items-center rounded-full transition ${
-                                isActive(href)
-                                    ? 'text-lime-400 font-medium'
-                                    : 'text-white/65 hover:text-white'
-                            }`}
-                        >
-                            {label}
-                        </Link>
+                        isExternal(href) ? (
+                            <a
+                                key={href}
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm px-4.5 h-full flex items-center rounded-full transition text-white/65 hover:text-white"
+                            >
+                                {label}
+                            </a>
+                        ) : (
+                            <Link
+                                key={href}
+                                href={href}
+                                onClick={() => handleNavClick(href)}
+                                className={`text-sm px-4.5 h-full flex items-center rounded-full transition ${
+                                    isActive(href)
+                                        ? 'text-lime-400 font-medium'
+                                        : 'text-white/65 hover:text-white'
+                                }`}
+                            >
+                                {label}
+                            </Link>
+                        )
                     ))}
                 </div>
 
                 {/* RIGHT */}
-                <div className="hidden lg:flex items-center gap-3 font-navbar">
+                <div className="hidden lg:flex ml-auto items-center gap-3 font-navbar">
                     {user ? (
                         <>
                             <Link href={ROUTES.notifications} className="relative text-slate-600 p-1">
@@ -150,7 +164,7 @@ export function Navbar() {
 
                 {/* HAMBURGER */}
                 <button
-                    className="lg:hidden text-slate-800"
+                    className="ml-auto lg:hidden text-slate-800"
                     onClick={() => setMobileOpen(!mobileOpen)}
                 >
                     {mobileOpen ? <FaXmark size={21} /> : <FaBars size={21} />}
@@ -161,16 +175,29 @@ export function Navbar() {
             {mobileOpen && (
                 <div className="lg:hidden bg-white/97 backdrop-blur-xl border-t border-black/6 px-6 pb-5 font-navbar">
                     {navLinks.map(({ href, label }) => (
-                        <Link
-                            key={href}
-                            href={href}
-                            className={`block py-3 text-[15px] border-b border-black/6 last:border-none ${
-                                isActive(href) ? 'text-lime-600 font-semibold' : 'text-slate-800'
-                            }`}
-                            onClick={() => { handleNavClick(href); setMobileOpen(false); }}
-                        >
-                            {label}
-                        </Link>
+                        isExternal(href) ? (
+                            <a
+                                key={href}
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block py-3 text-[15px] border-b border-black/6 last:border-none text-slate-800"
+                                onClick={() => setMobileOpen(false)}
+                            >
+                                {label}
+                            </a>
+                        ) : (
+                            <Link
+                                key={href}
+                                href={href}
+                                className={`block py-3 text-[15px] border-b border-black/6 last:border-none ${
+                                    isActive(href) ? 'text-lime-600 font-semibold' : 'text-slate-800'
+                                }`}
+                                onClick={() => { handleNavClick(href); setMobileOpen(false); }}
+                            >
+                                {label}
+                            </Link>
+                        )
                     ))}
                     <div className="mt-3 flex flex-col gap-2">
                         {user ? (

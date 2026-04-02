@@ -3,8 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { FaBell, FaMagnifyingGlass, FaXmark, FaUser, FaArrowRightFromBracket, FaBars, FaStar } from 'react-icons/fa6';
 import { useNotifications } from '@/hooks/useNotifications';
+import { ROUTES } from '@/constants';
+import { useAuthStore } from '@/store/auth.store';
 
 interface DashboardHeaderProps {
     searchQuery: string;
@@ -21,10 +24,19 @@ export function DashboardHeader({
     onSearchToggle,
     onSearchSubmit,
 }: DashboardHeaderProps) {
+    const router = useRouter();
+    const logoutWithApi = useAuthStore((s) => s.logoutWithApi);
     const [bellActive, setBellActive] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isHeaderVisible, setIsHeaderVisible] = useState(true);
     const lastScrollY = useRef(0);
+
+    const handleMobileLogout = async () => {
+        setMobileMenuOpen(false);
+        setBellActive(false);
+        await logoutWithApi();
+        router.replace(ROUTES.login);
+    };
 
     useEffect(() => {
         lastScrollY.current = window.scrollY;
@@ -193,7 +205,7 @@ export function DashboardHeader({
 
                                     <button
                                         onClick={() => {
-                                            setMobileMenuOpen(false);
+                                            void handleMobileLogout();
                                         }}
                                         className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                                     >
@@ -226,7 +238,7 @@ const NotificationPopover = () => {
             await markRead(id);
         }
         if (actionUrl) {
-            window.location.href = actionUrl;
+            window.location.assign(actionUrl);
         }
     };
     

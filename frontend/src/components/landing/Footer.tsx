@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { FaXTwitter, FaLinkedinIn, FaInstagram } from 'react-icons/fa6';
+import { FaLinkedinIn, FaInstagram } from 'react-icons/fa6';
 
 const companyLinks = [
     { label: 'About Us', href: '#' },
@@ -26,9 +26,8 @@ const employerLinks = [
 ];
 
 const socials = [
-    { icon: <FaXTwitter />, href: '#' },
-    { icon: <FaLinkedinIn />, href: '#' },
-    { icon: <FaInstagram />, href: '#' },
+    { icon: <FaLinkedinIn />, href: 'https://www.linkedin.com/company/jobyt-in/' },
+    { icon: <FaInstagram />, href: 'https://www.instagram.com/jobyt.in/' },
 ];
 
 export function Footer() {
@@ -90,9 +89,15 @@ export function Footer() {
                         {/* SOCIALS */}
                         <div className="mt-5 sm:mt-6 flex gap-3 sm:gap-4 text-white text-base sm:text-lg">
                             {socials.map((social, idx) => (
-                                <Link key={idx} href={social.href} className="hover:text-lime-400 transition">
+                                <a
+                                    key={idx}
+                                    href={social.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-lime-400 transition"
+                                >
                                     {social.icon}
-                                </Link>
+                                </a>
                             ))}
                         </div>
                     </div>

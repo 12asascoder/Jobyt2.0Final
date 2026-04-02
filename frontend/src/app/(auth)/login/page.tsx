@@ -219,7 +219,7 @@ export default function LoginPage() {
             </p>
             <div className="flex items-center gap-4">
               <Image
-                src="https://media.licdn.com/dms/image/v2/D5603AQE-R4BTnUDv9w/profile-displayphoto-crop_800_800/B56ZkZBrR7IAAI-/0/1757061495078?e=1774483200&v=beta&t=F8KZTCgZ62Lr8Q-keJAVc3SbIXGVDPe0TK7r27md53E"
+                src="/person_image.png"
                 alt="Ayush"
                 width={56}
                 height={56}

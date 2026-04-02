@@ -1,8 +1,15 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { FaCircleCheck } from 'react-icons/fa6';
 
 export function Hire() {
+    const router = useRouter();
+
+    const handlePostJob = () => {
+        router.push('/employer-login');
+    };
+
     return (
         <section className="relative overflow-hidden bg-white py-16 md:py-20 lg:py-24">
             {/* Background blobs matching the pricing section glow but positioned for the left text area */}
@@ -28,7 +35,9 @@ export function Hire() {
                         <p className="text-base sm:text-lg text-slate-600 font-medium leading-relaxed mb-8">
                             Jobyt gives you access to a curated pool of passionate students and professionals across the country. Post a job in minutes.
                         </p>
-                        <button className="bg-[#1a1a1a] text-white rounded-full px-8 py-3.5 text-sm sm:text-base font-semibold hover:bg-black transition-colors">
+                        <button 
+                            onClick={handlePostJob}
+                            className="bg-[#1a1a1a] text-white rounded-full px-8 py-3.5 text-sm sm:text-base font-semibold hover:bg-black transition-colors">
                             Post a Job
                         </button>
                     </div>

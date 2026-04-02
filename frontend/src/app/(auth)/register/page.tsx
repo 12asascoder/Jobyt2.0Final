@@ -92,7 +92,7 @@ export default function RegisterPage() {
           </p>
           <div className="flex items-center gap-4">
             <Image
-              src="https://media.licdn.com/dms/image/v2/D5603AQHmXTkx3bJ0SA/profile-displayphoto-scale_400_400/B56ZwN7O8zIQAk-/0/1769760158482?e=1774483200&v=beta&t=qvFbTxXUT0mJvYNUM2YuQmdASe0FomTnc3qXO67lW4Q"
+              src="/person_image.png"
               alt="Sourav"
               width={56}
               height={56}
