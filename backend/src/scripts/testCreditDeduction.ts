@@ -15,7 +15,7 @@ async function runTests() {
     // Create recruiter
     const recRes = await client.query("INSERT INTO users (email, password_hash, role, referral_code) VALUES ('cred_rec@test.com', 'pwd', 'recruiter', 'REC123') RETURNING id");
     recruiterId = recRes.rows[0].id;
-    await client.query("INSERT INTO recruiter_profiles (user_id, company_name) VALUES ($1, 'Cred Test Inc')", [recruiterId]);
+    await client.query("INSERT INTO recruiter_profiles (user_id, company_name, created_at, updated_at) VALUES ($1, 'Cred Test Inc', NOW(), NOW())", [recruiterId]);
     
     // Create applicant
     const appRes = await client.query("INSERT INTO users (email, password_hash, role, referral_code, credit_balance) VALUES ('cred_app@test.com', 'pwd', 'applicant', 'APP123', 1) RETURNING id");

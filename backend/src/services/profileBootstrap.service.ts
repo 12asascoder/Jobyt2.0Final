@@ -35,8 +35,8 @@ export const ProfileBootstrapService = {
 
     if (role === 'recruiter') {
       await pool.query(
-        `INSERT INTO recruiter_profiles (user_id)
-         VALUES ($1)
+        `INSERT INTO recruiter_profiles (user_id, created_at, updated_at)
+         VALUES ($1, NOW(), NOW())
          ON CONFLICT (user_id) DO NOTHING`,
         [userId],
       );

@@ -12,7 +12,7 @@ async function runTests() {
     console.log('1. Setting up mock test data...');
     const recruiterRes = await client.query("INSERT INTO users (email, password_hash, role, referral_code) VALUES ('testr@example.com', 'pwd', 'recruiter', 'REF_TEST1') RETURNING id");
     const recruiterId = recruiterRes.rows[0].id;
-    await client.query("INSERT INTO recruiter_profiles (user_id, company_name) VALUES ($1, 'Test Company')", [recruiterId]);
+    await client.query("INSERT INTO recruiter_profiles (user_id, company_name, created_at, updated_at) VALUES ($1, 'Test Company', NOW(), NOW())", [recruiterId]);
     
     const applicantRes = await client.query("INSERT INTO users (email, password_hash, role, referral_code) VALUES ('testa@example.com', 'pwd', 'applicant', 'REF_TEST2') RETURNING id");
     const applicantId = applicantRes.rows[0].id;
