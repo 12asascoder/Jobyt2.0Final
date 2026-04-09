@@ -1,5 +1,6 @@
 import { randomBytes, createHash, timingSafeEqual } from 'crypto';
 import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 import { UserModel } from '../models/user.model';
 import { ReferralModel } from '../models/referral.model';
 import { CreditService } from './credit.service';
@@ -347,7 +348,7 @@ export const AuthService = {
 
     const hashedToken = hashVerificationToken(token);
 
-    const verifiedUserId = await prisma.$transaction(async (tx) => {
+    const verifiedUserId = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const user = await tx.users.findFirst({
         where: { email_verification_token: hashedToken },
         select: {

@@ -85,6 +85,18 @@ app.use((req, res, next) => {
 // Structured request logging
 app.use(requestLogger);
 
+// Root welcome route
+app.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    message: 'Jobyt API Server',
+    version: '1.0.0',
+    status: 'running',
+    docs: '/api/v1',
+    health: '/api/v1/health',
+  });
+});
+
 // API routes
 app.use('/api/v1', routes);
 
