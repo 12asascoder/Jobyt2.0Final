@@ -120,35 +120,35 @@ export default function DashboardPage() {
     ];
 
     return (
-        <div className="max-w-350 mx-auto">
+        <div className="max-w-[1360px] ml-[31.9px]">
             {!isSearchMode ? (
                 <>
                     {/* Welcome */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl md:text-4xl lg:text-[42px] font-extrabold text-[#1a1a1a] tracking-tight leading-tight">
+                    <div className="mb-8 md:mb-9">
+                        <h1 className="text-3xl md:text-4xl lg:text-[52px] font-extrabold text-[#1a1a1a] tracking-tight leading-[1.05]">
                             Welcome back, {displayName}!
                         </h1>
-                        <p className="text-slate-500 font-medium text-sm md:text-base mt-1">
+                        <p className="text-slate-600 font-medium text-sm md:text-base mt-2">
                             Here&apos;s your overview for today
                         </p>
                     </div>
 
                     {/* Stat Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 md:pt-3 mb-10 max-w-[730px]">
                         {statCards.map((stat) => (
                             <div
                                 key={stat.label}
-                                className="bg-[#1a1a1a] rounded-2xl px-7 py-5 flex items-center gap-3"
+                                className="bg-[#121212] rounded-2xl px-5 pt-7 pb-3 min-h-[96px] flex items-end gap-3 shadow-[0_8px_18px_rgba(0,0,0,0.18)]"
                             >
-                                <span className="text-3xl md:text-4xl font-extrabold tracking-tight text-lime-400">
+                                <span className="text-[42px] leading-none font-extrabold tracking-tight text-lime-400">
                                     {stat.value}
                                 </span>
-                                <div className="leading-tight">
-                                    <span className="text-[10px] md:text-[11px] font-bold text-white/80 uppercase tracking-widest">
+                                <div className={`leading-[1.05] ${stat.sublabel ? 'mb-1 -translate-y-[3px]' : 'ml-2 mb-1 -translate-y-[3px]'}`}>
+                                    <span className="text-[10px] md:text-[11px] font-bold text-lime-100/80 uppercase tracking-wider">
                                         {stat.label}
                                     </span>
                                     {stat.sublabel && (
-                                        <span className="block text-[10px] md:text-[11px] font-bold text-white/80 uppercase tracking-widest">
+                                        <span className="block text-[10px] md:text-[11px] font-bold text-lime-100/80 uppercase tracking-wider">
                                             {stat.sublabel}
                                         </span>
                                     )}
@@ -163,9 +163,9 @@ export default function DashboardPage() {
                             Latest Job Openings
                         </h2>
                         {jobsLoading ? (
-                            <SkeletonGrid count={8} gridClass="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
+                            <SkeletonGrid count={8} gridClass="!mx-0 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
                         ) : filteredJobs.length > 0 ? (
-                            <JobCardGrid jobs={filteredJobs} gridClass="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
+                            <JobCardGrid jobs={filteredJobs} gridClass="!mx-0 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
                         ) : (
                             <div className="rounded-2xl border-2 border-dashed border-slate-200 py-20 text-center">
                                 <p className="text-2xl mb-2">🚀</p>
@@ -353,9 +353,9 @@ export default function DashboardPage() {
                         {/* Main Content Area — Job Cards Grid */}
                         <div className="flex-1 w-full min-w-0">
                             {jobsLoading ? (
-                                <SkeletonGrid count={9} gridClass="grid-cols-1 md:grid-cols-2 xl:grid-cols-3" />
+                                <SkeletonGrid count={9} gridClass="!mx-0 grid-cols-1 md:grid-cols-2 xl:grid-cols-3" />
                             ) : filteredJobs.length > 0 ? (
-                                <JobCardGrid jobs={filteredJobs} gridClass="grid-cols-1 md:grid-cols-2 xl:grid-cols-3" />
+                                <JobCardGrid jobs={filteredJobs} gridClass="!mx-0 grid-cols-1 md:grid-cols-2 xl:grid-cols-3" />
                             ) : (
                                 <div className="w-full flex flex-col items-center justify-center py-32 text-center rounded-3xl border-2 border-dashed border-slate-200">
                                     <span className="text-4xl mb-4">🔍</span>

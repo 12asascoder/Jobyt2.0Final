@@ -152,30 +152,30 @@ export default function ProfilePage() {
   if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
 
   return (
-    <div className="max-w-6xl mx-auto pb-10 px-4 sm:px-6">
-      <h1 className="text-3xl font-bold font-brand mb-6 text-gray-900 tracking-tight">My Profile</h1>
+    <div className="max-w-[1308px] ml-[31.9px] pb-8 font-brand">
+      <h1 className="text-[40px] leading-[54px] font-normal mb-3 text-black tracking-tight">My Profile</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-brand">
+      <div className="grid grid-cols-1 xl:grid-cols-[800px_384px] gap-6 items-start">
         {/* Left Column: Beige Form Container */}
-        <div className="lg:col-span-2 bg-[#F4F1E9] rounded-3xl p-6 sm:p-8 shadow-sm border border-[#e8e4db] relative">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8 pb-20">
+        <div className="bg-[#F4F1EA] rounded-[20px] p-6 shadow-sm border border-[#e8e4db] relative min-h-[870px]">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-24">
             
             {/* Avatar Row */}
-            <div className="flex items-center gap-4 sm:gap-6">
-              <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white shadow-sm shrink-0">
+            <div className="flex items-center gap-8">
+              <div className="w-[150px] h-[150px] rounded-full overflow-hidden border-4 border-white shadow-sm shrink-0">
                 <Avatar src={photoUrl} name={user?.email} size="xl" className="w-full h-full object-cover" />
               </div>
               <div>
-                <label className="cursor-pointer bg-black text-white px-4 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-gray-800 transition-colors inline-block mb-1.5 sm:mb-2">
+                <label className="cursor-pointer bg-black text-white px-5 py-2.5 rounded-[10px] text-sm font-normal hover:bg-gray-800 transition-colors inline-block mb-2">
                   {uploading ? 'Uploading...' : 'Upload New Photo'}
                   <input type="file" accept="image/png, image/jpeg" className="hidden" onChange={handlePhotoUpload} />
                 </label>
-                <p className="text-[10px] sm:text-xs text-gray-500 max-w-[200px]">800 x 800 px JPG or PNG allowed</p>
+                <p className="text-sm text-[#525252]">800 x 800 px JPG or PNG allowed</p>
               </div>
             </div>
 
             {/* Personal Info */}
-            <div className={`bg-white rounded-2xl p-6 shadow-sm relative transition-all border ${editBasic ? 'border-lime-400' : 'border-transparent'}`}>
+            <div className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editBasic ? 'border-lime-400' : 'border-[#c3ff3d]/60'}`}>
               <button 
                 type="button" 
                 onClick={() => setEditBasic(!editBasic)}
@@ -183,7 +183,7 @@ export default function ProfilePage() {
               >
                 <FaPenToSquare />
               </button>
-              <h3 className="font-semibold text-gray-900 mb-4 text-lg">Personal Info</h3>
+              <h3 className="font-normal text-black mb-4 text-[18px] leading-6">Personal Info</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 mb-1">Full Name</label>
@@ -223,7 +223,7 @@ export default function ProfilePage() {
 
             {/* Bio */}
             {user?.role === 'applicant' && (
-              <div className={`bg-white rounded-2xl p-6 shadow-sm relative transition-all border ${editBio ? 'border-lime-400' : 'border-transparent'}`}>
+              <div className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editBio ? 'border-lime-400' : 'border-[#c3ff3d]/60'}`}>
                 <button 
                   type="button" 
                   onClick={() => setEditBio(!editBio)}
@@ -231,7 +231,7 @@ export default function ProfilePage() {
                 >
                   <FaPenToSquare />
                 </button>
-                <h3 className="font-semibold text-gray-900 mb-2 text-lg">Bio</h3>
+                <h3 className="font-normal text-black mb-2 text-[18px] leading-6">Bio</h3>
                 <textarea 
                   {...register('bio')} 
                   disabled={!editBio}
@@ -244,7 +244,7 @@ export default function ProfilePage() {
 
             {/* Corporate Info for Recruiters */}
             {user?.role === 'recruiter' && (
-              <div className={`bg-white rounded-2xl p-6 shadow-sm relative transition-all border ${editCompany ? 'border-lime-400' : 'border-transparent'}`}>
+              <div className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editCompany ? 'border-lime-400' : 'border-[#c3ff3d]/60'}`}>
                 <button 
                   type="button" 
                   onClick={() => setEditCompany(!editCompany)}
@@ -252,7 +252,7 @@ export default function ProfilePage() {
                 >
                   <FaPenToSquare />
                 </button>
-                <h3 className="font-semibold text-gray-900 mb-4 text-lg">Company Details</h3>
+                <h3 className="font-normal text-black mb-4 text-[18px] leading-6">Company Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Company Name</label>
@@ -275,7 +275,7 @@ export default function ProfilePage() {
             )}
 
             {/* Links */}
-            <div className={`bg-white rounded-2xl p-6 shadow-sm relative transition-all border ${editLinks ? 'border-lime-400' : 'border-transparent'}`}>
+            <div className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editLinks ? 'border-lime-400' : 'border-[#c3ff3d]/60'}`}>
               <button 
                 type="button" 
                 onClick={() => setEditLinks(!editLinks)}
@@ -283,22 +283,22 @@ export default function ProfilePage() {
               >
                 <FaPenToSquare />
               </button>
-              <h3 className="font-semibold text-gray-900 mb-4 text-lg">Links</h3>
+              <h3 className="font-normal text-black mb-4 text-[18px] leading-6">Links</h3>
               
               <div className="space-y-5">
                 {user?.role === 'applicant' ? (
                   <>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">Portfolio Link</label>
-                      <input {...register('portfolio_url')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-lg px-4 py-3 font-mono text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://" />
+                      <label className="block text-base font-normal text-black mb-2">Portfolio Link</label>
+                      <input {...register('portfolio_url')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://" />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">LinkedIn Link</label>
-                      <input {...register('linkedin_url')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-lg px-4 py-3 font-mono text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://linkedin.com/in/" />
+                      <label className="block text-base font-normal text-black mb-2">LinkedIn Link</label>
+                      <input {...register('linkedin_url')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://linkedin.com/in/" />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">GitHub Link</label>
-                      <input {...register('github_url')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-lg px-4 py-3 font-mono text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://github.com/username" />
+                      <label className="block text-base font-normal text-black mb-2">GitHub Link</label>
+                      <input {...register('github_url')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://github.com/username" />
                     </div>
                   </>
                 ) : (
@@ -311,11 +311,11 @@ export default function ProfilePage() {
             </div>
 
             {/* Save Container at the bottom */}
-            <div className="absolute bottom-6 left-0 right-0 flex justify-center">
+            <div className="absolute bottom-12 left-0 right-0 flex justify-center">
               <button 
                 type="submit" 
                 disabled={isSubmitting || (!editBasic && !editBio && !editCompany && !editLinks)}
-                className="bg-[#c3ff3d] text-black font-semibold text-sm px-10 py-3 rounded-full hover:bg-[#aee62d] transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed shadow-md"
+                className="bg-[#c3ff3d] text-black font-normal text-[18px] leading-6 px-5 py-[15px] rounded-[20px] hover:bg-[#aee62d] transition-transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed shadow-md min-w-[158px] h-[54px]"
               >
                 {isSubmitting ? 'Saving...' : 'Save Changes'}
               </button>
@@ -324,24 +324,24 @@ export default function ProfilePage() {
         </div>
 
         {/* Right Column: Dark Sidebar Cards */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Complete Profile Card */}
-          <div className="bg-[#0b0b0b] rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-900">
-            <h3 className="text-white font-semibold text-lg mb-8 text-center sm:text-left">Complete Your Profile</h3>
+          <div className="bg-[#0b0b0b] rounded-[20px] p-6 shadow-xl border border-gray-900 min-h-[383px]">
+            <h3 className="text-white font-normal text-[24px] leading-8 mb-6 text-center sm:text-left">Complete Your Profile</h3>
             
             {/* Donut Chart */}
-            <div className="relative w-36 h-36 sm:w-40 sm:h-40 mx-auto flex justify-center items-center mb-10">
+            <div className="relative w-36 h-36 sm:w-[150px] sm:h-[150px] mx-auto flex justify-center items-center mb-4">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="40" stroke="#333" strokeWidth="12" fill="none" />
                 <circle cx="50" cy="50" r="40" stroke="#c3ff3d" strokeWidth="12" fill="none" strokeDasharray="251.2" strokeDashoffset={251.2 - (251.2 * completeness) / 100} className="transition-all duration-1000 ease-out" />
               </svg>
               <div className="absolute flex items-center justify-center flex-col">
-                <span className="text-2xl sm:text-3xl font-bold text-white">{completeness}%</span>
+                <span className="text-[27px] leading-9 font-normal text-white">{completeness}%</span>
               </div>
             </div>
 
             {/* Checklist */}
-            <ul className="space-y-4 text-sm font-medium pl-2 sm:pl-4">
+            <ul className="space-y-2.5 text-sm font-normal pl-2 sm:pl-4">
               <li className="flex items-center gap-3">
                 <div className="w-2.5 h-2.5 rounded-full bg-lime-400 shrink-0"></div>
                 <span className="text-lime-400">Setup Account</span>
@@ -392,7 +392,7 @@ export default function ProfilePage() {
 
           {/* Resume Upload + Parsing */}
           {user?.role === 'applicant' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <ResumeUploadCard
                 onSuccess={async () => {
                   toast.success('Resume uploaded successfully');

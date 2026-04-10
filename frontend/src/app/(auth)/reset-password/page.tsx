@@ -7,6 +7,18 @@ import { api, ApiError } from '@/lib/api';
 import { Button, Input, Card, CardBody } from '@/components/ui';
 import { ROUTES, APP_NAME } from '@/constants';
 
+const weakPasswords = new Set(['123456', '12345678', '123456789', 'password', 'password123', 'qwerty123']);
+
+const validatePassword = (value: string): string | null => {
+  if (!value) return 'Password is required';
+  if (value.length < 8) return 'Password must be at least 8 characters long';
+  if (!/[A-Z]/.test(value)) return 'Password must include at least one uppercase letter';
+  if (!/[a-z]/.test(value)) return 'Password must include at least one lowercase letter';
+  if (!/[0-9]/.test(value)) return 'Password must include at least one number';
+  if (weakPasswords.has(value.toLowerCase())) return 'Password is too weak. Please choose a stronger password';
+  return null;
+};
+
 function ResetPasswordForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -20,6 +32,8 @@ function ResetPasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const passwordError = validatePassword(password);
+    if (passwordError) { setError(passwordError); return; }
     if (password !== confirm) { setError('Passwords do not match'); return; }
     setError('');
     setLoading(true);

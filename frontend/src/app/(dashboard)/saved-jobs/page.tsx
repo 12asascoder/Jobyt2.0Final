@@ -30,7 +30,7 @@ export default function SavedJobsPage() {
     };
 
     return (
-        <div className="max-w-[1400px] mx-auto">
+        <div className="max-w-[1400px] ml-[31.9px]">
             <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight mb-2">
                 Saved Jobs
             </h1>
@@ -42,7 +42,6 @@ export default function SavedJobsPage() {
                 <SkeletonGrid count={6} gridClass="grid-cols-1 md:grid-cols-2 xl:grid-cols-3" />
             ) : jobs.length === 0 ? (
                 <div className="rounded-2xl border-2 border-dashed border-slate-200 py-20 text-center">
-                    <p className="text-2xl mb-2">🔖</p>
                     <p className="text-slate-500 font-medium text-lg">No saved jobs yet</p>
                     <p className="text-slate-400 text-sm mt-1">Browse internships and save the ones you like!</p>
                 </div>
