@@ -109,7 +109,7 @@ export default function CommunityPage() {
   }
 
   return (
-    <div className="max-w-[1400px] ml-[31.9px] space-y-6 sm:space-y-8">
+    <div className="max-w-[1400px] ml-4 sm:ml-6 lg:ml-8 pr-4 space-y-6 sm:space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight mb-2">
@@ -122,16 +122,16 @@ export default function CommunityPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="flex flex-wrap justify-center gap-8 sm:gap-10">
-        <div className="w-[303px] h-[191px] bg-[#0b0b0b] rounded-2xl border border-gray-900 shadow-lg flex flex-col items-center justify-center">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-[#0b0b0b] rounded-2xl border border-gray-900 shadow-lg flex flex-col items-center justify-center py-10">
           <p className="text-xs text-[#a8e02d] font-semibold tracking-wider uppercase mb-4">Total Referrals</p>
           <p className="text-5xl font-bold text-[#c3ff3d]">{totalReferrals.toString().padStart(2, '0')}</p>
         </div>
-        <div className="w-[303px] h-[191px] bg-[#0b0b0b] rounded-2xl border border-gray-900 shadow-lg flex flex-col items-center justify-center">
+        <div className="bg-[#0b0b0b] rounded-2xl border border-gray-900 shadow-lg flex flex-col items-center justify-center py-10">
           <p className="text-xs text-[#a8e02d] font-semibold tracking-wider uppercase mb-4">Credited</p>
           <p className="text-5xl font-bold text-[#c3ff3d]">{creditedReferrals.toString().padStart(2, '0')}</p>
         </div>
-        <div className="w-[303px] h-[191px] bg-[#0b0b0b] rounded-2xl border border-gray-900 shadow-lg flex flex-col items-center justify-center">
+        <div className="bg-[#0b0b0b] rounded-2xl border border-gray-900 shadow-lg flex flex-col items-center justify-center py-10">
           <p className="text-xs text-[#a8e02d] font-semibold tracking-wider uppercase mb-4">Credits Earned</p>
           <p className="text-5xl font-bold text-[#c3ff3d]">{creditsEarned}</p>
         </div>

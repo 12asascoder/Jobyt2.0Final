@@ -120,7 +120,7 @@ export default function DashboardPage() {
     ];
 
     return (
-        <div className="max-w-[1360px] ml-[31.9px]">
+        <div className="max-w-[1360px] w-full ml-4 sm:ml-6 lg:ml-8 pr-4">
             {!isSearchMode ? (
                 <>
                     {/* Welcome */}
@@ -134,21 +134,25 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Stat Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10 max-w-[900px]">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-10 max-w-[260px] sm:max-w-[900px]">
                         {statCards.map((stat) => (
                             <div
                                 key={stat.label}
-                                className="bg-[#141414] rounded-3xl p-6 md:p-8 flex flex-col justify-center border border-white/5 shadow-2xl relative overflow-hidden group"
+                                className="bg-[#141414] rounded-2xl p-4 md:p-5 flex items-center gap-4 lg:gap-5 border border-white/5 shadow-xl"
                             >
-                                <span className="text-[46px] md:text-[52px] leading-none font-extrabold tracking-tight text-lime-400 mb-2 drop-shadow-md relative z-10">
+                                <span className="text-[40px] md:text-[44px] leading-none font-extrabold tracking-tight text-lime-400 drop-shadow-md shrink-0">
                                     {stat.value}
                                 </span>
-                                <span className="text-[12px] md:text-[13px] font-bold text-slate-400 uppercase tracking-widest relative z-10">
-                                    {stat.label} {stat.sublabel}
-                                </span>
-                                
-                                {/* Subtle interaction glow */}
-                                <div className="absolute -top-12 -right-12 w-32 h-32 bg-lime-400/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+                                <div className="flex flex-col justify-center">
+                                    <span className="text-[12px] md:text-[13px] font-bold text-slate-400 uppercase tracking-wider leading-tight">
+                                        {stat.label}
+                                    </span>
+                                    {stat.sublabel && (
+                                        <span className="text-[12px] md:text-[13px] font-bold text-slate-400 uppercase tracking-wider leading-tight">
+                                            {stat.sublabel}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -159,9 +163,9 @@ export default function DashboardPage() {
                             Latest Job Openings
                         </h2>
                         {jobsLoading ? (
-                            <SkeletonGrid count={8} gridClass="!mx-0 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
+                            <SkeletonGrid count={8} gridClass="!ml-0 !mr-auto grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
                         ) : filteredJobs.length > 0 ? (
-                            <JobCardGrid jobs={filteredJobs} gridClass="!mx-0 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
+                            <JobCardGrid jobs={filteredJobs} gridClass="!ml-0 !mr-auto grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
                         ) : (
                             <div className="rounded-2xl border-2 border-dashed border-slate-200 py-20 text-center">
                                 <p className="text-2xl mb-2">🚀</p>

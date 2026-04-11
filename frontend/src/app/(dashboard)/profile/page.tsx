@@ -152,20 +152,20 @@ export default function ProfilePage() {
   if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
 
   return (
-    <div className="max-w-[1308px] ml-[31.9px] pb-8 font-brand">
+    <div className="max-w-[1308px] ml-4 sm:ml-6 lg:ml-8 pr-4 pb-8 font-brand">
       <h1 className="text-[40px] leading-[54px] font-normal mb-3 text-black tracking-tight">My Profile</h1>
 
       <div className="grid grid-cols-1 xl:grid-cols-[800px_484px] gap-6 items-start">
         {/* Left Column: Beige Form Container */}
-        <div className="bg-[#F4F1EA] rounded-[20px] p-6 shadow-sm border border-[#e8e4db] relative min-h-[870px]">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-24">
+        <div className="bg-[#F4F1EA] rounded-[20px] p-6 shadow-sm border border-[#e8e4db] relative">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-6">
             
             {/* Avatar Row */}
-            <div className="flex items-center gap-8">
-              <div className="w-[150px] h-[150px] rounded-full overflow-hidden border-4 border-white shadow-sm shrink-0">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+              <div className="w-24 h-24 sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border-4 border-white shadow-sm shrink-0">
                 <Avatar src={photoUrl} name={user?.email} size="xl" className="w-full h-full object-cover" />
               </div>
-              <div>
+              <div className="text-center sm:text-left">
                 <label className="cursor-pointer bg-black text-white px-5 py-2.5 rounded-[10px] text-sm font-normal hover:bg-gray-800 transition-colors inline-block mb-2">
                   {uploading ? 'Uploading...' : 'Upload New Photo'}
                   <input type="file" accept="image/png, image/jpeg" className="hidden" onChange={handlePhotoUpload} />
@@ -327,7 +327,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Save Container at the bottom */}
-            <div className="absolute bottom-12 left-0 right-0 flex justify-center">
+            <div className="flex justify-center pt-2">
               <button 
                 type="submit" 
                 disabled={isSubmitting || (!editBasic && !editBio && !editCompany && !editLinks)}
@@ -357,7 +357,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Checklist Split into Columns */}
-            <div className="flex flex-col sm:flex-row justify-evenly gap-y-4 w-full text-sm font-normal">
+            <div className="flex flex-row justify-evenly gap-y-4 w-full text-sm font-normal">
               {/* Left Column: Basic Info */}
               <ul className="space-y-3">
                 <li className="flex items-center gap-3">

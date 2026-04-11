@@ -256,7 +256,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="max-w-[1400px] ml-[31.9px] pb-2">
+    <div className="max-w-[1400px] ml-4 sm:ml-6 lg:ml-8 pr-4 pb-2">
       <div className="rounded-[30px] bg-[#ecebe6] p-4 md:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
         <div className="flex h-[calc(100dvh-9.5rem)] min-h-[500px] max-h-[680px] gap-3 overflow-hidden">
           {/* Left Sidebar - Conversations */}
