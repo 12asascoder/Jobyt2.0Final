@@ -31,10 +31,9 @@ export function Resume() {
                         <svg
                             viewBox="0 0 303 266"
                             width="100%"
-                            height="auto"
                             fill="none"
                             xmlns="http://www.w3.org/2000/svg"
-                            className="drop-shadow-sm transition-transform duration-500 hover:scale-[1.02]"
+                            className="h-auto drop-shadow-sm transition-transform duration-500 hover:scale-[1.02]"
                         >
                             <defs>
                                 <pattern id="resume_image_pattern" x="0" y="0" width="1" height="1" patternUnits="objectBoundingBox">

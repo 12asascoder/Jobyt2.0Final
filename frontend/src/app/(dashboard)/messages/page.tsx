@@ -258,8 +258,8 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="max-w-[1400px] ml-4 sm:ml-6 lg:ml-8 pr-4 pb-2">
-      <div className="rounded-[30px] bg-[#ecebe6] p-4 md:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+    <div className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+      <div className="rounded-[24px] md:rounded-[30px] bg-[#ecebe6] p-3 md:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
         <div className="flex h-[calc(100dvh-9.5rem)] min-h-[500px] max-h-[680px] gap-3 overflow-hidden">
           {/* Left Sidebar - Conversations */}
           <div className={`rounded-[22px] bg-[#f7f7f5] p-3 md:p-4 flex-col w-full md:w-[31%] ${selectedConvId ? 'hidden md:flex' : 'flex'}`}>
@@ -330,11 +330,11 @@ export default function MessagesPage() {
           </div>
 
           {/* Right Side - Messages & Info */}
-          <div className={`flex-1 flex-col ${selectedConvId ? 'flex' : 'hidden md:flex'}`}>
+          <div className={`flex-1 flex-col min-w-0 ${selectedConvId ? 'flex' : 'hidden md:flex'}`}>
             {selectedConvId ? (
               <>
-                <div className="flex-1 min-h-0 flex gap-3">
-                  <div className="flex-1 min-h-0 flex flex-col rounded-[22px] bg-white border border-[#e5e3dd] overflow-hidden">
+                <div className="flex-1 min-h-0 min-w-0 flex gap-3">
+                  <div className="flex-1 min-h-0 min-w-0 flex flex-col rounded-[22px] bg-white border border-[#e5e3dd] overflow-hidden">
                     <div className="px-5 py-4 border-b border-[#ece9e2] flex items-center gap-3">
                       <button
                         type="button"
@@ -397,8 +397,8 @@ export default function MessagesPage() {
                     </div>
 
                     {/* Input Area */}
-                    <div className="p-4 md:px-5 md:py-4 md:pb-5 border-t border-[#ece9e2] bg-white">
-                      <div className="flex gap-2.5">
+                    <div className="p-3 md:px-5 md:py-4 md:pb-5 border-t border-[#ece9e2] bg-white shrink-0">
+                      <div className="flex gap-2 min-w-0">
                         <input
                           type="text"
                           placeholder="Type a message..."
@@ -408,12 +408,12 @@ export default function MessagesPage() {
                             if (e.key === 'Enter') handleSendMessage();
                           }}
                           disabled={sendingMessage}
-                          className="flex-1 px-5 py-3 rounded-full bg-[#f8f7f5] border-none text-[14px] focus:outline-none focus:ring-2 focus:ring-lime-300 transition-shadow"
+                          className="flex-1 min-w-0 px-4 py-3 md:px-5 rounded-full bg-[#f8f7f5] border-none text-[14px] focus:outline-none focus:ring-2 focus:ring-lime-300 transition-shadow"
                         />
                         <button
                           onClick={handleSendMessage}
                           disabled={sendingMessage || !newMessage.trim()}
-                          className="px-6 py-3 rounded-full bg-black text-white font-semibold text-sm hover:bg-slate-800 focus:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          className="px-5 md:px-6 py-3 shrink-0 rounded-full bg-black text-white font-semibold text-[13px] md:text-sm hover:bg-slate-800 focus:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
                           {sendingMessage ? 'Sending...' : 'Send'}
                         </button>

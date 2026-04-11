@@ -70,7 +70,7 @@ export function DashboardHeader({
             <div className="mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-10 h-16 md:h-20">
                 {/* Logo */}
                 <Link href={ROUTES.home} className="flex items-center gap-2 shrink-0">
-                    <Image src="/logo.png" alt="Jobyt" width={28} height={28} className="object-contain" />
+                    <Image src="/logo.png" alt="Jobyt" width={28} height={28} className="object-contain" style={{ width: 'auto', height: 'auto' }} priority />
                     <span className="font-display text-xl font-bold text-slate-900 tracking-tight">Jobyt</span>
                 </Link>
 
