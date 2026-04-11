@@ -40,7 +40,7 @@ export default function ApplicationsPage() {
 
     return (
         <div className="max-w-[1400px] ml-[31.9px]">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight mb-8">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight mb-4">
                 My Applications
             </h1>
 

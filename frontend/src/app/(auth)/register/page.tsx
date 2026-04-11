@@ -214,7 +214,7 @@ export default function RegisterPage() {
           <div className="mb-6 text-center">
             <Link href={ROUTES.home} className="inline-flex items-center gap-2 mb-3">
               <Image src="/logo.png" alt="Jobyt" width={26} height={26} className="object-contain" unoptimized />
-              <span className="text-2xl md:text-3xl font-extrabold tracking-tighter pt-[5px]">
+              <span className="text-2xl md:text-3xl font-extrabold tracking-tight pt-[5px]">
                 Joby<span className="text-brand-primary">t</span>
               </span>
             </Link>

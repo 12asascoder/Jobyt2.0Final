@@ -115,7 +115,7 @@ export default function CommunityPage() {
         <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight mb-2">
           Referral Program
         </h1>
-        <p className="text-slate-500 font-medium text-sm md:text-base mb-8">
+        <p className="text-slate-500 font-medium text-sm md:text-base mb-5">
           Every user can take part in our internship referral program. For every person who joins the
           platform using your unique link, you&apos;ll earn credits.
         </p>

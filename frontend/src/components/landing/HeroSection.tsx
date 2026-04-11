@@ -67,7 +67,7 @@ export function HeroSection() {
                 <p className="text-slate-500 max-w-130 lg:max-w-145"
                     style={{
                         fontSize: 'clamp(0.82rem, 1.6vw, 1.05rem)',
-                        marginTop: 'clamp(1.5rem, 3vw, 2rem)',
+                        marginTop: 'clamp(1rem, 3vw, 2rem)',
                         lineHeight: '1.7',
                     }}>
                     Discover internships and fresher jobs that match your passion.
@@ -78,7 +78,7 @@ export function HeroSection() {
                 <div className="w-full flex items-center bg-black rounded-full shadow-xl"
                     style={{
                         maxWidth: 'clamp(280px, 75vw, 660px)',
-                        marginTop: 'clamp(2rem, 4vw, 2.75rem)',
+                        marginTop: 'clamp(1rem, 4vw, 2.75rem)',
                         padding: 'clamp(4px, 0.8vw, 7px)',
                         paddingLeft: 'clamp(14px, 2.5vw, 22px)',
                         gap: '4px',

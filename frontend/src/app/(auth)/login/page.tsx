@@ -66,7 +66,7 @@ export default function LoginPage() {
           <div className="mb-8 text-center">
             <Link href={ROUTES.home} className="inline-flex items-center gap-2 mb-4">
               <Image src="/logo.png" alt="Jobyt" width={28} height={28} className="object-contain" unoptimized />
-              <span className="text-3xl font-extrabold tracking-tighter pt-[5px]">
+              <span className="text-3xl font-extrabold tracking-tight pt-[5px]">
                 Joby<span className="text-brand-primary">t</span>
               </span>
             </Link>

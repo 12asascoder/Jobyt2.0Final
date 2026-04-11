@@ -124,7 +124,7 @@ export default function DashboardPage() {
             {!isSearchMode ? (
                 <>
                     {/* Welcome */}
-                    <div className="mb-8 md:mb-9">
+                    <div className="mb-4">
                         <h1 className="text-3xl md:text-4xl lg:text-[52px] font-extrabold text-[#1a1a1a] tracking-tight leading-[1.05]">
                             Welcome back, {displayName}!
                         </h1>
@@ -134,25 +134,21 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Stat Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 md:pt-3 mb-10 max-w-[730px]">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10 max-w-[900px]">
                         {statCards.map((stat) => (
                             <div
                                 key={stat.label}
-                                className="bg-[#121212] rounded-2xl px-5 pt-7 pb-3 min-h-[96px] flex items-end gap-3 shadow-[0_8px_18px_rgba(0,0,0,0.18)]"
+                                className="bg-[#141414] rounded-3xl p-6 md:p-8 flex flex-col justify-center border border-white/5 shadow-2xl relative overflow-hidden group"
                             >
-                                <span className="text-[42px] leading-none font-extrabold tracking-tight text-lime-400">
+                                <span className="text-[46px] md:text-[52px] leading-none font-extrabold tracking-tight text-lime-400 mb-2 drop-shadow-md relative z-10">
                                     {stat.value}
                                 </span>
-                                <div className={`leading-[1.05] ${stat.sublabel ? 'mb-1 -translate-y-[3px]' : 'ml-2 mb-1 -translate-y-[3px]'}`}>
-                                    <span className="text-[10px] md:text-[11px] font-bold text-lime-100/80 uppercase tracking-wider">
-                                        {stat.label}
-                                    </span>
-                                    {stat.sublabel && (
-                                        <span className="block text-[10px] md:text-[11px] font-bold text-lime-100/80 uppercase tracking-wider">
-                                            {stat.sublabel}
-                                        </span>
-                                    )}
-                                </div>
+                                <span className="text-[12px] md:text-[13px] font-bold text-slate-400 uppercase tracking-widest relative z-10">
+                                    {stat.label} {stat.sublabel}
+                                </span>
+                                
+                                {/* Subtle interaction glow */}
+                                <div className="absolute -top-12 -right-12 w-32 h-32 bg-lime-400/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
                             </div>
                         ))}
                     </div>

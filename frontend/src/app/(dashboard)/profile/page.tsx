@@ -155,7 +155,7 @@ export default function ProfilePage() {
     <div className="max-w-[1308px] ml-[31.9px] pb-8 font-brand">
       <h1 className="text-[40px] leading-[54px] font-normal mb-3 text-black tracking-tight">My Profile</h1>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[800px_384px] gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[800px_484px] gap-6 items-start">
         {/* Left Column: Beige Form Container */}
         <div className="bg-[#F4F1EA] rounded-[20px] p-6 shadow-sm border border-[#e8e4db] relative min-h-[870px]">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-24">
@@ -175,7 +175,11 @@ export default function ProfilePage() {
             </div>
 
             {/* Personal Info */}
-            <div className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editBasic ? 'border-lime-400' : 'border-[#c3ff3d]/60'}`}>
+            <div 
+              onDoubleClick={() => setEditBasic(!editBasic)}
+              title="Double-click to edit"
+              className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editBasic ? 'border-lime-400' : 'border-[#c3ff3d]/60 cursor-pointer'}`}
+            >
               <button 
                 type="button" 
                 onClick={() => setEditBasic(!editBasic)}
@@ -189,14 +193,14 @@ export default function ProfilePage() {
                   <label className="block text-xs font-semibold text-gray-400 mb-1">Full Name</label>
                   <input 
                     {...register('name')} 
-                    disabled={!editBasic}
-                    className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 disabled:opacity-100" 
+                    readOnly={!editBasic}
+                    className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-900 font-medium py-1 ${!editBasic ? 'cursor-pointer' : ''}`} 
                     placeholder="Your Name" 
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 mb-1">Email</label>
-                  <input disabled value={user?.email || ''} className="w-full bg-transparent text-gray-900 font-medium py-1 opacity-70" />
+                  <input readOnly value={user?.email || ''} className="w-full bg-transparent text-gray-900 font-medium py-1 opacity-70 cursor-pointer" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 mb-1">
@@ -205,15 +209,15 @@ export default function ProfilePage() {
                   {user?.role === 'recruiter' ? (
                     <input
                       {...register('location')}
-                      disabled={!editBasic}
-                      className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 disabled:opacity-100"
+                      readOnly={!editBasic}
+                      className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-900 font-medium py-1 ${!editBasic ? 'cursor-pointer' : ''}`}
                       placeholder="City, Country"
                     />
                   ) : (
                     <input
                       {...register('phone')}
-                      disabled={!editBasic}
-                      className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 disabled:opacity-100"
+                      readOnly={!editBasic}
+                      className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-900 font-medium py-1 ${!editBasic ? 'cursor-pointer' : ''}`}
                       placeholder="+91 98XXXXXXXX"
                     />
                   )}
@@ -223,7 +227,11 @@ export default function ProfilePage() {
 
             {/* Bio */}
             {user?.role === 'applicant' && (
-              <div className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editBio ? 'border-lime-400' : 'border-[#c3ff3d]/60'}`}>
+              <div 
+                onDoubleClick={() => setEditBio(!editBio)}
+                title="Double-click to edit"
+                className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editBio ? 'border-lime-400' : 'border-[#c3ff3d]/60 cursor-pointer'}`}
+              >
                 <button 
                   type="button" 
                   onClick={() => setEditBio(!editBio)}
@@ -234,9 +242,9 @@ export default function ProfilePage() {
                 <h3 className="font-normal text-black mb-2 text-[18px] leading-6">Bio</h3>
                 <textarea 
                   {...register('bio')} 
-                  disabled={!editBio}
+                  readOnly={!editBio}
                   rows={3}
-                  className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-700 text-sm leading-relaxed resize-none mt-2 disabled:opacity-100"
+                  className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-700 text-sm leading-relaxed resize-none mt-2 ${!editBio ? 'cursor-pointer' : ''}`}
                   placeholder="Tell us about yourself..."
                 />
               </div>
@@ -244,7 +252,11 @@ export default function ProfilePage() {
 
             {/* Corporate Info for Recruiters */}
             {user?.role === 'recruiter' && (
-              <div className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editCompany ? 'border-lime-400' : 'border-[#c3ff3d]/60'}`}>
+              <div 
+                onDoubleClick={() => setEditCompany(!editCompany)}
+                title="Double-click to edit"
+                className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editCompany ? 'border-lime-400' : 'border-[#c3ff3d]/60 cursor-pointer'}`}
+              >
                 <button 
                   type="button" 
                   onClick={() => setEditCompany(!editCompany)}
@@ -256,26 +268,30 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Company Name</label>
-                    <input {...register('company_name')} disabled={!editCompany} className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 disabled:opacity-100" />
+                    <input {...register('company_name')} readOnly={!editCompany} className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-900 font-medium py-1 ${!editCompany ? 'cursor-pointer' : ''}`} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Industry</label>
-                    <input {...register('industry')} disabled={!editCompany} className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 disabled:opacity-100" />
+                    <input {...register('industry')} readOnly={!editCompany} className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-900 font-medium py-1 ${!editCompany ? 'cursor-pointer' : ''}`} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Company Size</label>
-                    <input {...register('company_size')} disabled={!editCompany} className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 disabled:opacity-100" placeholder="e.g. 11-50" />
+                    <input {...register('company_size')} readOnly={!editCompany} className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-900 font-medium py-1 ${!editCompany ? 'cursor-pointer' : ''}`} placeholder="e.g. 11-50" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Description</label>
-                    <textarea {...register('description')} disabled={!editCompany} rows={2} className="w-full bg-transparent border-b border-transparent focus:border-lime-400 disabled:border-transparent focus:outline-none text-gray-900 font-medium py-1 resize-none disabled:opacity-100" />
+                    <textarea {...register('description')} readOnly={!editCompany} rows={2} className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-900 font-medium py-1 resize-none ${!editCompany ? 'cursor-pointer' : ''}`} />
                   </div>
                 </div>
               </div>
             )}
 
             {/* Links */}
-            <div className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editLinks ? 'border-lime-400' : 'border-[#c3ff3d]/60'}`}>
+            <div 
+              onDoubleClick={() => setEditLinks(!editLinks)}
+              title="Double-click to edit"
+              className={`bg-white rounded-[10px] p-6 shadow-sm relative transition-all border ${editLinks ? 'border-lime-400' : 'border-[#c3ff3d]/60 cursor-pointer'}`}
+            >
               <button 
                 type="button" 
                 onClick={() => setEditLinks(!editLinks)}
@@ -290,21 +306,21 @@ export default function ProfilePage() {
                   <>
                     <div>
                       <label className="block text-base font-normal text-black mb-2">Portfolio Link</label>
-                      <input {...register('portfolio_url')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://" />
+                      <input {...register('portfolio_url')} readOnly={!editLinks} type="url" className="w-full bg-black text-lime-400 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors cursor-pointer" placeholder="https://" />
                     </div>
                     <div>
                       <label className="block text-base font-normal text-black mb-2">LinkedIn Link</label>
-                      <input {...register('linkedin_url')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://linkedin.com/in/" />
+                      <input {...register('linkedin_url')} readOnly={!editLinks} type="url" className="w-full bg-black text-lime-400 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors cursor-pointer" placeholder="https://linkedin.com/in/" />
                     </div>
                     <div>
                       <label className="block text-base font-normal text-black mb-2">GitHub Link</label>
-                      <input {...register('github_url')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://github.com/username" />
+                      <input {...register('github_url')} readOnly={!editLinks} type="url" className="w-full bg-black text-lime-400 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors cursor-pointer" placeholder="https://github.com/username" />
                     </div>
                   </>
                 ) : (
                   <div>
                     <label className="block text-sm font-semibold text-gray-800 mb-2">Website</label>
-                    <input {...register('website')} disabled={!editLinks} type="url" className="w-full bg-black text-lime-400 disabled:text-lime-400/70 rounded-lg px-4 py-3 font-mono text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors" placeholder="https://" />
+                    <input {...register('website')} readOnly={!editLinks} type="url" className="w-full bg-black text-lime-400 rounded-lg px-4 py-3 font-mono text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors cursor-pointer" placeholder="https://" />
                   </div>
                 )}
               </div>
@@ -327,7 +343,7 @@ export default function ProfilePage() {
         <div className="space-y-4">
           {/* Complete Profile Card */}
           <div className="bg-[#0b0b0b] rounded-[20px] p-6 shadow-xl border border-gray-900 min-h-[383px]">
-            <h3 className="text-white font-normal text-[24px] leading-8 mb-6 text-center sm:text-left">Complete Your Profile</h3>
+            <h3 className="text-white font-normal text-[24px] leading-8 mb-6 text-center">Complete Your Profile</h3>
             
             {/* Donut Chart */}
             <div className="relative w-36 h-36 sm:w-[150px] sm:h-[150px] mx-auto flex justify-center items-center mb-4">
@@ -340,54 +356,71 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Checklist */}
-            <ul className="space-y-2.5 text-sm font-normal pl-2 sm:pl-4">
-              <li className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-lime-400 shrink-0"></div>
-                <span className="text-lime-400">Setup Account</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Full Name') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                <span className={missingFields.includes('Full Name') ? 'text-gray-400' : 'text-lime-400'}>Full Name</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Email') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                <span className={missingFields.includes('Email') ? 'text-gray-400' : 'text-lime-400'}>Email</span>
-              </li>
-              {user?.role === 'applicant' ? (
-                <>
-                  <li className="flex items-center gap-3">
-                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Phone Number') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                    <span className={missingFields.includes('Phone Number') ? 'text-gray-400' : 'text-lime-400'}>Phone Number</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Bio') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                    <span className={missingFields.includes('Bio') ? 'text-gray-400' : 'text-lime-400'}>Bio</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Portfolio Link') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                    <span className={missingFields.includes('Portfolio Link') ? 'text-gray-400' : 'text-lime-400'}>Portfolio Link</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('LinkedIn Link') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                    <span className={missingFields.includes('LinkedIn Link') ? 'text-gray-400' : 'text-lime-400'}>LinkedIn Link</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('GitHub Link') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                    <span className={missingFields.includes('GitHub Link') ? 'text-gray-400' : 'text-lime-400'}>GitHub Link</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Profile Picture') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                    <span className={missingFields.includes('Profile Picture') ? 'text-gray-400' : 'text-lime-400'}>Profile Picture</span>
-                  </li>
-                </>
-              ) : (
+            {/* Checklist Split into Columns */}
+            <div className="flex flex-col sm:flex-row justify-evenly gap-y-4 w-full text-sm font-normal">
+              {/* Left Column: Basic Info */}
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3">
+                  <div className="w-2.5 h-2.5 rounded-full bg-lime-400 shrink-0"></div>
+                  <span className="text-lime-400 font-medium whitespace-nowrap">Setup Account</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Full Name') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                  <span className={missingFields.includes('Full Name') ? 'text-gray-400' : 'text-lime-400 font-medium'}>Full Name</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Email') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                  <span className={missingFields.includes('Email') ? 'text-gray-400' : 'text-lime-400 font-medium'}>Email</span>
+                </li>
+                {user?.role === 'recruiter' ? (
+                  <>
+                    <li className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Company Name') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                      <span className={missingFields.includes('Company Name') ? 'text-gray-400' : 'text-lime-400 font-medium'}>Company Name</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Location') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                      <span className={missingFields.includes('Location') ? 'text-gray-400' : 'text-lime-400 font-medium'}>Location</span>
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Phone Number') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                      <span className={missingFields.includes('Phone Number') ? 'text-gray-400' : 'text-lime-400 font-medium'}>Phone Number</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Bio') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                      <span className={missingFields.includes('Bio') ? 'text-gray-400' : 'text-lime-400 font-medium'}>Bio</span>
+                    </li>
+                  </>
+                )}
+              </ul>
+
+              {/* Right Column: Links & Media */}
+              <ul className="space-y-3">
+                {user?.role === 'applicant' ? (
+                  <>
+                    <li className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Portfolio Link') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                      <span className={missingFields.includes('Portfolio Link') ? 'text-gray-400' : 'text-lime-400 font-medium'}>Portfolio Link</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('LinkedIn Link') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                      <span className={missingFields.includes('LinkedIn Link') ? 'text-gray-400' : 'text-lime-400 font-medium'}>LinkedIn Link</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('GitHub Link') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
+                      <span className={missingFields.includes('GitHub Link') ? 'text-gray-400' : 'text-lime-400 font-medium'}>GitHub Link</span>
+                    </li>
+                  </>
+                ) : null}
                 <li className="flex items-center gap-3">
                   <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${missingFields.includes('Profile Picture') ? 'bg-gray-500' : 'bg-lime-400'}`}></div>
-                  <span className={missingFields.includes('Profile Picture') ? 'text-gray-400' : 'text-lime-400'}>Profile Picture</span>
+                  <span className={missingFields.includes('Profile Picture') ? 'text-gray-400' : 'text-lime-400 font-medium'}>Profile Picture</span>
                 </li>
-              )}
-            </ul>
+              </ul>
+            </div>
           </div>
 
           {/* Resume Upload + Parsing */}
