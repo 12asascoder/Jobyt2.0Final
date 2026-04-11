@@ -161,7 +161,7 @@ export default function ProfilePage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-6">
             
             {/* Avatar Row */}
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+            <div className="flex flex-col sm:flex-row items-center gap-5">
               <div className="w-24 h-24 sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden border-4 border-white shadow-sm shrink-0">
                 <Avatar src={photoUrl} name={user?.email} size="xl" className="w-full h-full object-cover" />
               </div>
