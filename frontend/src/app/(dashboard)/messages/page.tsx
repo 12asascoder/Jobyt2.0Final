@@ -174,6 +174,7 @@ export default function MessagesPage() {
   const fetchMessages = useCallback(async (conversationId: string) => {
     if (!conversationId) return;
     setMessagesLoading(true);
+
     try {
       const msgRes = await api.get<any>(`/messages/conversations/${conversationId}?page=1&limit=50`);
 
@@ -207,6 +208,7 @@ export default function MessagesPage() {
   const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || !selectedConvId) return;
     setSendingMessage(true);
+
     try {
       const response = await api.post<SendMessageData>(`/messages/conversations/${selectedConvId}`, {
         content: newMessage,
@@ -314,10 +316,10 @@ export default function MessagesPage() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[24px] md:text-[27px] font-bold text-slate-900 truncate leading-[1.05]">
+                          <p className="text-[15px] md:text-[16px] font-bold text-slate-900 truncate leading-[1.2]">
                             {participant?.name || participant?.email || 'Conversation'}
                           </p>
-                          <p className="text-xs text-slate-600 truncate">{conv.last_message || 'No messages yet'}</p>
+                          <p className="text-xs md:text-[13px] text-slate-500 truncate mt-0.5">{conv.last_message || 'No messages yet'}</p>
                         </div>
                       </div>
                     </div>
@@ -333,16 +335,16 @@ export default function MessagesPage() {
               <>
                 <div className="flex-1 min-h-0 flex gap-3">
                   <div className="flex-1 min-h-0 flex flex-col rounded-[22px] bg-white border border-[#e5e3dd] overflow-hidden">
-                    <div className="px-4 py-3 border-b border-[#ece9e2] flex items-center gap-3">
+                    <div className="px-5 py-4 border-b border-[#ece9e2] flex items-center gap-3">
                       <button
                         type="button"
                         onClick={() => setSelectedConvId(null)}
-                        className="md:hidden inline-flex items-center justify-center w-8 h-8 rounded-full border border-slate-200 text-slate-600"
+                        className="md:hidden inline-flex items-center justify-center w-8 h-8 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
                         aria-label="Back to conversations"
                       >
                         <FaArrowLeft size={14} />
                       </button>
-                      <div className="w-9 h-9 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-xs font-semibold">
+                      <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-xs font-semibold shrink-0">
                         {selectedParticipant?.avatar || selectedParticipant?.logo_url ? (
                           <img
                             src={resolveAssetUrl(selectedParticipant?.avatar || selectedParticipant?.logo_url || '') || ''}
@@ -353,15 +355,15 @@ export default function MessagesPage() {
                           getInitials(selectedParticipant?.name || selectedParticipant?.email || 'U')
                         )}
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-slate-900 truncate">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[16px] font-bold text-slate-900 truncate">
                           {selectedParticipant?.name || selectedParticipant?.email || 'Conversation'}
                         </p>
                       </div>
                     </div>
 
                     {/* Messages Area */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#f7f7f5]">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 bg-white">
                       {messagesLoading ? (
                         <div className="flex justify-center items-center h-full">
                           <Spinner />
@@ -377,14 +379,16 @@ export default function MessagesPage() {
                               className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                             >
                               <div
-                                className={`max-w-[85%] md:max-w-[78%] px-4 py-3 rounded-2xl ${
+                                className={`max-w-[85%] md:max-w-[75%] px-4 py-3 rounded-[20px] ${
                                   isOwnMessage
-                                    ? 'bg-[#d6f2a5] text-black'
-                                    : 'bg-white text-slate-900 border border-[#e7e4de]'
+                                    ? 'bg-[#d6f2a5] text-black rounded-br-sm shadow-sm'
+                                    : 'bg-[#f5f4f0] text-slate-900 rounded-bl-sm'
                                 }`}
                               >
-                                <p className="text-sm break-words">{msg.body}</p>
-                                <p className="text-[11px] text-slate-500 mt-2">{formatTime(msg.created_at)}</p>
+                                <p className="text-[14px] leading-relaxed break-words">{msg.body}</p>
+                                <p className={`text-[11px] mt-1.5 ${isOwnMessage ? 'text-black/60' : 'text-slate-500'}`}>
+                                  {formatTime(msg.created_at)}
+                                </p>
                               </div>
                             </div>
                           );
@@ -393,8 +397,8 @@ export default function MessagesPage() {
                     </div>
 
                     {/* Input Area */}
-                    <div className="p-4 border-t border-[#ece9e2] bg-white">
-                      <div className="flex gap-2">
+                    <div className="p-4 md:px-5 md:py-4 md:pb-5 border-t border-[#ece9e2] bg-white">
+                      <div className="flex gap-2.5">
                         <input
                           type="text"
                           placeholder="Type a message..."
@@ -404,12 +408,12 @@ export default function MessagesPage() {
                             if (e.key === 'Enter') handleSendMessage();
                           }}
                           disabled={sendingMessage}
-                          className="flex-1 px-4 py-2.5 rounded-full border border-[#d8d5ce] text-sm focus:outline-none focus:ring-2 focus:ring-lime-300"
+                          className="flex-1 px-5 py-3 rounded-full bg-[#f8f7f5] border-none text-[14px] focus:outline-none focus:ring-2 focus:ring-lime-300 transition-shadow"
                         />
                         <button
                           onClick={handleSendMessage}
                           disabled={sendingMessage || !newMessage.trim()}
-                          className="px-5 py-2.5 rounded-full bg-black text-white font-semibold text-sm hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                          className="px-6 py-3 rounded-full bg-black text-white font-semibold text-sm hover:bg-slate-800 focus:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
                           {sendingMessage ? 'Sending...' : 'Send'}
                         </button>
@@ -418,11 +422,11 @@ export default function MessagesPage() {
                   </div>
 
                   {/* Right Side Info Panel */}
-                  <aside className="hidden lg:block w-[31%] rounded-[22px] bg-[#f2f1ee] p-4 overflow-y-auto">
-                    <h4 className="text-[29px] font-bold text-slate-900 mb-3 leading-none">General Info</h4>
-                    <div className="rounded-2xl bg-white border border-[#e6e3dc] p-3 mb-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-xs font-semibold">
+                  <aside className="hidden lg:block w-[31%] rounded-[22px] bg-[#f2f1ee] p-5 overflow-y-auto">
+                    <h4 className="text-[20px] font-extrabold text-slate-900 mb-5 px-1 tracking-tight">General Info</h4>
+                    <div className="rounded-[20px] bg-white border border-[#e6e3dc] shadow-sm p-4 mb-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-xs font-semibold shrink-0">
                           {selectedParticipant?.avatar || selectedParticipant?.logo_url ? (
                             <img
                               src={resolveAssetUrl(selectedParticipant?.avatar || selectedParticipant?.logo_url || '') || ''}
@@ -433,11 +437,11 @@ export default function MessagesPage() {
                             getInitials(selectedParticipant?.name || selectedParticipant?.email || 'U')
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[14px] font-bold text-slate-900 truncate">
                             {selectedParticipant?.name || 'N/A'}
                           </p>
-                          <p className="text-[11px] text-slate-500 truncate">{selectedParticipant?.email || 'N/A'}</p>
+                          <p className="text-[12px] text-slate-500 truncate mt-0.5">{selectedParticipant?.email || 'N/A'}</p>
                         </div>
                       </div>
                       <div className="mt-3 space-y-1 text-xs text-slate-600">
