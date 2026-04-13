@@ -133,4 +133,22 @@ router.get('/jobs/:id', AdminController.getJobById);
 router.get('/metrics', AdminController.getMetrics);
 router.get('/audit-log', AdminController.getAuditLog);
 
+// ── Applications ───────────────────────────────────────────────────────────────
+router.get('/applications', AdminController.listApplications);
+router.get('/applications/:id', AdminController.getApplicationById);
+router.patch(
+  '/applications/:id/status',
+  body('status').isIn([
+    'applied',
+    'in_review',
+    'shortlisted',
+    'interview',
+    'offer',
+    'hired',
+    'rejected',
+  ]),
+  validate,
+  AdminController.updateApplicationStatus
+);
+
 export default router;

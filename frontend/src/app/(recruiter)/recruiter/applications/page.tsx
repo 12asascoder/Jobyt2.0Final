@@ -169,7 +169,7 @@ export default function RecruiterApplicationsPage() {
       } else {
         if (selectedStatus) params.append('status', selectedStatus);
         if (searchQuery) {
-          params.append('jobTitle', searchQuery);
+          params.append('search', searchQuery);
         }
         if (selectedJobId) {
           params.append('jobId', selectedJobId);

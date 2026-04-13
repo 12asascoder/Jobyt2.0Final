@@ -90,6 +90,23 @@ export const ApplicationModel = {
     return rows[0] || null;
   },
 
+  async adminFindById(applicationId: string): Promise<any | null> {
+    const { rows } = await pool.query(
+      `SELECT a.*, u.email, ap.name, ap.photo_url, ap.phone, ap.skills, ap.education,
+              j.title as job_title, j.location as job_location, j.skills as job_skills,
+              COALESCE(r.file_url, a.resume_snapshot_url) as resume_url
+       FROM applications a
+       JOIN users u ON u.id = a.applicant_id
+       JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
+       JOIN jobs j ON j.id = a.job_id
+       LEFT JOIN resumes r ON r.id = a.resume_id
+       WHERE a.id = $1
+       LIMIT 1`,
+      [applicationId],
+    );
+    return rows[0] || null;
+  },
+
   async findByJobAndApplicant(
     jobId: string,
     applicantId: string,
@@ -311,7 +328,7 @@ export const ApplicationModel = {
 
   async findByRecruiterWithFilters(
     recruiterId: string,
-    filters: { status?: ApplicationStatus; jobTitle?: string; applicantName?: string; jobId?: string },
+    filters: { status?: ApplicationStatus; jobTitle?: string; applicantName?: string; jobId?: string; search?: string },
     page = 1,
     limit = 20,
   ): Promise<{ applications: any[]; total: number }> {
@@ -346,6 +363,12 @@ export const ApplicationModel = {
       paramIndex++;
     }
 
+    if (filters.search) {
+      query += ` AND (j.title ILIKE $${paramIndex} OR ap.name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`;
+      params.push(`%${filters.search}%`);
+      paramIndex++;
+    }
+
     if (filters.jobId) {
       query += ` AND j.id = $${paramIndex}`;
       params.push(filters.jobId);
@@ -358,6 +381,69 @@ export const ApplicationModel = {
     const countQuery = query.replace(/LIMIT \$\d+ OFFSET \$\d+$/, '');
     const countSql = `SELECT COUNT(*) FROM (${countQuery}) as counted`;
     const countParams = params.slice(0, -2); // all params except limit and offset
+
+    const [countRes, dataRes] = await Promise.all([
+      pool.query(countSql, countParams),
+      pool.query(query, params),
+    ]);
+
+    return { applications: dataRes.rows, total: Number.parseInt(countRes.rows[0].count) };
+  },
+
+  async adminFindAllWithFilters(
+    filters: { status?: ApplicationStatus; jobTitle?: string; applicantName?: string; jobId?: string; search?: string },
+    page = 1,
+    limit = 20,
+  ): Promise<{ applications: any[]; total: number }> {
+    const offset = (page - 1) * limit;
+    let query = `
+      SELECT a.*, u.email, ap.name, ap.photo_url, ap.phone, ap.skills, ap.education,
+             j.title as job_title, j.location as job_location
+      FROM applications a
+      JOIN users u ON u.id = a.applicant_id
+      JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
+      JOIN jobs j ON j.id = a.job_id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (filters.status) {
+      query += ` AND a.status = $${paramIndex}`;
+      params.push(filters.status);
+      paramIndex++;
+    }
+
+    if (filters.jobTitle) {
+      query += ` AND j.title ILIKE $${paramIndex}`;
+      params.push(`%${filters.jobTitle}%`);
+      paramIndex++;
+    }
+
+    if (filters.applicantName) {
+      query += ` AND ap.name ILIKE $${paramIndex}`;
+      params.push(`%${filters.applicantName}%`);
+      paramIndex++;
+    }
+
+    if (filters.search) {
+      query += ` AND (j.title ILIKE $${paramIndex} OR ap.name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`;
+      params.push(`%${filters.search}%`);
+      paramIndex++;
+    }
+
+    if (filters.jobId) {
+      query += ` AND j.id = $${paramIndex}`;
+      params.push(filters.jobId);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY a.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(limit, offset);
+
+    const countQuery = query.replace(/LIMIT \$\d+ OFFSET \$\d+$/, '');
+    const countSql = `SELECT COUNT(*) FROM (${countQuery}) as counted`;
+    const countParams = params.slice(0, -2);
 
     const [countRes, dataRes] = await Promise.all([
       pool.query(countSql, countParams),
