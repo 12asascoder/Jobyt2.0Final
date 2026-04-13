@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { FaBell, FaMagnifyingGlass, FaXmark, FaUser, FaArrowRightFromBracket, FaBars, FaStar } from 'react-icons/fa6';
 import { useNotifications } from '@/hooks/useNotifications';
 import { ROUTES } from '@/constants';
@@ -25,6 +25,7 @@ export function DashboardHeader({
     onSearchSubmit,
 }: DashboardHeaderProps) {
     const router = useRouter();
+    const pathname = usePathname();
     const logoutWithApi = useAuthStore((s) => s.logoutWithApi);
     const [bellActive, setBellActive] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -37,6 +38,14 @@ export function DashboardHeader({
         await logoutWithApi();
         router.replace(ROUTES.login);
     };
+
+    // Auto-close search and notifications when navigating to a new page
+    useEffect(() => {
+        onSearchToggle(false);
+        onSearchChange('');
+        setBellActive(false);
+        setMobileMenuOpen(false);
+    }, [pathname, onSearchToggle, onSearchChange]);
 
     useEffect(() => {
         lastScrollY.current = window.scrollY;

@@ -84,9 +84,9 @@ export function DashboardSidebar() {
     return (
         <>
             {/* ── DESKTOP: Floating vertical bar ── */}
-            <div className="hidden lg:flex fixed left-4 xl:left-8 top-1/2 -translate-y-1/2 z-40 flex-col items-center gap-10">
+            <div className="hidden lg:flex fixed left-1 xl:left-2 top-1/2 -translate-y-1/2 z-40 flex-col items-center gap-3">
                 {/* Main icon pill */}
-                <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-0.5">
+                <div className="bg-[#1a1a1a] rounded-full py-2.5 px-2.5 flex flex-col items-center gap-1">
                     {mainItems.map(({ icon: Icon, href, label }) => {
                         const active = isActive(href);
                         return (
@@ -94,22 +94,22 @@ export function DashboardSidebar() {
                                 key={href}
                                 href={href}
                                 title={label}
-                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${active
+                                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${active
                                         ? 'bg-lime-400 text-black'
                                         : 'text-white/60 hover:text-white hover:bg-white/10'
                                     }`}
                             >
-                                <Icon className="text-lg" />
+                                <Icon className="text-base" />
                             </Link>
                         );
                     })}
                 </div>
 
                 {/* Bottom utility pill: star + logout + avatar */}
-                <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-0.5">
+                <div className="bg-[#1a1a1a] rounded-full py-2.5 px-2.5 flex flex-col items-center gap-1">
                     <Link
                         href={ROUTES.credits}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isActive(ROUTES.credits)
+                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${isActive(ROUTES.credits)
                                 ? 'bg-lime-400 text-black'
                                 : 'text-white/60 hover:text-white hover:bg-white/10'
                             }`}
@@ -119,14 +119,14 @@ export function DashboardSidebar() {
                     </Link>
                     <button
                         onClick={handleLogout}
-                        className="w-12 h-12 rounded-full text-white/60 hover:text-red-400 flex items-center justify-center transition-colors"
+                        className="w-11 h-11 rounded-full text-white/60 hover:text-red-400 flex items-center justify-center transition-colors"
                         title="Sign out"
                     >
                         <FaArrowRightFromBracket className="text-base" />
                     </button>
                     <Link
                         href={ROUTES.profile}
-                        className={`w-11 h-11 rounded-full overflow-hidden border-2 mt-1 transition-colors ${isActive(ROUTES.profile) ? 'border-[#c3ff3d]' : 'border-white/20 hover:border-white/40'
+                        className={`w-11 h-11 rounded-full overflow-hidden border-2 transition-colors ${isActive(ROUTES.profile) ? 'border-[#c3ff3d]' : 'border-white/20 hover:border-white/40'
                             }`}
                         title="Profile"
                     >
@@ -137,7 +137,7 @@ export function DashboardSidebar() {
                                 className="w-full h-full object-cover"
                             />
                         ) : (
-                            <div className="w-full h-full bg-slate-700 text-white flex items-center justify-center text-sm font-semibold">
+                            <div className="w-full h-full bg-slate-700 text-white flex items-center justify-center text-xs font-semibold">
                                 {avatarInitial}
                             </div>
                         )}

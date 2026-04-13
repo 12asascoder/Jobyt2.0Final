@@ -4,25 +4,18 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { FaLinkedinIn, FaInstagram } from 'react-icons/fa6';
 
-const companyLinks = [
-    { label: 'About Us', href: '#' },
-    { label: 'Careers', href: '#' },
-    { label: 'Privacy Policy', href: '#' },
-    { label: 'Terms of Service', href: '#' },
-];
+const companyLinks = [];
 
 const candidateLinks = [
-    { label: 'Explore Internships', href: '#' },
-    { label: 'Career Paths', href: '#' },
-    { label: 'Resume Builder', href: '#' },
-    { label: 'Success Stories', href: '#' },
+    { label: 'Explore Internships', href: '/internships' },
+    { label: 'Career Paths', href: '/roadmaps' },
+    { label: 'Resume Builder', href: '/resume-builder' },
 ];
 
 const employerLinks = [
-    { label: 'Post a Job', href: '#' },
-    { label: 'Pricing', href: '#' },
-    { label: 'Hire Talent', href: '#' },
-    { label: 'Hiring Guide', href: '#' },
+    { label: 'Post a Job', href: '/employer-login' },
+    { label: 'Pricing', href: '/#pricing' },
+    { label: 'Hire Talent', href: '/employer-login' },
 ];
 
 const socials = [
@@ -59,15 +52,17 @@ export function Footer() {
                             </a>
                         </div>
 
-                        <ul className="mt-5 sm:mt-6 space-y-2.5 sm:space-y-3 text-[13px] sm:text-sm text-slate-300">
-                            {companyLinks.map((item) => (
-                                <li key={item.label}>
-                                    <Link href={item.href} className="hover:text-white transition">
-                                        {item.label}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
+                        {companyLinks.length > 0 && (
+                            <ul className="mt-5 sm:mt-6 space-y-2.5 sm:space-y-3 text-[13px] sm:text-sm text-slate-300">
+                                {companyLinks.map((item) => (
+                                    <li key={item.label}>
+                                        <Link href={item.href} className="hover:text-white transition">
+                                            {item.label}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
 
                     {/* CANDIDATES */}
