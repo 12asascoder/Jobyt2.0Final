@@ -10,8 +10,9 @@ import { AppError } from '../utils/appError';
 import prisma from '../config/prisma';
 import pool from '../config/database';
 import { PoolClient } from 'pg';
+import { ApplicationModel } from '../models/application.model';
+import { ApplicationService } from './application.service';
 import logger from '../config/logger';
-
 export const AdminService = {
   // ── Users ───────────────────────────────────────────────────────────────────
 
@@ -386,5 +387,49 @@ export const AdminService = {
     );
 
     return rejectedJob;
+  },
+
+  // ── Applications ─────────────────────────────────────────────────────────────
+
+  async listApplications(
+    filters: { status?: string; jobTitle?: string; applicantName?: string; jobId?: string; search?: string },
+    page: number,
+    limit: number,
+  ) {
+    return ApplicationModel.adminFindAllWithFilters(
+      {
+        status: filters.status as any,
+        jobTitle: filters.jobTitle,
+        applicantName: filters.applicantName,
+        jobId: filters.jobId,
+        search: filters.search,
+      },
+      page,
+      limit,
+    );
+  },
+
+  async getApplicationById(applicationId: string) {
+    const application = await ApplicationModel.adminFindById(applicationId);
+    if (!application) throw new AppError('Application not found', 404);
+    return application;
+  },
+
+  async updateApplicationStatus(adminId: string, applicationId: string, status: string) {
+    const updated = await ApplicationService.updateStatus(
+      { userId: adminId, role: 'admin' },
+      applicationId,
+      status as any,
+    );
+
+    await AdminAuditLogModel.create({
+      admin_id: adminId,
+      action: 'UPDATE_APPLICATION_STATUS',
+      target_type: 'application',
+      target_id: applicationId,
+      reason: `Admin updated status to ${status}`,
+    });
+
+    return updated;
   },
 };
