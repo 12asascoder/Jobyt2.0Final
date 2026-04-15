@@ -15,7 +15,6 @@ import {
 } from '../utils/email';
 import { generateReferralCode } from '../utils/referralCode';
 import { UserRole, JwtPayload } from '../types';
-import { Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
 import logger from '../config/logger';
 import redis from '../config/redis';
