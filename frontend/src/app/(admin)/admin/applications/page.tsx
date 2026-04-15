@@ -195,7 +195,7 @@ export default function AdminApplicationsPage() {
     setOpeningConversationFor(app.id);
     try {
       const conversationId = await createConversation(app.applicant_id, app.job_id);
-      router.push(`${ROUTES.messages}?conversationId=${conversationId}`); // Admins may just use global messaging endpoint if they can message
+      router.push(`${ROUTES.adminMessages}?conversationId=${conversationId}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to open chat';
       toast.error(message);

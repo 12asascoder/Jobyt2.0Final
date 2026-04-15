@@ -43,6 +43,7 @@ interface Conversation {
   recruiter_id: string;
   applicant_id: string;
   job_id: string | null;
+  company_name?: string | null;
   last_message_at: string;
   last_message?: string;
   participant?: {
@@ -148,7 +149,11 @@ export default function MessagesPage() {
 
       const enrichedConversations = rawConversations.map((conv: Conversation) => {
         const profile = profileMap.get(conv.recruiter_id);
-        const participantName = profile?.profile?.name || profile?.profile?.company_name || null;
+        const participantName =
+          (user?.role === 'applicant' ? conv.company_name?.trim() : null) ||
+          profile?.profile?.company_name ||
+          profile?.profile?.name ||
+          null;
         return {
           ...conv,
           participant: {
@@ -169,7 +174,7 @@ export default function MessagesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.role]);
 
   const fetchMessages = useCallback(async (conversationId: string) => {
     if (!conversationId) return;

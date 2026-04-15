@@ -13,6 +13,7 @@ type ApiConversation = {
   id: string;
   recruiter_id: string;
   applicant_id: string;
+  company_name?: string | null;
   participant?: {
     name?: string | null;
   };
@@ -126,7 +127,9 @@ export default function MessageThreadPage({ params }: { params: Promise<{ conver
         const conversation = conversations.find((c) => c.id === conversationId);
         if (conversation) {
           const fallbackName = user?.role === 'recruiter' ? 'Candidate' : 'Recruiter';
-          setOtherUserName(conversation.participant?.name?.trim() || fallbackName);
+          const companyDisplay =
+            user?.role === 'applicant' ? conversation.company_name?.trim() : null;
+          setOtherUserName(companyDisplay || conversation.participant?.name?.trim() || fallbackName);
 
           if (user?.id) {
             const otherId =
@@ -140,6 +143,7 @@ export default function MessageThreadPage({ params }: { params: Promise<{ conver
                 .then((profileRes) => {
                   const profile = profileRes.data?.profile;
                   const resolvedName =
+                    companyDisplay ||
                     profile?.name?.trim() ||
                     profile?.company_name?.trim() ||
                     conversation.participant?.name?.trim() ||

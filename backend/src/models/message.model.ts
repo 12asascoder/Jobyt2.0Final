@@ -5,6 +5,7 @@ export interface Conversation {
   recruiter_id: string;
   applicant_id: string;
   job_id: string | null;
+  company_name?: string | null;
   last_message_at: Date;
   created_at: Date;
 }
@@ -44,16 +45,69 @@ export const MessageModel = {
     return rows[0];
   },
 
-  async getConversationsForUser(userId: string): Promise<Conversation[]> {
+  async getJobMessagingContext(jobId: string): Promise<{
+    id: string;
+    recruiter_id: string;
+    source: string;
+    created_by: string | null;
+    company_name: string | null;
+  } | null> {
     const { rows } = await pool.query(
-      `SELECT c.*, m.body AS last_message, m.created_at AS last_message_at
+      `SELECT id, recruiter_id, source, created_by, company_name
+       FROM jobs
+       WHERE id = $1 AND deleted_at IS NULL
+       LIMIT 1`,
+      [jobId],
+    );
+    return rows[0] || null;
+  },
+
+  async hasApplicantAppliedToJob(applicantId: string, jobId: string): Promise<boolean> {
+    const { rows } = await pool.query(
+      `SELECT 1
+       FROM applications
+       WHERE applicant_id = $1 AND job_id = $2
+       LIMIT 1`,
+      [applicantId, jobId],
+    );
+    return rows.length > 0;
+  },
+
+  async isAdminAllowedForConversation(adminId: string, conversationId: string): Promise<boolean> {
+    const { rows } = await pool.query(
+      `SELECT 1
        FROM conversations c
+       JOIN jobs j ON j.id = c.job_id
+       WHERE c.id = $1
+         AND j.created_by = $2
+         AND j.source IN ('admin_external', 'admin_company')
+         AND j.deleted_at IS NULL
+       LIMIT 1`,
+      [conversationId, adminId],
+    );
+    return rows.length > 0;
+  },
+
+  async getConversationsForUser(userId: string, role: string): Promise<Conversation[]> {
+    const includeAdminOwnedConversations = role === 'admin';
+    const { rows } = await pool.query(
+      `SELECT c.*, j.company_name, m.body AS last_message, m.created_at AS last_message_at
+       FROM conversations c
+       LEFT JOIN jobs j ON j.id = c.job_id
        LEFT JOIN LATERAL (
          SELECT body, created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1
        ) m ON TRUE
-       WHERE c.recruiter_id = $1 OR c.applicant_id = $1
+       WHERE c.recruiter_id = $1
+          OR c.applicant_id = $1
+          OR (
+            $2::boolean = TRUE
+            AND c.job_id IS NOT NULL
+            AND j.created_by = $1
+            AND j.source IN ('admin_external', 'admin_company')
+            AND j.deleted_at IS NULL
+          )
        ORDER BY c.last_message_at DESC`,
-      [userId],
+      [userId, includeAdminOwnedConversations],
     );
     return rows;
   },

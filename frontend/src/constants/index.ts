@@ -77,5 +77,6 @@ export const ROUTES = {
   adminJobApprovals: '/admin/jobs/approvals',
   adminApplications: '/admin/applications',
   adminApplicationDetail: (id: string) => `/admin/applications/${id}`,
+  adminMessages: '/admin/messages',
   adminCredits: '/admin/credits',
 };

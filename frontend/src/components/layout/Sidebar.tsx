@@ -53,6 +53,7 @@ const adminNav: NavItem[] = [
     { label: 'Post Job', href: ROUTES.adminPostJob, icon: FaBriefcase },
     { label: 'Approvals', href: ROUTES.adminJobApprovals, icon: FaChartLine },
     { label: 'Applications', href: ROUTES.adminApplications, icon: FaFileLines },
+    { label: 'Messages', href: ROUTES.adminMessages, icon: FaComments },
     { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
     { label: 'Credits', href: ROUTES.adminCredits, icon: FaCoins },
 ];
