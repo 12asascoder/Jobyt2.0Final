@@ -19,6 +19,9 @@ interface RedeemResponse {
 interface ReferralDashboard {
   code: string;
   link: string;
+  total_referrals: number;
+  credited_referrals: number;
+  credits_earned: number;
 }
 
 export default function CommunityPage() {
@@ -29,6 +32,9 @@ export default function CommunityPage() {
   const [redemptionDate, setRedemptionDate] = useState<string | null>(null);
   const [myCode, setMyCode] = useState('');
   const [copiedMyCode, setCopiedMyCode] = useState(false);
+  const [totalReferrals, setTotalReferrals] = useState(0);
+  const [creditedReferrals, setCreditedReferrals] = useState(0);
+  const [creditsEarned, setCreditsEarned] = useState(0);
 
   // Check if user already redeemed a code
   useEffect(() => {
@@ -36,6 +42,9 @@ export default function CommunityPage() {
       try {
         const dashboardResponse = await api.get<ReferralDashboard>('/referrals/dashboard');
         setMyCode(dashboardResponse.data?.code ?? '');
+        setTotalReferrals(dashboardResponse.data?.total_referrals ?? 0);
+        setCreditedReferrals(dashboardResponse.data?.credited_referrals ?? 0);
+        setCreditsEarned(dashboardResponse.data?.credits_earned ?? 0);
       } catch (err) {
         console.error('Failed to fetch referral dashboard:', err);
       }
@@ -100,13 +109,32 @@ export default function CommunityPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-8 space-y-6 sm:space-y-8">
+    <div className="max-w-[1400px] ml-4 sm:ml-6 lg:ml-8 pr-4 space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2 tracking-tight">Community</h1>
-        <p className="text-sm sm:text-[15px] leading-relaxed max-w-3xl font-medium">
-          Join our community and earn credits by redeeming referral codes from friends!
+      <div>
+        <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight mb-2">
+          Referral Program
+        </h1>
+        <p className="text-slate-500 font-medium text-sm md:text-base mb-5">
+          Every user can take part in our internship referral program. For every person who joins the
+          platform using your unique link, you&apos;ll earn credits.
         </p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-[#0b0b0b] rounded-2xl border border-gray-900 shadow-lg flex flex-col items-center justify-center py-10">
+          <p className="text-xs text-[#a8e02d] font-semibold tracking-wider uppercase mb-4">Total Referrals</p>
+          <p className="text-5xl font-bold text-[#c3ff3d]">{totalReferrals.toString().padStart(2, '0')}</p>
+        </div>
+        <div className="bg-[#0b0b0b] rounded-2xl border border-gray-900 shadow-lg flex flex-col items-center justify-center py-10">
+          <p className="text-xs text-[#a8e02d] font-semibold tracking-wider uppercase mb-4">Credited</p>
+          <p className="text-5xl font-bold text-[#c3ff3d]">{creditedReferrals.toString().padStart(2, '0')}</p>
+        </div>
+        <div className="bg-[#0b0b0b] rounded-2xl border border-gray-900 shadow-lg flex flex-col items-center justify-center py-10">
+          <p className="text-xs text-[#a8e02d] font-semibold tracking-wider uppercase mb-4">Credits Earned</p>
+          <p className="text-5xl font-bold text-[#c3ff3d]">{creditsEarned}</p>
+        </div>
       </div>
 
       {/* Redeem Code Card */}

@@ -78,8 +78,8 @@ export function DashboardHeader({
             {/* ── Row 1: Logo + search + notifications ── */}
             <div className="mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-10 h-16 md:h-20">
                 {/* Logo */}
-                <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-                    <Image src="/logo.png" alt="Jobyt" width={28} height={28} className="object-contain" />
+                <Link href={ROUTES.home} className="flex items-center gap-2 shrink-0">
+                    <Image src="/logo.png" alt="Jobyt" width={28} height={28} className="object-contain" style={{ width: 'auto', height: 'auto' }} priority />
                     <span className="font-display text-xl font-bold text-slate-900 tracking-tight">Jobyt</span>
                 </Link>
 
@@ -112,7 +112,11 @@ export function DashboardHeader({
                                 </div>
                                 <div className="flex items-center gap-1 ml-1 pl-1 relative">
                                     <button
-                                        onClick={() => setBellActive(!bellActive)}
+                                        onClick={() => {
+                                            const nextActive = !bellActive;
+                                            setBellActive(nextActive);
+                                            if (nextActive) onSearchToggle(false);
+                                        }}
                                         className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors ${
                                             bellActive ? 'bg-lime-400 text-black' : 'text-white/80 hover:text-white'
                                         }`}
@@ -126,7 +130,10 @@ export function DashboardHeader({
                             /* STATE: Default / Notification — solid black pill */
                             <div className="flex items-center bg-[#1a1a1a] rounded-full h-14 px-2 gap-1 relative">
                                 <button
-                                    onClick={() => onSearchToggle(true)}
+                                    onClick={() => {
+                                        onSearchToggle(true);
+                                        setBellActive(false);
+                                    }}
                                     className="w-11 h-11 rounded-full flex items-center justify-center text-white/80 hover:text-white transition-colors"
                                 >
                                     <FaMagnifyingGlass className="text-base" />
@@ -172,6 +179,7 @@ export function DashboardHeader({
                                                 onSearchChange(e.target.value);
                                                 onSearchToggle(Boolean(e.target.value));
                                             }}
+                                            onFocus={() => setBellActive(false)}
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter' && searchQuery.trim() && onSearchSubmit) {
                                                     onSearchSubmit(searchQuery.trim());

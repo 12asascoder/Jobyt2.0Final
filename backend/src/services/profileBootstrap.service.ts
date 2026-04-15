@@ -25,8 +25,8 @@ export const ProfileBootstrapService = {
   async ensureRoleProfileWithSql(userId: string, role: UserRole): Promise<void> {
     if (role === 'applicant') {
       await pool.query(
-        `INSERT INTO applicant_profiles (user_id)
-         VALUES ($1)
+        `INSERT INTO applicant_profiles (user_id, created_at, updated_at)
+         VALUES ($1, NOW(), NOW())
          ON CONFLICT (user_id) DO NOTHING`,
         [userId],
       );

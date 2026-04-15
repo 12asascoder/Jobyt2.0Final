@@ -213,4 +213,47 @@ export const AdminController = {
       next(err);
     }
   },
+
+  // ── Applications ─────────────────────────────────────────────────────────────
+
+  async listApplications(req: Request, res: Response, next: NextFunction) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const filters = {
+        status: req.query.status as string,
+        jobTitle: req.query.jobTitle as string,
+        applicantName: req.query.applicantName as string,
+        jobId: req.query.jobId as string,
+        search: req.query.search as string,
+      };
+      const { applications, total } = await AdminService.listApplications(filters, page, limit);
+      sendPaginated(res, applications, total, page, limit);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getApplicationById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const application = await AdminService.getApplicationById(req.params.id as string);
+      sendSuccess(res, application);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async updateApplicationStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { status } = req.body;
+      const updated = await AdminService.updateApplicationStatus(
+        req.user!.userId,
+        req.params.id as string,
+        status
+      );
+      sendSuccess(res, updated, 'Application status updated');
+    } catch (err) {
+      next(err);
+    }
+  },
 };

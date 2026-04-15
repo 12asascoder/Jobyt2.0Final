@@ -231,7 +231,7 @@ export const ApplicationService = {
 
   async getRecruiterApplicationsWithFilters(
     recruiterId: string,
-    filters: { status?: ApplicationStatus; jobTitle?: string; applicantName?: string; jobId?: string },
+    filters: { status?: ApplicationStatus; jobTitle?: string; applicantName?: string; jobId?: string; search?: string },
     page: number,
     limit: number,
   ) {

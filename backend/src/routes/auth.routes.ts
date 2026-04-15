@@ -6,6 +6,37 @@ import { validate } from '../middleware/validate';
 
 const router = Router();
 
+const weakPasswords = new Set([
+  '123456',
+  '12345678',
+  '123456789',
+  'password',
+  'password123',
+  'qwerty123',
+]);
+
+const passwordPolicy = body('password').custom((value: unknown) => {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error('Password is required');
+  }
+  if (value.length < 8) {
+    throw new Error('Password must be at least 8 characters long');
+  }
+  if (!/[A-Z]/.test(value)) {
+    throw new Error('Password must include at least one uppercase letter');
+  }
+  if (!/[a-z]/.test(value)) {
+    throw new Error('Password must include at least one lowercase letter');
+  }
+  if (!/[0-9]/.test(value)) {
+    throw new Error('Password must include at least one number');
+  }
+  if (weakPasswords.has(value.toLowerCase())) {
+    throw new Error('Password is too weak. Please choose a stronger password');
+  }
+  return true;
+});
+
 const oauthCredentialPresence = body().custom((value) => {
   const payload = (value ?? {}) as {
     tokenOrCode?: unknown;
@@ -24,7 +55,7 @@ const oauthCredentialPresence = body().custom((value) => {
 router.post(
   '/register',
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 8 }),
+  passwordPolicy,
   body('role').isIn(['applicant', 'recruiter']),
   body('referralCode').optional().isString(),
   validate,
@@ -104,7 +135,7 @@ router.post(
 router.post(
   '/reset-password',
   body('token').notEmpty(),
-  body('password').isLength({ min: 8 }),
+  passwordPolicy,
   validate,
   AuthController.resetPassword,
 );

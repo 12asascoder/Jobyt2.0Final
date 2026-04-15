@@ -1,8 +1,6 @@
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
-import { FaLinkedinIn, FaInstagram } from 'react-icons/fa6';
+import { ModemAnimatedFooter, defaultJobytSocials } from '@/components/ui/modem-animated-footer';
 
 const companyLinks = [];
 
