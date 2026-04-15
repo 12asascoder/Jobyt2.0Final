@@ -106,7 +106,7 @@ export function DashboardSidebar() {
                 </div>
 
                 {/* Bottom utility pill: star + logout + avatar */}
-                <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-0.5">
+                <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-0.5 mt-5">
                     <Link
                         href={ROUTES.credits}
                         className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isActive(ROUTES.credits)

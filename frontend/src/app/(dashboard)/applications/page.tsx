@@ -39,8 +39,8 @@ export default function ApplicationsPage() {
     }, [fetchMyApplications]);
 
     return (
-        <div className="max-w-[1100px] mx-auto">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight mb-8">
+        <div className="max-w-[1400px] ml-4 sm:ml-6 lg:ml-8 pr-4">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight mb-4">
                 My Applications
             </h1>
 
@@ -54,7 +54,6 @@ export default function ApplicationsPage() {
 
             {!isLoading && applications.length === 0 && (
                 <div className="rounded-2xl border-2 border-dashed border-slate-200 py-20 text-center">
-                    <p className="text-2xl mb-2">📋</p>
                     <p className="text-slate-500 font-medium text-lg">You haven&apos;t applied to any jobs yet.</p>
                     <p className="text-slate-400 text-sm mt-1">Start exploring opportunities!</p>
                 </div>
