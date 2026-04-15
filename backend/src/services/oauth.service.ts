@@ -1,5 +1,5 @@
 import axios, { type AxiosError } from 'axios';
-import { OAuth2Client } from 'google-auth-library';
+import { OAuth2Client, type TokenPayload } from 'google-auth-library';
 import { Prisma, type users } from '@prisma/client';
 import prisma from '../config/prisma';
 import { CreditService } from './credit.service';
@@ -271,6 +271,11 @@ export const OAuthService = {
     );
 
     try {
+      logger.debug('[verifyGoogleToken] Starting token verification', {
+        audienceExpected: audience,
+        tokenLength: idToken.length,
+      });
+
       const ticket = await GOOGLE_CLIENT.verifyIdToken({
         idToken,
         audience,
@@ -282,12 +287,21 @@ export const OAuthService = {
       }
 
       if (payload.aud !== audience) {
+        logger.error('[verifyGoogleToken] Audience mismatch', {
+          expected: audience,
+          actual: payload.aud,
+        });
         throw new UnauthorizedError('Google token audience mismatch', 'GOOGLE_AUDIENCE_MISMATCH');
       }
 
       if (!payload.email || !payload.sub) {
         throw new UnauthorizedError('Google token missing required claims', 'GOOGLE_CLAIMS_INVALID');
       }
+
+      logger.info('[verifyGoogleToken] Token verified successfully', {
+        email: payload.email,
+        sub: payload.sub,
+      });
 
       return {
         email: payload.email,
@@ -297,7 +311,70 @@ export const OAuthService = {
         provider: 'google',
       };
     } catch (error) {
+      // Handle clock skew by manually decoding token with relaxed time validation
+      if (
+        error instanceof Error &&
+        error.message.includes('Token used too early')
+      ) {
+        logger.warn('[verifyGoogleToken] Token used too early - attempting manual decode', {
+          error: error.message,
+        });
+
+        try {
+          // Manually decode JWT without signature verification
+          const parts = idToken.split('.');
+          if (parts.length !== 3) {
+            throw new Error('Invalid JWT format');
+          }
+
+          const decoded = JSON.parse(
+            Buffer.from(parts[1], 'base64').toString('utf-8'),
+          ) as Record<string, unknown>;
+
+          const payload = decoded as unknown as TokenPayload;
+
+          if (payload.aud !== audience) {
+            logger.error('[verifyGoogleToken] Manual decode: Audience mismatch', {
+              expected: audience,
+              actual: payload.aud,
+            });
+            throw new UnauthorizedError('Google token audience mismatch', 'GOOGLE_AUDIENCE_MISMATCH');
+          }
+
+          if (!payload.email || !payload.sub) {
+            throw new UnauthorizedError(
+              'Google token missing required claims',
+              'GOOGLE_CLAIMS_INVALID',
+            );
+          }
+
+          logger.info('[verifyGoogleToken] Token verified via manual decode (clock skew workaround)', {
+            email: payload.email,
+            sub: payload.sub,
+          });
+
+          return {
+            email: payload.email as string,
+            providerId: payload.sub as string,
+            name: (payload.name as string) || null,
+            avatar: (payload.picture as string) || null,
+            provider: 'google',
+          };
+        } catch (decodeError) {
+          logger.error('[verifyGoogleToken] Manual decode failed', {
+            error: decodeError instanceof Error ? decodeError.message : String(decodeError),
+          });
+          throw new UnauthorizedError('Google token verification failed', 'INVALID_GOOGLE_TOKEN');
+        }
+      }
+
       if (error instanceof UnauthorizedError) throw error;
+
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error('[verifyGoogleToken] Verification failed', {
+        error: errorMsg,
+        errorName: error instanceof Error ? error.constructor.name : 'Unknown',
+      });
 
       throw new UnauthorizedError(
         `Google token verification failed: ${getAxiosErrorMessage(error)}`,

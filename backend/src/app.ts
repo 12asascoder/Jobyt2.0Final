@@ -85,6 +85,7 @@ app.use((req, res, next) => {
 // Structured request logging
 app.use(requestLogger);
 
+// Root welcome route
 app.get('/', (_req, res) => {
   res.json({
     success: true,

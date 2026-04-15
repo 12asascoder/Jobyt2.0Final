@@ -7,6 +7,8 @@ import { ApplicationQuestion, Job } from '@/types';
 import { Button, Spinner } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
 import { formatDate } from '@/lib/utils';
+import { avatarColor, avatarInitials } from '@/components/ui/JobCard';
+import { resolveAssetUrl } from '@/lib/assetUrl';
 import toast from 'react-hot-toast';
 import { ROUTES } from '@/constants';
 import { InsufficientCreditsCard } from '@/components/credits/InsufficientCreditsCard';
@@ -177,8 +179,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       api.get<Job>(`/jobs/${id}`),
       api.get<{ hasApplied: boolean }>(`/applications/jobs/${id}/check`).catch(() => ({ data: { hasApplied: false } })),
       api.get<{ resumes: ResumeListItem[] }>('/users/me/resumes').catch(() => ({ data: { resumes: [] } })),
+      api.get<Job[]>('/users/me/saved-jobs').catch(() => ({ data: [] })),
     ])
-      .then(([jobRes, checkRes, resumeRes]) => {
+      .then(([jobRes, checkRes, resumeRes, savedRes]) => {
         setJob(jobRes.data ?? null);
         setHasApplied(checkRes.data?.hasApplied ?? false);
         const availableResumes = Array.isArray(resumeRes.data?.resumes) ? resumeRes.data.resumes : [];
@@ -189,6 +192,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         } else if (availableResumes.length > 0) {
           setSelectedResumeId(availableResumes[0].id);
         }
+        
+        // Check if job is saved - savedRes.data is an array of saved jobs
+        const savedJobs = Array.isArray(savedRes.data) ? savedRes.data : [];
+        const isSavedJob = savedJobs.some((savedJob) => savedJob.id === id);
+        setIsSaved(isSavedJob);
       })
       .catch(() => router.push(ROUTES.dashboard))
       .finally(() => setLoading(false));
@@ -428,8 +436,30 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       <div className="job-mock-scroll rounded-[24px] bg-[#e8e7e2] p-4 shadow-[0_8px_30px_rgba(0,0,0,0.06)] md:max-h-[calc(100vh-130px)] md:overflow-y-scroll md:pr-2 md:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-[20px] bg-[#f3f3f0] p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#2a3f98] text-lg font-black text-white">
-              {companyName.slice(0, 2).toUpperCase()}
+            <div 
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 50,
+                background: avatarColor(companyName),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                overflow: 'hidden',
+              }}
+            >
+              {resolveAssetUrl(job.company_logo) ? (
+                <img
+                  src={resolveAssetUrl(job.company_logo) || ''}
+                  alt={`${companyName} logo`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1 }}>
+                  {avatarInitials(companyName)}
+                </span>
+              )}
             </div>
             <div>
               <p className="text-3xl font-black tracking-tight text-[#121212]">{companyName}</p>
@@ -438,10 +468,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           </div>
           <button
             onClick={handleSaveJob}
-            className={`inline-flex h-12 w-12 items-center justify-center rounded-xl border-2 ${isSaved ? 'border-[#bbf52f] bg-black text-[#bbf52f]' : 'border-black bg-white text-black'}`}
-            aria-label="Save job"
+            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 font-bold text-sm transition ${isSaved ? 'border-[#bbf52f] bg-black text-[#bbf52f]' : 'border-black bg-white text-black hover:bg-gray-50'}`}
+            aria-label={isSaved ? 'Unsave job' : 'Save job'}
           >
-            <FaBookmark className="h-5 w-5" />
+            <FaBookmark className="h-4 w-4" />
+            {isSaved ? 'Unsave' : 'Save'}
           </button>
         </div>
 
@@ -511,7 +542,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   }
                   className="flex w-full items-center justify-between px-5 py-4 text-left"
                 >
-                  <span className="text-[30px] font-bold tracking-tight text-[#111] md:text-[34px]">{section.title}</span>
+                  <span className="text-lg font-bold tracking-tight text-[#111] md:text-xl">{section.title}</span>
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white">
                     {openSections[section.key] ? <FaChevronUp className="h-3.5 w-3.5" /> : <FaChevronDown className="h-3.5 w-3.5" />}
                   </span>
@@ -643,16 +674,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             </div>
           </div>
 
-          <div className="h-fit rounded-3xl bg-black p-5 text-white lg:sticky lg:top-24">
+          <div className="sticky top-24 z-40 h-fit rounded-3xl bg-black p-3 text-white">
             {user?.role === 'applicant' && job.skills.length > 0 && (
               <>
-                <div className="mb-3 text-center">
-                  <p className="text-[54px] font-black leading-none text-[#bbf52f]">
+                <div className="mb-2 text-center">
+                  <p className="text-4xl font-black leading-none text-[#bbf52f]">
                     {loadingInsights ? '--' : matchScore !== null ? `${matchScore}%` : '80%'}
                   </p>
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#bbf52f]">Skill Matching</p>
                 </div>
-                <div className="mb-5 h-5 rounded-full bg-[#4a4a4a]">
+                <div className="mb-3 h-4 rounded-full bg-[#4a4a4a]">
                   <div
                     className="h-full rounded-full bg-[#bbf52f]"
                     style={{ width: `${loadingInsights ? 0 : matchScore ?? 80}%` }}
@@ -661,33 +692,43 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               </>
             )}
 
-            <h3 className="mb-3 text-3xl font-black">Skills</h3>
-            <div className="flex flex-wrap gap-2">
-              {job.skills.map((skill) => (
+            <h3 className="mb-2 text-lg font-black">Skills</h3>
+            <div className="flex flex-wrap gap-1.5">
+              {job.skills.slice(0, 6).map((skill) => (
                 <span
                   key={skill}
-                  className="rounded-full border border-[#9acd32] px-3 py-1 text-sm text-[#bbf52f]"
+                  className="rounded-full border border-[#9acd32] px-2 py-0.5 text-xs text-[#bbf52f]"
                 >
                   {skill}
                 </span>
               ))}
+              {job.skills.length > 6 && (
+                <span className="rounded-full border border-[#9acd32] px-2 py-0.5 text-xs text-[#bbf52f]">
+                  +{job.skills.length - 6}
+                </span>
+              )}
             </div>
 
             {user?.role === 'applicant' && missingSkills.length > 0 && (
-              <div className="mt-5 space-y-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-300">Missing Skills</p>
-                <div className="flex flex-wrap gap-2">
-                  {missingSkills.map((skill) => (
-                    <span key={skill} className="rounded-full border border-white px-3 py-1 text-xs text-white">
+              <div className="mt-3 space-y-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-300">Missing</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {missingSkills.slice(0, 4).map((skill) => (
+                    <span key={skill} className="rounded-full border border-white px-2 py-0.5 text-xs text-white">
                       {skill}
                     </span>
                   ))}
+                  {missingSkills.length > 4 && (
+                    <span className="rounded-full border border-white px-2 py-0.5 text-xs text-white">
+                      +{missingSkills.length - 4}
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={handleGenerateRoadmap}
-                  className="mt-2 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-black"
+                  className="mt-2 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-black"
                 >
-                  <FaRoute className="h-3 w-3" /> Generate Roadmap
+                  <FaRoute className="h-2.5 w-2.5" /> Roadmap
                 </button>
               </div>
             )}

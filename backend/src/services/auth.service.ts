@@ -1,5 +1,6 @@
 import { randomBytes, createHash, timingSafeEqual } from 'crypto';
 import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 import { UserModel } from '../models/user.model';
 import { ReferralModel } from '../models/referral.model';
 import { CreditService } from './credit.service';
@@ -14,7 +15,6 @@ import {
 } from '../utils/email';
 import { generateReferralCode } from '../utils/referralCode';
 import { UserRole, JwtPayload } from '../types';
-import { Prisma } from '@prisma/client';
 import prisma from '../config/prisma';
 import logger from '../config/logger';
 import redis from '../config/redis';
