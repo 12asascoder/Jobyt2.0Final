@@ -3,8 +3,10 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { sortSpazorlabsFirst } from '@/lib/companyFlags';
 import { useAuthStore } from '@/store/auth.store';
 import { Job } from '@/types';
+import { Button } from '@/components/ui';
 import {
     BackendJob,
     JobCardGrid,
@@ -16,6 +18,7 @@ import {
 const AVAILABLE_SKILLS = ['React', 'Figma', 'Python', 'Marketing', 'UI/UX', 'SQL', 'Node.js'];
 const WORK_TYPES = ['Remote', 'Hybrid', 'On-site'];
 const DURATIONS = ['1-3 Months', '3-6 Months', '6+ Months'];
+const JOBS_PAGE_SIZE = 50;
 
 export default function DashboardPage() {
     const { user } = useAuthStore();
@@ -29,6 +32,10 @@ export default function DashboardPage() {
 
     const [jobs, setJobs] = useState<BackendJob[]>([]);
     const [jobsLoading, setJobsLoading] = useState(true);
+    const [jobsLoadingMore, setJobsLoadingMore] = useState(false);
+    const [jobTotal, setJobTotal] = useState(0);
+    const [jobPage, setJobPage] = useState(1);
+    const [hasMoreJobs, setHasMoreJobs] = useState(false);
 
     // Search & filter state
     const [keyword, setKeyword] = useState(keywordParam);
@@ -67,27 +74,53 @@ export default function DashboardPage() {
         fetchStats().finally(() => setLoading(false));
     }, [fetchStats]);
 
-    useEffect(() => {
-        api.getPaginated<BackendJob>('/jobs?limit=50&exclude_applied=true')
-            .then((response) => {
-                const jobsData = response.data ?? [];
-                if (response.success && jobsData.length > 0) {
-                    // Normalize all jobs to ensure they have valid id fields
-                    const normalizedJobs = jobsData.map((job) => normalizeJob(job));
-                    setJobs(normalizedJobs);
-                } else {
-                    setJobs([]);
-                }
-            })
-            .catch(() => setJobs([]))
-            .finally(() => setJobsLoading(false));
+    const fetchJobsPage = useCallback(async (page: number, append: boolean) => {
+        if (append) {
+            setJobsLoadingMore(true);
+        } else {
+            setJobsLoading(true);
+        }
+
+        try {
+            const response = await api.getPaginated<BackendJob>(
+                `/jobs?page=${page}&limit=${JOBS_PAGE_SIZE}&exclude_applied=true`,
+            );
+
+            const jobsData = response.data ?? [];
+            const normalizedJobs = jobsData.map((job) => normalizeJob(job));
+            const total = response.pagination?.total ?? 0;
+
+            setJobTotal(total);
+            setJobPage(page);
+            setHasMoreJobs(page * JOBS_PAGE_SIZE < total);
+            setJobs((prev) => (append ? [...prev, ...normalizedJobs] : normalizedJobs));
+        } catch {
+            if (!append) {
+                setJobs([]);
+            }
+        } finally {
+            if (append) {
+                setJobsLoadingMore(false);
+            } else {
+                setJobsLoading(false);
+            }
+        }
     }, []);
+
+    useEffect(() => {
+        fetchJobsPage(1, false);
+    }, [fetchJobsPage]);
+
+    const handleLoadMoreJobs = useCallback(() => {
+        if (jobsLoading || jobsLoadingMore || !hasMoreJobs) return;
+        fetchJobsPage(jobPage + 1, true);
+    }, [fetchJobsPage, hasMoreJobs, jobPage, jobsLoading, jobsLoadingMore]);
 
     const toggleSkill = (s: string) =>
         setSelectedSkills((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
     const filteredJobs = useMemo(() => {
-        return jobs.filter((job) => {
+        const visibleJobs = jobs.filter((job) => {
             if (keyword) {
                 const q = keyword.toLowerCase();
                 if (
@@ -108,6 +141,7 @@ export default function DashboardPage() {
             }
             return true;
         });
+        return sortSpazorlabsFirst(visibleJobs);
     }, [jobs, keyword, selectedSkills, selectedWorkType]);
 
     const userName = user?.email ? user.email.split('@')[0] : 'User';
@@ -170,6 +204,19 @@ export default function DashboardPage() {
                             <div className="rounded-2xl border-2 border-dashed border-slate-200 py-20 text-center">
                                 <p className="text-2xl mb-2">🚀</p>
                                 <p className="text-slate-500 font-medium text-lg">New opportunities coming soon</p>
+                            </div>
+                        )}
+
+                        {!jobsLoading && jobs.length > 0 && hasMoreJobs && (
+                            <div className="mt-8 flex flex-col items-center gap-3">
+                                <Button
+                                    onClick={handleLoadMoreJobs}
+                                    isLoading={jobsLoadingMore}
+                                    disabled={jobsLoadingMore}
+                                >
+                                    {jobsLoadingMore ? 'Loading more jobs...' : 'Load more jobs'}
+                                </Button>
+                                <p className="text-sm text-slate-500">Showing {jobs.length} of {jobTotal} jobs</p>
                             </div>
                         )}
                     </div>
@@ -372,6 +419,19 @@ export default function DashboardPage() {
                                     >
                                         Clear all filters
                                     </button>
+                                </div>
+                            )}
+
+                            {!jobsLoading && jobs.length > 0 && hasMoreJobs && (
+                                <div className="mt-8 flex flex-col items-center gap-3">
+                                    <Button
+                                        onClick={handleLoadMoreJobs}
+                                        isLoading={jobsLoadingMore}
+                                        disabled={jobsLoadingMore}
+                                    >
+                                        {jobsLoadingMore ? 'Loading more jobs...' : 'Load more jobs'}
+                                    </Button>
+                                    <p className="text-sm text-slate-500">Showing {jobs.length} of {jobTotal} jobs</p>
                                 </div>
                             )}
                         </div>

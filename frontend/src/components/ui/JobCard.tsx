@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { resolveAssetUrl } from '@/lib/assetUrl';
+import { isSpazorlabsCompany } from '@/lib/companyFlags';
 
 export interface BackendJob {
     id: string;
@@ -252,6 +253,7 @@ export function JobCard({
 
     const isRemote = job.type === 'remote' || (job.location?.toLowerCase().includes('remote') ?? false);
     const badgeText = getBadgeText(job);
+    const isVerifiedCompany = isSpazorlabsCompany(job.company_name);
     const name = job.company_name || job.title;
     const companyLogo = resolveAssetUrl(job.company_logo || job.company?.logo || null);
     const salaryLabel = formatSalary(job.salary_min, job.salary_max);
@@ -367,6 +369,19 @@ export function JobCard({
                         {job.company_name && (
                             <span style={{ fontSize: 12, fontWeight: 500, color: '#444' }}>
                                 {job.company_name}
+                            </span>
+                        )}
+                        {isVerifiedCompany && (
+                            <span
+                                style={{
+                                    background: '#D9FBE6', color: '#0E6B3A',
+                                    fontSize: 8, fontWeight: 700,
+                                    padding: '3px 6px', letterSpacing: '0.07em',
+                                    textTransform: 'uppercase', lineHeight: 1.3,
+                                    borderRadius: 2, whiteSpace: 'nowrap',
+                                }}
+                            >
+                                Verified
                             </span>
                         )}
                         {badgeText && (

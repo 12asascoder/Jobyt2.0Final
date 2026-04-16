@@ -637,6 +637,7 @@ export const JobModel = {
     skills?: string[];
     excludeAppliedForApplicantId?: string;
     onlyApproved?: boolean;
+    prioritizeSpazorlabs?: boolean;
     limit: number;
     offset: number;
   }): Promise<{ rows: Job[]; total: number }> {
@@ -701,6 +702,11 @@ export const JobModel = {
     }
 
     const whereClause = `WHERE ${conditions.join(' AND ')}`;
+    const priorityOrderClause =
+      "CASE WHEN regexp_replace(lower(COALESCE(NULLIF(jobs.company_name, ''), recruiter_profiles.company_name, '')), '[^a-z0-9]', '', 'g') LIKE '%spazorlabs%' THEN 0 ELSE 1 END";
+    const orderByClause = filters.prioritizeSpazorlabs
+      ? `${priorityOrderClause}, jobs.created_at DESC, jobs.id DESC`
+      : 'jobs.created_at DESC, jobs.id DESC';
 
     const countQuery = `SELECT COUNT(*) FROM jobs ${whereClause}`;
     const selectQuery = `SELECT
@@ -713,7 +719,7 @@ export const JobModel = {
       FROM jobs
       LEFT JOIN recruiter_profiles ON recruiter_profiles.user_id = jobs.recruiter_id
       ${whereClause}
-      ORDER BY jobs.created_at DESC, jobs.id DESC
+      ORDER BY ${orderByClause}
       LIMIT $${index++} OFFSET $${index++}`;
 
     const [countResult, selectResult] = await Promise.all([

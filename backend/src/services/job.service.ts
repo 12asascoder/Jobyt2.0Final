@@ -167,6 +167,7 @@ export const JobService = {
     skills?: string[];
     excludeAppliedForApplicantId?: string;
     onlyApproved?: boolean;
+    prioritizeSpazorlabs?: boolean;
   }) {
     // Normalize pagination safely.
     const normalizedPage = Number(filters.page);
@@ -193,6 +194,7 @@ export const JobService = {
       skills?: string[];
       excludeAppliedForApplicantId?: string;
       onlyApproved?: boolean;
+      prioritizeSpazorlabs?: boolean;
     } = {};
     const allowedStatus: JobStatus[] = ['draft', 'active', 'closed'];
 
@@ -250,6 +252,10 @@ export const JobService = {
 
     if (filters.onlyApproved) {
       queryFilters.onlyApproved = true;
+    }
+
+    if (filters.prioritizeSpazorlabs) {
+      queryFilters.prioritizeSpazorlabs = true;
     }
 
     const result = await JobModel.findAll({ ...queryFilters, limit, offset });

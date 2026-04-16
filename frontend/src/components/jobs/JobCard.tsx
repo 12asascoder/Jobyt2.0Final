@@ -4,15 +4,19 @@ import { Badge, Card, CardBody } from '@/components/ui';
 import { formatSalaryRange, formatDate } from '@/lib/utils';
 import { ROUTES } from '@/constants';
 import { resolveAssetUrl } from '@/lib/assetUrl';
+import { isSpazorlabsCompany } from '@/lib/companyFlags';
 
 interface JobCardProps {
   job: Job;
   actions?: React.ReactNode;
 }
 
-export const JobCard = ({ job, actions }: JobCardProps) => (
-  <Card className="hover:shadow-md transition-shadow">
-    <CardBody>
+export const JobCard = ({ job, actions }: JobCardProps) => {
+  const isVerifiedCompany = isSpazorlabsCompany(job.company_name);
+
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardBody>
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-1 items-start gap-3">
           <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-slate-200">
@@ -32,7 +36,10 @@ export const JobCard = ({ job, actions }: JobCardProps) => (
           <Link href={ROUTES.jobDetail(job.id)} className="text-base font-semibold text-gray-900 hover:text-blue-600">
             {job.title}
           </Link>
-          {job.company_name && <p className="mt-0.5 text-sm text-gray-500">{job.company_name}</p>}
+          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+            {job.company_name && <p className="text-sm text-gray-500">{job.company_name}</p>}
+            {isVerifiedCompany && <Badge variant="success">Verified</Badge>}
+          </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {job.location && <span className="text-xs text-gray-500">📍 {job.location}</span>}
@@ -58,6 +65,7 @@ export const JobCard = ({ job, actions }: JobCardProps) => (
       </div>
 
       {actions && <div className="mt-4 flex gap-2">{actions}</div>}
-    </CardBody>
-  </Card>
-);
+      </CardBody>
+    </Card>
+  );
+};

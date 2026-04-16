@@ -52,6 +52,7 @@ export const JobController = {
         skills: normalizedSkills,
         excludeAppliedForApplicantId,
         onlyApproved: req.user?.role === 'applicant',
+        prioritizeSpazorlabs: req.user?.role === 'applicant',
       });
 
       sendPaginated(res, jobs, pagination.total, pagination.page, pagination.limit, 'Jobs fetched successfully');

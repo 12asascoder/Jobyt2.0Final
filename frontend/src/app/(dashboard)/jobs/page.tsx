@@ -10,12 +10,12 @@ import { FaMagnifyingGlass } from 'react-icons/fa6';
 
 function JobsContent() {
     const searchParams = useSearchParams();
-    const { jobs, total, isLoading, searchJobs } = useJobs();
+    const { jobs, total, isLoading, isLoadingMore, hasMore, searchJobs, loadMore } = useJobs();
 
     useEffect(() => {
         const keyword = searchParams.get('keyword') || undefined;
         const type = searchParams.get('type') || undefined;
-        searchJobs({ keyword, type });
+        searchJobs({ keyword, type, page: 1, limit: 20 });
     }, [searchParams, searchJobs]);
 
     return (
@@ -47,6 +47,15 @@ function JobsContent() {
                         <JobCard key={job.id} job={job} actions={<Button size="sm">Apply Now</Button>} />
                     ))}
                 </div>
+
+                {!isLoading && jobs.length > 0 && hasMore && (
+                    <div className="mt-6 flex flex-col items-center gap-3">
+                        <Button onClick={loadMore} isLoading={isLoadingMore} disabled={isLoadingMore}>
+                            {isLoadingMore ? 'Loading more jobs...' : 'Load more jobs'}
+                        </Button>
+                        <p className="text-sm text-slate-500">Showing {jobs.length} of {total} jobs</p>
+                    </div>
+                )}
             </div>
         </div>
     );
