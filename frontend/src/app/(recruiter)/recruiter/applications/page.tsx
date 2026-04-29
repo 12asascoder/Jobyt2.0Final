@@ -262,12 +262,13 @@ export default function RecruiterApplicationsPage() {
   }, []);
 
   return (
-    <div>
-      <div className="max-w-6xl mx-auto pb-6 pt-6 px-4">
-        <section className="mb-8">
+    <div className="max-w-7xl mx-auto space-y-6 pb-6">
+      <section className="flex items-start justify-between gap-4">
+        <div>
           <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Applications</h1>
           <p className="mt-2 text-xl leading-tight text-black/80">Review and manage candidate applications</p>
-        </section>
+        </div>
+      </section>
 
         <div className="rounded-2xl p-6 space-y-6" style={{ backgroundColor: '#ece9e2' }}>
       <div className="flex flex-col lg:flex-row lg:items-center gap-4">
@@ -456,7 +457,6 @@ export default function RecruiterApplicationsPage() {
           ))}
         </div>
       )}
-        </div>
       </div>
     </div>
   );

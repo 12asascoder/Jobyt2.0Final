@@ -100,9 +100,8 @@ export default function RecruiterJobsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto pb-6 pt-6 px-4">
-        <section className="mb-8 flex items-start justify-between gap-4">
+    <div className="max-w-7xl mx-auto space-y-6 pb-6">
+      <section className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Job Listings</h1>
             <p className="mt-2 text-xl leading-tight text-black/80">Manage and track all your internship postings</p>
@@ -205,7 +204,6 @@ export default function RecruiterJobsPage() {
           )})}
         </div>
       )}
-        </div>
       </div>
     </div>
   );

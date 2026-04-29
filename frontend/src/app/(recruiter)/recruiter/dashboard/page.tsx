@@ -220,10 +220,10 @@ export default function RecruiterDashboardPage() {
                 </Link>
             </section>
 
-            <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <section className="flex flex-wrap gap-4 sm:gap-6">
                 {statCards.map((stat) => {
                     return (
-                        <article key={stat.label.join('-')} className="rounded-2xl bg-black text-lime-300 px-5 py-4 shadow-xl min-h-[92px] flex items-center">
+                        <article key={stat.label.join('-')} className="rounded-2xl bg-black text-lime-300 px-5 py-4 shadow-xl w-[199px] h-[100px] flex items-center">
                             <div className="flex items-end gap-4">
                                 <p className="text-[38px] leading-none font-black tracking-tight">{stat.value}</p>
                                 <div className="pb-1">
