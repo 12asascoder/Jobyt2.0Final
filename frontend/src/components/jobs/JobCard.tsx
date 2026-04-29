@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { Job } from '@/types';
 import { Badge, Card, CardBody } from '@/components/ui';
-import { formatSalaryRange, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
+import { formatSalaryRange } from '@/lib/salary';
 import { ROUTES } from '@/constants';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import { isSpazorlabsCompany } from '@/lib/companyFlags';
@@ -59,7 +60,7 @@ export const JobCard = ({ job, actions }: JobCardProps) => {
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="text-sm font-medium text-gray-900">{formatSalaryRange(job.salary_min, job.salary_max)}</p>
+          <p className="text-sm font-medium text-gray-900">{formatSalaryRange(job.salary_min, job.salary_max, job.type)}</p>
           <p className="mt-1 text-xs text-gray-400">{formatDate(job.created_at)}</p>
         </div>
       </div>

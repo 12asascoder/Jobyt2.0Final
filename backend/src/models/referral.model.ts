@@ -27,10 +27,14 @@ export const ReferralModel = {
 
   async findByReferrerId(referrerId: string): Promise<Referral[]> {
     const { rows } = await pool.query(
-      `SELECT r.*, u.email, ap.name FROM referrals r
+      `SELECT r.*, u.email,
+              COALESCE(ap.name, rp.name) AS name
+       FROM referrals r
        JOIN users u ON u.id = r.referred_id
        LEFT JOIN applicant_profiles ap ON ap.user_id = r.referred_id
-       WHERE r.referrer_id = $1 ORDER BY r.created_at DESC`,
+       LEFT JOIN recruiter_profiles rp ON rp.user_id = r.referred_id
+       WHERE r.referrer_id = $1
+       ORDER BY r.created_at DESC`,
       [referrerId],
     );
     return rows;

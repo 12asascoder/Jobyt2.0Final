@@ -8,7 +8,7 @@ import { AppError } from '../utils/appError';
 import { UserRole } from '../types';
 import type { ParsedResume } from '../utils/resumeParser';
 
-import { normalizeUrl } from '../utils/url';
+import { normalizeUrl, normalizeLinkedInUrl } from '../utils/url';
 
 const APPLICANT_PROFILE_FIELDS = new Set([
   'name',
@@ -55,8 +55,9 @@ const normalizeProfilePatch = (
     // Treat empty strings as null for optional profile text/URL fields.
     let val = typeof value === 'string' && value.trim() === '' ? null : value;
     
+    // Apply URL normalization — use domain-specific normalizer for linkedin_url.
     if (val && typeof val === 'string' && URL_FIELDS.has(key)) {
-      val = normalizeUrl(val);
+      val = key === 'linkedin_url' ? normalizeLinkedInUrl(val) : normalizeUrl(val);
     }
     
     out[key] = val;

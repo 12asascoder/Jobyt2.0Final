@@ -90,6 +90,15 @@ export default function ProfilePage() {
         return trimmed.length ? trimmed : null;
       };
 
+      // Client-side LinkedIn URL validation
+      if (data.linkedin_url && typeof data.linkedin_url === 'string' && data.linkedin_url.trim()) {
+        const linkedinVal = data.linkedin_url.trim().replace(/^https?:\/\//i, '').toLowerCase();
+        if (!linkedinVal.startsWith('linkedin.com/') && !linkedinVal.startsWith('www.linkedin.com/')) {
+          toast.error('LinkedIn URL must be from linkedin.com (e.g. https://linkedin.com/in/username)');
+          return;
+        }
+      }
+
       const payload =
         user?.role === 'recruiter'
           ? {
@@ -310,7 +319,16 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <label className="block text-base font-normal text-black mb-2">LinkedIn Link</label>
-                      <input {...register('linkedin_url')} readOnly={!editLinks} type="url" className="w-full bg-black text-lime-400 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors cursor-pointer" placeholder="https://linkedin.com/in/" />
+                      <input
+                        {...register('linkedin_url')}
+                        readOnly={!editLinks}
+                        type="url"
+                        className="w-full bg-black text-lime-400 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors cursor-pointer"
+                        placeholder="https://linkedin.com/in/username"
+                      />
+                      {editLinks && (
+                        <p className="text-xs text-gray-400 mt-1">Must be a valid linkedin.com profile URL</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-base font-normal text-black mb-2">GitHub Link</label>

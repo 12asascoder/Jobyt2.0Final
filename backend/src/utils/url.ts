@@ -15,3 +15,24 @@ export const normalizeUrl = (url?: string | null): string | null => {
   // Otherwise, prepend https://
   return `https://${trimmed}`;
 };
+
+/**
+ * Normalizes a LinkedIn URL, enforcing that it belongs to linkedin.com.
+ * Returns null if the value is empty or doesn't belong to linkedin.com.
+ */
+export const normalizeLinkedInUrl = (url?: string | null): string | null => {
+  const normalized = normalizeUrl(url);
+  if (!normalized) return null;
+  
+  const withoutProtocol = normalized.replace(/^https?:\/\//i, '').toLowerCase();
+  if (
+    !withoutProtocol.startsWith('linkedin.com/') &&
+    !withoutProtocol.startsWith('www.linkedin.com/')
+  ) {
+    // Not a LinkedIn URL — return null to prevent invalid data from being stored
+    return null;
+  }
+  
+  return normalized;
+};
+

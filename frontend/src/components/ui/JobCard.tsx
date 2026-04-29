@@ -90,23 +90,7 @@ export function normalizeJob(job: JobLike): BackendJob {
     };
 }
 
-export function formatSalary(min: number | null, max: number | null): string {
-    if (!min && !max) return 'Competitive';
-    const fmt = (v: number) => {
-        if (v >= 100000) return `₹${(v / 100000).toFixed(0)}L`;
-        if (v >= 1000) return `₹${(v / 1000).toFixed(0)}k`;
-        return `₹${v}`;
-    };
-    if (min && max) return `${fmt(min)}–${fmt(max)}`;
-    if (min) return `${fmt(min)}+`;
-    return `Up to ${fmt(max!)}`;
-}
-
-export function getSalaryUnit(min: number | null, max: number | null): string {
-    const val = min ?? max ?? 0;
-    if (val < 100000) return '/mo';
-    return '/yr';
-}
+import { formatSalaryRange } from '@/lib/salary';
 
 export function getBadgeText(job: BackendJob): string | null {
     if (job.is_boosted) return 'Actively Hiring';
@@ -256,8 +240,7 @@ export function JobCard({
     const isVerifiedCompany = isSpazorlabsCompany(job.company_name);
     const name = job.company_name || job.title;
     const companyLogo = resolveAssetUrl(job.company_logo || job.company?.logo || null);
-    const salaryLabel = formatSalary(job.salary_min, job.salary_max);
-    const salaryUnit = getSalaryUnit(job.salary_min, job.salary_max);
+    const salaryLabel = formatSalaryRange(job.salary_min, job.salary_max, job.type);
     const locationLabel = job.location || 'Remote';
 
     const tags = [
@@ -463,11 +446,6 @@ export function JobCard({
                         <span style={{ fontSize: 18, fontWeight: 700, color: '#0B0B0B', letterSpacing: -0.8, lineHeight: 1 }}>
                             {salaryLabel}
                         </span>
-                        {(job.salary_min || job.salary_max) && (
-                            <span style={{ fontSize: 13, fontWeight: 500, color: '#666', marginLeft: 2 }}>
-                                {salaryUnit}
-                            </span>
-                        )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5 }}>
                         <svg width="10" height="12" viewBox="0 0 10 12" fill="none" style={{ flexShrink: 0 }}>
