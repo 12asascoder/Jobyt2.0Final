@@ -13,15 +13,41 @@ import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
 import { GitHubLoginButton } from '@/components/auth/GitHubLoginButton';
 import { LinkedInLoginButton } from '@/components/auth/LinkedInLoginButton';
 
-const weakPasswords = new Set(['123456', '12345678', '123456789', 'password', 'password123', 'qwerty123']);
+const weakPasswords = new Set([
+  '123456',
+  '12345678',
+  '123456789',
+  'password',
+  'password123',
+  'qwerty123',
+  'qwertyuiop',
+  'admin123',
+  'welcome123',
+  'letmein123',
+]);
 
-const validatePassword = (value: string): string | null => {
+const validatePassword = (value: string, email?: string): string | null => {
   if (!value) return 'Password is required';
   if (value.length < 8) return 'Password must be at least 8 characters long';
   if (!/[A-Z]/.test(value)) return 'Password must include at least one uppercase letter';
   if (!/[a-z]/.test(value)) return 'Password must include at least one lowercase letter';
   if (!/[0-9]/.test(value)) return 'Password must include at least one number';
-  if (weakPasswords.has(value.toLowerCase())) return 'Password is too weak. Please choose a stronger password';
+  
+  const lowerPassword = value.toLowerCase();
+  if (weakPasswords.has(lowerPassword)) return 'Password is too weak. Please choose a stronger password';
+  
+  const commonPatterns = ['abc123', '123abc', 'qwerty', 'asdfgh'];
+  if (commonPatterns.some(pattern => lowerPassword.includes(pattern))) {
+    return 'Password contains a common easily guessable pattern';
+  }
+
+  if (email) {
+    const prefix = email.split('@')[0];
+    if (prefix.length >= 4 && lowerPassword.includes(prefix.toLowerCase())) {
+      return 'Password cannot contain your email or username';
+    }
+  }
+
   return null;
 };
 
@@ -72,7 +98,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const passwordError = validatePassword(form.password);
+    const passwordError = validatePassword(form.password, form.email);
     if (passwordError) {
       setError(passwordError);
       return;

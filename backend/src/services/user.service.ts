@@ -8,6 +8,8 @@ import { AppError } from '../utils/appError';
 import { UserRole } from '../types';
 import type { ParsedResume } from '../utils/resumeParser';
 
+import { normalizeUrl } from '../utils/url';
+
 const APPLICANT_PROFILE_FIELDS = new Set([
   'name',
   'phone',
@@ -33,6 +35,15 @@ const RECRUITER_PROFILE_FIELDS = new Set([
   'location',
 ]);
 
+const URL_FIELDS = new Set([
+  'portfolio_url',
+  'github_url',
+  'linkedin_url',
+  'website',
+  'photo_url',
+  'logo_url'
+]);
+
 const normalizeProfilePatch = (
   data: Record<string, unknown>,
   allowedFields: Set<string>,
@@ -42,7 +53,13 @@ const normalizeProfilePatch = (
     if (!allowedFields.has(key)) continue;
 
     // Treat empty strings as null for optional profile text/URL fields.
-    out[key] = typeof value === 'string' && value.trim() === '' ? null : value;
+    let val = typeof value === 'string' && value.trim() === '' ? null : value;
+    
+    if (val && typeof val === 'string' && URL_FIELDS.has(key)) {
+      val = normalizeUrl(val);
+    }
+    
+    out[key] = val;
   }
   return out;
 };

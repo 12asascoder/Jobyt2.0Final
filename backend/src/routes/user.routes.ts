@@ -84,6 +84,7 @@ router.get(
 );
 
 // ── Public profile ─────────────────────────────────────────────────────────────
+router.get('/:userId/resumes/:id/secure-url', ResumeController.getSecureUrl);
 router.get('/:userId', UserController.getPublicProfile);
 
 export default router;

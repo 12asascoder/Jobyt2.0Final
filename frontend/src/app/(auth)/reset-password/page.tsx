@@ -7,7 +7,18 @@ import { api, ApiError } from '@/lib/api';
 import { Button, Input, Card, CardBody } from '@/components/ui';
 import { ROUTES, APP_NAME } from '@/constants';
 
-const weakPasswords = new Set(['123456', '12345678', '123456789', 'password', 'password123', 'qwerty123']);
+const weakPasswords = new Set([
+  '123456',
+  '12345678',
+  '123456789',
+  'password',
+  'password123',
+  'qwerty123',
+  'qwertyuiop',
+  'admin123',
+  'welcome123',
+  'letmein123',
+]);
 
 const validatePassword = (value: string): string | null => {
   if (!value) return 'Password is required';
@@ -15,7 +26,15 @@ const validatePassword = (value: string): string | null => {
   if (!/[A-Z]/.test(value)) return 'Password must include at least one uppercase letter';
   if (!/[a-z]/.test(value)) return 'Password must include at least one lowercase letter';
   if (!/[0-9]/.test(value)) return 'Password must include at least one number';
-  if (weakPasswords.has(value.toLowerCase())) return 'Password is too weak. Please choose a stronger password';
+  
+  const lowerPassword = value.toLowerCase();
+  if (weakPasswords.has(lowerPassword)) return 'Password is too weak. Please choose a stronger password';
+  
+  const commonPatterns = ['abc123', '123abc', 'qwerty', 'asdfgh'];
+  if (commonPatterns.some(pattern => lowerPassword.includes(pattern))) {
+    return 'Password contains a common easily guessable pattern';
+  }
+
   return null;
 };
 

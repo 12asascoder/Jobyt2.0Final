@@ -56,6 +56,19 @@ export default function JobApplicationsPage() {
     }
   };
 
+  const handleViewResume = async (appId: string) => {
+    try {
+      const res = await api.get<{ url: string }>(`/applications/${appId}/resume-url`);
+      if (res.data?.url) {
+        window.open(res.data.url, '_blank');
+      } else {
+        toast.error('Resume URL not found');
+      }
+    } catch (err) {
+      toast.error('Failed to load secure resume URL');
+    }
+  };
+
   if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
 
   return (
@@ -138,9 +151,9 @@ export default function JobApplicationsPage() {
                   Message Candidate
                 </Button>
                 {app.resume_snapshot_url && (
-                  <a href={app.resume_snapshot_url} target="_blank" rel="noreferrer">
-                    <Button size="sm" variant="outline">Resume</Button>
-                  </a>
+                  <Button size="sm" variant="outline" onClick={() => void handleViewResume(app.id)}>
+                    Resume
+                  </Button>
                 )}
               </div>
             </div>

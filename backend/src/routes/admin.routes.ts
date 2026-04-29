@@ -4,6 +4,7 @@ import { AdminController } from '../controllers/admin.controller';
 import { JobController } from '../controllers/job.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { normalizeUrl } from '../utils/url';
 
 const router = Router();
 
@@ -81,8 +82,8 @@ router.post(
       }
       return true;
     }),
-  body('company_logo').optional().isURL().withMessage('company_logo must be a valid URL'),
-  body('company_website').optional().isURL().withMessage('company_website must be a valid URL'),
+  body('company_logo').optional().customSanitizer(normalizeUrl).isURL().withMessage('company_logo must be a valid URL'),
+  body('company_website').optional().customSanitizer(normalizeUrl).isURL().withMessage('company_website must be a valid URL'),
   validate,
   AdminController.createJob,
 );

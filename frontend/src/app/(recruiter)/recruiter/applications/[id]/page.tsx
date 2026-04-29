@@ -103,19 +103,22 @@ export default function ApplicationDetailPage() {
     }
   };
 
-  const handleViewResume = () => {
-    const candidateResumeUrl =
-      application?.resume_url ||
-      application?.resume_snapshot_url ||
-      application?.responses?.['resume_url'];
+  const [fetchingResume, setFetchingResume] = useState(false);
 
-    if (candidateResumeUrl) {
-      const resolvedUrl = resolveAssetUrl(candidateResumeUrl) || candidateResumeUrl;
-      window.open(resolvedUrl, '_blank');
-      return;
+  const handleViewResume = async () => {
+    setFetchingResume(true);
+    try {
+      const res = await api.get<{ url: string }>(`/applications/${applicationId}/resume-url`);
+      if (res.data?.url) {
+        window.open(res.data.url, '_blank');
+      } else {
+        toast.error('Resume URL not found');
+      }
+    } catch (err) {
+      toast.error('Failed to load secure resume URL');
+    } finally {
+      setFetchingResume(false);
     }
-
-    toast.error('Resume not available for this application');
   };
 
   if (loading) {
@@ -282,11 +285,11 @@ export default function ApplicationDetailPage() {
             <div className="bg-black rounded-2xl p-6 text-white text-center">
               <h3 className="font-bold text-lg mb-4">View Resume</h3>
               <button
-                onClick={handleViewResume}
-                disabled={!hasResume}
+                onClick={() => void handleViewResume()}
+                disabled={!hasResume || fetchingResume}
                 className="w-full px-4 py-2 bg-lime-300 text-black font-bold rounded-lg hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                View Attached Resume
+                {fetchingResume ? 'Loading...' : 'View Attached Resume'}
               </button>
             </div>
           </div>

@@ -83,5 +83,20 @@ export const ResumeController = {
       next(err);
     }
   },
+
+  async getSecureUrl(req: Request, res: Response, next: NextFunction) {
+    try {
+      // route is /:userId/resumes/:id/secure-url or similar
+      // but the actual authenticated user is req.user
+      const requestingUserId = req.user!.userId;
+      const role = req.user!.role;
+      const resumeId = req.params.id as string;
+
+      const url = await ResumeService.getSecureUrl(requestingUserId, role, resumeId);
+      sendSuccess(res, { url });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
