@@ -330,7 +330,7 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
             {canPreview ? (
               <>
               <iframe
-                src={resumePreviewUrl || ''}
+                src={resumePreviewUrl || undefined}
                 className="w-full h-[600px] rounded-lg border border-slate-200"
                 aria-label="Resume Preview"
               />

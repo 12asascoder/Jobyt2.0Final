@@ -133,6 +133,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const [skillSuggestions, setSkillSuggestions] = useState<Record<string, string>>({});
   const [loadingInsights, setLoadingInsights] = useState(false);
 
+  const [showAllSkills, setShowAllSkills] = useState(false);
+  const [showAllMissing, setShowAllMissing] = useState(false);
+
   const [roadmap, setRoadmap] = useState<RoadmapWeek[] | null>(null);
   const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
   const [showRoadmapModal, setShowRoadmapModal] = useState(false);
@@ -385,6 +388,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   const companyName = getCompanyName(job);
   const jobRole = deriveJobRole(job.title);
+
+  const displaySkills =
+    user?.role === 'applicant' && !loadingInsights && matchScore !== null
+      ? matchedSkills
+      : job.skills;
 
   return (
     <div className="mx-auto max-w-[1180px] rounded-[30px] bg-[#edf3df] px-4 pb-8 pt-4 md:px-8">
@@ -666,20 +674,25 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               </>
             )}
 
-            <h3 className="mb-2 text-lg font-black">Skills</h3>
+            <h3 className="mb-2 text-lg font-black">
+              {user?.role === 'applicant' && !loadingInsights && matchScore !== null ? 'Matched Skills' : 'Required Skills'}
+            </h3>
             <div className="flex flex-wrap gap-1.5">
-              {job.skills.slice(0, 6).map((skill) => (
+              {(showAllSkills ? displaySkills : displaySkills.slice(0, 6)).map((skill) => (
                 <span
                   key={skill}
-                  className="rounded-full border border-[#9acd32] px-2 py-0.5 text-xs text-[#bbf52f]"
+                  className="rounded-full border border-[#9acd32] bg-black px-2 py-0.5 text-xs text-[#bbf52f]"
                 >
                   {skill}
                 </span>
               ))}
-              {job.skills.length > 6 && (
-                <span className="rounded-full border border-[#9acd32] px-2 py-0.5 text-xs text-[#bbf52f]">
-                  +{job.skills.length - 6}
-                </span>
+              {displaySkills.length > 6 && (
+                <button
+                  onClick={() => setShowAllSkills((prev) => !prev)}
+                  className="rounded-full bg-[#bbf52f] px-2 py-0.5 text-xs font-bold text-black hover:bg-[#aee62d] transition-colors cursor-pointer"
+                >
+                  {showAllSkills ? 'Show less' : `+${displaySkills.length - 6}`}
+                </button>
               )}
             </div>
 
@@ -687,15 +700,18 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               <div className="mt-3 space-y-1">
                 <p className="text-xs font-bold uppercase tracking-wider text-gray-300">Missing</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {missingSkills.slice(0, 4).map((skill) => (
+                  {(showAllMissing ? missingSkills : missingSkills.slice(0, 4)).map((skill) => (
                     <span key={skill} className="rounded-full border border-white px-2 py-0.5 text-xs text-white">
                       {skill}
                     </span>
                   ))}
                   {missingSkills.length > 4 && (
-                    <span className="rounded-full border border-white px-2 py-0.5 text-xs text-white">
-                      +{missingSkills.length - 4}
-                    </span>
+                    <button
+                      onClick={() => setShowAllMissing((prev) => !prev)}
+                      className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-black hover:bg-gray-200 transition-colors cursor-pointer"
+                    >
+                      {showAllMissing ? 'Show less' : `+${missingSkills.length - 4}`}
+                    </button>
                   )}
                 </div>
                 <button
