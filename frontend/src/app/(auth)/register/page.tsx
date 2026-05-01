@@ -302,14 +302,14 @@ export default function RegisterPage() {
               />
             </div>
 
-            <label className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-600">
+            <label className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-600 cursor-pointer group">
               <input
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-3.5 w-3.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary/40"
+                className="h-3.5 w-3.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary/40 cursor-pointer"
               />
-              Remember me
+              <span className="relative translate-y-[1px] inline-block group-hover:text-slate-900 transition-colors">Remember me</span>
             </label>
 
 

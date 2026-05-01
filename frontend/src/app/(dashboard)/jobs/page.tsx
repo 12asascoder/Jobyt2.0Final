@@ -48,10 +48,10 @@ function JobsContent() {
                     ))}
                 </div>
 
-                {!isLoading && jobs.length > 0 && hasMore && (
+                {!isLoading && jobs.length > 0 && (
                     <div className="mt-6 flex flex-col items-center gap-3">
-                        <Button onClick={loadMore} isLoading={isLoadingMore} disabled={isLoadingMore}>
-                            {isLoadingMore ? 'Loading more jobs...' : 'Load more jobs'}
+                        <Button variant="brand" onClick={loadMore} isLoading={isLoadingMore} disabled={isLoadingMore || !hasMore}>
+                            {isLoadingMore ? 'Loading more jobs...' : (hasMore ? 'Load more jobs' : 'No more jobs')}
                         </Button>
                         <p className="text-sm text-slate-500">Showing {jobs.length} of {total} jobs</p>
                     </div>

@@ -537,7 +537,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 <p className="mb-3 text-sm text-[#444]">Your current resume will be submitted along with this application.</p>
                 {resumes.length > 0 ? (
                   <select
-                    className="max-w-[250px] rounded-xl border border-black bg-black px-3 py-2 text-sm font-semibold text-white"
+                    className="w-full sm:w-auto max-w-full rounded-xl border border-black bg-black px-4 py-2.5 text-sm font-semibold text-white"
                     value={selectedResumeId}
                     onChange={(e) => {
                       setSelectedResumeId(e.target.value);
@@ -545,11 +545,15 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       setAtsScore(null);
                     }}
                   >
-                    {resumes.map((resume) => (
-                      <option key={resume.id} value={resume.id}>
-                        {resume.file_name}{resume.is_default ? ' (Default)' : ''}
-                      </option>
-                    ))}
+                    {resumes.map((resume) => {
+                      const name = resume.file_name || '';
+                      const displayName = name.length > 35 ? name.substring(0, 32) + '...' : name;
+                      return (
+                        <option key={resume.id} value={resume.id}>
+                          {displayName}{resume.is_default ? ' (Default)' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 ) : (
                   <p className="inline-block rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -677,7 +681,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 </span>
               ))}
               {job.skills.length > 6 && (
-                <span className="rounded-full border border-[#9acd32] px-2 py-0.5 text-xs text-[#bbf52f]">
+                <span className="rounded-full bg-[#bbf52f] px-2 py-0.5 text-xs font-bold text-black">
                   +{job.skills.length - 6}
                 </span>
               )}
@@ -693,7 +697,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     </span>
                   ))}
                   {missingSkills.length > 4 && (
-                    <span className="rounded-full border border-white px-2 py-0.5 text-xs text-white">
+                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-black">
                       +{missingSkills.length - 4}
                     </span>
                   )}

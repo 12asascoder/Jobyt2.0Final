@@ -41,6 +41,7 @@ export function DashboardSidebar() {
 
     const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
 
     const avatarInitial = useMemo(() => {
         const email = user?.email || '';
@@ -84,63 +85,102 @@ export function DashboardSidebar() {
     return (
         <>
             {/* ── DESKTOP: Floating vertical bar ── */}
-            <div className="hidden lg:flex fixed left-1 xl:left-2 top-1/2 -translate-y-1/2 z-40 flex-col items-center gap-3">
+            <div 
+                className={`hidden lg:flex fixed left-1 xl:left-2 top-1/2 -translate-y-1/2 z-40 flex-col gap-3 transition-all duration-300 ease-in-out ${isHovered ? 'w-48 items-stretch' : 'w-16 items-center'}`}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+            >
                 {/* Main icon pill */}
-                <div className="bg-[#1a1a1a] rounded-full py-2.5 px-2.5 flex flex-col items-center gap-1">
+                <div className="bg-[#1a1a1a] rounded-[24px] py-2.5 px-2.5 flex flex-col gap-1 shadow-xl">
                     {mainItems.map(({ icon: Icon, href, label }) => {
                         const active = isActive(href);
                         return (
                             <Link
                                 key={href}
                                 href={href}
-                                title={label}
-                                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${active
+                                title={isHovered ? undefined : label}
+                                className={`h-11 rounded-full flex items-center transition-colors overflow-hidden ${
+                                    isHovered ? 'px-4 justify-start' : 'w-11 justify-center'
+                                } ${active
                                         ? 'bg-lime-400 text-black'
                                         : 'text-white/60 hover:text-white hover:bg-white/10'
                                     }`}
                             >
-                                <Icon className="text-base" />
+                                <Icon className="text-base shrink-0" />
+                                <span 
+                                    className={`text-[13px] font-semibold tracking-wide whitespace-nowrap transition-all duration-300 ${
+                                        isHovered ? 'ml-3 w-auto opacity-100' : 'w-0 opacity-0 ml-0'
+                                    }`}
+                                >
+                                    {label}
+                                </span>
                             </Link>
                         );
                     })}
                 </div>
 
                 {/* Bottom utility pill: star + logout + avatar */}
-                <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-0.5 mt-5">
+                <div className="bg-[#1a1a1a] rounded-[24px] py-3 px-2.5 flex flex-col gap-1 shadow-xl">
                     <Link
                         href={ROUTES.credits}
-                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${isActive(ROUTES.credits)
+                        title={isHovered ? undefined : 'Credits'}
+                        className={`h-11 rounded-full flex items-center transition-colors overflow-hidden ${
+                            isHovered ? 'px-4 justify-start' : 'w-11 justify-center'
+                        } ${isActive(ROUTES.credits)
                                 ? 'bg-lime-400 text-black'
                                 : 'text-white/60 hover:text-white hover:bg-white/10'
                             }`}
-                        title="Credits"
                     >
-                        <FaStar className="text-base" />
+                        <FaStar className="text-base shrink-0" />
+                        <span 
+                            className={`text-[13px] font-semibold tracking-wide whitespace-nowrap transition-all duration-300 ${
+                                isHovered ? 'ml-3 w-auto opacity-100' : 'w-0 opacity-0 ml-0'
+                            }`}
+                        >
+                            Credits
+                        </span>
                     </Link>
                     <button
                         onClick={handleLogout}
-                        className="w-11 h-11 rounded-full text-white/60 hover:text-red-400 flex items-center justify-center transition-colors"
-                        title="Sign out"
+                        title={isHovered ? undefined : 'Sign out'}
+                        className={`h-11 rounded-full text-white/60 hover:text-red-400 flex items-center transition-colors overflow-hidden ${
+                            isHovered ? 'px-4 justify-start hover:bg-white/5' : 'w-11 justify-center'
+                        }`}
                     >
-                        <FaArrowRightFromBracket className="text-base" />
+                        <FaArrowRightFromBracket className="text-base shrink-0" />
+                        <span 
+                            className={`text-[13px] font-semibold tracking-wide whitespace-nowrap transition-all duration-300 ${
+                                isHovered ? 'ml-3 w-auto opacity-100' : 'w-0 opacity-0 ml-0'
+                            }`}
+                        >
+                            Sign Out
+                        </span>
                     </button>
                     <Link
                         href={ROUTES.profile}
-                        className={`w-11 h-11 rounded-full overflow-hidden border-2 transition-colors ${isActive(ROUTES.profile) ? 'border-[#c3ff3d]' : 'border-white/20 hover:border-white/40'
-                            }`}
-                        title="Profile"
+                        title={isHovered ? undefined : 'Profile'}
+                        className={`h-11 rounded-full border-2 transition-colors flex items-center overflow-hidden ${
+                            isHovered ? 'pl-0.5 pr-4 justify-start border-transparent hover:bg-white/10' : 'w-11 justify-center'
+                        } ${isActive(ROUTES.profile) ? 'border-[#c3ff3d]' : 'border-white/20 hover:border-white/40'}`}
                     >
-                        {avatarUrl ? (
-                            <img
-                                src={avatarUrl}
-                                alt="Avatar"
-                                className="w-full h-full object-cover"
-                            />
-                        ) : (
-                            <div className="w-full h-full bg-slate-700 text-white flex items-center justify-center text-xs font-semibold">
-                                {avatarInitial}
-                            </div>
-                        )}
+                        <div className="w-9 h-9 shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-slate-700 text-white text-xs font-semibold">
+                            {avatarUrl ? (
+                                <img
+                                    src={avatarUrl}
+                                    alt="Avatar"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                avatarInitial
+                            )}
+                        </div>
+                        <span 
+                            className={`text-[13px] font-semibold tracking-wide whitespace-nowrap text-white/90 transition-all duration-300 ${
+                                isHovered ? 'ml-3 w-auto opacity-100' : 'w-0 opacity-0 ml-0'
+                            }`}
+                        >
+                            Profile
+                        </span>
                     </Link>
                 </div>
             </div>

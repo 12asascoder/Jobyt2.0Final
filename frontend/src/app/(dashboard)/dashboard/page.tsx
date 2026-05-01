@@ -210,14 +210,15 @@ export default function DashboardPage() {
                             </div>
                         )}
 
-                        {!jobsLoading && jobs.length > 0 && hasMoreJobs && (
+                        {!jobsLoading && jobs.length > 0 && (
                             <div className="mt-8 flex flex-col items-center gap-3">
                                 <Button
+                                    variant="brand"
                                     onClick={handleLoadMoreJobs}
                                     isLoading={jobsLoadingMore}
-                                    disabled={jobsLoadingMore}
+                                    disabled={jobsLoadingMore || !hasMoreJobs}
                                 >
-                                    {jobsLoadingMore ? 'Loading more jobs...' : 'Load more jobs'}
+                                    {jobsLoadingMore ? 'Loading more jobs...' : (hasMoreJobs ? 'Load more jobs' : 'No more jobs')}
                                 </Button>
                                 <p className="text-sm text-slate-500">Showing {jobs.length} of {jobTotal} jobs</p>
                             </div>
@@ -425,14 +426,15 @@ export default function DashboardPage() {
                                 </div>
                             )}
 
-                            {!jobsLoading && jobs.length > 0 && hasMoreJobs && (
+                            {!jobsLoading && jobs.length > 0 && (
                                 <div className="mt-8 flex flex-col items-center gap-3">
                                     <Button
+                                        variant="brand"
                                         onClick={handleLoadMoreJobs}
                                         isLoading={jobsLoadingMore}
-                                        disabled={jobsLoadingMore}
+                                        disabled={jobsLoadingMore || !hasMoreJobs}
                                     >
-                                        {jobsLoadingMore ? 'Loading more jobs...' : 'Load more jobs'}
+                                        {jobsLoadingMore ? 'Loading more jobs...' : (hasMoreJobs ? 'Load more jobs' : 'No more jobs')}
                                     </Button>
                                     <p className="text-sm text-slate-500">Showing {jobs.length} of {jobTotal} jobs</p>
                                 </div>

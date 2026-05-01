@@ -53,6 +53,14 @@ const resolveResumeUrl = (url?: string | null): string | null => {
   return url.startsWith('/') ? `${origin}${url}` : `${origin}/${url}`;
 };
 
+const getCloudinaryDownloadUrl = (url?: string | null): string | null => {
+  if (!url) return null;
+  if (url.includes('res.cloudinary.com')) {
+    return url.replace('/upload/', '/upload/fl_attachment/');
+  }
+  return url;
+};
+
 const isPdfLike = (resume: ResumeDetail): boolean => {
   const mimeType = resume.mime_type?.toLowerCase() || '';
   const fileName = resume.file_name?.toLowerCase() || '';
@@ -179,6 +187,7 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
   }, [resume?.id]);
 
   const resumePreviewUrl = secureUrl ? `${secureUrl}#view=FitH` : null;
+  const resumeDownloadUrl = getCloudinaryDownloadUrl(secureUrl);
 
   useEffect(() => {
     let canceled = false;
@@ -305,7 +314,7 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
         <h1 className="text-2xl font-bold text-slate-900">{resume.file_name || 'Resume'}</h1>
         <div className="flex flex-wrap gap-2">
           {resume.file_url && (
-            <a href={secureUrl || '#'} target="_blank" rel="noreferrer">
+            <a href={resumeDownloadUrl || '#'} download={resume.file_name || 'resume.pdf'} target="_blank" rel="noreferrer">
               <Button variant="outline" disabled={!secureUrl}>Download</Button>
             </a>
           )}
@@ -347,7 +356,7 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
                 <p className="text-sm text-slate-700">Preview is unavailable for this file type.</p>
                 {resume.file_url && (
-                  <a href={secureUrl || '#'} target="_blank" rel="noreferrer">
+                  <a href={resumeDownloadUrl || '#'} download={resume.file_name || 'resume.pdf'} target="_blank" rel="noreferrer">
                     <Button variant="outline" disabled={!secureUrl}>Download Resume</Button>
                   </a>
                 )}

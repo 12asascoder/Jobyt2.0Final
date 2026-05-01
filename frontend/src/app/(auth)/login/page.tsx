@@ -129,16 +129,16 @@ export default function LoginPage() {
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <label className="inline-flex items-center gap-2.5 text-[13px] leading-5 font-medium text-slate-600">
+              <label className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-600 cursor-pointer group">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-3.5 w-3.5 shrink-0 rounded border-slate-300 text-brand-primary focus:ring-2 focus:ring-brand-primary/30"
+                  className="h-3.5 w-3.5 shrink-0 rounded border-slate-300 text-brand-primary focus:ring-2 focus:ring-brand-primary/30 cursor-pointer"
                 />
-                <span>Remember me</span>
+                <span className="relative translate-y-[1px] inline-block group-hover:text-slate-900 transition-colors">Remember me</span>
               </label>
-              <Link href={ROUTES.forgotPassword} className="text-[13px] font-bold text-brand-blue hover:text-blue-700 transition-colors">
+              <Link href={ROUTES.forgotPassword} className="text-[13px] font-bold text-brand-blue hover:text-blue-700 transition-colors relative translate-y-[1px]">
                 Forgot password?
               </Link>
             </div>
@@ -146,7 +146,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading || oauthPending}
-              className="w-full mt-2 bg-slate-900 text-brand-primary rounded-xl px-4 py-4 font-bold text-base hover:bg-slate-800 transition-all shadow-[0_8px_20px_rgba(15,23,42,0.25)] hover:shadow-[0_12px_25px_rgba(15,23,42,0.35)] hover:-translate-y-0.5 disabled:opacity-70 disabled:hover:transform-none flex items-center justify-center gap-2 group"
+              className="w-full bg-slate-900 text-brand-primary rounded-xl px-4 py-4 font-bold text-base hover:bg-slate-800 transition-all shadow-[0_8px_20px_rgba(15,23,42,0.25)] hover:shadow-[0_12px_25px_rgba(15,23,42,0.35)] hover:-translate-y-0.5 disabled:opacity-70 disabled:hover:transform-none flex items-center justify-center gap-2 group"
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
               {!isLoading && <FaArrowRight className="group-hover:translate-x-1 transition-transform" />}
