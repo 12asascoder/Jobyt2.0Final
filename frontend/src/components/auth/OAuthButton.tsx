@@ -13,8 +13,8 @@ interface OAuthButtonProps {
 }
 
 const variantStyles: Record<OAuthButtonProps['variant'], string> = {
-  google: 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300',
-  github: 'bg-slate-900 border border-slate-900 text-white hover:bg-slate-800',
+  google: 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 [&>span:last-child]:translate-y-[1px]',
+  github: 'bg-slate-900 border border-slate-900 text-white hover:bg-slate-800 [&>span:last-child]:translate-y-[2px]',
   linkedin: 'bg-[#0a66c2] border border-[#0a66c2] text-white hover:bg-[#08549d]',
 };
 
