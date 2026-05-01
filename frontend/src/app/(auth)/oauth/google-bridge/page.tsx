@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Card, CardBody, Spinner, Button } from '@/components/ui';
@@ -24,11 +24,26 @@ export default function GoogleBridgePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const setSession = useAuthStore((s) => s.setSession);
+  
+  const [bridgeStatus, setBridgeStatus] = useState<'loading' | 'error' | 'success'>('loading');
   const [error, setError] = useState('');
+  const runStarted = useRef(false);
 
   useEffect(() => {
+    // If already started or still loading session, do nothing
+    if (status === 'loading' || runStarted.current) return;
+
+    // If session is missing and we haven't succeeded yet, it's an error
+    if (status === 'unauthenticated' && bridgeStatus !== 'success') {
+      setBridgeStatus('error');
+      setError('Authentication session expired or not found. Please try again.');
+      return;
+    }
+
     const run = async () => {
-      if (status !== 'authenticated') return;
+      if (status !== 'authenticated' || runStarted.current) return;
+      runStarted.current = true;
+      setBridgeStatus('loading');
 
       try {
         const googleIdToken = (session as SessionWithGoogleToken | null)?.googleIdToken;
@@ -53,9 +68,17 @@ export default function GoogleBridgePage() {
           throw new Error('Login failed. Please try again.');
         }
 
+        // 1. Update our own auth store
         setSession(parsed.tokens.accessToken, parsed.tokens.refreshToken, parsed.user);
+        
+        // 2. Mark as success BEFORE signing out of next-auth
+        // This ensures the UI stays in loading/success state during the transition
+        setBridgeStatus('success');
+
+        // 3. Clear next-auth session
         await signOut({ redirect: false });
 
+        // 4. Redirect to appropriate destination
         if (parsed.requiresEmail || !parsed.user.email) {
           router.replace(ROUTES.addEmail);
           return;
@@ -75,24 +98,30 @@ export default function GoogleBridgePage() {
 
         router.replace(destination);
       } catch (err) {
+        runStarted.current = false; // Allow retry on error
         clearOAuthRole();
         clearOAuthReferralCode();
-        await signOut({ redirect: false });
+        setBridgeStatus('error');
         setError(err instanceof Error ? err.message : 'Google login failed. Please try again.');
+        // Don't sign out on error unless you want to completely reset the flow
       }
     };
 
     void run();
-  }, [router, session, setSession, status]);
+  }, [router, session, setSession, status, bridgeStatus]);
 
-  if (status === 'loading' || (status === 'authenticated' && !error)) {
+  if (bridgeStatus === 'loading' || bridgeStatus === 'success') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
         <Card className="w-full max-w-md">
           <CardBody className="p-8 text-center">
             <Spinner className="mx-auto mb-4" />
-            <h2 className="mb-2 text-xl font-bold text-gray-900">Completing Google login</h2>
-            <p className="text-sm text-gray-500">Finalizing secure sign in...</p>
+            <h2 className="mb-2 text-xl font-bold text-gray-900">
+              {bridgeStatus === 'success' ? 'Redirecting...' : 'Completing Google login'}
+            </h2>
+            <p className="text-sm text-gray-500">
+              {bridgeStatus === 'success' ? 'Taking you to your dashboard...' : 'Finalizing secure sign in...'}
+            </p>
           </CardBody>
         </Card>
       </div>
@@ -116,3 +145,4 @@ export default function GoogleBridgePage() {
     </div>
   );
 }
+
