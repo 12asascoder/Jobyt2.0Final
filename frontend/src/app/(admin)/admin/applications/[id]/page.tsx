@@ -164,9 +164,9 @@ export default function AdminApplicationDetailPage() {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 rounded-xl m-4 space-y-6 pb-6" style={{ backgroundColor: '#ece9e2' }}>
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Candidate Info and Responses */}
-          <div className="col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6">
             {/* Candidate Header */}
             <div className="bg-white rounded-xl border border-slate-200 p-6">
                <div className="flex justify-between items-start mb-6">
@@ -270,7 +270,7 @@ export default function AdminApplicationDetailPage() {
           </div>
 
           {/* Right: Skill Match and Resume */}
-          <div className="col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-6">
             {/* Candidate's Skill Match */}
             <div className="bg-slate-900 rounded-2xl p-6 text-white border border-slate-800">
               <h3 className="font-bold text-lg mb-6 text-center text-slate-100">Candidate's Skill Match</h3>
