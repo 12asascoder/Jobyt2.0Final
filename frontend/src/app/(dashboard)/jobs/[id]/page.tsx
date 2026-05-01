@@ -540,15 +540,15 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                   onClick={() =>
                     setOpenSections((prev) => ({ ...prev, [section.key]: !prev[section.key] }))
                   }
-                  className="flex w-full items-center justify-between px-5 py-4 text-left"
+                  className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-[#eaeaea] transition-colors duration-200"
                 >
                   <span className="text-lg font-bold tracking-tight text-[#111] md:text-xl">{section.title}</span>
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white">
-                    {openSections[section.key] ? <FaChevronUp className="h-3.5 w-3.5" /> : <FaChevronDown className="h-3.5 w-3.5" />}
+                  <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full bg-black text-white transition-transform duration-300 ${openSections[section.key] ? 'rotate-180' : ''}`}>
+                    <FaChevronDown className="h-3.5 w-3.5" />
                   </span>
                 </button>
                 {openSections[section.key] && (
-                  <div className="border-t border-[#dfdfd9] px-5 pb-4 pt-3">
+                  <div className="border-t border-[#dfdfd9] px-5 pb-4 pt-3 animate-in slide-in-from-top-2 fade-in duration-200">
                     <p className="whitespace-pre-wrap text-sm leading-7 text-[#252525]">{section.content}</p>
                   </div>
                 )}

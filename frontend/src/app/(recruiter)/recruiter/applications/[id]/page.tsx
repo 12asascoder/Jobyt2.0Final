@@ -162,9 +162,9 @@ export default function ApplicationDetailPage() {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 rounded-xl m-4 space-y-6 pb-6" style={{ backgroundColor: '#ece9e2' }}>
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Candidate Info and Responses */}
-          <div className="col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6">
             {/* Candidate Header */}
             <div className="bg-white rounded-xl border border-slate-200 p-6">
               <div className="flex items-start gap-4 mb-6">
@@ -230,7 +230,7 @@ export default function ApplicationDetailPage() {
           </div>
 
           {/* Right: Skill Match and Resume */}
-          <div className="col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-6">
             {/* Candidate's Skill Match */}
             <div className="bg-black rounded-2xl p-6 text-white">
               <h3 className="font-bold text-lg mb-6 text-center">Candidate's Skill Match</h3>
