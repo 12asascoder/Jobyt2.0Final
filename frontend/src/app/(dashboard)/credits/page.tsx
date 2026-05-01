@@ -162,7 +162,7 @@ export default function CreditsPage() {
     <div className="mx-auto max-w-5xl space-y-8 sm:space-y-10 px-3 sm:px-4 py-6 sm:py-8">
       <h1 className="text-3xl font-display font-medium text-center text-slate-900 tracking-tight">Credits & Plans</h1>
 
-      <section className="rounded-3xl bg-[#060606] px-5 py-4 sm:px-8 sm:py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      <section className="rounded-3xl bg-[#060606] px-5 py-4 sm:px-8 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-[#c1f237] text-xs sm:text-sm font-medium tracking-wide uppercase">Credit Balance</p>
           <p className="text-[#c1f237] text-5xl sm:text-7xl font-semibold leading-none mt-2">{balance}</p>

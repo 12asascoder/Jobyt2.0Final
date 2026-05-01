@@ -39,7 +39,7 @@ export default function ApplicationsPage() {
     }, [fetchMyApplications]);
 
     return (
-        <div className="max-w-[1400px] ml-4 sm:ml-6 lg:ml-8 pr-4">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight mb-4">
                 My Applications
             </h1>
