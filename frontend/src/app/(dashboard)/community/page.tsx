@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
 import { Spinner } from '@/components/ui';
+import { ROUTES } from '@/constants';
 
 interface RedemptionStatus {
   has_redeemed: boolean;
@@ -279,7 +280,7 @@ export default function CommunityPage() {
           </div>
 
           <a
-            href="/dashboard/referral"
+            href={ROUTES.referral}
             className="text-xs sm:text-[13px] text-[#a8e02d] hover:text-[#c3ff3d] hover:underline font-medium self-start"
           >
             View full referral stats
