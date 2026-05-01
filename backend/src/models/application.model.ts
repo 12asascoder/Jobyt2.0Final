@@ -202,17 +202,44 @@ export const ApplicationModel = {
     jobId: string,
     page = 1,
     limit = 20,
+    filters?: { search?: string; status?: string },
   ): Promise<{ applications: Application[]; total: number }> {
     const offset = (page - 1) * limit;
+    let whereClause = 'WHERE a.job_id = $1';
+    const params: unknown[] = [jobId];
+    let paramIndex = 2;
+
+    if (filters?.status) {
+      whereClause += ` AND a.status = $${paramIndex}`;
+      params.push(filters.status);
+      paramIndex++;
+    }
+
+    if (filters?.search) {
+      whereClause += ` AND (ap.name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`;
+      params.push(`%${filters.search}%`);
+      paramIndex++;
+    }
+
+    const countParams = [...params];
+    params.push(limit, offset);
+
     const [countRes, dataRes] = await Promise.all([
-      pool.query('SELECT COUNT(*) FROM applications WHERE job_id = $1', [jobId]),
       pool.query(
-        `SELECT a.*, ap.name, ap.photo_url, ap.skills
+        `SELECT COUNT(*) FROM applications a
+         JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
+         JOIN users u ON u.id = a.applicant_id
+         ${whereClause}`,
+        countParams,
+      ),
+      pool.query(
+        `SELECT a.*, ap.name, ap.photo_url, ap.skills, u.email
          FROM applications a
          JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
-         WHERE a.job_id = $1
-         ORDER BY a.created_at DESC LIMIT $2 OFFSET $3`,
-        [jobId, limit, offset],
+         JOIN users u ON u.id = a.applicant_id
+         ${whereClause}
+         ORDER BY a.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+        params,
       ),
     ]);
     return { applications: dataRes.rows, total: parseInt(countRes.rows[0].count) };

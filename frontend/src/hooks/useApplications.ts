@@ -7,34 +7,50 @@ import { Application, ApplicationStatus } from '@/types';
 export const useApplications = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit] = useState(20);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchMyApplications = useCallback(async (page = 1) => {
+  const fetchMyApplications = useCallback(async (requestedPage = 1) => {
     setIsLoading(true);
     try {
-      const res = await api.getPaginated<Application>(`/applications/my?page=${page}`);
+      const res = await api.getPaginated<Application>(`/applications/my?page=${requestedPage}&limit=${limit}`);
       setApplications(res.data ?? []);
       setTotal(res.pagination?.total ?? 0);
+      setPage(res.pagination?.page ?? requestedPage);
+      setTotalPages(res.pagination?.totalPages ?? 1);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [limit]);
 
-  const fetchJobApplications = useCallback(async (jobId: string, page = 1) => {
+  const fetchJobApplications = useCallback(async (jobId: string, requestedPage = 1) => {
     setIsLoading(true);
     try {
-      const res = await api.getPaginated<Application>(`/applications/jobs/${jobId}?page=${page}`);
+      const res = await api.getPaginated<Application>(`/applications/jobs/${jobId}?page=${requestedPage}&limit=${limit}`);
       setApplications(res.data ?? []);
       setTotal(res.pagination?.total ?? 0);
+      setPage(res.pagination?.page ?? requestedPage);
+      setTotalPages(res.pagination?.totalPages ?? 1);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [limit]);
 
   const updateStatus = useCallback(async (applicationId: string, status: ApplicationStatus) => {
     const res = await api.patch<Application>(`/applications/${applicationId}/status`, { status });
     setApplications((prev) => prev.map((a) => (a.id === applicationId && res.data ? res.data : a)));
   }, []);
 
-  return { applications, total, isLoading, fetchMyApplications, fetchJobApplications, updateStatus };
+  const goToPage = useCallback((newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      fetchMyApplications(newPage);
+    }
+  }, [totalPages, fetchMyApplications]);
+
+  return {
+    applications, total, page, totalPages, limit, isLoading,
+    fetchMyApplications, fetchJobApplications, updateStatus, goToPage,
+  };
 };
