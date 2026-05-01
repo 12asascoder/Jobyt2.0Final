@@ -8,6 +8,8 @@ interface EmailOptions {
   html: string;
 }
 
+let testAccountPromise: Promise<nodemailer.TestAccount> | null = null;
+
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
   if (process.env.NODE_ENV === 'test') return;
 
@@ -16,19 +18,54 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
   const secure = process.env.SMTP_SECURE === 'true' || port === 465;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
-  const from = process.env.EMAIL_FROM;
+  const from = process.env.EMAIL_FROM || '"Hiring Platform" <noreply@hiringplatform.local>';
   const connectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || '30000');
   const greetingTimeout = Number(process.env.SMTP_GREETING_TIMEOUT_MS || '15000');
   const fallbackEnabled = process.env.SMTP_FALLBACK_ENABLED !== 'false';
 
-  if (!host || !user || !pass || !from) {
-    console.log(`\n📧 [DEV EMAIL] ─────────────────────────────────`);
-    console.log(`   To:      ${options.to}`);
-    console.log(`   Subject: ${options.subject}`);
-    const links = options.html.match(/href="([^"]+)"/g);
-    if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
-    console.log(`   Note:    SMTP env vars missing, email not sent.`);
-    console.log(`────────────────────────────────────────────────\n`);
+  if (!host || !user || !pass) {
+    console.log(`\n📧 [DEV EMAIL] SMTP config missing. Falling back to Ethereal Email.`);
+    try {
+      if (!testAccountPromise) {
+        testAccountPromise = nodemailer.createTestAccount();
+      }
+      const testAccount = await testAccountPromise;
+
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      });
+
+      console.log(`\n📧 [DEV EMAIL] ─────────────────────────────────`);
+      console.log(`   To:      ${options.to}`);
+      console.log(`   Subject: ${options.subject}`);
+      console.log(`   Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
+      const links = options.html.match(/href="([^"]+)"/g);
+      if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
+      console.log(`────────────────────────────────────────────────\n`);
+    } catch (err) {
+      console.error('Failed to send Ethereal email:', err);
+      // Fallback to console print if ethereal fails
+      console.log(`\n📧 [DEV EMAIL] ─────────────────────────────────`);
+      console.log(`   To:      ${options.to}`);
+      console.log(`   Subject: ${options.subject}`);
+      const links = options.html.match(/href="([^"]+)"/g);
+      if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
+      console.log(`   Note:    SMTP env vars missing, email not sent.`);
+      console.log(`────────────────────────────────────────────────\n`);
+    }
     return;
   }
 
