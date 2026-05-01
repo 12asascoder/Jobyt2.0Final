@@ -4,7 +4,8 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
-import { Button, Input, Card, CardBody } from '@/components/ui';
+import { Button, Card, CardBody } from '@/components/ui';
+import { PasswordInput } from '@/components/PasswordInput';
 import { ROUTES, APP_NAME } from '@/constants';
 
 const weakPasswords = new Set(['123456', '12345678', '123456789', 'password', 'password123', 'qwerty123']);
@@ -74,17 +75,15 @@ function ResetPasswordForm() {
       {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Input
+        <PasswordInput
           label="New password"
-          type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
           minLength={8}
         />
-        <Input
+        <PasswordInput
           label="Confirm password"
-          type="password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           required
