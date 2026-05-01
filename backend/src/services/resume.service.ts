@@ -225,149 +225,119 @@ export const ResumeService = {
     if (!resumeText || !jobDescription) return defaultFail;
 
     try {
-      const natural = require('natural');
-      const sw = require('stopword');
+      const { ATSService } = require('./ats.service');
 
-      const tokenizer = new natural.WordTokenizer();
-      const originalWordMap: Record<string, string> = {};
-      
-      const tokenizeAndClean = (text: string) => {
-        const cleanText = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
-        const tokens = tokenizer.tokenize(cleanText) || [];
-        const noStopWords = sw.removeStopwords(tokens);
-        return noStopWords.map((word: string) => {
-          const stem = natural.PorterStemmer.stem(word);
-          if (!originalWordMap[stem] || originalWordMap[stem].length > word.length) {
-            originalWordMap[stem] = word;
-          }
-          return stem;
-        });
+      // Extract skills from resume text using common skills matching
+      const COMMON_SKILLS = [
+        'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'Java', 'Go',
+        'Rust', 'SQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Docker', 'Kubernetes',
+        'AWS', 'GCP', 'Azure', 'Git', 'GraphQL', 'REST', 'HTML', 'CSS',
+        'Tailwind', 'Next.js', 'Vue', 'Angular', 'Spring', 'Django', 'FastAPI',
+        'C++', 'C#', 'Swift', 'Kotlin', 'Flutter', 'Machine Learning',
+        'TensorFlow', 'PyTorch', 'Pandas', 'NumPy', 'Linux', 'Terraform',
+      ];
+      const upperResumeText = resumeText.toUpperCase();
+      const resumeSkills = COMMON_SKILLS.filter(s => upperResumeText.includes(s.toUpperCase()));
+
+      // Extract job skills from description similarly
+      const upperJobDesc = jobDescription.toUpperCase();
+      const jobSkills = COMMON_SKILLS.filter(s => upperJobDesc.includes(s.toUpperCase()));
+
+      const atsResult = ATSService.calculateATSScore(
+        {
+          skills: resumeSkills,
+          experienceText: resumeText,
+          fullText: resumeText,
+        },
+        {
+          skills: jobSkills,
+          description: jobDescription,
+        },
+      );
+
+      const result: ATSResult = {
+        score: atsResult.totalScore,
+        missingKeywords: atsResult.missingSkills.slice(0, 10),
+        semanticSimilarityScore: atsResult.sectionScores.keywordsScore,
+        sectionScores: {
+          skillsScore: atsResult.sectionScores.skillsScore,
+          experienceScore: atsResult.sectionScores.experienceScore,
+          educationScore: Math.round(atsResult.sectionScores.keywordsScore * 0.8), // Approximation
+        },
+        keywordDensity: {},
+        explanation: `Deterministic ATS analysis: skills=${atsResult.sectionScores.skillsScore}%, experience=${atsResult.sectionScores.experienceScore}%, keywords=${atsResult.sectionScores.keywordsScore}%. Matched ${atsResult.matchedSkills.length} of ${atsResult.debug.jobSkillCount} required skills.`,
+        feedback: {
+          missingSections: [],
+          weakAreas: atsResult.missingSkills.length > 3 ? ['Skills gap detected'] : [],
+          improvements: atsResult.missingSkills.length > 0
+            ? [`Consider adding skills: ${atsResult.missingSkills.slice(0, 5).join(', ')}`]
+            : [],
+        },
+        qualityScore: Math.min(100, atsResult.totalScore + 10),
+        rolePrediction: "Analysis based on skills profile",
+        experience: "See resume details",
       };
 
-      const jobTokens = tokenizeAndClean(jobDescription);
-      const resumeTokens = tokenizeAndClean(resumeText);
+      // Optional: LLM enrichment if available
+      if (process.env.OPENAI_API_KEY) {
+        try {
+          const prompt = `You are a strict, senior technical recruiter AI parsing a resume string against a job description.
+          You must output ONLY valid JSON without any markdown formatting.
+          Analyze the exact raw resume text and job description provided below.
+          
+          Calculate based exactly on real industry expectations:
+          1. keywordDensity: top 3 most repeated tech skill keywords and their frequencies in the resume.
+          2. explanation: highly specific 2-sentence rationale for the overall resume strength compared to the job description.
+          3. feedback: { "missingSections": [], "weakAreas": [], "improvements": ["Actionable suggestion 1", "Suggestion 2"] }
+          4. qualityScore: 0 to 100 purely based on grammar, wording, length optimization, and detail. Deduct heavily for duplicate filler content.
+          5. rolePrediction: The best job title the candidate actually deserves based solely on the resume.
+          6. experience: Calculate total years/months from chronological dates found in the resume (e.g. "5 Years 2 Months"). Return "0 Years" if none found.
 
-      const TfIdf = natural.TfIdf;
-      const tfidf = new TfIdf();
-      tfidf.addDocument(jobTokens);
-      tfidf.addDocument(resumeTokens);
+          Resume Text: "${resumeText.substring(0, 3000)}"
+          Job Description: "${jobDescription.substring(0, 1500)}"
+          
+          JSON schema required:
+          {
+            "keywordDensity": { "keywordString": number },
+            "explanation": string,
+            "feedback": { "missingSections": [string], "weakAreas": [string], "improvements": [string] },
+            "qualityScore": number,
+            "rolePrediction": string,
+            "experience": string
+          }`;
 
-      let dotProduct = 0;
-      let jobNorm = 0;
-      let resumeNorm = 0;
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: 'gpt-3.5-turbo',
+              temperature: 0.1,
+              response_format: { type: 'json_object' },
+              messages: [{ role: 'system', content: prompt }]
+            })
+          });
 
-      const terms = Array.from(new Set([...jobTokens, ...resumeTokens]));
-      const vecJob: Record<string, number> = {};
-      
-      terms.forEach(term => {
-        const jTf = tfidf.tfidf(term, 0); 
-        const rTf = tfidf.tfidf(term, 1); 
-        vecJob[term] = jTf;
-        dotProduct += jTf * rTf;
-        jobNorm += jTf * jTf;
-        resumeNorm += rTf * rTf;
-      });
-
-      const similarity = (jobNorm === 0 || resumeNorm === 0) ? 0 : dotProduct / (Math.sqrt(jobNorm) * Math.sqrt(resumeNorm));
-      const semanticSimilarityScore = similarity > 0 ? Math.min(Math.log10(1 + similarity * 9) * 100, 100) : 0;
-      const score = Math.round(semanticSimilarityScore);
-
-      const missingKeywords: string[] = [];
-      const jobTermsWithWeights = jobTokens.map((term: string) => ({ term, weight: vecJob[term] }));
-      jobTermsWithWeights.sort((a: any, b: any) => b.weight - a.weight); 
-      const uniqueJobTerms = Array.from(new Set(jobTermsWithWeights.map((t: any) => t.term))) as string[];
-      
-      for (const term of uniqueJobTerms) {
-        if (!resumeTokens.includes(term) && originalWordMap[term] && originalWordMap[term].length > 2) {
-          missingKeywords.push(originalWordMap[term]);
+          if (response.ok) {
+            const data: any = await response.json();
+            const p = JSON.parse(data.choices[0].message.content) as any;
+            result.keywordDensity = p.keywordDensity || result.keywordDensity;
+            result.explanation = p.explanation || result.explanation;
+            result.feedback = p.feedback || result.feedback;
+            result.qualityScore = p.qualityScore || result.qualityScore;
+            result.rolePrediction = p.rolePrediction || result.rolePrediction;
+            result.experience = p.experience || result.experience;
+          }
+        } catch (llmError) {
+          console.warn('[ATS] LLM enrichment failed, using deterministic scores:', llmError);
         }
       }
 
-      const MathBase: ATSResult = {
-        score: isNaN(score) ? 0 : Math.min(Math.max(score, 0), 100),
-        missingKeywords: missingKeywords.slice(0, 10),
-        semanticSimilarityScore: Math.round(semanticSimilarityScore),
-        sectionScores: { skillsScore: 50, experienceScore: 50, educationScore: 50 },
-        keywordDensity: {},
-        explanation: "Analyzed purely mathematically using Cosine Similarity.",
-        feedback: { missingSections: [], weakAreas: [], improvements: [] },
-        qualityScore: 50,
-        rolePrediction: "Analysis in progress",
-        experience: "Unknown"
-      };
-
-      if (!process.env.OPENAI_API_KEY) {
-        console.warn('No OPENAI API KEY, returning math-only results.');
-        return MathBase;
-      }
-
-      try {
-        const prompt = `You are a strict, senior technical recruiter AI parsing a resume string against a job description.
-        You must output ONLY valid JSON without any markdown formatting.
-        Analyze the exact raw resume text and job description provided below.
-        
-        Calculate based exactly on real industry expectations:
-        1. sectionScores: out of 100 for skills, experience, and education.
-        2. keywordDensity: top 3 most repeated tech skill keywords and their frequencies in the resume.
-        3. explanation: highly specific 2-sentence rationale for the overall resume strength compared to the job description.
-        4. feedback: { "missingSections": [], "weakAreas": [], "improvements": ["Actionable suggestion 1", "Suggestion 2"] }
-        5. qualityScore: 0 to 100 purely based on grammar, wording, length optimization, and detail. Deduct heavily for duplicate filler content.
-        6. rolePrediction: The best job title the candidate actually deserves based solely on the resume.
-        7. experience: Calculate total years/months from chronological dates found in the resume (e.g. "5 Years 2 Months"). Return "0 Years" if none found.
-
-        Resume Text: "${resumeText.substring(0, 3000)}"
-        Job Description: "${jobDescription.substring(0, 1500)}"
-        
-        JSON schema required:
-        {
-          "sectionScores": { "skillsScore": number, "experienceScore": number, "educationScore": number },
-          "keywordDensity": { "keywordString": number },
-          "explanation": string,
-          "feedback": { "missingSections": [string], "weakAreas": [string], "improvements": [string] },
-          "qualityScore": number,
-          "rolePrediction": string,
-          "experience": string
-        }`;
-
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
-            temperature: 0.1,
-            response_format: { type: 'json_object' },
-            messages: [{ role: 'system', content: prompt }]
-          })
-        });
-
-        const data: any = await response.json();
-        
-        // Use Type Assertion to cleanly extract
-        const p = JSON.parse(data.choices[0].message.content) as any;
-
-        return {
-          score: MathBase.score,
-          missingKeywords: MathBase.missingKeywords,
-          semanticSimilarityScore: MathBase.semanticSimilarityScore,
-          sectionScores: p.sectionScores || MathBase.sectionScores,
-          keywordDensity: p.keywordDensity || {},
-          explanation: p.explanation || MathBase.explanation,
-          feedback: p.feedback || MathBase.feedback,
-          qualityScore: p.qualityScore || MathBase.qualityScore,
-          rolePrediction: p.rolePrediction || MathBase.rolePrediction,
-          experience: p.experience || MathBase.experience
-        };
-
-      } catch (llmError) {
-        console.error('LLM ATS Analysis failed, falling back to Math:', llmError);
-        return MathBase;
-      }
-
+      return result;
     } catch (error) {
-      console.error('NLP Error in scoreATS:', error);
+      console.error('[ATS] Scoring error:', error);
       return defaultFail;
     }
   },

@@ -94,39 +94,49 @@ export default function RecruiterApplicationsPage() {
   const [applications, setApplications] = useState<RecruiterApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [openingConversationFor, setOpeningConversationFor] = useState<string | null>(null);
   const [updatingStatusFor, setUpdatingStatusFor] = useState<string | null>(null);
   const selectedJobId = searchParams.get('jobId') || '';
+
+  // 300ms debounce on search
+  useEffect(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [searchQuery]);
 
   const fetchApplications = useCallback(async () => {
     const requestId = ++activeRequestRef.current;
     setLoading(true);
     try {
       if (selectedJobId) {
-        const res = await api.getPaginated<RecruiterApplication>(`/applications/jobs/${selectedJobId}?limit=100`);
-        const base = res.data ?? [];
-        const searchLower = searchQuery.trim().toLowerCase();
-
-        const filteredByStatus = base.filter((app) => {
-          const status = app.status?.toLowerCase() || '';
-          if (!selectedStatus) return true;
+        const searchLower = debouncedSearch.trim().toLowerCase();
+        const params = new URLSearchParams();
+        params.append('limit', '100');
+        if (searchLower) params.append('search', searchLower);
+        if (selectedStatus) {
           if (selectedStatus === 'rejected,hired,offer') {
-            return status === 'rejected' || status === 'hired' || status === 'offer';
+            // Client-side multi-status filter for job-scoped view
+          } else {
+            params.append('status', selectedStatus);
           }
-          return status === selectedStatus;
-        });
+        }
+        const res = await api.getPaginated<RecruiterApplication>(`/applications/jobs/${selectedJobId}?${params.toString()}`);
+        let base = res.data ?? [];
 
-        const filtered = filteredByStatus.filter((app) => {
-          if (!searchLower) return true;
-          const name = (app.name || '').toLowerCase();
-          const email = (app.email || '').toLowerCase();
-          const title = (app.job_title || '').toLowerCase();
-          return name.includes(searchLower) || email.includes(searchLower) || title.includes(searchLower);
-        });
-
-        if (requestId === activeRequestRef.current) {
-          setApplications(filtered);
+        // Client-side multi-status filter if needed
+        if (selectedStatus === 'rejected,hired,offer') {
+          base = base.filter((app) => {
+            const s = app.status?.toLowerCase() || '';
+            return s === 'rejected' || s === 'hired' || s === 'offer';
+          });
         }
         return;
       }
@@ -168,8 +178,8 @@ export default function RecruiterApplicationsPage() {
         }
       } else {
         if (selectedStatus) params.append('status', selectedStatus);
-        if (searchQuery) {
-          params.append('search', searchQuery);
+        if (debouncedSearch) {
+          params.append('search', debouncedSearch);
         }
         if (selectedJobId) {
           params.append('jobId', selectedJobId);
@@ -192,7 +202,7 @@ export default function RecruiterApplicationsPage() {
         setLoading(false);
       }
     }
-  }, [selectedStatus, searchQuery, selectedJobId]);
+  }, [selectedStatus, debouncedSearch, selectedJobId]);
 
   useEffect(() => {
     fetchApplications();
