@@ -118,6 +118,7 @@ export default function MessagesPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedSection, setExpandedSection] = useState<'about' | 'files' | 'links' | null>(null);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -456,16 +457,69 @@ export default function MessagesPage() {
                         <p>{formatDate(selectedConversationItem?.last_message_at || selectedConversation?.last_message_at)}</p>
                       </div>
                     </div>
-                    {['About Company', 'Shared Files', 'Shared Links'].map((label) => (
-                      <button
-                        key={label}
-                        type="button"
-                        className="w-full rounded-full bg-white border border-[#e6e3dc] px-4 py-2.5 text-left text-sm font-semibold text-slate-800 mb-3 flex items-center justify-between"
-                      >
-                        <span>{label}</span>
-                        <span className="w-5 h-5 rounded-full bg-black text-white inline-flex items-center justify-center text-[10px]">⌄</span>
-                      </button>
-                    ))}
+                    
+                    <div className="space-y-3">
+                      {/* About Company */}
+                      <div className="rounded-[20px] bg-white border border-[#e6e3dc] overflow-hidden shadow-sm">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedSection(expandedSection === 'about' ? null : 'about')}
+                          className="w-full px-4 py-3 flex items-center justify-between text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                        >
+                          <span>About Company</span>
+                          <span className={`w-5 h-5 rounded-full bg-black text-white inline-flex items-center justify-center text-[10px] transition-transform duration-200 ${expandedSection === 'about' ? 'rotate-180' : ''}`}>
+                            ⌄
+                          </span>
+                        </button>
+                        {expandedSection === 'about' && (
+                          <div className="px-4 pb-4 text-xs text-slate-600 animate-in fade-in slide-in-from-top-1">
+                            <p className="leading-relaxed">
+                              {selectedConversationItem?.company_name 
+                                ? `${selectedConversationItem.company_name} is committed to building the future of technology through innovation and collaboration.`
+                                : "No company information available at this time."}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Shared Files */}
+                      <div className="rounded-[20px] bg-white border border-[#e6e3dc] overflow-hidden shadow-sm">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedSection(expandedSection === 'files' ? null : 'files')}
+                          className="w-full px-4 py-3 flex items-center justify-between text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                        >
+                          <span>Shared Files</span>
+                          <span className={`w-5 h-5 rounded-full bg-black text-white inline-flex items-center justify-center text-[10px] transition-transform duration-200 ${expandedSection === 'files' ? 'rotate-180' : ''}`}>
+                            ⌄
+                          </span>
+                        </button>
+                        {expandedSection === 'files' && (
+                          <div className="px-4 pb-4 text-xs text-slate-500 text-center italic animate-in fade-in slide-in-from-top-1">
+                            No files have been shared in this conversation.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Shared Links */}
+                      <div className="rounded-[20px] bg-white border border-[#e6e3dc] overflow-hidden shadow-sm">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedSection(expandedSection === 'links' ? null : 'links')}
+                          className="w-full px-4 py-3 flex items-center justify-between text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                        >
+                          <span>Shared Links</span>
+                          <span className={`w-5 h-5 rounded-full bg-black text-white inline-flex items-center justify-center text-[10px] transition-transform duration-200 ${expandedSection === 'links' ? 'rotate-180' : ''}`}>
+                            ⌄
+                          </span>
+                        </button>
+                        {expandedSection === 'links' && (
+                          <div className="px-4 pb-4 text-xs text-slate-500 text-center italic animate-in fade-in slide-in-from-top-1">
+                            No links have been shared in this conversation.
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </aside>
                 </div>
               </>
