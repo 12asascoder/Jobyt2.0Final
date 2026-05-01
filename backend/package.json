@@ -36,15 +36,15 @@
     "ioredis": "^5.10.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "natural": "^8.1.1",
-    "nodemailer": "^6.10.1",
+    "natural": "^6.10.5",
+    "nodemailer": "^8.0.7",
     "pdf-parse": "^2.4.5",
     "pg": "^8.20.0",
     "razorpay": "^2.9.6",
     "socket.io": "^4.8.3",
     "stopword": "^3.1.5",
     "stripe": "^20.4.0",
-    "uuid": "^13.0.0",
+    "uuid": "^14.0.0",
     "winston": "^3.19.0"
   },
   "devDependencies": {

@@ -19,7 +19,7 @@ type SocialLink = {
 const candidateLinks: FooterLink[] = [
     { label: 'Explore Internships', href: '/internships' },
     { label: 'Career Paths', href: '/roadmaps' },
-    { label: 'Resume Builder', href: '/resume-builder' },
+    { label: 'Resume Builder', href: '/resumes' },
 ];
 
 const employerLinks: FooterLink[] = [
@@ -111,7 +111,7 @@ export function Footer() {
                             alt="Footer Logo"
                             width={300}
                             height={420}
-                            className="h-auto w-20 sm:w-24 lg:w-50"
+                            className="h-auto w-20 sm:w-24 lg:w-48"
                             priority
                         />
                     </div>
