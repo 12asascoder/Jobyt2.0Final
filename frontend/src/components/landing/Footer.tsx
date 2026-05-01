@@ -19,7 +19,7 @@ type SocialLink = {
 const candidateLinks: FooterLink[] = [
     { label: 'Explore Internships', href: '/internships' },
     { label: 'Career Paths', href: '/roadmaps' },
-    { label: 'Resume Builder', href: '/resume-builder' },
+    { label: 'Resume Builder', href: '/resumes' },
 ];
 
 const employerLinks: FooterLink[] = [
