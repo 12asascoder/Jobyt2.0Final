@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuthStore } from '@/store/auth.store';
+import { useSearchParams } from 'next/navigation';
 import { Navbar, Footer } from '@/components/landing';
 import { BackendJob, JobCardGrid, SkeletonGrid, getJobTypeLabel, normalizeJob } from '@/components/ui/JobCard';
 import { API_BASE } from '@/constants';
@@ -20,22 +19,11 @@ export default function InternshipsPage() {
 }
 
 function InternshipsContent() {
-    const { isAuthenticated, initialize } = useAuthStore();
-    const router = useRouter();
     const searchParams = useSearchParams();
-
-    useEffect(() => {
-        void initialize();
-    }, [initialize]);
-
-    useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/login');
-        }
-    }, [isAuthenticated, router]);
 
     const [jobs, setJobs] = useState<BackendJob[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     // Initial query params parsing
     const initialKeyword = searchParams.get('keyword') || '';
@@ -46,18 +34,29 @@ function InternshipsContent() {
     const [filterOpen, setFilterOpen] = useState(false);
 
     useEffect(() => {
-        fetch(`${API_BASE}/jobs?limit=50&sort=date`)
-            .then(res => res.json())
+        setLoading(true);
+        setError(null);
+
+        fetch(`${API_BASE}/jobs?limit=50&type=internship`)
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`Server error: ${res.status}`);
+                }
+                return res.json();
+            })
             .then(data => {
-                if (data.success && data.data?.length > 0) {
-                    // Normalize all jobs to ensure they have valid id fields
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
                     const normalizedJobs = data.data.map((job: BackendJob) => normalizeJob(job));
                     setJobs(normalizedJobs);
                 } else {
                     setJobs([]);
                 }
             })
-            .catch(() => setJobs([]))
+            .catch((err) => {
+                console.error('[Internships] Failed to fetch:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load internships');
+                setJobs([]);
+            })
             .finally(() => setLoading(false));
     }, []);
 
@@ -89,11 +88,8 @@ function InternshipsContent() {
                 const isRemote = job.type === 'remote' || job.location?.toLowerCase().includes('remote');
                 if (wt === 'remote' && !isRemote) return false;
                 if (wt === 'on-site' && isRemote) return false;
-                // Hybrid might need specific db tags, assume standard parsing
             }
 
-            // Duration match (mock parsing, assumes DB structure maps string durations to skills or tags)
-            // if (selectedDuration) { ... }
             return true;
         });
     }, [jobs, keyword, selectedSkills, selectedWorkType]);
@@ -274,6 +270,18 @@ function InternshipsContent() {
                     <div className="flex-1 w-full min-w-0">
                         {loading ? (
                             <SkeletonGrid count={9} gridClass="grid-cols-1 md:grid-cols-2 xl:grid-cols-3" />
+                        ) : error ? (
+                            <div className="w-full flex flex-col items-center justify-center py-32 text-center rounded-[24px] border-2 border-dashed border-red-200 bg-red-50/50">
+                                <span className="text-4xl mb-4">⚠️</span>
+                                <h3 className="text-lg font-bold text-red-800 mb-1">Something went wrong</h3>
+                                <p className="text-red-600 text-sm mb-4">{error}</p>
+                                <button
+                                    onClick={() => window.location.reload()}
+                                    className="text-sm font-semibold text-red-700 hover:text-red-900 underline"
+                                >
+                                    Try again
+                                </button>
+                            </div>
                         ) : filteredJobs.length > 0 ? (
                             <JobCardGrid jobs={filteredJobs} gridClass="grid-cols-1 md:grid-cols-2 xl:grid-cols-3" />
                         ) : (

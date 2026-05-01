@@ -4,27 +4,27 @@ export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://hiringplatfo
 export const JOB_TYPES = ['full-time', 'part-time', 'contract', 'remote', 'internship'] as const;
 
 export const APPLICATION_STATUSES = [
-  'APPLIED', 'SCREENING', 'SHORTLISTED', 'INTERVIEW', 'SELECTED', 'HIRED', 'REJECTED',
+  'applied', 'in_review', 'shortlisted', 'interview', 'offer', 'hired', 'rejected',
 ] as const;
 
 export const APPLICATION_STATUS_LABELS: Record<string, string> = {
-  APPLIED: 'Applied',
-  SCREENING: 'Screening',
-  SHORTLISTED: 'Shortlisted',
-  INTERVIEW: 'Interview',
-  SELECTED: 'Selected',
-  HIRED: 'Hired',
-  REJECTED: 'Rejected',
+  applied: 'Applied',
+  in_review: 'In Review',
+  shortlisted: 'Shortlisted',
+  interview: 'Interview',
+  offer: 'Offer',
+  hired: 'Hired',
+  rejected: 'Rejected',
 };
 
 export const APPLICATION_STATUS_COLORS: Record<string, string> = {
-  APPLIED: 'bg-blue-100 text-blue-700',
-  SCREENING: 'bg-yellow-100 text-yellow-700',
-  SHORTLISTED: 'bg-purple-100 text-purple-700',
-  INTERVIEW: 'bg-orange-100 text-orange-700',
-  SELECTED: 'bg-teal-100 text-teal-700',
-  HIRED: 'bg-green-100 text-green-700',
-  REJECTED: 'bg-red-100 text-red-700',
+  applied: 'bg-blue-100 text-blue-700',
+  in_review: 'bg-yellow-100 text-yellow-700',
+  shortlisted: 'bg-purple-100 text-purple-700',
+  interview: 'bg-orange-100 text-orange-700',
+  offer: 'bg-teal-100 text-teal-700',
+  hired: 'bg-green-100 text-green-700',
+  rejected: 'bg-red-100 text-red-700',
 };
 
 export const ROUTES = {
@@ -44,6 +44,7 @@ export const ROUTES = {
   dashboard: '/dashboard',
   profile: '/profile',
   jobs: '/jobs',
+  internships: '/internships',
   jobDetail: (id: string) => `/jobs/${id}`,
   applications: '/applications',
   savedJobs: '/saved-jobs',

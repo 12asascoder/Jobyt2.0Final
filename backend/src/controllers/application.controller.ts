@@ -73,11 +73,14 @@ export const ApplicationController = {
     try {
       const page = Number.parseInt(req.query.page as string) || 1;
       const limit = Number.parseInt(req.query.limit as string) || 20;
+      const search = req.query.search as string | undefined;
+      const status = req.query.status as string | undefined;
       const { applications, total } = await ApplicationService.getJobApplications(
         req.user!.userId,
         req.params.jobId as string,
         page,
         limit,
+        { search, status },
       );
       sendPaginated(res, applications, total, page, limit);
     } catch (err) {
