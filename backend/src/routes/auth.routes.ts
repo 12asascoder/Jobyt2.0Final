@@ -13,9 +13,13 @@ const weakPasswords = new Set([
   'password',
   'password123',
   'qwerty123',
+  'qwertyuiop',
+  'admin123',
+  'welcome123',
+  'letmein123',
 ]);
 
-const passwordPolicy = body('password').custom((value: unknown) => {
+const passwordPolicy = body('password').custom((value: string, { req }) => {
   if (typeof value !== 'string' || value.length === 0) {
     throw new Error('Password is required');
   }
@@ -31,9 +35,28 @@ const passwordPolicy = body('password').custom((value: unknown) => {
   if (!/[0-9]/.test(value)) {
     throw new Error('Password must include at least one number');
   }
-  if (weakPasswords.has(value.toLowerCase())) {
-    throw new Error('Password is too weak. Please choose a stronger password');
+  
+  const lowerPassword = value.toLowerCase();
+  
+  if (weakPasswords.has(lowerPassword)) {
+    throw new Error('Password is too common. Please choose a stronger password');
   }
+
+  // Prevent patterns like abc123, 123abc, qwerty
+  const commonPatterns = ['abc123', '123abc', 'qwerty', 'asdfgh'];
+  if (commonPatterns.some(pattern => lowerPassword.includes(pattern))) {
+    throw new Error('Password contains a common easily guessable pattern');
+  }
+
+  // No User Info: Prevent password from containing email prefix
+  const email = req.body.email;
+  if (email && typeof email === 'string') {
+    const prefix = email.split('@')[0];
+    if (prefix.length >= 4 && lowerPassword.includes(prefix.toLowerCase())) {
+      throw new Error('Password cannot contain your email or username');
+    }
+  }
+
   return true;
 });
 

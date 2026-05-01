@@ -1,6 +1,7 @@
 import pool from '../config/database';
 import { PoolClient } from 'pg';
 import { randomUUID } from 'crypto';
+import { normalizeUrl } from '../utils/url';
 
 export type JobType = 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
 export type JobStatus = 'draft' | 'active' | 'closed';
@@ -214,7 +215,7 @@ export const JobModel = {
     let companyId = data.company_id ?? null;
     let companyName = data.company_name?.trim();
     let companyLogo = data.company_logo ?? null;
-    let companyWebsite = data.company_website ?? null;
+    let companyWebsite = normalizeUrl(data.company_website) ?? null;
     let companyLocation = data.company_location ?? data.location ?? null;
     const isExternalCompany = Boolean(data.is_external_company);
     const source: JobSource = data.source ?? 'recruiter';
@@ -236,7 +237,7 @@ export const JobModel = {
       if (!companyId) companyId = recruiterCompany?.id ?? null;
       if (!companyName) companyName = recruiterCompany?.company_name ?? 'Unknown Company';
       if (!companyLogo) companyLogo = recruiterCompany?.logo_url ?? null;
-      if (!companyWebsite) companyWebsite = recruiterCompany?.website ?? null;
+      if (!companyWebsite) companyWebsite = normalizeUrl(recruiterCompany?.website) ?? null;
       if (!companyLocation) companyLocation = recruiterCompany?.location ?? null;
     }
 
@@ -363,7 +364,7 @@ export const JobModel = {
     let companyId: string | null = null;
     let companyName = normalizedCompanyName || '';
     let companyLogo = data.company_logo || null;
-    let companyWebsite = data.company_website || null;
+    let companyWebsite = normalizeUrl(data.company_website) || null;
     let companyLocation = normalizedCompanyLocation || data.location || null;
     let isExternalCompany = false;
     let source: JobSource = 'admin_external';
@@ -388,7 +389,7 @@ export const JobModel = {
       companyId = company.id;
       companyName = normalizedCompanyName || company.company_name || 'Unknown Company';
       companyLogo = data.company_logo || company.logo_url || null;
-      companyWebsite = data.company_website || company.website || null;
+      companyWebsite = normalizeUrl(data.company_website) || (company.website ? normalizeUrl(company.website) : null) || null;
       companyLocation = normalizedCompanyLocation || data.location || company.location || null;
       isExternalCompany = false;
       source = 'admin_company';
@@ -507,6 +508,10 @@ export const JobModel = {
 
     const hasQuestionsColumn = await hasApplicationQuestionsColumn();
     const sanitizedData: Record<string, unknown> = { ...data };
+
+    if (sanitizedData.company_website !== undefined) {
+      sanitizedData.company_website = normalizeUrl(sanitizedData.company_website as string | null);
+    }
 
     if (!hasQuestionsColumn) {
       delete sanitizedData.application_questions;

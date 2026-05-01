@@ -22,7 +22,7 @@ interface ReferralDashboard {
   link: string;
   total_referrals: number;
   credited_referrals: number;
-  credits_earned: number;
+  total_credits_earned: number;
 }
 
 export default function CommunityPage() {
@@ -45,7 +45,7 @@ export default function CommunityPage() {
         setMyCode(dashboardResponse.data?.code ?? '');
         setTotalReferrals(dashboardResponse.data?.total_referrals ?? 0);
         setCreditedReferrals(dashboardResponse.data?.credited_referrals ?? 0);
-        setCreditsEarned(dashboardResponse.data?.credits_earned ?? 0);
+        setCreditsEarned(dashboardResponse.data?.total_credits_earned ?? 0);
       } catch (err) {
         console.error('Failed to fetch referral dashboard:', err);
       }

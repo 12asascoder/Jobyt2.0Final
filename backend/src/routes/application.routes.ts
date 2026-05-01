@@ -76,6 +76,9 @@ router.post(
 // Recruiter: view applications for a job
 router.get('/jobs/:jobId', authorize('recruiter'), employerGuard, ApplicationController.jobApplications);
 
+// Any role (authorized via controller): get secure resume URL for this application
+router.get('/:id/resume-url', ApplicationController.getResumeUrl);
+
 // Recruiter: update application status
 router.patch(
   '/:id/status',

@@ -7,6 +7,7 @@ import { CreditService } from './credit.service';
 import { CREDIT_COSTS } from '../config/creditCosts';
 import { ResumeModel } from '../models/resume.model';
 import { ProfileRequirementsService } from './profileRequirements.service';
+import { StorageService } from './storage.service';
 
 export const ApplicationService = {
   async apply(
@@ -266,5 +267,36 @@ export const ApplicationService = {
     }
 
     return PipelineEventModel.findByApplication(applicationId);
+  },
+
+  async getResumeUrl(user: { userId: string; role: string }, applicationId: string): Promise<string> {
+    const application = await ApplicationModel.findById(applicationId);
+    if (!application) {
+      throw Object.assign(new Error('Application not found'), { statusCode: 404 });
+    }
+
+    if (!application.resume_snapshot_url) {
+      throw Object.assign(new Error('No resume attached to this application'), { statusCode: 404 });
+    }
+
+    let isAuthorized = false;
+
+    if (user.role === 'admin') {
+      isAuthorized = true;
+    } else if (user.role === 'applicant' && application.applicant_id === user.userId) {
+      isAuthorized = true;
+    } else if (user.role === 'recruiter') {
+      const job = await JobModel.findById(application.job_id);
+      if (job && job.recruiter_id === user.userId) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
+      throw Object.assign(new Error('Forbidden: You do not have access to this resume'), { statusCode: 403 });
+    }
+
+    // Defaulting to PDF/image type for snapshots, as they are typically PDFs
+    return StorageService.generateSignedUrl(application.resume_snapshot_url, 'image');
   },
 };

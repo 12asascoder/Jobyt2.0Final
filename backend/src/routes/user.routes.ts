@@ -25,6 +25,26 @@ router.put(
   body('company_name').optional({ nullable: true, checkFalsy: true }).isString().trim(),
   body('industry').optional({ nullable: true, checkFalsy: true }).isString(),
   body('website').optional({ nullable: true, checkFalsy: true }).isURL(),
+  body('portfolio_url')
+    .optional({ nullable: true, checkFalsy: true })
+    .isURL({ require_protocol: false })
+    .withMessage('Portfolio URL is not a valid URL'),
+  body('github_url')
+    .optional({ nullable: true, checkFalsy: true })
+    .isURL({ require_protocol: false })
+    .withMessage('GitHub URL is not a valid URL'),
+  body('linkedin_url')
+    .optional({ nullable: true, checkFalsy: true })
+    .isURL({ require_protocol: false })
+    .withMessage('LinkedIn URL is not a valid URL')
+    .custom((value: string) => {
+      if (!value) return true;
+      const normalized = value.replace(/^https?:\/\//i, '').toLowerCase();
+      if (!normalized.startsWith('linkedin.com/') && !normalized.startsWith('www.linkedin.com/')) {
+        throw new Error('LinkedIn URL must be from linkedin.com (e.g. https://linkedin.com/in/username)');
+      }
+      return true;
+    }),
   validate,
   UserController.updateProfile,
 );
@@ -84,6 +104,7 @@ router.get(
 );
 
 // ── Public profile ─────────────────────────────────────────────────────────────
+router.get('/:userId/resumes/:id/secure-url', ResumeController.getSecureUrl);
 router.get('/:userId', UserController.getPublicProfile);
 
 export default router;

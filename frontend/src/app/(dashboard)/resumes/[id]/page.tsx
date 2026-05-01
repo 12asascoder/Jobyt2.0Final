@@ -168,14 +168,23 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
   }, [education.length, experience.length, parsed?.name, skills.length]);
 
   const canPreview = Boolean(resume?.file_url) && Boolean(resume && isPdfLike(resume));
-  const resumeUrl = resolveResumeUrl(resume?.file_url);
-  const resumePreviewUrl = resumeUrl ? `${resumeUrl}#view=FitH` : null;
+  const [secureUrl, setSecureUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (resume?.id) {
+      api.get<{ url: string }>(`/users/me/resumes/${resume.id}/secure-url`)
+        .then(res => setSecureUrl(res.data?.url || null))
+        .catch(err => console.error('Failed to get secure URL', err));
+    }
+  }, [resume?.id]);
+
+  const resumePreviewUrl = secureUrl ? `${secureUrl}#view=FitH` : null;
 
   useEffect(() => {
     let canceled = false;
 
     const scoreResume = async () => {
-      if (!resume || !resumeUrl) {
+      if (!resume) {
         setAtsScore(null);
         setAtsExplanation(null);
         return;
@@ -196,10 +205,12 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
           return;
         }
 
+        if (!secureUrl) return; // Wait for secureUrl if we need to fetch the file
+
         const formData = new FormData();
 
         if (isPdfLike(resume)) {
-          const fileRes = await fetch(resumeUrl);
+          const fileRes = await fetch(secureUrl);
           if (!fileRes.ok) throw new Error('Failed to fetch resume file');
 
           const blob = await fileRes.blob();
@@ -252,7 +263,7 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
     return () => {
       canceled = true;
     };
-  }, [parsed, resume, resumeUrl]);
+  }, [parsed, resume, secureUrl]);
 
   const setDefaultResume = async () => {
     if (!resume || resume.is_default || settingDefault) return;
@@ -294,8 +305,8 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
         <h1 className="text-2xl font-bold text-slate-900">{resume.file_name || 'Resume'}</h1>
         <div className="flex flex-wrap gap-2">
           {resume.file_url && (
-            <a href={resumeUrl || '#'} target="_blank" rel="noreferrer">
-              <Button variant="outline">Download</Button>
+            <a href={secureUrl || '#'} target="_blank" rel="noreferrer">
+              <Button variant="outline" disabled={!secureUrl}>Download</Button>
             </a>
           )}
           {!resume.is_default && (
@@ -326,8 +337,8 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
                   <p className="text-sm text-slate-700">Inline preview is unavailable in this browser.</p>
                   {resume.file_url && (
-                    <a href={resumeUrl || '#'} target="_blank" rel="noreferrer">
-                      <Button variant="outline">Open Resume in New Tab</Button>
+                    <a href={secureUrl || '#'} target="_blank" rel="noreferrer">
+                      <Button variant="outline" disabled={!secureUrl}>Open Resume in New Tab</Button>
                     </a>
                   )}
                 </div>
@@ -336,8 +347,8 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
                 <p className="text-sm text-slate-700">Preview is unavailable for this file type.</p>
                 {resume.file_url && (
-                  <a href={resumeUrl || '#'} target="_blank" rel="noreferrer">
-                    <Button variant="outline">Download Resume</Button>
+                  <a href={secureUrl || '#'} target="_blank" rel="noreferrer">
+                    <Button variant="outline" disabled={!secureUrl}>Download Resume</Button>
                   </a>
                 )}
               </div>
