@@ -90,7 +90,7 @@ model jobs {
   id                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   recruiter_id          String                   @db.Uuid
   company_id            String?                  @db.Uuid
-  company_name          String                   @default("Unknown Company") @db.VarChar(255)
+  companyName          String                   @map("company_name") @default("Unknown Company") @db.VarChar(255)
   company_logo          String?                  @db.VarChar(500)
   company_website       String?                  @db.VarChar(500)
   company_location      String?                  @db.VarChar(255)
@@ -194,7 +194,7 @@ model recruiter_profiles {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id       String   @unique @db.Uuid
   name          String?  @db.VarChar(255)
-  company_name  String?  @db.VarChar(255)
+  companyName   String?  @map("company_name") @db.VarChar(255)
   company_email String?  @unique @db.VarChar(255)
   industry      String?  @db.VarChar(100)
   description   String?

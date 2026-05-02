@@ -62,7 +62,7 @@ interface PublicUserProfile {
   role?: string;
   profile?: {
     name?: string | null;
-    company_name?: string | null;
+    companyName?: string | null;
     photo_url?: string | null;
     logo_url?: string | null;
   };
@@ -151,7 +151,7 @@ export default function MessagesPage() {
 
       const enrichedConversations = rawConversations.map((conv: Conversation) => {
         const profile = profileMap.get(conv.applicant_id);
-        const participantName = profile?.profile?.name || profile?.profile?.company_name || null;
+        const participantName = profile?.profile?.name || profile?.profile?.companyName || null;
         return {
           ...conv,
           participant: {

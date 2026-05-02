@@ -126,7 +126,7 @@ export default function DashboardPage() {
                 const q = keyword.toLowerCase();
                 if (
                     !job.title.toLowerCase().includes(q) &&
-                    !job.company_name?.toLowerCase().includes(q)
+                    !job.companyName?.toLowerCase().includes(q)
                 )
                     return false;
             }

@@ -8,12 +8,8 @@ import { isSpazorlabsCompany } from '@/lib/companyFlags';
 export interface BackendJob {
     id: string;
     title: string;
-    company_name?: string;
+    companyName?: string | null;
     company_logo?: string | null;
-    company?: {
-        name?: string;
-        logo?: string | null;
-    };
     location: string | null;
     type: 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
     salary_min: number | null;
@@ -26,59 +22,16 @@ export interface BackendJob {
 
 type JobLike = Partial<BackendJob> & { _id?: string };
 
-const getCompanyName = (job: JobLike & Record<string, any>): string | undefined => {
-    const nestedCompanyName =
-        typeof job.company === 'object' && job.company
-            ? (job.company as Record<string, unknown>).name
-            : undefined;
-
-    const candidates = [
-        job.company_name,
-        job.companyName,
-        typeof nestedCompanyName === 'string' ? nestedCompanyName : undefined,
-        job.employer_name,
-        job.recruiter_company_name,
-    ];
-
-    const resolved = candidates.find(
-        (value) => typeof value === 'string' && value.trim().length > 0 && value.trim().toLowerCase() !== 'unknown company',
-    );
-
-    return typeof resolved === 'string' ? resolved.trim() : undefined;
-};
-
-const getCompanyLogo = (job: JobLike & Record<string, any>): string | null => {
-    const nestedLogo =
-        typeof job.company === 'object' && job.company
-            ? (job.company as Record<string, unknown>).logo
-            : undefined;
-
-    const candidates = [
-        job.company_logo,
-        job.companyLogo,
-        typeof nestedLogo === 'string' ? nestedLogo : undefined,
-        job.logo_url,
-    ];
-
-    const resolved = candidates.find((value) => typeof value === 'string' && value.trim().length > 0);
-    return typeof resolved === 'string' ? resolved.trim() : null;
-};
-
-// Normalize job data to ensure it has an id field
+// Normalize job data to ensure it has an id field and uses companyName
 export function normalizeJob(job: JobLike): BackendJob {
-    const typedJob = job as JobLike & Record<string, any>;
-    const companyName = getCompanyName(typedJob);
-    const companyLogo = getCompanyLogo(typedJob);
+    const rawName = (job.companyName ?? '').toString().trim();
+    const companyLogo = job.company_logo ?? null;
 
     return {
         id: job.id || job._id || '',
         title: job.title || '',
-        company_name: companyName,
+        companyName: rawName || null,
         company_logo: companyLogo,
-        company: {
-            name: companyName,
-            logo: companyLogo,
-        },
         location: job.location ?? null,
         type: job.type || 'full-time',
         salary_min: job.salary_min ?? null,
@@ -237,9 +190,9 @@ export function JobCard({
 
     const isRemote = job.type === 'remote' || (job.location?.toLowerCase().includes('remote') ?? false);
     const badgeText = getBadgeText(job);
-    const isVerifiedCompany = isSpazorlabsCompany(job.company_name);
-    const name = job.company_name || job.title;
-    const companyLogo = resolveAssetUrl(job.company_logo || job.company?.logo || null);
+    const isVerifiedCompany = isSpazorlabsCompany(job.companyName);
+    const name = job.companyName || job.title;
+    const companyLogo = resolveAssetUrl(job.company_logo || null);
     const salaryLabel = formatSalaryRange(job.salary_min, job.salary_max, job.type);
     const locationLabel = job.location || 'Remote';
 
@@ -349,9 +302,9 @@ export function JobCard({
                         {job.title}
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                        {job.company_name && (
+                        {job.companyName && (
                             <span style={{ fontSize: 12, fontWeight: 500, color: '#444' }}>
-                                {job.company_name}
+                                {job.companyName}
                             </span>
                         )}
                         {isVerifiedCompany && (

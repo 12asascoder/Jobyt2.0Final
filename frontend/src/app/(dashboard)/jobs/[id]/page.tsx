@@ -96,24 +96,7 @@ function deriveJobRole(title: string): string {
 }
 
 function getCompanyName(job: Job): string {
-  const maybe = job as Job & {
-    company?: { name?: string | null };
-    companyName?: string | null;
-  };
-
-  const normalizedPrimary = job.company_name?.trim();
-  const normalizedNested = maybe.company?.name?.trim();
-  const normalizedCamel = maybe.companyName?.trim();
-
-  const isUnknown = (value?: string | null) =>
-    typeof value === 'string' && value.toLowerCase() === 'unknown company';
-
-  return (
-    (!isUnknown(normalizedPrimary) ? normalizedPrimary : '') ||
-    (!isUnknown(normalizedNested) ? normalizedNested : '') ||
-    (!isUnknown(normalizedCamel) ? normalizedCamel : '') ||
-    'Unknown Company'
-  );
+  return job.companyName?.trim() || 'Unknown Company';
 }
 
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {

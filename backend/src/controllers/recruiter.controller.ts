@@ -35,10 +35,10 @@ export const RecruiterController = {
   async createRecruiterProfile(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.userId;
-      const { company_name, company_email, industry, description, company_size, website, location } = req.body;
+      const { companyName, company_email, industry, description, company_size, website, location } = req.body;
 
       const profile = await RecruiterService.createRecruiterProfile(userId, {
-        company_name,
+        companyName,
         company_email,
         industry,
         description,

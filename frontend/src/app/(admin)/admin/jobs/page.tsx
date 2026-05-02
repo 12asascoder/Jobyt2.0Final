@@ -105,7 +105,7 @@ export default function AdminJobsPage() {
               {jobs.map((job) => (
                 <tr key={job.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-semibold text-slate-900">{job.title}</td>
-                  <td className="px-4 py-3 text-slate-600">{job.company_name ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-600">{job.companyName ?? '—'}</td>
                   <td className="px-4 py-3">
                     <Badge
                       variant={

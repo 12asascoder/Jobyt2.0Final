@@ -127,7 +127,7 @@ export const AdminService = {
       skills?: string[];
       status?: 'draft' | 'active' | 'closed';
       company_id?: string;
-      company_name?: string;
+      companyName?: string;
       company_logo?: string;
       company_website?: string;
       company_location?: string;
@@ -142,7 +142,7 @@ export const AdminService = {
       }>;
     },
   ) {
-    if (!data.company_id && !data.company_name?.trim()) {
+    if (!data.company_id && !data.companyName?.trim()) {
       throw new AppError('COMPANY_REQUIRED', 400, 'COMPANY_REQUIRED');
     }
 
@@ -161,7 +161,7 @@ export const AdminService = {
       skills: data.skills,
       status: data.status,
       company_id: data.company_id,
-      company_name: data.company_name,
+      companyName: data.companyName,
       company_logo: data.company_logo,
       company_website: data.company_website,
       company_location: data.company_location,
@@ -174,14 +174,14 @@ export const AdminService = {
       target_type: 'job',
       target_id: job.id,
       reason: job.is_external_company
-        ? `Admin created external job for ${job.company.name}`
-        : `Admin created job for company ${job.company.name}`,
+        ? `Admin created external job for ${job.companyName}`
+        : `Admin created job for company ${job.companyName}`,
     });
 
     if (job.is_external_company) {
       logger.info('Admin created external job', {
         adminId,
-        companyName: job.company.name,
+        companyName: job.companyName,
         jobId: job.id,
       });
     }

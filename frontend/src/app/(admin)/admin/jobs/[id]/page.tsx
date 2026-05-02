@@ -127,7 +127,7 @@ export default function AdminJobDetailPage() {
           <div className="space-y-3 text-sm text-slate-700">
             <div>
               <p className="text-xs uppercase tracking-wide font-bold text-slate-500">Company</p>
-              <p className="mt-1">{job.company_name || 'Unknown Company'}</p>
+              <p className="mt-1">{job.companyName || 'Unknown Company'}</p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide font-bold text-slate-500">Company Location</p>

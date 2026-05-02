@@ -48,7 +48,7 @@ export interface Education {
 export interface RecruiterProfile {
   user_id: string;
   name: string | null;
-  company_name: string | null;
+  companyName: string | null;
   industry: string | null;
   description: string | null;
   company_size: string | null;
@@ -87,7 +87,7 @@ export interface Job {
   job_approval_status?: 'pending_approval' | 'approved' | 'rejected';
   is_boosted: boolean;
   views_count: number;
-  company_name?: string;
+  companyName?: string | null;
   company_logo?: string | null;
   company_website?: string | null;
   company_location?: string | null;
@@ -114,7 +114,7 @@ export interface Application {
   // joined fields
   job_title?: string;
   location?: string;
-  company_name?: string;
+  companyName?: string | null;
   latest_comment?: string | null;
 }
 

@@ -62,13 +62,13 @@ router.post(
   body('application_questions.*.options').optional().isArray(),
   body('application_questions.*.options.*').optional().isString(),
   body('company_id').optional().isUUID().withMessage('company_id must be a valid UUID'),
-  body('company_name')
+  body('companyName')
     .optional()
     .isString()
     .trim()
     .custom((value, { req }) => {
       if (!req.body.company_id && !String(value || '').trim()) {
-        throw new Error('company_name is required when company_id is not provided');
+        throw new Error('companyName is required when company_id is not provided');
       }
       return true;
     }),

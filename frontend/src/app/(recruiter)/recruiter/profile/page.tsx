@@ -9,7 +9,7 @@ import { Notification as AppNotification } from '@/types';
 
 interface RecruiterProfileForm {
   name: string;
-  company_name: string;
+  companyName: string;
   industry: string;
   company_size: string;
   location: string;
@@ -27,7 +27,7 @@ interface ProfilePayload {
 
 const emptyForm: RecruiterProfileForm = {
   name: '',
-  company_name: '',
+  companyName: '',
   industry: '',
   company_size: '',
   location: '',
@@ -70,7 +70,7 @@ export default function RecruiterProfilePage() {
         setLogoUrl(toAbsoluteUrl(profile.logo_url));
         setForm({
           name: profile.name ?? '',
-          company_name: profile.company_name ?? '',
+          companyName: profile.companyName ?? '',
           industry: profile.industry ?? '',
           company_size: profile.company_size ?? '',
           location: profile.location ?? '',
@@ -122,14 +122,14 @@ export default function RecruiterProfilePage() {
   };
 
   const profileInitials = useMemo(() => {
-    const source = form.company_name || form.name || email || 'R';
+    const source = form.companyName || form.name || email || 'R';
     return source
       .split(' ')
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part.charAt(0).toUpperCase())
       .join('');
-  }, [email, form.company_name, form.name]);
+  }, [email, form.companyName, form.name]);
 
   const onChange = (key: keyof RecruiterProfileForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -171,7 +171,7 @@ export default function RecruiterProfilePage() {
     try {
       const payload = {
         name: form.name.trim(),
-        company_name: form.company_name.trim(),
+        companyName: form.companyName.trim(),
         industry: form.industry.trim(),
         company_size: form.company_size.trim(),
         location: form.location.trim(),
@@ -185,7 +185,7 @@ export default function RecruiterProfilePage() {
         setForm((prev) => ({
           ...prev,
           name: next.profile?.name ?? prev.name,
-          company_name: next.profile?.company_name ?? prev.company_name,
+          companyName: next.profile?.companyName ?? prev.companyName,
           industry: next.profile?.industry ?? prev.industry,
           company_size: next.profile?.company_size ?? prev.company_size,
           location: next.profile?.location ?? prev.location,
@@ -241,7 +241,7 @@ export default function RecruiterProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Your Name" value={form.name} onChange={(v) => onChange('name', v)} placeholder="Hiring manager name" />
               <Field label="Email" value={email} disabled onChange={() => undefined} placeholder="" />
-              <Field label="Company Name" value={form.company_name} onChange={(v) => onChange('company_name', v)} placeholder="Acme Inc." />
+              <Field label="Company Name" value={form.companyName} onChange={(v) => onChange('companyName', v)} placeholder="Acme Inc." />
               <Field label="Industry" value={form.industry} onChange={(v) => onChange('industry', v)} placeholder="Software" />
               <Field label="Company Size" value={form.company_size} onChange={(v) => onChange('company_size', v)} placeholder="11-50" />
               <Field label="Location" value={form.location} onChange={(v) => onChange('location', v)} placeholder="Bengaluru, India" />

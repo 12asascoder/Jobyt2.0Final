@@ -114,12 +114,12 @@ export default function RecruiterMessageThreadPage({ params }: { params: Promise
 
             if (otherId) {
               api
-                .get<{ profile?: { name?: string | null; company_name?: string | null } }>(`/users/${otherId}`)
+                .get<{ profile?: { name?: string | null; companyName?: string | null } }>(`/users/${otherId}`)
                 .then((profileRes) => {
                   const profile = profileRes.data?.profile;
                   const resolvedName =
                     profile?.name?.trim() ||
-                    profile?.company_name?.trim() ||
+                    profile?.companyName?.trim() ||
                     conversation.participant?.name?.trim() ||
                     fallbackName;
                   setOtherUserName(resolvedName);

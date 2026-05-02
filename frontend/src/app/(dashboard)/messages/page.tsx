@@ -43,7 +43,7 @@ interface Conversation {
   recruiter_id: string;
   applicant_id: string;
   job_id: string | null;
-  company_name?: string | null;
+  companyName?: string | null;
   last_message_at: string;
   last_message?: string;
   participant?: {
@@ -62,7 +62,7 @@ interface PublicUserProfile {
   role?: string;
   profile?: {
     name?: string | null;
-    company_name?: string | null;
+    companyName?: string | null;
     photo_url?: string | null;
     logo_url?: string | null;
   };
@@ -151,8 +151,8 @@ export default function MessagesPage() {
       const enrichedConversations = rawConversations.map((conv: Conversation) => {
         const profile = profileMap.get(conv.recruiter_id);
         const participantName =
-          (user?.role === 'applicant' ? conv.company_name?.trim() : null) ||
-          profile?.profile?.company_name ||
+          (user?.role === 'applicant' ? conv.companyName?.trim() : null) ||
+          profile?.profile?.companyName ||
           profile?.profile?.name ||
           null;
         return {
@@ -474,8 +474,8 @@ export default function MessagesPage() {
                         {expandedSection === 'about' && (
                           <div className="px-4 pb-4 text-xs text-slate-600 animate-in fade-in slide-in-from-top-1">
                             <p className="leading-relaxed">
-                              {selectedConversationItem?.company_name 
-                                ? `${selectedConversationItem.company_name} is committed to building the future of technology through innovation and collaboration.`
+                              {selectedConversationItem?.companyName 
+                                ? `${selectedConversationItem.companyName} is committed to building the future of technology through innovation and collaboration.`
                                 : "No company information available at this time."}
                             </p>
                           </div>

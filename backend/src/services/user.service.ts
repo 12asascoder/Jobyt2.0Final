@@ -25,7 +25,7 @@ const APPLICANT_PROFILE_FIELDS = new Set([
 
 const RECRUITER_PROFILE_FIELDS = new Set([
   'name',
-  'company_name',
+  'companyName',
   'company_email',
   'industry',
   'description',
@@ -54,12 +54,12 @@ const normalizeProfilePatch = (
 
     // Treat empty strings as null for optional profile text/URL fields.
     let val = typeof value === 'string' && value.trim() === '' ? null : value;
-    
+
     // Apply URL normalization — use domain-specific normalizer for linkedin_url.
     if (val && typeof val === 'string' && URL_FIELDS.has(key)) {
       val = key === 'linkedin_url' ? normalizeLinkedInUrl(val) : normalizeUrl(val);
     }
-    
+
     out[key] = val;
   }
   return out;
@@ -86,7 +86,7 @@ const computeApplicantCompleteness = (p: ApplicantProfile, email?: string | null
 const computeRecruiterCompleteness = (p: RecruiterProfile): number => {
   let score = 0;
   if (p.name) score += 10;
-  if (p.company_name) score += 20;
+  if (p.companyName) score += 20;
   if (p.industry) score += 10;
   if (p.description) score += 20;
   if (p.company_size) score += 10;

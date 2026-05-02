@@ -186,7 +186,8 @@ export const ApplicationModel = {
     const [countRes, dataRes] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM applications WHERE applicant_id = $1', [applicantId]),
       pool.query(
-        `SELECT a.*, j.title as job_title, j.location, rp.company_name
+        `SELECT a.*, j.title as job_title, j.location,
+                COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName"
          FROM applications a
          JOIN jobs j ON j.id = a.job_id
          LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
@@ -254,7 +255,8 @@ export const ApplicationModel = {
     const offset = (page - 1) * limit;
     let query = `
       SELECT a.*, j.title as job_title, j.location, j.type, j.salary_min, j.salary_max,
-             rp.company_name, rp.industry
+             COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName",
+             rp.industry
       FROM applications a
       JOIN jobs j ON j.id = a.job_id
       LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id

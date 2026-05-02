@@ -47,7 +47,7 @@ export default function ProfilePage() {
         if (user?.role === 'recruiter') {
           if (!p.name) missing.push('Full Name');
           if (!r.data?.email) missing.push('Email');
-          if (!p.company_name) missing.push('Company Name');
+          if (!p.companyName) missing.push('Company Name');
           if (!p.location) missing.push('Location');
           if (!p.logo_url) missing.push('Profile Picture');
         } else {
@@ -104,7 +104,7 @@ export default function ProfilePage() {
           ? {
               name: toNullable(data.name),
               location: toNullable(data.location),
-              company_name: toNullable(data.company_name),
+              companyName: toNullable(data.companyName),
               industry: toNullable(data.industry),
               company_size: toNullable(data.company_size),
               description: toNullable(data.description),
@@ -277,7 +277,7 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Company Name</label>
-                    <input {...register('company_name')} readOnly={!editCompany} className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-900 font-medium py-1 ${!editCompany ? 'cursor-pointer' : ''}`} />
+                    <input {...register('companyName')} readOnly={!editCompany} className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-900 font-medium py-1 ${!editCompany ? 'cursor-pointer' : ''}`} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Industry</label>

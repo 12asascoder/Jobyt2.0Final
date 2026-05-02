@@ -52,11 +52,11 @@ export const ApplicationService = {
       const jobQuestions = Array.isArray(job.application_questions) ? job.application_questions : [];
       const submittedAnswers = Array.isArray(data.answers)
         ? data.answers
-            .map((item) => ({
-              question_id: String(item?.question_id || '').trim(),
-              answer: String(item?.answer || '').trim(),
-            }))
-            .filter((item) => item.question_id.length > 0)
+          .map((item) => ({
+            question_id: String(item?.question_id || '').trim(),
+            answer: String(item?.answer || '').trim(),
+          }))
+          .filter((item) => item.question_id.length > 0)
         : [];
 
       const answerMap = new Map(submittedAnswers.map((item) => [item.question_id, item.answer]));
@@ -70,7 +70,6 @@ export const ApplicationService = {
           );
         }
       }
-
       const filteredAnswers = jobQuestions
         .map((question) => {
           const answer = answerMap.get(question.id);
@@ -119,7 +118,6 @@ export const ApplicationService = {
         },
         client,
       );
-
       // 6) Notify recruiter (transaction-scoped for consistent state)
       await NotificationModel.create(
         {
@@ -198,18 +196,18 @@ export const ApplicationService = {
     const job = await JobModel.findById(jobId);
     if (!job || job.recruiter_id !== recruiterId)
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
-      
+
     const result = await ApplicationModel.findByJob(jobId, page, limit, filters);
     const { JobService } = require('./job.service');
-    
+
     const enrichedApplications = await Promise.all(result.applications.map(async (app: any) => {
-       const matchResult = await JobService.calculateMatchScore(app.skills || [], job.skills || []);
-       return { ...app, matchScore: matchResult.matchScore };
+      const matchResult = await JobService.calculateMatchScore(app.skills || [], job.skills || []);
+      return { ...app, matchScore: matchResult.matchScore };
     }));
-    
+
     // Sort logically for Resume Ranking
     enrichedApplications.sort((a, b) => b.matchScore - a.matchScore);
-    
+
     return { ...result, applications: enrichedApplications };
   },
 
