@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { normalizeCompany } from '@/lib/utils';
 import { Job } from '@/types';
 import { Spinner } from '@/components/ui';
 import { ROUTES } from '@/constants';
@@ -63,7 +64,7 @@ export default function RecruiterJobsPage() {
   const fetchJobs = useCallback(async () => {
     try {
       const res = await api.getPaginated<ExtendedJob>('/jobs/my/listings?limit=50');
-      setJobs(res.data ?? []);
+      setJobs((res.data ?? []).map(normalizeCompany));
     } catch {
       setJobs([]);
     } finally {

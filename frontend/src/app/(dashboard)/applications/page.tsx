@@ -136,7 +136,7 @@ export default function ApplicationsPage() {
                                     <div className="grid grid-cols-10 gap-3 items-center">
                                         <div className="col-span-2">
                                             <span className="text-sm font-semibold text-[#1a1a1a]">
-                                                {view.companyName || 'Company'}
+                                                {view.companyName || 'N/A'}
                                             </span>
                                         </div>
                                         <div className="col-span-2">
@@ -195,7 +195,7 @@ export default function ApplicationsPage() {
                                 <div className="flex items-start justify-between mb-3">
                                     <div>
                                         <p className="text-sm font-bold text-[#1a1a1a]">
-                                            {view.companyName || 'Company'}
+                                            {view.companyName || 'N/A'}
                                         </p>
                                         <p className="text-xs text-slate-500 mt-0.5">
                                             {view.job_title || 'Position'}

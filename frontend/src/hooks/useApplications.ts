@@ -5,6 +5,15 @@ import { api } from '@/lib/api';
 import { Application, ApplicationStatus } from '@/types';
 
 export const useApplications = () => {
+  const normalizeCompany = (item: any): Application => ({
+    ...item,
+    companyName:
+      item.companyName ||
+      item.company_name ||
+      item.company?.name ||
+      item.recruiter?.companyName ||
+      null,
+  });
   const [applications, setApplications] = useState<Application[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -16,7 +25,7 @@ export const useApplications = () => {
     setIsLoading(true);
     try {
       const res = await api.getPaginated<Application>(`/applications/my?page=${requestedPage}&limit=${limit}`);
-      const apps = res.data ?? [];
+      const apps = (res.data ?? []).map(normalizeCompany);
       
       // Fetch latest comment for each application
       const appsWithComments = await Promise.all(apps.map(async (app) => {
@@ -44,7 +53,7 @@ export const useApplications = () => {
     setIsLoading(true);
     try {
       const res = await api.getPaginated<Application>(`/applications/jobs/${jobId}?page=${requestedPage}&limit=${limit}`);
-      setApplications(res.data ?? []);
+      setApplications((res.data ?? []).map(normalizeCompany));
       setTotal(res.pagination?.total ?? 0);
       setPage(res.pagination?.page ?? requestedPage);
       setTotalPages(res.pagination?.totalPages ?? 1);

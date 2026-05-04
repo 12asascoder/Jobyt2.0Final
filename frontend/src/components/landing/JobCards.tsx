@@ -11,80 +11,7 @@ interface JobsApiResult {
     data?: BackendJob[];
 }
 
-const HARDCODED_JOBS: BackendJob[] = [
-    {
-        id: 'hc-1', title: 'Software Development Engineer Intern', companyName: 'SpazorLabs',
-        location: 'Remote', type: 'internship', salary_min: 15000, salary_max: 30000,
-        skills: ['React', 'Next.js', 'TypeScript', 'Python'], status: 'open', is_boosted: true,
-        created_at: new Date().toISOString(),
-    },
-    {
-        id: 'hc-2', title: 'Frontend Engineer', companyName: 'TechCorp India',
-        location: 'Bangalore, India', type: 'full-time', salary_min: 800000, salary_max: 1400000,
-        skills: ['React', 'Tailwind CSS', 'Redux', 'JavaScript'], status: 'open', is_boosted: false,
-        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    },
-    {
-        id: 'hc-3', title: 'Backend Developer', companyName: 'InnovateX Solutions',
-        location: 'Pune, India', type: 'full-time', salary_min: 1000000, salary_max: 1800000,
-        skills: ['Node.js', 'Express', 'MongoDB', 'AWS'], status: 'open', is_boosted: true,
-        created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-    },
-    {
-        id: 'hc-4', title: 'Product Designer (UI/UX)', companyName: 'Designify Studios',
-        location: 'Remote', type: 'contract', salary_min: 50000, salary_max: 90000,
-        skills: ['Figma', 'UI/UX', 'Prototyping', 'Adobe XD'], status: 'open', is_boosted: false,
-        created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
-    },
-    {
-        id: 'hc-5', title: 'Data Scientist', companyName: 'Analytics Pro',
-        location: 'Mumbai, India', type: 'full-time', salary_min: 1200000, salary_max: 2000000,
-        skills: ['Python', 'Machine Learning', 'SQL'], status: 'open', is_boosted: true,
-        created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-    },
-    {
-        id: 'hc-6', title: 'Marketing Manager', companyName: 'GrowthHackers',
-        location: 'Remote', type: 'full-time', salary_min: 700000, salary_max: 1200000,
-        skills: ['SEO', 'Content Strategy', 'Google Ads'], status: 'open', is_boosted: false,
-        created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
-    },
-    {
-        id: 'hc-7', title: 'DevOps Engineer', companyName: 'CloudScale',
-        location: 'Hyderabad, India', type: 'contract', salary_min: 1500000, salary_max: 2500000,
-        skills: ['Kubernetes', 'Docker', 'AWS', 'CI/CD'], status: 'open', is_boosted: true,
-        created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
-    },
-    {
-        id: 'hc-8', title: 'HR Business Partner', companyName: 'PeopleFirst',
-        location: 'Bangalore, India', type: 'full-time', salary_min: 600000, salary_max: 900000,
-        skills: ['Recruitment', 'Employee Relations', 'HR Policies'], status: 'open', is_boosted: false,
-        created_at: new Date(Date.now() - 86400000 * 6).toISOString(),
-    },
-    {
-        id: 'hc-9', title: 'Mobile App Developer', companyName: 'AppWorks',
-        location: 'Pune, India', type: 'full-time', salary_min: 900000, salary_max: 1500000,
-        skills: ['Flutter', 'React Native', 'iOS', 'Android'], status: 'open', is_boosted: true,
-        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    },
-    {
-        id: 'hc-10', title: 'Cybersecurity Analyst', companyName: 'SecureNet',
-        location: 'Delhi, India', type: 'full-time', salary_min: 1100000, salary_max: 1800000,
-        skills: ['Network Security', 'Penetration Testing'], status: 'open', is_boosted: false,
-        created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
-    },
-    {
-        id: 'hc-11', title: 'Technical Writer', companyName: 'DocuTech',
-        location: 'Remote', type: 'part-time', salary_min: 400000, salary_max: 700000,
-        skills: ['API Documentation', 'Markdown'], status: 'open', is_boosted: false,
-        created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-    },
-    {
-        id: 'hc-12', title: 'Graphic Designer', companyName: 'CreativeMinds',
-        location: 'Kolkata, India', type: 'internship', salary_min: 10000, salary_max: 20000,
-        skills: ['Adobe Illustrator', 'Photoshop'], status: 'open', is_boosted: true,
-        created_at: new Date().toISOString(),
-    },
-];
+
 
 export function JobCards() {
     const [jobs, setJobs] = useState<BackendJob[]>([]);
@@ -104,10 +31,10 @@ export function JobCards() {
                     const normalizedJobs = jobsData.map((job) => normalizeJob(job));
                     setJobs(normalizedJobs);
                 } else {
-                    setJobs(HARDCODED_JOBS);
+                    setJobs([]);
                 }
             })
-            .catch(() => setJobs(HARDCODED_JOBS))
+            .catch(() => setJobs([]))
             .finally(() => setLoading(false));
     }, []);
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { normalizeCompany } from '@/lib/utils';
 import { Job } from '@/types';
 import { Spinner, Badge, Button, Input } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
@@ -19,7 +20,7 @@ export default function AdminJobsPage() {
     setLoading(true);
     try {
       const res = await api.getPaginated<Job>(`/admin/jobs?page=${p}&limit=20${q ? `&search=${encodeURIComponent(q)}` : ''}`);
-      setJobs(res.data ?? []);
+      setJobs((res.data ?? []).map(normalizeCompany));
       setTotal(res.pagination?.total ?? 0);
     } finally {
       setLoading(false);

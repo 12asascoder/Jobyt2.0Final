@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { Job } from '@/types';
 import { sortSpazorlabsFirst } from '@/lib/companyFlags';
+import { normalizeCompany } from '@/lib/utils';
 
 interface JobFilters {
   keyword?: string;
@@ -52,7 +53,7 @@ export const useJobs = () => {
           .map(([k, v]) => [k, String(v)])
       );
       const res = await api.getPaginated<Job>(`/jobs?${params}`);
-      const nextJobs = res.data ?? [];
+      const nextJobs = (res.data ?? []).map(normalizeCompany);
       const nextTotal = res.pagination?.total ?? 0;
 
       setJobs((prev) => {

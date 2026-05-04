@@ -6,7 +6,7 @@ import { api, ApiError } from '@/lib/api';
 import { ApplicationQuestion, Job } from '@/types';
 import { Button, Spinner } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
-import { formatDate } from '@/lib/utils';
+import { formatDate, normalizeCompany } from '@/lib/utils';
 import { avatarColor, avatarInitials } from '@/components/ui/JobCard';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import toast from 'react-hot-toast';
@@ -156,7 +156,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       api.get<Job[]>('/users/me/saved-jobs').catch(() => ({ data: [] })),
     ])
       .then(([jobRes, checkRes, resumeRes, savedRes]) => {
-        setJob(jobRes.data ?? null);
+        setJob(jobRes.data ? normalizeCompany(jobRes.data) : null);
         setHasApplied(checkRes.data?.hasApplied ?? false);
         const availableResumes = Array.isArray(resumeRes.data?.resumes) ? resumeRes.data.resumes : [];
         setResumes(availableResumes);

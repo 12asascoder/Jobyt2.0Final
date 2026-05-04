@@ -10,6 +10,7 @@ import { FaMagnifyingGlass } from 'react-icons/fa6';
 import toast from 'react-hot-toast';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import { createConversation } from '@/lib/messages';
+import { normalizeCompany } from '@/lib/utils';
 
 interface RecruiterApplication {
   id: string;
@@ -129,7 +130,7 @@ export default function RecruiterApplicationsPage() {
           }
         }
         const res = await api.getPaginated<RecruiterApplication>(`/applications/jobs/${selectedJobId}?${params.toString()}`);
-        let base = res.data ?? [];
+        let base = (res.data ?? []).map(normalizeCompany);
 
         // Client-side multi-status filter if needed
         if (selectedStatus === 'rejected,hired,offer') {
@@ -172,9 +173,9 @@ export default function RecruiterApplicationsPage() {
           ...(rejectedRes.data ?? []),
           ...(hiredRes.data ?? []),
           ...(offerRes.data ?? []),
-        ];
+        ].map(normalizeCompany);
         if (requestId === activeRequestRef.current) {
-          setApplications(combined);
+          setApplications(combined as any);
         }
       } else {
         if (selectedStatus) params.append('status', selectedStatus);
@@ -189,7 +190,7 @@ export default function RecruiterApplicationsPage() {
           `/applications/recruiter/applicants/filtered?${params.toString()}&limit=50`
         );
         if (requestId === activeRequestRef.current) {
-          setApplications(res.data ?? []);
+          setApplications((res.data ?? []).map(normalizeCompany) as any);
         }
       }
     } catch (err) {
