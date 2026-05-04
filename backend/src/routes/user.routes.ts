@@ -22,7 +22,7 @@ router.put(
   body('skills').optional().isArray(),
   body('experience').optional().isArray(),
   body('education').optional().isArray(),
-  body('company_name').optional({ nullable: true, checkFalsy: true }).isString().trim(),
+  body('companyName').optional({ nullable: true, checkFalsy: true }).isString().trim(),
   body('industry').optional({ nullable: true, checkFalsy: true }).isString(),
   body('website').optional({ nullable: true, checkFalsy: true }).isURL(),
   body('portfolio_url')

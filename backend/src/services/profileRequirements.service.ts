@@ -69,7 +69,7 @@ export const ProfileRequirementsService = {
       missing.push('Email');
     }
 
-    const companyName = normalize(profile?.company_name);
+    const companyName = normalize(profile?.companyName);
     if (!companyName) {
       missing.push('Company Name');
     }

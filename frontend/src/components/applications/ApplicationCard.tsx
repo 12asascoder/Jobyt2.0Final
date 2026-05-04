@@ -14,7 +14,7 @@ export const ApplicationCard = ({ application, actions }: ApplicationCardProps) 
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="font-semibold text-gray-900">{application.job_title || 'Job'}</p>
-          {application.company_name && <p className="text-sm text-gray-500">{application.company_name}</p>}
+          {application.companyName && <p className="text-sm text-gray-500">{application.companyName}</p>}
           <p className="mt-1 text-xs text-gray-400">Applied {formatDate(application.created_at)}</p>
         </div>
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${APPLICATION_STATUS_COLORS[application.status]}`}>

@@ -72,7 +72,7 @@ function InternshipsContent() {
             if (keyword) {
                 const term = keyword.toLowerCase();
                 const titleMatch = job.title.toLowerCase().includes(term);
-                const companyMatch = job.company_name?.toLowerCase().includes(term);
+                const companyMatch = job.companyName?.toLowerCase().includes(term);
                 if (!titleMatch && !companyMatch) return false;
             }
 

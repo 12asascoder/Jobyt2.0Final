@@ -32,7 +32,7 @@ router.get(
  * 
  * Updatable fields:
  * {
- *   "company_name": "string (optional)",
+ *   "companyName": "string (optional)",
  *   "company_email": "string (optional, valid email)",
  *   "industry": "string (optional)",
  *   "description": "string (optional)",
@@ -49,7 +49,7 @@ router.put(
   authenticate,
   authorize('recruiter'),
   employerGuard,
-  body('company_name').optional({ checkFalsy: true }).trim().notEmpty().withMessage('Company name cannot be empty'),
+  body('companyName').optional({ checkFalsy: true }).trim().notEmpty().withMessage('Company name cannot be empty'),
   body('company_email')
     .optional({ checkFalsy: true })
     .isEmail()
@@ -70,11 +70,11 @@ router.put(
  * Create recruiter profile (first-time registration)
  * 
  * Middleware: authenticate → authorize('recruiter') → validate
- * Validation: company_name (required), company_email (optional, valid email)
+ * Validation: companyName (required), company_email (optional, valid email)
  * 
  * Request body:
  * {
- *   "company_name": "string (required)",
+ *   "companyName": "string (required)",
  *   "company_email": "string (optional, valid email)",
  *   "industry": "string (optional)",
  *   "description": "string (optional)",
@@ -87,7 +87,7 @@ router.post(
   '/profile',
   authenticate,
   authorize('recruiter'),
-  body('company_name').trim().notEmpty().withMessage('Company name is required'),
+  body('companyName').trim().notEmpty().withMessage('Company name is required'),
   body('company_email')
     .optional({ checkFalsy: true })
     .isEmail()

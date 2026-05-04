@@ -7,7 +7,7 @@ import { APPLICATION_STATUS_LABELS } from '@/constants';
 import { FaArrowUpRightFromSquare, FaChevronLeft, FaChevronRight } from 'react-icons/fa6';
 
 type ApplicationView = {
-    company_name?: string;
+    companyName?: string | null;
     job_title?: string;
     status_updated_at?: string;
     latest_comment?: string | null;
@@ -136,7 +136,7 @@ export default function ApplicationsPage() {
                                     <div className="grid grid-cols-10 gap-3 items-center">
                                         <div className="col-span-2">
                                             <span className="text-sm font-semibold text-[#1a1a1a]">
-                                                {view.company_name || 'Company'}
+                                                {view.companyName || 'Company'}
                                             </span>
                                         </div>
                                         <div className="col-span-2">
@@ -195,7 +195,7 @@ export default function ApplicationsPage() {
                                 <div className="flex items-start justify-between mb-3">
                                     <div>
                                         <p className="text-sm font-bold text-[#1a1a1a]">
-                                            {view.company_name || 'Company'}
+                                            {view.companyName || 'Company'}
                                         </p>
                                         <p className="text-xs text-slate-500 mt-0.5">
                                             {view.job_title || 'Position'}

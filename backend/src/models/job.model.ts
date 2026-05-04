@@ -8,13 +8,7 @@ export type JobStatus = 'draft' | 'active' | 'closed';
 export type JobApprovalStatus = 'pending_approval' | 'approved' | 'rejected';
 export type JobSource = 'admin_external' | 'recruiter' | 'admin_company';
 
-export interface JobCompany {
-  id: string | null;
-  name: string;
-  logo: string | null;
-  website: string | null;
-  location: string | null;
-}
+
 
 export type JobApplicationQuestionType = 'text' | 'textarea' | 'select' | 'rating' | 'link';
 
@@ -32,14 +26,13 @@ export interface Job {
   id: string;
   recruiter_id: string;
   company_id: string | null;
-  company_name: string;
+  companyName: string | null;
   company_logo: string | null;
   company_website: string | null;
   company_location: string | null;
   is_external_company: boolean;
   source: JobSource;
   created_by: string | null;
-  company: JobCompany;
   application_questions: JobApplicationQuestion[];
   title: string;
   location: string | null;
@@ -71,7 +64,7 @@ export interface JobFilters {
   sort?: 'relevance' | 'date' | 'salary';
 }
 
-type JobRow = Omit<Job, 'company'> & { company: JobCompany };
+type JobRow = Job;
 
 let applicationQuestionsColumnExists: boolean | null = null;
 
@@ -114,8 +107,8 @@ export function normalizeQuestions(raw: unknown): JobApplicationQuestion[] {
       const type = normalizeQuestionType(source.type);
       const optionsRaw = Array.isArray(source.options)
         ? source.options
-            .map((opt) => String(opt || '').trim())
-            .filter((opt) => opt.length > 0)
+          .map((opt) => String(opt || '').trim())
+          .filter((opt) => opt.length > 0)
         : [];
       const options = (type === 'select' || type === 'rating') && optionsRaw.length > 0 ? Array.from(new Set(optionsRaw)) : undefined;
 
@@ -136,13 +129,15 @@ export function normalizeQuestions(raw: unknown): JobApplicationQuestion[] {
 }
 
 const mapJobRow = (row: Record<string, any>): JobRow => {
-  const companyName = (row.company_name || '').trim() || 'Unknown Company';
+  const { company_name, ...rest } = row;
+  const rawName = (row.companyName ?? company_name ?? '').trim();
+  const companyName = rawName || null;
   const questions = normalizeQuestions(row.application_questions);
 
   return {
-    ...row,
+    ...rest,
     company_id: row.company_id ?? null,
-    company_name: companyName,
+    companyName,
     company_logo: row.company_logo ?? null,
     company_website: row.company_website ?? null,
     company_location: row.company_location ?? row.location ?? null,
@@ -150,13 +145,6 @@ const mapJobRow = (row: Record<string, any>): JobRow => {
     source: (row.source ?? 'recruiter') as JobSource,
     created_by: row.created_by ?? null,
     application_questions: questions,
-    company: {
-      id: row.company_id ?? null,
-      name: companyName,
-      logo: row.company_logo ?? null,
-      website: row.company_website ?? null,
-      location: row.company_location ?? row.location ?? null,
-    },
   } as JobRow;
 };
 
@@ -167,7 +155,7 @@ export const JobModel = {
       `SELECT
         jobs.*,
         COALESCE(jobs.company_id, recruiter_profiles.id) AS company_id,
-        COALESCE(NULLIF(jobs.company_name, ''), recruiter_profiles.company_name, 'Unknown Company') AS company_name,
+        COALESCE(NULLIF(jobs.company_name, ''), recruiter_profiles.company_name) AS "companyName",
         COALESCE(jobs.company_logo, recruiter_profiles.logo_url) AS company_logo,
         COALESCE(jobs.company_website, recruiter_profiles.website) AS company_website,
         COALESCE(jobs.company_location, jobs.location, recruiter_profiles.location) AS company_location
@@ -200,7 +188,7 @@ export const JobModel = {
     skills?: string[];
     status?: JobStatus;
     company_id?: string | null;
-    company_name?: string;
+    companyName?: string;
     company_logo?: string;
     company_website?: string;
     company_location?: string;
@@ -213,7 +201,7 @@ export const JobModel = {
 
     // Recruiter flow compatibility: company branding follows recruiter profile when not explicitly provided.
     let companyId = data.company_id ?? null;
-    let companyName = data.company_name?.trim();
+    let companyName = data.companyName?.trim();
     let companyLogo = data.company_logo ?? null;
     let companyWebsite = normalizeUrl(data.company_website) ?? null;
     let companyLocation = data.company_location ?? data.location ?? null;
@@ -226,7 +214,7 @@ export const JobModel = {
 
     if (!companyName || !companyId) {
       const profileRes = await pool.query(
-        `SELECT id, company_name, logo_url, website, location
+        `SELECT id, company_name AS "companyName", logo_url, website, location
          FROM recruiter_profiles
          WHERE user_id = $1
          LIMIT 1`,
@@ -235,7 +223,7 @@ export const JobModel = {
 
       const recruiterCompany = profileRes.rows[0];
       if (!companyId) companyId = recruiterCompany?.id ?? null;
-      if (!companyName) companyName = recruiterCompany?.company_name ?? 'Unknown Company';
+      if (!companyName) companyName = recruiterCompany?.companyName ?? 'Unknown Company';
       if (!companyLogo) companyLogo = recruiterCompany?.logo_url ?? null;
       if (!companyWebsite) companyWebsite = normalizeUrl(recruiterCompany?.website) ?? null;
       if (!companyLocation) companyLocation = recruiterCompany?.location ?? null;
@@ -254,7 +242,7 @@ export const JobModel = {
             skills,
             status,
             company_id,
-            company_name,
+            company_name: companyName,
             company_logo,
             company_website,
             company_location,
@@ -298,7 +286,7 @@ export const JobModel = {
             skills,
             status,
             company_id,
-            company_name,
+            company_name: companyName,
             company_logo,
             company_website,
             company_location,
@@ -344,7 +332,7 @@ export const JobModel = {
     skills?: string[];
     status?: JobStatus;
     company_id?: string;
-    company_name?: string;
+    companyName?: string;
     company_logo?: string;
     company_website?: string;
     company_location?: string;
@@ -353,7 +341,7 @@ export const JobModel = {
     const hasType = data.type !== undefined;
 
     const normalizedCompanyId = data.company_id?.trim() || null;
-    const normalizedCompanyName = data.company_name?.trim();
+    const normalizedCompanyName = data.companyName?.trim();
     const normalizedCompanyLocation = data.company_location?.trim();
 
     if (!normalizedCompanyId && !normalizedCompanyName) {
@@ -373,7 +361,7 @@ export const JobModel = {
 
     if (normalizedCompanyId) {
       const companyRes = await pool.query(
-        `SELECT id, user_id, company_name, logo_url, website, location
+        `SELECT id, user_id, company_name AS "companyName", logo_url, website, location
          FROM recruiter_profiles
          WHERE id = $1
          LIMIT 1`,
@@ -387,7 +375,7 @@ export const JobModel = {
 
       recruiterIdForOwner = company.user_id;
       companyId = company.id;
-      companyName = normalizedCompanyName || company.company_name || 'Unknown Company';
+      companyName = normalizedCompanyName || company.companyName || 'Unknown Company';
       companyLogo = data.company_logo || company.logo_url || null;
       companyWebsite = normalizeUrl(data.company_website) || (company.website ? normalizeUrl(company.website) : null) || null;
       companyLocation = normalizedCompanyLocation || data.location || company.location || null;
@@ -395,7 +383,7 @@ export const JobModel = {
       source = 'admin_company';
     } else {
       if (!normalizedCompanyName || !normalizedCompanyLocation) {
-        throw Object.assign(new Error('External company requires company_name and company_location'), {
+        throw Object.assign(new Error('External company requires companyName and company_location'), {
           statusCode: 400,
           code: 'COMPANY_REQUIRED',
         });
@@ -417,7 +405,7 @@ export const JobModel = {
             skills,
             status,
             company_id,
-            company_name,
+            company_name: companyName,
             company_logo,
             company_website,
             company_location,
@@ -458,7 +446,7 @@ export const JobModel = {
             skills,
             status,
             company_id,
-            company_name,
+            company_name: companyName,
             company_logo,
             company_website,
             company_location,
@@ -616,7 +604,7 @@ export const JobModel = {
     const dataQuery = `SELECT
       j.*,
       COALESCE(j.company_id, rp.id) AS company_id,
-      COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS company_name,
+      COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName",
       COALESCE(j.company_logo, rp.logo_url) AS company_logo,
       COALESCE(j.company_website, rp.website) AS company_website,
       COALESCE(j.company_location, j.location, rp.location) AS company_location
@@ -717,7 +705,7 @@ export const JobModel = {
     const selectQuery = `SELECT
       jobs.*,
       COALESCE(jobs.company_id, recruiter_profiles.id) AS company_id,
-      COALESCE(NULLIF(jobs.company_name, ''), recruiter_profiles.company_name, 'Unknown Company') AS company_name,
+      COALESCE(NULLIF(jobs.company_name, ''), recruiter_profiles.company_name) AS "companyName",
       COALESCE(jobs.company_logo, recruiter_profiles.logo_url) AS company_logo,
       COALESCE(jobs.company_website, recruiter_profiles.website) AS company_website,
       COALESCE(jobs.company_location, jobs.location, recruiter_profiles.location) AS company_location
@@ -740,7 +728,7 @@ export const JobModel = {
       `SELECT
         j.*,
         COALESCE(j.company_id, rp.id) AS company_id,
-        COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS company_name,
+        COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName",
         COALESCE(j.company_logo, rp.logo_url) AS company_logo,
         COALESCE(j.company_website, rp.website) AS company_website,
         COALESCE(j.company_location, j.location, rp.location) AS company_location,
@@ -774,7 +762,7 @@ export const JobModel = {
       `SELECT
         j.*,
         COALESCE(j.company_id, rp.id) AS company_id,
-        COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS company_name,
+        COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName",
         COALESCE(j.company_logo, rp.logo_url) AS company_logo,
         COALESCE(j.company_website, rp.website) AS company_website,
         COALESCE(j.company_location, j.location, rp.location) AS company_location,
@@ -829,7 +817,7 @@ export const JobModel = {
         `SELECT
           j.*,
           COALESCE(j.company_id, rp.id) AS company_id,
-          COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS company_name,
+          COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName",
           COALESCE(j.company_logo, rp.logo_url) AS company_logo,
           COALESCE(j.company_website, rp.website) AS company_website,
           COALESCE(j.company_location, j.location, rp.location) AS company_location
@@ -895,7 +883,7 @@ export const JobModel = {
         `SELECT
           j.*,
           COALESCE(j.company_id, rp.id) AS company_id,
-          COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS company_name,
+          COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName",
           COALESCE(j.company_logo, rp.logo_url) AS company_logo,
           COALESCE(j.company_website, rp.website) AS company_website,
           COALESCE(j.company_location, j.location, rp.location) AS company_location

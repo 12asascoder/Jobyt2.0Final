@@ -11,7 +11,7 @@ import { ROUTES } from '@/constants';
 interface PendingJob {
   id: string;
   title: string;
-  company_name: string;
+  companyName: string | null;
   recruiter_id: string;
   status: string;
   created_at: string;
@@ -133,7 +133,7 @@ export default function AdminJobApprovalsPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-slate-900">{job.title}</h3>
-                  <p className="text-sm text-slate-500 mt-1">{job.company_name}</p>
+                  <p className="text-sm text-slate-500 mt-1">{job.companyName}</p>
                   <div className="flex items-center gap-3 mt-2">
                     <Badge variant="warning">Pending Approval</Badge>
                     <span className="text-xs text-slate-400">{formatDate(job.created_at)}</span>

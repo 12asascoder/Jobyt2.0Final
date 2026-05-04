@@ -13,7 +13,7 @@ type ApiConversation = {
   id: string;
   recruiter_id: string;
   applicant_id: string;
-  company_name?: string | null;
+  companyName?: string | null;
   participant?: {
     name?: string | null;
   };
@@ -128,7 +128,7 @@ export default function MessageThreadPage({ params }: { params: Promise<{ conver
         if (conversation) {
           const fallbackName = user?.role === 'recruiter' ? 'Candidate' : 'Recruiter';
           const companyDisplay =
-            user?.role === 'applicant' ? conversation.company_name?.trim() : null;
+            user?.role === 'applicant' ? conversation.companyName?.trim() : null;
           setOtherUserName(companyDisplay || conversation.participant?.name?.trim() || fallbackName);
 
           if (user?.id) {
@@ -139,13 +139,13 @@ export default function MessageThreadPage({ params }: { params: Promise<{ conver
 
             if (otherId) {
               api
-                .get<{ profile?: { name?: string | null; company_name?: string | null } }>(`/users/${otherId}`)
+                .get<{ profile?: { name?: string | null; companyName?: string | null } }>(`/users/${otherId}`)
                 .then((profileRes) => {
                   const profile = profileRes.data?.profile;
                   const resolvedName =
                     companyDisplay ||
                     profile?.name?.trim() ||
-                    profile?.company_name?.trim() ||
+                    profile?.companyName?.trim() ||
                     conversation.participant?.name?.trim() ||
                     fallbackName;
                   setOtherUserName(resolvedName);
