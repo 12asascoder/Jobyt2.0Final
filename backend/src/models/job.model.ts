@@ -223,7 +223,7 @@ export const JobModel = {
 
       const recruiterCompany = profileRes.rows[0];
       if (!companyId) companyId = recruiterCompany?.id ?? null;
-      if (!companyName) companyName = recruiterCompany?.companyName ?? 'Unknown Company';
+      if (!companyName) companyName = recruiterCompany?.companyName || null;
       if (!companyLogo) companyLogo = recruiterCompany?.logo_url ?? null;
       if (!companyWebsite) companyWebsite = normalizeUrl(recruiterCompany?.website) ?? null;
       if (!companyLocation) companyLocation = recruiterCompany?.location ?? null;
@@ -242,7 +242,7 @@ export const JobModel = {
             skills,
             status,
             company_id,
-            company_name: companyName,
+            company_name,
             company_logo,
             company_website,
             company_location,
@@ -286,7 +286,7 @@ export const JobModel = {
             skills,
             status,
             company_id,
-            company_name: companyName,
+            company_name,
             company_logo,
             company_website,
             company_location,
@@ -375,7 +375,7 @@ export const JobModel = {
 
       recruiterIdForOwner = company.user_id;
       companyId = company.id;
-      companyName = normalizedCompanyName || company.companyName || 'Unknown Company';
+      companyName = normalizedCompanyName || company.companyName || null;
       companyLogo = data.company_logo || company.logo_url || null;
       companyWebsite = normalizeUrl(data.company_website) || (company.website ? normalizeUrl(company.website) : null) || null;
       companyLocation = normalizedCompanyLocation || data.location || company.location || null;
@@ -405,7 +405,7 @@ export const JobModel = {
             skills,
             status,
             company_id,
-            company_name: companyName,
+            company_name,
             company_logo,
             company_website,
             company_location,
@@ -446,7 +446,7 @@ export const JobModel = {
             skills,
             status,
             company_id,
-            company_name: companyName,
+            company_name,
             company_logo,
             company_website,
             company_location,
@@ -496,6 +496,11 @@ export const JobModel = {
 
     const hasQuestionsColumn = await hasApplicationQuestionsColumn();
     const sanitizedData: Record<string, unknown> = { ...data };
+
+    if ('companyName' in sanitizedData) {
+      sanitizedData.company_name = sanitizedData.companyName;
+      delete sanitizedData.companyName;
+    }
 
     if (sanitizedData.company_website !== undefined) {
       sanitizedData.company_website = normalizeUrl(sanitizedData.company_website as string | null);

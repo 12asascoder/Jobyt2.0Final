@@ -24,7 +24,13 @@ type JobLike = Partial<BackendJob> & { _id?: string };
 
 // Normalize job data to ensure it has an id field and uses companyName
 export function normalizeJob(job: JobLike): BackendJob {
-    const rawName = (job.companyName ?? '').toString().trim();
+    const rawName = (
+        job.companyName ||
+        (job as any).company_name ||
+        (job as any).company?.name ||
+        (job as any).recruiter?.companyName ||
+        ''
+    ).toString().trim();
     const companyLogo = job.company_logo ?? null;
 
     return {

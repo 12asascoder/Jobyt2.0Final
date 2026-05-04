@@ -10,18 +10,27 @@ const SPEED       = 90;   // px/s
 const SMOOTH_TAU  = 0.3;
 const MAX_DT      = 0.05;
 
-const companies = [
-    { name: 'Amazon',    src: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg' },
-    { name: 'Microsoft', src: 'https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg' },
-    { name: 'Google',    src: 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg' },
-    { name: 'Swiggy',    src: 'https://upload.wikimedia.org/wikipedia/en/thumb/2/27/Swiggy_logo_%28old%29.svg/960px-Swiggy_logo_%28old%29.svg.png' },
-    { name: 'Uber',      src: 'https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png' },
-    { name: 'Slack',     src: 'https://upload.wikimedia.org/wikipedia/commons/d/d5/Slack_icon_2019.svg' },
-    { name: 'Spotify',   src: 'https://upload.wikimedia.org/wikipedia/commons/2/26/Spotify_logo_with_text.svg' },
-    { name: 'Airbnb',    src: 'https://upload.wikimedia.org/wikipedia/commons/6/69/Airbnb_Logo_B%C3%A9lo.svg' },
-];
+import { API_BASE } from '@/constants';
 
 export function CompanyMarquee() {
+    const [companies, setCompanies] = useState<{name: string, src: string}[]>([]);
+
+    useEffect(() => {
+        fetch(`${API_BASE}/jobs?limit=50`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    const unique = new Map<string, {name: string, src: string}>();
+                    data.data.forEach((job: any) => {
+                        if (job.companyName && job.logo_url) {
+                            unique.set(job.companyName, { name: job.companyName, src: job.logo_url });
+                        }
+                    });
+                    setCompanies(Array.from(unique.values()));
+                }
+            })
+            .catch(() => {});
+    }, []);
     const containerRef = useRef<HTMLDivElement>(null);
     const trackRef     = useRef<HTMLDivElement>(null);
     const seqRef       = useRef<HTMLUListElement>(null);
@@ -101,8 +110,9 @@ export function CompanyMarquee() {
         return () => ro.disconnect();
     }, [measure]);
 
-    const lists = useMemo(() =>
-        Array.from({ length: copyCount }, (_, ci) => (
+    const lists = useMemo(() => {
+        if (companies.length === 0) return null;
+        return Array.from({ length: copyCount }, (_, ci) => (
             <ul key={ci} ref={ci === 0 ? seqRef : undefined}
                 aria-hidden={ci > 0} role="list"
                 style={{ display: 'flex', flexShrink: 0, alignItems: 'center', listStyle: 'none', margin: 0, padding: 0 }}
@@ -116,8 +126,10 @@ export function CompanyMarquee() {
                     </li>
                 ))}
             </ul>
-        )),
-    [copyCount]);
+        ));
+    }, [copyCount, companies]);
+
+    if (companies.length === 0) return null;
 
     return (
         <div style={{ width: '100%' }}>

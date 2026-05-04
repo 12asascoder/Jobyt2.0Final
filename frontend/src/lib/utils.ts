@@ -15,3 +15,17 @@ export const truncate = (str: string, length: number): string =>
 
 export const pluralize = (count: number, word: string): string =>
   `${count} ${word}${count !== 1 ? 's' : ''}`;
+
+export const normalizeCompany = <T extends any>(item: T): T => {
+  if (!item) return item;
+  return {
+    ...item,
+    companyName:
+      (item as any).companyName ||
+      (item as any).company_name ||
+      (item as any).company?.name ||
+      (item as any).recruiter?.companyName ||
+      (item as any).job?.companyName ||
+      null,
+  };
+};
