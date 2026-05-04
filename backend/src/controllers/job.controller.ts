@@ -1,9 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
 import { JobService } from '../services/job.service';
+import { ExternalJobService } from '../services/externalJob.service';
 import { JobType } from '../models/job.model';
 import { sendSuccess, sendPaginated } from '../utils/response';
 
 export const JobController = {
+  async createExternalJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { url } = req.body;
+      const userId = req.user!.userId;
+      const job = await ExternalJobService.createExternalJob(userId, url);
+      sendSuccess(res, job, 'External job created successfully', 201);
+    } catch (err) {
+      next(err);
+    }
+  },
   async getJobs(req: Request, res: Response, next: NextFunction) {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);

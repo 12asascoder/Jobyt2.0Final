@@ -40,6 +40,7 @@
     "nodemailer": "^8.0.7",
     "pdf-parse": "^2.4.5",
     "pg": "^8.20.0",
+    "puppeteer": "^24.42.0",
     "razorpay": "^2.9.6",
     "socket.io": "^4.8.3",
     "stopword": "^3.1.5",

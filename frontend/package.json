@@ -31,7 +31,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
-    "@next/swc-win32-x64-msvc": "^16.2.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

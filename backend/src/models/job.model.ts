@@ -6,7 +6,7 @@ import { normalizeUrl } from '../utils/url';
 export type JobType = 'full-time' | 'part-time' | 'contract' | 'remote' | 'internship';
 export type JobStatus = 'draft' | 'active' | 'closed';
 export type JobApprovalStatus = 'pending_approval' | 'approved' | 'rejected';
-export type JobSource = 'admin_external' | 'recruiter' | 'admin_company';
+export type JobSource = 'admin_external' | 'recruiter' | 'admin_company' | 'external';
 
 
 
@@ -47,6 +47,7 @@ export interface Job {
   approved_at: Date | null;
   is_boosted: boolean;
   views_count: number;
+  external_url: string | null;
   deleted_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -145,6 +146,7 @@ const mapJobRow = (row: Record<string, any>): JobRow => {
     source: (row.source ?? 'recruiter') as JobSource,
     created_by: row.created_by ?? null,
     application_questions: questions,
+    external_url: row.external_url ?? null,
   } as JobRow;
 };
 
@@ -173,6 +175,14 @@ export const JobModel = {
     const { rows } = await pool.query(
       `SELECT 1 FROM jobs WHERE recruiter_id = $1 AND title ILIKE $2 AND status IN ('active', 'draft') AND deleted_at IS NULL`,
       [recruiterId, title]
+    );
+    return rows.length > 0;
+  },
+
+  async findByExternalUrl(url: string): Promise<boolean> {
+    const { rows } = await pool.query(
+      `SELECT 1 FROM jobs WHERE external_url = $1 AND deleted_at IS NULL`,
+      [url]
     );
     return rows.length > 0;
   },
@@ -318,6 +328,46 @@ export const JobModel = {
           ...(hasQuestionsColumn ? [JSON.stringify(questions)] : []),
         ],
       );
+    return mapJobRow(rows[0]);
+  },
+
+  async createExternal(data: {
+    recruiter_id: string;
+    title: string;
+    description: string;
+    companyName: string;
+    external_url: string;
+  }): Promise<Job> {
+    const hasQuestionsColumn = await hasApplicationQuestionsColumn();
+    const source: JobSource = 'external';
+
+    const { rows } = await pool.query(
+      `INSERT INTO jobs (
+          recruiter_id,
+          title,
+          description,
+          company_name,
+          external_url,
+          source,
+          created_by,
+          status,
+          job_approval_status${hasQuestionsColumn ? ', application_questions' : ''}
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9${hasQuestionsColumn ? ',$10' : ''})
+        RETURNING *`,
+      [
+        data.recruiter_id,
+        data.title,
+        data.description,
+        data.companyName,
+        data.external_url,
+        source,
+        data.recruiter_id,
+        'active', // External jobs default to active immediately
+        'approved', // External jobs default to approved
+        ...(hasQuestionsColumn ? ['[]'] : []),
+      ],
+    );
     return mapJobRow(rows[0]);
   },
 

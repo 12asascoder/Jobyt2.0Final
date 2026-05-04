@@ -113,6 +113,7 @@ model jobs {
   deleted_at            DateTime?                @db.Timestamptz(6)
   created_at            DateTime?                @default(now()) @db.Timestamptz(6)
   updated_at            DateTime?                @default(now()) @db.Timestamptz(6)
+  external_url          String?                  @db.VarChar(2048)
   search_vector         Unsupported("tsvector")?
   application_questions Json                     @default("[]")
   applications          applications[]
@@ -261,6 +262,8 @@ model resumes {
 model users {
   id                                              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                                           String?               @unique @db.VarChar(255)
+  phone                                           String?               @unique @db.VarChar(30)
+  phone_verified                                  Boolean               @default(false)
   password_hash                                   String?               @db.VarChar(255)
   auth_provider                                   auth_provider         @default(local)
   google_id                                       String?               @unique @db.VarChar(255)

@@ -3,6 +3,15 @@ import { body, query } from 'express-validator';
 import { AuthController } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { OtpController } from '../controllers/otp.controller';
+import rateLimit from 'express-rate-limit';
+
+const otpRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per window
+  message: { success: false, message: 'Too many OTP requests, please try again later.' },
+});
+
 
 const router = Router();
 
@@ -161,6 +170,25 @@ router.post(
   passwordPolicy,
   validate,
   AuthController.resetPassword,
+);
+
+// --- OTP Verification Routes ---
+router.post(
+  '/otp/send',
+  authenticate,
+  otpRateLimiter,
+  body('channel').isIn(['email', 'whatsapp']).withMessage('Channel must be email or whatsapp'),
+  validate,
+  OtpController.sendOtp,
+);
+
+router.post(
+  '/otp/verify',
+  authenticate,
+  body('channel').isIn(['email', 'whatsapp']).withMessage('Channel must be email or whatsapp'),
+  body('code').notEmpty().isString().isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
+  validate,
+  OtpController.verifyOtp,
 );
 
 router.get('/me', authenticate, AuthController.me);
