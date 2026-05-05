@@ -152,7 +152,14 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const fetchJobData = async () => {
       try {
         const jobRes = await api.get<Job>(`/jobs/${id}`);
-        setJob(jobRes.data ?? null);
+        const jobData = jobRes.data ?? null;
+        setJob(jobData);
+
+        // Auto-open apply modal if redirecting back from login
+        const applyRequested = new URLSearchParams(window.location.search).get('apply') === '1';
+        if (applyRequested && jobData && isAuthenticated) {
+          setShowModal(true);
+        }
 
         if (isAuthenticated) {
           try {
@@ -242,7 +249,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const handleApply = async () => {
     if (!isAuthenticated) {
       toast.error('Please login to apply for this job');
-      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('apply', '1');
+      const redirectTarget = currentUrl.pathname + currentUrl.search;
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(redirectTarget)}`);
       return;
     }
 
