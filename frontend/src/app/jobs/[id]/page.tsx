@@ -242,7 +242,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const handleApply = async () => {
     if (!isAuthenticated) {
       toast.error('Please login to apply for this job');
-      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname)}`);
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
 
@@ -308,7 +308,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const handleSaveJob = async () => {
     if (!isAuthenticated) {
       toast.error('Please login to save this job');
-      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname)}`);
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
     try {
@@ -328,7 +328,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   const scrollToApplySection = () => {
     if (!isAuthenticated) {
-      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname)}`);
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
     const node = document.getElementById('apply-now-section');
