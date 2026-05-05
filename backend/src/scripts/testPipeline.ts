@@ -21,7 +21,7 @@ async function runTests() {
     await client.query("INSERT INTO applicant_profiles (user_id, name, skills) VALUES ($1, 'TestApplicantName', ARRAY['React'])", [applicantId]);
 
     const jobRes = await client.query("INSERT INTO jobs (recruiter_id, title, description, location, type, salary_min, salary_max) " +
-      "VALUES ($1, 'Test Job', 'Desc', 'Remote', 'full-time', 50010, 60000) RETURNING id", [recruiterId]);
+      "VALUES ($1, 'Test Job', 'Desc', 'Remote', 'full-time', 50000, 60000) RETURNING id", [recruiterId]);
     const jobId = jobRes.rows[0].id;
 
     const appRes = await client.query("INSERT INTO applications (job_id, applicant_id, status) VALUES ($1, $2, 'applied') RETURNING id", [jobId, applicantId]);

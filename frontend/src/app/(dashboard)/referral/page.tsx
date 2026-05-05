@@ -7,8 +7,10 @@ import { formatDate } from '@/lib/utils';
 import Image from 'next/image';
 
 interface ReferralEntry {
+  id: string;
   referred_email: string;
-  status: string;
+  name: string | null;
+  status: 'credited' | 'pending';
   referred_credited: boolean;
   created_at: string;
 }
@@ -18,7 +20,7 @@ interface ReferralDashboard {
   link: string;
   total_referrals: number;
   credited_referrals: number;
-  credits_earned: number;
+  total_credits_earned: number;
   referrals: ReferralEntry[];
 }
 
@@ -70,7 +72,7 @@ export default function ReferralPage() {
         
         <div className="bg-[#0b0b0b] rounded-2xl sm:rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-lg border border-gray-900 min-h-[140px] sm:min-h-[160px]">
           <p className="text-[10px] sm:text-xs text-[#a8e02d] font-semibold tracking-wider uppercase mb-2 sm:mb-3">Credits Earned</p>
-          <p className="text-4xl sm:text-5xl font-bold text-[#c3ff3d]">{data.credits_earned || 0}</p>
+          <p className="text-4xl sm:text-5xl font-bold text-[#c3ff3d]">{data.total_credits_earned || 0}</p>
         </div>
       </div>
 
@@ -95,9 +97,12 @@ export default function ReferralPage() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-gray-900 line-clamp-1">
-                      <span className="capitalize">{r.referred_email.split('@')[0]}</span> Joined!
+                      <span className="capitalize">
+                        {r.name ?? r.referred_email.split('@')[0]}
+                      </span>{' '}Joined!
                     </p>
-                    <p className="text-[11px] sm:text-xs text-gray-500 font-medium">{formatDate(r.created_at)}</p>
+                    <p className="text-[11px] sm:text-xs text-gray-500 font-medium">{r.referred_email}</p>
+                    <p className="text-[11px] sm:text-xs text-gray-400 font-medium">{formatDate(r.created_at)}</p>
                   </div>
                 </div>
                 <div className="pl-14 sm:pl-0 sm:pr-2 self-start sm:self-auto">

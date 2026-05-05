@@ -35,12 +35,14 @@ async function cloudinaryUpload(
   const tempPath = await createTempFileFromBuffer(file);
 
   try {
+    const isResume = resolveCloudinaryFolder(folder, file.mimetype) === 'resumes';
     const uploadResult = await cloudinary.uploader.upload(tempPath, {
       folder: resolveCloudinaryFolder(folder, file.mimetype),
       resource_type: 'auto',
       use_filename: true,
       unique_filename: true,
       overwrite: false,
+      type: isResume ? 'authenticated' : 'upload',
     });
 
     return {
@@ -108,5 +110,21 @@ export const StorageService = {
     }
 
     await deleteFromCloudinary(url).catch(() => undefined);
+  },
+
+  generateSignedUrl(fileUrl: string, resourceType: 'image' | 'raw' = 'image'): string {
+    const publicId = extractCloudinaryPublicId(fileUrl);
+    if (!publicId) return fileUrl; // Fallback if not cloudinary
+
+    const cloudinary = getCloudinary();
+    // Expiration time: 1 hour from now
+    const expiresAt = Math.floor(Date.now() / 1000) + 3600;
+
+    return cloudinary.utils.url(publicId, {
+      sign_url: true,
+      type: 'authenticated',
+      resource_type: resourceType,
+      expires_at: expiresAt,
+    });
   },
 };

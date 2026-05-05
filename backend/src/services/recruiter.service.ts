@@ -19,7 +19,7 @@ export const RecruiterService = {
   async updateRecruiterProfile(
     userId: string,
     data: Partial<{
-      company_name: string;
+      companyName: string;
       company_email: string;
       industry: string;
       description: string;
@@ -71,7 +71,7 @@ export const RecruiterService = {
    * - If not exists: create profile with provided data
    *
    * @param userId - The recruiter user's ID
-   * @param data - Profile data (company_name, company_email, etc.)
+   * @param data - Profile data (companyName, company_email, etc.)
    * @returns Created profile
    * @throws {AppError} 409 if profile already exists
    * @throws {AppError} 400 for duplicate company_email
@@ -79,7 +79,7 @@ export const RecruiterService = {
   async createRecruiterProfile(
     userId: string,
     data: {
-      company_name?: string;
+      companyName?: string;
       company_email?: string;
       industry?: string;
       description?: string;
@@ -113,8 +113,8 @@ export const RecruiterService = {
       const profile = await (prisma.recruiter_profiles as any).create({
         data: {
           user_id: userId,
-          name: data.company_name, // Store company name as profile name initially
-          company_name: data.company_name,
+          name: data.companyName, // Store company name as profile name initially
+          companyName: data.companyName,
           company_email: data.company_email,
           industry: data.industry,
           description: data.description,
@@ -151,7 +151,7 @@ export const RecruiterService = {
    * - Atomically handles both operations
    *
    * @param userId - The user's ID to convert
-   * @param data - Profile data (company_name, company_email, etc.)
+   * @param data - Profile data (companyName, company_email, etc.)
    * @returns Created recruiter profile
    * @throws {AppError} 400 if user is already a recruiter
    * @throws {AppError} 409 if profile already exists or email in use

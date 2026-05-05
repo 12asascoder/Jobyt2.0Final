@@ -4,6 +4,7 @@ import { AdminController } from '../controllers/admin.controller';
 import { JobController } from '../controllers/job.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { normalizeUrl } from '../utils/url';
 
 const router = Router();
 
@@ -61,13 +62,13 @@ router.post(
   body('application_questions.*.options').optional().isArray(),
   body('application_questions.*.options.*').optional().isString(),
   body('company_id').optional().isUUID().withMessage('company_id must be a valid UUID'),
-  body('company_name')
+  body('companyName')
     .optional()
     .isString()
     .trim()
     .custom((value, { req }) => {
       if (!req.body.company_id && !String(value || '').trim()) {
-        throw new Error('company_name is required when company_id is not provided');
+        throw new Error('companyName is required when company_id is not provided');
       }
       return true;
     }),
@@ -81,8 +82,8 @@ router.post(
       }
       return true;
     }),
-  body('company_logo').optional().isURL().withMessage('company_logo must be a valid URL'),
-  body('company_website').optional().isURL().withMessage('company_website must be a valid URL'),
+  body('company_logo').optional().customSanitizer(normalizeUrl).isURL().withMessage('company_logo must be a valid URL'),
+  body('company_website').optional().customSanitizer(normalizeUrl).isURL().withMessage('company_website must be a valid URL'),
   validate,
   AdminController.createJob,
 );

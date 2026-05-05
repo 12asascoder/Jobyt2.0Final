@@ -11,6 +11,17 @@ const app = express();
 // Required when running behind a reverse proxy (e.g. Railway) so client IPs are resolved correctly.
 app.set('trust proxy', 1);
 
+// Disable ETag-based caching in development to prevent 304 responses with stale data.
+if (process.env.NODE_ENV !== 'production') {
+  app.set('etag', false);
+  app.use((_req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
+  });
+}
+
 const allowedOrigins = new Set(
   [
     'http://localhost:3000',

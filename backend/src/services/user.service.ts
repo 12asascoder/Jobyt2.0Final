@@ -8,6 +8,8 @@ import { AppError } from '../utils/appError';
 import { UserRole } from '../types';
 import type { ParsedResume } from '../utils/resumeParser';
 
+import { normalizeUrl, normalizeLinkedInUrl } from '../utils/url';
+
 const APPLICANT_PROFILE_FIELDS = new Set([
   'name',
   'phone',
@@ -23,7 +25,7 @@ const APPLICANT_PROFILE_FIELDS = new Set([
 
 const RECRUITER_PROFILE_FIELDS = new Set([
   'name',
-  'company_name',
+  'companyName',
   'company_email',
   'industry',
   'description',
@@ -31,6 +33,15 @@ const RECRUITER_PROFILE_FIELDS = new Set([
   'logo_url',
   'website',
   'location',
+]);
+
+const URL_FIELDS = new Set([
+  'portfolio_url',
+  'github_url',
+  'linkedin_url',
+  'website',
+  'photo_url',
+  'logo_url'
 ]);
 
 const normalizeProfilePatch = (
@@ -42,7 +53,14 @@ const normalizeProfilePatch = (
     if (!allowedFields.has(key)) continue;
 
     // Treat empty strings as null for optional profile text/URL fields.
-    out[key] = typeof value === 'string' && value.trim() === '' ? null : value;
+    let val = typeof value === 'string' && value.trim() === '' ? null : value;
+
+    // Apply URL normalization — use domain-specific normalizer for linkedin_url.
+    if (val && typeof val === 'string' && URL_FIELDS.has(key)) {
+      val = key === 'linkedin_url' ? normalizeLinkedInUrl(val) : normalizeUrl(val);
+    }
+
+    out[key] = val;
   }
   return out;
 };
@@ -68,7 +86,7 @@ const computeApplicantCompleteness = (p: ApplicantProfile, email?: string | null
 const computeRecruiterCompleteness = (p: RecruiterProfile): number => {
   let score = 0;
   if (p.name) score += 10;
-  if (p.company_name) score += 20;
+  if (p.companyName) score += 20;
   if (p.industry) score += 10;
   if (p.description) score += 20;
   if (p.company_size) score += 10;

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
 import { Spinner } from '@/components/ui';
+import { ROUTES } from '@/constants';
 
 interface RedemptionStatus {
   has_redeemed: boolean;
@@ -21,7 +22,7 @@ interface ReferralDashboard {
   link: string;
   total_referrals: number;
   credited_referrals: number;
-  credits_earned: number;
+  total_credits_earned: number;
 }
 
 export default function CommunityPage() {
@@ -44,7 +45,7 @@ export default function CommunityPage() {
         setMyCode(dashboardResponse.data?.code ?? '');
         setTotalReferrals(dashboardResponse.data?.total_referrals ?? 0);
         setCreditedReferrals(dashboardResponse.data?.credited_referrals ?? 0);
-        setCreditsEarned(dashboardResponse.data?.credits_earned ?? 0);
+        setCreditsEarned(dashboardResponse.data?.total_credits_earned ?? 0);
       } catch (err) {
         console.error('Failed to fetch referral dashboard:', err);
       }
@@ -279,7 +280,7 @@ export default function CommunityPage() {
           </div>
 
           <a
-            href="/dashboard/referral"
+            href={ROUTES.referral}
             className="text-xs sm:text-[13px] text-[#a8e02d] hover:text-[#c3ff3d] hover:underline font-medium self-start"
           >
             View full referral stats

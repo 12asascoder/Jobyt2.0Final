@@ -51,7 +51,7 @@ ON CONFLICT (user_id) DO NOTHING;
 
 -- Sample Jobs (Posted by Google recruiter)
 INSERT INTO jobs (recruiter_id, title, location, type, salary_min, salary_max, skills, description, status)
-SELECT u.id, 'Senior Software Engineer', 'Mountain View, CA', 'full-time', 180000, 250010, 
+SELECT u.id, 'Senior Software Engineer', 'Mountain View, CA', 'full-time', 180000, 250000, 
   ARRAY['Go', 'Python', 'Kubernetes', 'Distributed Systems', 'SQL'],
   'Join Google infrastructure team to build highly available, planet-scale distributed systems.',
   'active'
@@ -67,7 +67,7 @@ FROM users u WHERE u.email = 'recruiter1@google.com'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO jobs (recruiter_id, title, location, type, salary_min, salary_max, skills, description, status)
-SELECT u.id, 'Backend Developer', 'Redmond, WA', 'full-time', 155001, 210000,
+SELECT u.id, 'Backend Developer', 'Redmond, WA', 'full-time', 155000, 210000,
   ARRAY['C#', '.NET', 'Azure', 'SQL', 'REST', 'Docker'],
   'Join Microsoft Azure backend engineering team to build cloud-native services.',
   'active'
@@ -75,7 +75,7 @@ FROM users u WHERE u.email = 'recruiter2@microsoft.com'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO jobs (recruiter_id, title, location, type, salary_min, salary_max, skills, description, status)
-SELECT u.id, 'Full Stack Developer', 'Remote', 'remote', 140000, 195001,
+SELECT u.id, 'Full Stack Developer', 'Remote', 'remote', 140000, 195000,
   ARRAY['TypeScript', 'React', 'Node.js', 'Azure', 'PostgreSQL'],
   'Work on Microsoft Teams web platform, building features that empower hybrid collaboration.',
   'active'

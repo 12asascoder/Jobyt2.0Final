@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
 import { GitHubLoginButton } from '@/components/auth/GitHubLoginButton';
 import { LinkedInLoginButton } from '@/components/auth/LinkedInLoginButton';
+import { PasswordInput } from '@/components/PasswordInput';
 import { AuthTokens, AuthUser } from '@/types';
 
 export default function LoginPage() {
@@ -118,8 +119,7 @@ export default function LoginPage() {
 
             <div>
               <label className="block text-[13px] font-bold text-slate-700 mb-1">Password</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -234,7 +234,7 @@ export default function LoginPage() {
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Hired Recently</p>
               <p className="text-sm font-bold text-slate-900 leading-tight">Hirav Kadikar</p>
-              <p className="text-xs text-slate-500 font-medium">Interning at SpazorLabs</p>
+              <p className="text-xs text-slate-500 font-medium">SDE Intern at Google</p>
             </div>
           </div>
         </div>
@@ -255,7 +255,7 @@ export default function LoginPage() {
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Hired Recently</p>
               <p className="text-sm font-bold text-slate-900 leading-tight">Ankush Wadehra</p>
-              <p className="text-xs text-slate-500 font-medium">Is no longer jobless</p>
+              <p className="text-xs text-slate-500 font-medium">Product Intern at Microsoft</p>
             </div>
           </div>
         </div>
@@ -266,7 +266,7 @@ export default function LoginPage() {
           style={{
             top:    'calc(35% - 8px)',  /* move up/down  */
             bottom: 'auto',             /* set % or px to pin from bottom instead */
-            left:   '15%',               /* move left/right from left edge */
+            left:   '10%',               /* move left/right from left edge */
             right:  'auto',             /* set % or px to pin from right edge instead */
             rotate: '6deg',             /* tilt angle */
           }}
@@ -276,7 +276,7 @@ export default function LoginPage() {
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Hired Recently</p>
               <p className="text-sm font-bold text-slate-900 leading-tight">Vivan Sanghvi</p>
-              <p className="text-xs text-slate-500 font-medium">Interning at CodeNex</p>
+              <p className="text-xs text-slate-500 font-medium">Backend Intern at Amazon</p>
             </div>
           </div>
         </div>

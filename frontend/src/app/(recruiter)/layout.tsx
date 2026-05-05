@@ -264,6 +264,12 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
     closeSearch();
   };
 
+  const handleLogoClick = () => {
+    closeSearch();
+    setBellActive(false);
+    router.push(ROUTES.recruiterDashboard);
+  };
+
   const handleSearchSubmit = (query: string) => {
     const trimmed = query.trim();
     if (!trimmed) return;
@@ -376,10 +382,14 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
           }`}
         >
           <div className="mx-auto flex items-center justify-between">
-            <Link href={ROUTES.recruiterDashboard} className="inline-flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleLogoClick}
+              className="inline-flex items-center gap-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400 focus:ring-offset-2 focus:ring-offset-[#f7f7f7]"
+            >
               <Image src="/logo.png" alt="Jobyt" width={28} height={28} className="object-contain" />
               <span className="font-display text-xl font-bold text-slate-900 tracking-tight">Jobyt</span>
-            </Link>
+            </button>
 
             {/* Right Actions — Desktop/Tablet */}
             <div className="hidden sm:flex items-center gap-3">

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { normalizeCompany } from '@/lib/utils';
 import { Job } from '@/types';
 import { Spinner } from '@/components/ui';
 import { ROUTES } from '@/constants';
@@ -34,12 +35,7 @@ const formatRelative = (isoDate: string) => {
   return `${days}d ago`;
 };
 
-const formatSalary = (min?: number | null, max?: number | null) => {
-  if (!min && !max) return '';
-  if (min && !max) return `₹${min.toLocaleString()}/month`;
-  if (!min && max) return `₹${max.toLocaleString()}/month`;
-  return `₹${min!.toLocaleString()}-${max!.toLocaleString()}/month`;
-};
+import { formatSalaryRange } from '@/lib/salary';
 
 const getJobStatusDisplay = (job: ExtendedJob) => {
   if (job.job_approval_status === 'pending_approval') {
@@ -68,7 +64,7 @@ export default function RecruiterJobsPage() {
   const fetchJobs = useCallback(async () => {
     try {
       const res = await api.getPaginated<ExtendedJob>('/jobs/my/listings?limit=50');
-      setJobs(res.data ?? []);
+      setJobs((res.data ?? []).map(normalizeCompany));
     } catch {
       setJobs([]);
     } finally {
@@ -194,7 +190,7 @@ export default function RecruiterJobsPage() {
                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 font-medium">
                   {(job.salary_min || job.salary_max) && (
                     <>
-                      <span>{formatSalary(job.salary_min, job.salary_max)}</span>
+                      <span>{formatSalaryRange(job.salary_min, job.salary_max, job.type)}</span>
                       <span className="text-slate-400">•</span>
                     </>
                   )}

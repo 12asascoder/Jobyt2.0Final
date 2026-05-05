@@ -7,7 +7,7 @@ import { APPLICATION_STATUS_LABELS } from '@/constants';
 import { FaArrowUpRightFromSquare, FaChevronLeft, FaChevronRight } from 'react-icons/fa6';
 
 type ApplicationView = {
-    company_name?: string;
+    companyName?: string | null;
     job_title?: string;
     status_updated_at?: string;
 };
@@ -135,7 +135,7 @@ export default function ApplicationsPage() {
                                         <div className="grid grid-cols-10 gap-3 items-center">
                                             <div className="col-span-2">
                                                 <span className="text-sm font-semibold text-[#1a1a1a]">
-                                                    {view.company_name || 'Company'}
+                                                    {view.companyName || 'Company'}
                                                 </span>
                                             </div>
                                             <div className="col-span-2">
@@ -148,10 +148,23 @@ export default function ApplicationsPage() {
                                                     {formatDate(app.created_at)}
                                                 </span>
                                             </div>
-                                            <div className="col-span-2">
+                                            <div className="col-span-1">
                                                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
                                                     {APPLICATION_STATUS_LABELS[app.status] || app.status}
                                                 </span>
+                                            </div>
+                                            <div className="col-span-2 min-w-0">
+                                                <div className="group relative">
+                                                    <p className="text-xs text-slate-500 italic line-clamp-2 leading-relaxed">
+                                                        {app.latest_comment || 'No comments yet'}
+                                                    </p>
+                                                    {app.latest_comment && (
+                                                        <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-1">
+                                                            {app.latest_comment}
+                                                            <div className="absolute top-full left-4 border-8 border-transparent border-t-slate-900" />
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="col-span-1 flex justify-center">
                                                 <button
@@ -161,13 +174,6 @@ export default function ApplicationsPage() {
                                                 >
                                                     <FaArrowUpRightFromSquare className="text-xs text-[#1a1a1a]" />
                                                 </button>
-                                            </div>
-                                            <div className="col-span-1">
-                                                <span className="text-xs text-slate-400">
-                                                    {view.status_updated_at
-                                                        ? formatRelative(view.status_updated_at)
-                                                        : formatRelative(app.created_at)}
-                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -188,7 +194,7 @@ export default function ApplicationsPage() {
                                     <div className="flex items-start justify-between mb-3">
                                         <div>
                                             <p className="text-sm font-bold text-[#1a1a1a]">
-                                                {view.company_name || 'Company'}
+                                                {view.companyName || 'Company'}
                                             </p>
                                             <p className="text-xs text-slate-500 mt-0.5">
                                                 {view.job_title || 'Position'}

@@ -3,6 +3,15 @@ import { body, query } from 'express-validator';
 import { AuthController } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { OtpController } from '../controllers/otp.controller';
+import rateLimit from 'express-rate-limit';
+
+const otpRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per window
+  message: { success: false, message: 'Too many OTP requests, please try again later.' },
+});
+
 
 const router = Router();
 
@@ -13,9 +22,13 @@ const weakPasswords = new Set([
   'password',
   'password123',
   'qwerty123',
+  'qwertyuiop',
+  'admin123',
+  'welcome123',
+  'letmein123',
 ]);
 
-const passwordPolicy = body('password').custom((value: unknown) => {
+const passwordPolicy = body('password').custom((value: string, { req }) => {
   if (typeof value !== 'string' || value.length === 0) {
     throw new Error('Password is required');
   }
@@ -31,9 +44,28 @@ const passwordPolicy = body('password').custom((value: unknown) => {
   if (!/[0-9]/.test(value)) {
     throw new Error('Password must include at least one number');
   }
-  if (weakPasswords.has(value.toLowerCase())) {
-    throw new Error('Password is too weak. Please choose a stronger password');
+  
+  const lowerPassword = value.toLowerCase();
+  
+  if (weakPasswords.has(lowerPassword)) {
+    throw new Error('Password is too common. Please choose a stronger password');
   }
+
+  // Prevent patterns like abc123, 123abc, qwerty
+  const commonPatterns = ['abc123', '123abc', 'qwerty', 'asdfgh'];
+  if (commonPatterns.some(pattern => lowerPassword.includes(pattern))) {
+    throw new Error('Password contains a common easily guessable pattern');
+  }
+
+  // No User Info: Prevent password from containing email prefix
+  const email = req.body.email;
+  if (email && typeof email === 'string') {
+    const prefix = email.split('@')[0];
+    if (prefix.length >= 4 && lowerPassword.includes(prefix.toLowerCase())) {
+      throw new Error('Password cannot contain your email or username');
+    }
+  }
+
   return true;
 });
 
@@ -138,6 +170,25 @@ router.post(
   passwordPolicy,
   validate,
   AuthController.resetPassword,
+);
+
+// --- OTP Verification Routes ---
+router.post(
+  '/otp/send',
+  authenticate,
+  otpRateLimiter,
+  body('channel').isIn(['email', 'whatsapp']).withMessage('Channel must be email or whatsapp'),
+  validate,
+  OtpController.sendOtp,
+);
+
+router.post(
+  '/otp/verify',
+  authenticate,
+  body('channel').isIn(['email', 'whatsapp']).withMessage('Channel must be email or whatsapp'),
+  body('code').notEmpty().isString().isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
+  validate,
+  OtpController.verifyOtp,
 );
 
 router.get('/me', authenticate, AuthController.me);

@@ -4,10 +4,22 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
-import { Button, Input, Card, CardBody } from '@/components/ui';
+import { Button, Card, CardBody } from '@/components/ui';
+import { PasswordInput } from '@/components/PasswordInput';
 import { ROUTES, APP_NAME } from '@/constants';
 
-const weakPasswords = new Set(['123456', '12345678', '123456789', 'password', 'password123', 'qwerty123']);
+const weakPasswords = new Set([
+  '123456',
+  '12345678',
+  '123456789',
+  'password',
+  'password123',
+  'qwerty123',
+  'qwertyuiop',
+  'admin123',
+  'welcome123',
+  'letmein123',
+]);
 
 const validatePassword = (value: string): string | null => {
   if (!value) return 'Password is required';
@@ -15,7 +27,15 @@ const validatePassword = (value: string): string | null => {
   if (!/[A-Z]/.test(value)) return 'Password must include at least one uppercase letter';
   if (!/[a-z]/.test(value)) return 'Password must include at least one lowercase letter';
   if (!/[0-9]/.test(value)) return 'Password must include at least one number';
-  if (weakPasswords.has(value.toLowerCase())) return 'Password is too weak. Please choose a stronger password';
+  
+  const lowerPassword = value.toLowerCase();
+  if (weakPasswords.has(lowerPassword)) return 'Password is too weak. Please choose a stronger password';
+  
+  const commonPatterns = ['abc123', '123abc', 'qwerty', 'asdfgh'];
+  if (commonPatterns.some(pattern => lowerPassword.includes(pattern))) {
+    return 'Password contains a common easily guessable pattern';
+  }
+
   return null;
 };
 
@@ -74,17 +94,15 @@ function ResetPasswordForm() {
       {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Input
+        <PasswordInput
           label="New password"
-          type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
           minLength={8}
         />
-        <Input
+        <PasswordInput
           label="Confirm password"
-          type="password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           required

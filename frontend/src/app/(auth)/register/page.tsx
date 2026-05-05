@@ -12,16 +12,43 @@ import { useAuthStore } from '@/store/auth.store';
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
 import { GitHubLoginButton } from '@/components/auth/GitHubLoginButton';
 import { LinkedInLoginButton } from '@/components/auth/LinkedInLoginButton';
+import { PasswordInput } from '@/components/PasswordInput';
 
-const weakPasswords = new Set(['123456', '12345678', '123456789', 'password', 'password123', 'qwerty123']);
+const weakPasswords = new Set([
+  '123456',
+  '12345678',
+  '123456789',
+  'password',
+  'password123',
+  'qwerty123',
+  'qwertyuiop',
+  'admin123',
+  'welcome123',
+  'letmein123',
+]);
 
-const validatePassword = (value: string): string | null => {
+const validatePassword = (value: string, email?: string): string | null => {
   if (!value) return 'Password is required';
   if (value.length < 8) return 'Password must be at least 8 characters long';
   if (!/[A-Z]/.test(value)) return 'Password must include at least one uppercase letter';
   if (!/[a-z]/.test(value)) return 'Password must include at least one lowercase letter';
   if (!/[0-9]/.test(value)) return 'Password must include at least one number';
-  if (weakPasswords.has(value.toLowerCase())) return 'Password is too weak. Please choose a stronger password';
+  
+  const lowerPassword = value.toLowerCase();
+  if (weakPasswords.has(lowerPassword)) return 'Password is too weak. Please choose a stronger password';
+  
+  const commonPatterns = ['abc123', '123abc', 'qwerty', 'asdfgh'];
+  if (commonPatterns.some(pattern => lowerPassword.includes(pattern))) {
+    return 'Password contains a common easily guessable pattern';
+  }
+
+  if (email) {
+    const prefix = email.split('@')[0];
+    if (prefix.length >= 4 && lowerPassword.includes(prefix.toLowerCase())) {
+      return 'Password cannot contain your email or username';
+    }
+  }
+
   return null;
 };
 
@@ -72,7 +99,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const passwordError = validatePassword(form.password);
+    const passwordError = validatePassword(form.password, form.email);
     if (passwordError) {
       setError(passwordError);
       return;
@@ -121,7 +148,7 @@ export default function RegisterPage() {
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Hired Recently</p>
             <p className="text-sm font-bold text-slate-900 leading-tight">Hirav Kadikar</p>
-            <p className="text-xs text-slate-500 font-medium">Interning at SpazorLabs</p>
+            <p className="text-xs text-slate-500 font-medium">SDE Intern at Google</p>
           </div>
         </div>
       </div>
@@ -142,7 +169,7 @@ export default function RegisterPage() {
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Hired Recently</p>
             <p className="text-sm font-bold text-slate-900 leading-tight">Ankush Wadehra</p>
-            <p className="text-xs text-slate-500 font-medium">Is no longer jobless</p>
+            <p className="text-xs text-slate-500 font-medium">Product Intern at Microsoft</p>
           </div>
         </div>
       </div>
@@ -153,7 +180,7 @@ export default function RegisterPage() {
         style={{
           top:    'calc(35% - 8px)',  /* move up/down  */
           bottom: 'auto',             /* set % or px to pin from bottom instead */
-          left:   '15%',               /* move left/right from left edge */
+          left:   '10%',               /* move left/right from left edge */
           right:  'auto',             /* set % or px to pin from right edge instead */
           rotate: '6deg',             /* tilt angle */
         }}
@@ -163,7 +190,7 @@ export default function RegisterPage() {
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Hired Recently</p>
             <p className="text-sm font-bold text-slate-900 leading-tight">Vivan Sanghvi</p>
-            <p className="text-xs text-slate-500 font-medium">Interning at CodeNex</p>
+            <p className="text-xs text-slate-500 font-medium">Backend Intern at Amazon</p>
           </div>
         </div>
       </div>
@@ -266,8 +293,7 @@ export default function RegisterPage() {
 
             <div>
               <label className="block text-[13px] font-bold text-slate-700 mb-1">Password</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={form.password}
                 onChange={set('password')}
                 required

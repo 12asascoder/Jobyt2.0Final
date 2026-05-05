@@ -5,6 +5,7 @@ import { withTransaction } from '../utils/transaction';
 import fs from 'fs/promises';
 import path from 'path';
 import { parseResume } from '../utils/resumeParser';
+import pool from '../config/database';
 
 export interface ATSResult {
   score: number;
@@ -340,5 +341,45 @@ export const ResumeService = {
       console.error('[ATS] Scoring error:', error);
       return defaultFail;
     }
+  },
+
+  async getSecureUrl(userId: string, role: string, resumeId: string): Promise<string> {
+    const { rows } = await pool.query(`SELECT user_id, file_url, mime_type FROM resumes WHERE id = $1 LIMIT 1`, [resumeId]);
+    const resume = rows[0];
+
+    if (!resume) {
+      throw Object.assign(new Error('Resume not found'), {
+        statusCode: 404,
+        code: 'RESUME_NOT_FOUND',
+      });
+    }
+
+    let isAuthorized = false;
+
+    if (role === 'admin') {
+      isAuthorized = true;
+    } else if (role === 'applicant' && resume.user_id === userId) {
+      isAuthorized = true;
+    } else if (role === 'recruiter') {
+      // Check if there is an application linking this recruiter to this resume
+      const { rows: appRows } = await pool.query(
+        `SELECT 1 FROM applications a
+         JOIN jobs j ON a.job_id = j.id
+         WHERE j.recruiter_id = $1 AND (a.resume_id = $2 OR a.applicant_id = $3)
+         LIMIT 1`,
+        [userId, resumeId, resume.user_id]
+      );
+      if (appRows.length > 0) isAuthorized = true;
+    }
+
+    if (!isAuthorized) {
+      throw Object.assign(new Error('Forbidden: You do not have access to this resume'), {
+        statusCode: 403,
+        code: 'RESUME_ACCESS_DENIED',
+      });
+    }
+
+    const resourceType = resume.mime_type === 'application/pdf' ? 'image' : 'raw';
+    return StorageService.generateSignedUrl(resume.file_url, resourceType);
   },
 };

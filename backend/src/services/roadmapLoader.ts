@@ -76,7 +76,7 @@ export function clearLoaderLogs(): void {
 
 // ─── Network Utilities ────────────────────────────────────────────────────────
 
-async function fetchWithRetry(url: string, maxRetries = 3, timeoutMs = 15001): Promise<string> {
+async function fetchWithRetry(url: string, maxRetries = 3, timeoutMs = 15000): Promise<string> {
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {

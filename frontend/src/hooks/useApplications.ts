@@ -5,6 +5,15 @@ import { api } from '@/lib/api';
 import { Application, ApplicationStatus } from '@/types';
 
 export const useApplications = () => {
+  const normalizeCompany = (item: any): Application => ({
+    ...item,
+    companyName:
+      item.companyName ||
+      item.company_name ||
+      item.company?.name ||
+      item.recruiter?.companyName ||
+      null,
+  });
   const [applications, setApplications] = useState<Application[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -16,7 +25,22 @@ export const useApplications = () => {
     setIsLoading(true);
     try {
       const res = await api.getPaginated<Application>(`/applications/my?page=${requestedPage}&limit=${limit}`);
-      setApplications(res.data ?? []);
+      const apps = (res.data ?? []).map(normalizeCompany);
+      
+      // Fetch latest comment for each application
+      const appsWithComments = await Promise.all(apps.map(async (app) => {
+        try {
+          const eventsRes = await api.get<any[]>(`/applications/${app.id}/events`);
+          const events = eventsRes.data || [];
+          // Get the most recent event that has notes
+          const lastEventWithNotes = [...events].reverse().find(e => e.notes && e.notes.trim());
+          return { ...app, latest_comment: lastEventWithNotes?.notes || null };
+        } catch {
+          return { ...app, latest_comment: null };
+        }
+      }));
+
+      setApplications(appsWithComments);
       setTotal(res.pagination?.total ?? 0);
       setPage(res.pagination?.page ?? requestedPage);
       setTotalPages(res.pagination?.totalPages ?? 1);
@@ -29,7 +53,7 @@ export const useApplications = () => {
     setIsLoading(true);
     try {
       const res = await api.getPaginated<Application>(`/applications/jobs/${jobId}?page=${requestedPage}&limit=${limit}`);
-      setApplications(res.data ?? []);
+      setApplications((res.data ?? []).map(normalizeCompany));
       setTotal(res.pagination?.total ?? 0);
       setPage(res.pagination?.page ?? requestedPage);
       setTotalPages(res.pagination?.totalPages ?? 1);

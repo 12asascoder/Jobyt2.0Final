@@ -20,7 +20,7 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
   const pass = process.env.SMTP_PASS;
   const from = process.env.EMAIL_FROM || '"Hiring Platform" <noreply@hiringplatform.local>';
   const connectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || '30000');
-  const greetingTimeout = Number(process.env.SMTP_GREETING_TIMEOUT_MS || '15001');
+  const greetingTimeout = Number(process.env.SMTP_GREETING_TIMEOUT_MS || '15000');
   const fallbackEnabled = process.env.SMTP_FALLBACK_ENABLED !== 'false';
 
   if (!host || !user || !pass) {
@@ -159,3 +159,15 @@ export const oauthEmailVerificationHtml = (email: string, token: string): string
   <a href="${process.env.FRONTEND_URL}/verify-email?token=${token}">Verify Email</a>
   <p>This link expires in 15 minutes.</p>
 `;
+
+export const otpEmailHtml = (code: string, expiryMins: number = 5): string => `
+  <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+    <h2 style="color: #333;">Your Verification Code</h2>
+    <p>Please use the following One-Time Password (OTP) to verify your account:</p>
+    <div style="background-color: #f4f4f4; padding: 15px; font-size: 24px; font-weight: bold; letter-spacing: 5px; text-align: center; border-radius: 4px; margin: 20px 0;">
+      ${code}
+    </div>
+    <p style="color: #666; font-size: 14px;">This code will expire in ${expiryMins} minutes. If you did not request this, please ignore this email.</p>
+  </div>
+`;
+

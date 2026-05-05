@@ -5,7 +5,7 @@ export interface Conversation {
   recruiter_id: string;
   applicant_id: string;
   job_id: string | null;
-  company_name?: string | null;
+  companyName?: string | null;
   last_message_at: Date;
   created_at: Date;
 }
@@ -50,10 +50,10 @@ export const MessageModel = {
     recruiter_id: string;
     source: string;
     created_by: string | null;
-    company_name: string | null;
+    companyName: string | null;
   } | null> {
     const { rows } = await pool.query(
-      `SELECT id, recruiter_id, source, created_by, company_name
+      `SELECT id, recruiter_id, source, created_by, company_name AS "companyName"
        FROM jobs
        WHERE id = $1 AND deleted_at IS NULL
        LIMIT 1`,
@@ -91,7 +91,7 @@ export const MessageModel = {
   async getConversationsForUser(userId: string, role: string): Promise<Conversation[]> {
     const includeAdminOwnedConversations = role === 'admin';
     const { rows } = await pool.query(
-      `SELECT c.*, j.company_name, m.body AS last_message, m.created_at AS last_message_at
+      `SELECT c.*, j.company_name AS "companyName", m.body AS last_message, m.created_at AS last_message_at
        FROM conversations c
        LEFT JOIN jobs j ON j.id = c.job_id
        LEFT JOIN LATERAL (

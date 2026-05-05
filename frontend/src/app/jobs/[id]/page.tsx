@@ -6,7 +6,7 @@ import { api, ApiError } from '@/lib/api';
 import { ApplicationQuestion, Job } from '@/types';
 import { Button, Spinner } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
-import { formatDate } from '@/lib/utils';
+import { formatDate, normalizeCompany } from '@/lib/utils';
 import { avatarColor, avatarInitials } from '@/components/ui/JobCard';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import toast from 'react-hot-toast';
@@ -24,9 +24,10 @@ import {
   FaRobot,
   FaRoute,
   FaFileLines,
-  FaChevronDown,
-  FaChevronUp
+  FaChevronUp,
+  FaChevronDown
 } from 'react-icons/fa6';
+import { formatSalaryRange } from '@/lib/salary';
 import { useAuthStore } from '@/store/auth.store';
 
 interface UserProfilePayload {
@@ -84,17 +85,7 @@ interface ResumeListItem {
   is_default: boolean;
 }
 
-function formatSalary(min: number | null, max: number | null): string {
-  if (!min && !max) return 'Competitive';
-  const fmt = (v: number) => {
-    if (v >= 100000) return `₹${(v / 100000).toFixed(0)}L`;
-    if (v >= 1000) return `₹${(v / 1000).toFixed(0)}k`;
-    return `₹${v}`;
-  };
-  if (min && max) return `${fmt(min)}–${fmt(max)}`;
-  if (min) return `${fmt(min)}+`;
-  return `Up to ${fmt(max!)}`;
-}
+
 
 function deriveJobRole(title: string): string {
   const cleaned = title
@@ -105,24 +96,7 @@ function deriveJobRole(title: string): string {
 }
 
 function getCompanyName(job: Job): string {
-  const maybe = job as Job & {
-    company?: { name?: string | null };
-    companyName?: string | null;
-  };
-
-  const normalizedPrimary = job.company_name?.trim();
-  const normalizedNested = maybe.company?.name?.trim();
-  const normalizedCamel = maybe.companyName?.trim();
-
-  const isUnknown = (value?: string | null) =>
-    typeof value === 'string' && value.toLowerCase() === 'unknown company';
-
-  return (
-    (!isUnknown(normalizedPrimary) ? normalizedPrimary : '') ||
-    (!isUnknown(normalizedNested) ? normalizedNested : '') ||
-    (!isUnknown(normalizedCamel) ? normalizedCamel : '') ||
-    'Unknown Company'
-  );
+  return job.companyName?.trim() || 'Unknown Company';
 }
 
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -525,7 +499,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           </div>
           <div>
             <p className="text-[10px] font-bold uppercase text-[#666]">Stipend</p>
-            <p className="text-sm font-bold text-[#121212]">{formatSalary(job.salary_min, job.salary_max)} /mo</p>
+            <p className="text-sm font-bold text-[#121212]">{formatSalaryRange(job.salary_min, job.salary_max, job.type)}</p>
           </div>
           <div>
             <p className="text-[10px] font-bold uppercase text-[#666]">Apply By</p>
@@ -552,7 +526,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               {
                 key: 'perks',
                 title: 'Perks',
-                content: `Hands-on projects, mentorship, and stipend range ${formatSalary(job.salary_min, job.salary_max)}.`,
+                content: `Hands-on projects, mentorship, and stipend range ${formatSalaryRange(job.salary_min, job.salary_max, job.type)}.`,
               },
               {
                 key: 'openings',

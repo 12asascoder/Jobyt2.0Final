@@ -77,11 +77,13 @@ export const ApplicationModel = {
     const { rows } = await pool.query(
       `SELECT a.*, u.email, ap.name, ap.photo_url, ap.phone, ap.skills, ap.education,
               j.title as job_title, j.location as job_location, j.skills as job_skills,
+              COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName",
               COALESCE(r.file_url, a.resume_snapshot_url) as resume_url
        FROM applications a
        JOIN users u ON u.id = a.applicant_id
        JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
        JOIN jobs j ON j.id = a.job_id
+       LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
        LEFT JOIN resumes r ON r.id = a.resume_id
        WHERE a.id = $1 AND j.recruiter_id = $2
        LIMIT 1`,
@@ -94,11 +96,13 @@ export const ApplicationModel = {
     const { rows } = await pool.query(
       `SELECT a.*, u.email, ap.name, ap.photo_url, ap.phone, ap.skills, ap.education,
               j.title as job_title, j.location as job_location, j.skills as job_skills,
+              COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName",
               COALESCE(r.file_url, a.resume_snapshot_url) as resume_url
        FROM applications a
        JOIN users u ON u.id = a.applicant_id
        JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
        JOIN jobs j ON j.id = a.job_id
+       LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
        LEFT JOIN resumes r ON r.id = a.resume_id
        WHERE a.id = $1
        LIMIT 1`,
@@ -186,7 +190,8 @@ export const ApplicationModel = {
     const [countRes, dataRes] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM applications WHERE applicant_id = $1', [applicantId]),
       pool.query(
-        `SELECT a.*, j.title as job_title, j.location, rp.company_name
+        `SELECT a.*, j.title as job_title, j.location,
+                COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName"
          FROM applications a
          JOIN jobs j ON j.id = a.job_id
          LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
@@ -254,7 +259,8 @@ export const ApplicationModel = {
     const offset = (page - 1) * limit;
     let query = `
       SELECT a.*, j.title as job_title, j.location, j.type, j.salary_min, j.salary_max,
-             rp.company_name, rp.industry
+             COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName",
+             rp.industry
       FROM applications a
       JOIN jobs j ON j.id = a.job_id
       LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
@@ -340,11 +346,13 @@ export const ApplicationModel = {
       ),
       pool.query(
         `SELECT a.*, u.email, ap.name, ap.photo_url, ap.phone, ap.skills, ap.education,
-                j.title as job_title, j.location as job_location
+                j.title as job_title, j.location as job_location,
+                COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName"
          FROM applications a
          JOIN users u ON u.id = a.applicant_id
          JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
          JOIN jobs j ON j.id = a.job_id
+         LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
          WHERE j.recruiter_id = $1
          ORDER BY a.created_at DESC LIMIT $2 OFFSET $3`,
         [recruiterId, limit, offset],
@@ -362,11 +370,13 @@ export const ApplicationModel = {
     const offset = (page - 1) * limit;
     let query = `
       SELECT a.*, u.email, ap.name, ap.photo_url, ap.phone, ap.skills, ap.education,
-             j.title as job_title, j.location as job_location
+             j.title as job_title, j.location as job_location,
+             COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName"
       FROM applications a
       JOIN users u ON u.id = a.applicant_id
       JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
       JOIN jobs j ON j.id = a.job_id
+      LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
       WHERE j.recruiter_id = $1
     `;
     const params: any[] = [recruiterId];
@@ -425,11 +435,13 @@ export const ApplicationModel = {
     const offset = (page - 1) * limit;
     let query = `
       SELECT a.*, u.email, ap.name, ap.photo_url, ap.phone, ap.skills, ap.education,
-             j.title as job_title, j.location as job_location
+             j.title as job_title, j.location as job_location,
+             COALESCE(NULLIF(j.company_name, ''), rp.company_name) AS "companyName"
       FROM applications a
       JOIN users u ON u.id = a.applicant_id
       JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
       JOIN jobs j ON j.id = a.job_id
+      LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
       WHERE 1=1
     `;
     const params: any[] = [];

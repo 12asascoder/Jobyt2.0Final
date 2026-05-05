@@ -178,4 +178,16 @@ export const ApplicationController = {
       next(err);
     }
   },
+
+  async getResumeUrl(req: Request, res: Response, next: NextFunction) {
+    try {
+      const url = await ApplicationService.getResumeUrl(
+        req.user!,
+        req.params.id as string
+      );
+      sendSuccess(res, { url }, 'Secure resume URL retrieved');
+    } catch (err) {
+      next(err);
+    }
+  },
 };

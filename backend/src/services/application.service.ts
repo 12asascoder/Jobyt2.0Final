@@ -7,6 +7,7 @@ import { CreditService } from './credit.service';
 import { CREDIT_COSTS } from '../config/creditCosts';
 import { ResumeModel } from '../models/resume.model';
 import { ProfileRequirementsService } from './profileRequirements.service';
+import { StorageService } from './storage.service';
 
 export const ApplicationService = {
   async apply(
@@ -51,11 +52,11 @@ export const ApplicationService = {
       const jobQuestions = Array.isArray(job.application_questions) ? job.application_questions : [];
       const submittedAnswers = Array.isArray(data.answers)
         ? data.answers
-            .map((item) => ({
-              question_id: String(item?.question_id || '').trim(),
-              answer: String(item?.answer || '').trim(),
-            }))
-            .filter((item) => item.question_id.length > 0)
+          .map((item) => ({
+            question_id: String(item?.question_id || '').trim(),
+            answer: String(item?.answer || '').trim(),
+          }))
+          .filter((item) => item.question_id.length > 0)
         : [];
 
       const answerMap = new Map(submittedAnswers.map((item) => [item.question_id, item.answer]));
@@ -69,7 +70,6 @@ export const ApplicationService = {
           );
         }
       }
-
       const filteredAnswers = jobQuestions
         .map((question) => {
           const answer = answerMap.get(question.id);
@@ -118,7 +118,6 @@ export const ApplicationService = {
         },
         client,
       );
-
       // 6) Notify recruiter (transaction-scoped for consistent state)
       await NotificationModel.create(
         {
@@ -197,18 +196,18 @@ export const ApplicationService = {
     const job = await JobModel.findById(jobId);
     if (!job || job.recruiter_id !== recruiterId)
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
-      
+
     const result = await ApplicationModel.findByJob(jobId, page, limit, filters);
     const { JobService } = require('./job.service');
-    
+
     const enrichedApplications = await Promise.all(result.applications.map(async (app: any) => {
-       const matchResult = await JobService.calculateMatchScore(app.skills || [], job.skills || []);
-       return { ...app, matchScore: matchResult.matchScore };
+      const matchResult = await JobService.calculateMatchScore(app.skills || [], job.skills || []);
+      return { ...app, matchScore: matchResult.matchScore };
     }));
-    
+
     // Sort logically for Resume Ranking
     enrichedApplications.sort((a, b) => b.matchScore - a.matchScore);
-    
+
     return { ...result, applications: enrichedApplications };
   },
 
@@ -266,5 +265,36 @@ export const ApplicationService = {
     }
 
     return PipelineEventModel.findByApplication(applicationId);
+  },
+
+  async getResumeUrl(user: { userId: string; role: string }, applicationId: string): Promise<string> {
+    const application = await ApplicationModel.findById(applicationId);
+    if (!application) {
+      throw Object.assign(new Error('Application not found'), { statusCode: 404 });
+    }
+
+    if (!application.resume_snapshot_url) {
+      throw Object.assign(new Error('No resume attached to this application'), { statusCode: 404 });
+    }
+
+    let isAuthorized = false;
+
+    if (user.role === 'admin') {
+      isAuthorized = true;
+    } else if (user.role === 'applicant' && application.applicant_id === user.userId) {
+      isAuthorized = true;
+    } else if (user.role === 'recruiter') {
+      const job = await JobModel.findById(application.job_id);
+      if (job && job.recruiter_id === user.userId) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
+      throw Object.assign(new Error('Forbidden: You do not have access to this resume'), { statusCode: 403 });
+    }
+
+    // Defaulting to PDF/image type for snapshots, as they are typically PDFs
+    return StorageService.generateSignedUrl(application.resume_snapshot_url, 'image');
   },
 };

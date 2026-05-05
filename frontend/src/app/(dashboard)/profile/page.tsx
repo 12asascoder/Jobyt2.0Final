@@ -47,7 +47,7 @@ export default function ProfilePage() {
         if (user?.role === 'recruiter') {
           if (!p.name) missing.push('Full Name');
           if (!r.data?.email) missing.push('Email');
-          if (!p.company_name) missing.push('Company Name');
+          if (!p.companyName) missing.push('Company Name');
           if (!p.location) missing.push('Location');
           if (!p.logo_url) missing.push('Profile Picture');
         } else {
@@ -90,12 +90,21 @@ export default function ProfilePage() {
         return trimmed.length ? trimmed : null;
       };
 
+      // Client-side LinkedIn URL validation
+      if (data.linkedin_url && typeof data.linkedin_url === 'string' && data.linkedin_url.trim()) {
+        const linkedinVal = data.linkedin_url.trim().replace(/^https?:\/\//i, '').toLowerCase();
+        if (!linkedinVal.startsWith('linkedin.com/') && !linkedinVal.startsWith('www.linkedin.com/')) {
+          toast.error('LinkedIn URL must be from linkedin.com (e.g. https://linkedin.com/in/username)');
+          return;
+        }
+      }
+
       const payload =
         user?.role === 'recruiter'
           ? {
               name: toNullable(data.name),
               location: toNullable(data.location),
-              company_name: toNullable(data.company_name),
+              companyName: toNullable(data.companyName),
               industry: toNullable(data.industry),
               company_size: toNullable(data.company_size),
               description: toNullable(data.description),
@@ -268,7 +277,7 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Company Name</label>
-                    <input {...register('company_name')} readOnly={!editCompany} className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-900 font-medium py-1 ${!editCompany ? 'cursor-pointer' : ''}`} />
+                    <input {...register('companyName')} readOnly={!editCompany} className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-900 font-medium py-1 ${!editCompany ? 'cursor-pointer' : ''}`} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1">Industry</label>
@@ -310,7 +319,16 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <label className="block text-base font-normal text-black mb-2">LinkedIn Link</label>
-                      <input {...register('linkedin_url')} readOnly={!editLinks} type="url" className="w-full bg-black text-lime-400 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors cursor-pointer" placeholder="https://linkedin.com/in/" />
+                      <input
+                        {...register('linkedin_url')}
+                        readOnly={!editLinks}
+                        type="url"
+                        className="w-full bg-black text-lime-400 rounded-[10px] px-3 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors cursor-pointer"
+                        placeholder="https://linkedin.com/in/username"
+                      />
+                      {editLinks && (
+                        <p className="text-xs text-gray-400 mt-1">Must be a valid linkedin.com profile URL</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-base font-normal text-black mb-2">GitHub Link</label>

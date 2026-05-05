@@ -10,12 +10,7 @@ import { ROUTES } from '@/constants';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
-const formatSalary = (min?: number | null, max?: number | null) => {
-  if (!min && !max) return 'Not specified';
-  if (min && !max) return `Rs ${min.toLocaleString()} / month`;
-  if (!min && max) return `Up to Rs ${max.toLocaleString()} / month`;
-  return `Rs ${min!.toLocaleString()} - Rs ${max!.toLocaleString()} / month`;
-};
+import { formatSalaryRange } from '@/lib/salary';
 
 export default function AdminJobDetailPage() {
   const params = useParams();
@@ -106,7 +101,7 @@ export default function AdminJobDetailPage() {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wide font-bold text-slate-500">Salary</p>
-                <p className="mt-1">{formatSalary(job.salary_min, job.salary_max)}</p>
+                <p className="mt-1">{formatSalaryRange(job.salary_min, job.salary_max, job.type)}</p>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wide font-bold text-slate-500">Views</p>
@@ -132,7 +127,7 @@ export default function AdminJobDetailPage() {
           <div className="space-y-3 text-sm text-slate-700">
             <div>
               <p className="text-xs uppercase tracking-wide font-bold text-slate-500">Company</p>
-              <p className="mt-1">{job.company_name || 'Unknown Company'}</p>
+              <p className="mt-1">{job.companyName || 'Unknown Company'}</p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide font-bold text-slate-500">Company Location</p>

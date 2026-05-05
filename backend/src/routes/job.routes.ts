@@ -17,6 +17,19 @@ router.post('/match', body('userSkills').isArray(), body('jobSkills').isArray(),
 router.post('/skill-gap', body('userSkills').isArray(), body('requiredSkills').isArray(), validate, JobController.getSkillGap);
 router.post('/interview-questions', body('role').isString(), body('skills').isArray(), validate, JobController.generateInterviewQuestions);
 
+// External Job Postings
+// Allows any authenticated user to post an external job URL.
+router.post(
+  '/external',
+  authenticate,
+  body('url')
+    .notEmpty().withMessage('URL is required')
+    .isURL({ protocols: ['http', 'https'], require_protocol: true })
+    .withMessage('Must be a valid HTTP/HTTPS URL'),
+  validate,
+  JobController.createExternalJob
+);
+
 // Close endpoint: bypass employerGuard since service validates ownership
 // Uses: authenticate + authorize('recruiter')
 router.patch('/:id/close', authenticate, requireEmail, authorize('recruiter'), JobController.closeJob);

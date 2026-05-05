@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { Job } from '@/types';
 import { Badge, Card, CardBody } from '@/components/ui';
-import { formatSalaryRange, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
+import { formatSalaryRange } from '@/lib/salary';
 import { ROUTES } from '@/constants';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import { isSpazorlabsCompany } from '@/lib/companyFlags';
@@ -12,7 +13,7 @@ interface JobCardProps {
 }
 
 export const JobCard = ({ job, actions }: JobCardProps) => {
-  const isVerifiedCompany = isSpazorlabsCompany(job.company_name);
+  const isVerifiedCompany = isSpazorlabsCompany(job.companyName);
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -23,12 +24,12 @@ export const JobCard = ({ job, actions }: JobCardProps) => {
             {resolveAssetUrl(job.company_logo) ? (
               <img
                 src={resolveAssetUrl(job.company_logo) || ''}
-                alt={job.company_name ? `${job.company_name} logo` : 'Company logo'}
+                alt={job.companyName ? `${job.companyName} logo` : 'Company logo'}
                 className="h-full w-full object-cover"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-xs font-bold text-slate-600">
-                {(job.company_name || job.title).slice(0, 2).toUpperCase()}
+                {(job.companyName || job.title).slice(0, 2).toUpperCase()}
               </div>
             )}
           </div>
@@ -37,7 +38,7 @@ export const JobCard = ({ job, actions }: JobCardProps) => {
             {job.title}
           </Link>
           <div className="mt-0.5 flex flex-wrap items-center gap-2">
-            {job.company_name && <p className="text-sm text-gray-500">{job.company_name}</p>}
+            {job.companyName && <p className="text-sm text-gray-500">{job.companyName}</p>}
             {isVerifiedCompany && <Badge variant="success">Verified</Badge>}
           </div>
 
@@ -59,7 +60,7 @@ export const JobCard = ({ job, actions }: JobCardProps) => {
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="text-sm font-medium text-gray-900">{formatSalaryRange(job.salary_min, job.salary_max)}</p>
+          <p className="text-sm font-medium text-gray-900">{formatSalaryRange(job.salary_min, job.salary_max, job.type)}</p>
           <p className="mt-1 text-xs text-gray-400">{formatDate(job.created_at)}</p>
         </div>
       </div>

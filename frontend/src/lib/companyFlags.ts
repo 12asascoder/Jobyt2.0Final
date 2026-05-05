@@ -1,5 +1,5 @@
 type HasCompanyName = {
-  company_name?: string | null;
+  companyName?: string | null;
 };
 
 export const SPAZORLABS_COMPANY_NAME = 'spazorlabs';
@@ -15,7 +15,7 @@ export const sortSpazorlabsFirst = <T extends HasCompanyName>(jobs: T[]): T[] =>
   const others: T[] = [];
 
   for (const job of jobs) {
-    if (isSpazorlabsCompany(job.company_name)) {
+    if (isSpazorlabsCompany(job.companyName)) {
       prioritized.push(job);
     } else {
       others.push(job);

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { ROUTES } from '@/constants';
 import { sortSpazorlabsFirst } from '@/lib/companyFlags';
 import { useAuthStore } from '@/store/auth.store';
 import { Job } from '@/types';
@@ -125,7 +126,7 @@ export default function DashboardPage() {
                 const q = keyword.toLowerCase();
                 if (
                     !job.title.toLowerCase().includes(q) &&
-                    !job.company_name?.toLowerCase().includes(q)
+                    !job.companyName?.toLowerCase().includes(q)
                 )
                     return false;
             }
@@ -148,9 +149,9 @@ export default function DashboardPage() {
     const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
 
     const statCards = [
-        { value: balance.toLocaleString(), label: 'CREDIT', sublabel: 'BALANCE' },
-        { value: stats.applications.toString(), label: 'APPLICATIONS', sublabel: '' },
-        { value: stats.saved.toString(), label: 'SAVED JOBS', sublabel: '' },
+        { value: balance.toLocaleString(), label: 'CREDIT', sublabel: 'BALANCE', href: ROUTES.credits },
+        { value: stats.applications.toString(), label: 'APPLICATIONS', sublabel: '', href: ROUTES.applications },
+        { value: stats.saved.toString(), label: 'SAVED JOBS', sublabel: '', href: ROUTES.savedJobs },
     ];
 
     return (
@@ -170,9 +171,11 @@ export default function DashboardPage() {
                     {/* Stat Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-10 max-w-[260px] sm:max-w-[900px]">
                         {statCards.map((stat) => (
-                            <div
+                            <button
+                                type="button"
                                 key={stat.label}
-                                className="bg-[#141414] rounded-2xl p-4 md:p-5 flex items-center gap-4 lg:gap-5 border border-white/5 shadow-xl"
+                                onClick={() => router.push(stat.href)}
+                                className="bg-[#141414] rounded-2xl p-4 md:p-5 flex items-center gap-4 lg:gap-5 border border-white/5 shadow-xl text-left transition-all hover:-translate-y-0.5 hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-lime-400 focus:ring-offset-2 focus:ring-offset-[#fcfcfc]"
                             >
                                 <span className="text-[40px] md:text-[44px] leading-none font-extrabold tracking-tight text-lime-400 drop-shadow-md shrink-0">
                                     {stat.value}
@@ -187,7 +190,7 @@ export default function DashboardPage() {
                                         </span>
                                     )}
                                 </div>
-                            </div>
+                            </button>
                         ))}
                     </div>
 

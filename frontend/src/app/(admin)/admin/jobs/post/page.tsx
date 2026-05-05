@@ -19,7 +19,7 @@ export default function AdminPostJobPage() {
     description: '',
     skills: '',
     company_id: '', // For existing company
-    company_name: '',
+    companyName: '',
     company_location: '',
     company_website: '',
     company_logo: '',
@@ -73,7 +73,7 @@ export default function AdminPostJobPage() {
       }
 
       if (!useExistingCompany) {
-        if (!form.company_name.trim()) {
+        if (!form.companyName.trim()) {
           setError('Company name is required');
           setLoading(false);
           return;
@@ -116,7 +116,7 @@ export default function AdminPostJobPage() {
       if (useExistingCompany) {
         payload.company_id = form.company_id;
       } else {
-        payload.company_name = form.company_name.trim();
+        payload.companyName = form.companyName.trim();
         payload.company_location = form.company_location.trim();
         if (form.company_website.trim()) {
           payload.company_website = form.company_website.trim();
@@ -215,7 +215,7 @@ export default function AdminPostJobPage() {
                 type="number"
                 value={form.salary_max}
                 onChange={(e) => set('salary_max', e.target.value)}
-                placeholder="e.g., 150010"
+                placeholder="e.g., 150000"
                 className="text-base"
               />
             </div>
@@ -291,8 +291,8 @@ export default function AdminPostJobPage() {
                     <label className="block text-sm font-semibold text-slate-900 mb-2">Company Name *</label>
                     <Input
                       type="text"
-                      value={form.company_name}
-                      onChange={(e) => set('company_name', e.target.value)}
+                      value={form.companyName}
+                      onChange={(e) => set('companyName', e.target.value)}
                       placeholder="e.g., Acme Corp"
                       className="text-base"
                     />
