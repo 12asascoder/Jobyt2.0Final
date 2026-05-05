@@ -308,7 +308,7 @@ export default function MessagesPage() {
                     }`}
                   >
                     <div className="w-[46px] h-[46px] rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
-                      <img src={resolveAssetUrl(avatarUrl)} alt="" className="w-full h-full object-cover" />
+                      <img src={resolveAssetUrl(avatarUrl) || undefined} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[15px] font-bold text-black truncate leading-tight">
@@ -339,7 +339,7 @@ export default function MessagesPage() {
                   &#8592;
                 </button>
                 <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden">
-                  <img src={resolveAssetUrl(selectedParticipant?.avatar || selectedParticipant?.logo_url || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + selectedParticipant?.name)} alt="" className="w-full h-full object-cover" />
+                  <img src={resolveAssetUrl(selectedParticipant?.avatar || selectedParticipant?.logo_url || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + selectedParticipant?.name) || undefined} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <h3 className="text-[16px] font-bold text-black leading-tight">
@@ -415,7 +415,7 @@ export default function MessagesPage() {
           <div className="bg-white rounded-[20px] p-5 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
-                <img src={resolveAssetUrl(selectedParticipant?.avatar || selectedParticipant?.logo_url || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + selectedParticipant?.name)} alt="" className="w-full h-full object-cover" />
+                <img src={resolveAssetUrl(selectedParticipant?.avatar || selectedParticipant?.logo_url || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + selectedParticipant?.name) || undefined} alt="" className="w-full h-full object-cover" />
               </div>
               <div>
                 <p className="text-[15px] font-bold text-black leading-tight">
