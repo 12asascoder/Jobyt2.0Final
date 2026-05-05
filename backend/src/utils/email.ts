@@ -20,7 +20,7 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
   const pass = process.env.SMTP_PASS;
   const from = process.env.EMAIL_FROM || '"Hiring Platform" <noreply@hiringplatform.local>';
   const connectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || '30000');
-  const greetingTimeout = Number(process.env.SMTP_GREETING_TIMEOUT_MS || '15000');
+  const greetingTimeout = Number(process.env.SMTP_GREETING_TIMEOUT_MS || '15001');
   const fallbackEnabled = process.env.SMTP_FALLBACK_ENABLED !== 'false';
 
   if (!host || !user || !pass) {

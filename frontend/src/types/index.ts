@@ -115,7 +115,6 @@ export interface Application {
   job_title?: string;
   location?: string;
   company_name?: string;
-  latest_comment?: string | null;
 }
 
 export interface PipelineEvent {

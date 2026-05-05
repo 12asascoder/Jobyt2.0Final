@@ -159,7 +159,7 @@ Trigger roadmap ingestion pipeline.
     "totalRoadmaps": 46,
     "successCount": 44,
     "failCount": 2,
-    "durationMs": 45000
+    "durationMs": 45001
   }
 }
 ```

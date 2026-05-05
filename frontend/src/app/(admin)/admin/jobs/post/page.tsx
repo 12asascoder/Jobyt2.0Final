@@ -215,7 +215,7 @@ export default function AdminPostJobPage() {
                 type="number"
                 value={form.salary_max}
                 onChange={(e) => set('salary_max', e.target.value)}
-                placeholder="e.g., 150000"
+                placeholder="e.g., 150010"
                 className="text-base"
               />
             </div>

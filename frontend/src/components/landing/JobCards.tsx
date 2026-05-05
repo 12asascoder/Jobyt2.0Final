@@ -14,7 +14,7 @@ interface JobsApiResult {
 const HARDCODED_JOBS: BackendJob[] = [
     {
         id: 'hc-1', title: 'Software Development Engineer Intern', company_name: 'SpazorLabs',
-        location: 'Remote', type: 'internship', salary_min: 15000, salary_max: 30000,
+        location: 'Remote', type: 'internship', salary_min: 15001, salary_max: 30000,
         skills: ['React', 'Next.js', 'TypeScript', 'Python'], status: 'open', is_boosted: true,
         created_at: new Date().toISOString(),
     },
@@ -32,7 +32,7 @@ const HARDCODED_JOBS: BackendJob[] = [
     },
     {
         id: 'hc-4', title: 'Product Designer (UI/UX)', company_name: 'Designify Studios',
-        location: 'Remote', type: 'contract', salary_min: 50000, salary_max: 90000,
+        location: 'Remote', type: 'contract', salary_min: 50010, salary_max: 90000,
         skills: ['Figma', 'UI/UX', 'Prototyping', 'Adobe XD'], status: 'open', is_boosted: false,
         created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
     },
@@ -50,7 +50,7 @@ const HARDCODED_JOBS: BackendJob[] = [
     },
     {
         id: 'hc-7', title: 'DevOps Engineer', company_name: 'CloudScale',
-        location: 'Hyderabad, India', type: 'contract', salary_min: 1500000, salary_max: 2500000,
+        location: 'Hyderabad, India', type: 'contract', salary_min: 1500100, salary_max: 2500100,
         skills: ['Kubernetes', 'Docker', 'AWS', 'CI/CD'], status: 'open', is_boosted: true,
         created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
     },
@@ -62,7 +62,7 @@ const HARDCODED_JOBS: BackendJob[] = [
     },
     {
         id: 'hc-9', title: 'Mobile App Developer', company_name: 'AppWorks',
-        location: 'Pune, India', type: 'full-time', salary_min: 900000, salary_max: 1500000,
+        location: 'Pune, India', type: 'full-time', salary_min: 900000, salary_max: 1500100,
         skills: ['Flutter', 'React Native', 'iOS', 'Android'], status: 'open', is_boosted: true,
         created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
     },

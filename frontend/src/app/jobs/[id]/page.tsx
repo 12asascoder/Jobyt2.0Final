@@ -128,7 +128,7 @@ function getCompanyName(job: Job): string {
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
@@ -171,36 +171,51 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   useEffect(() => {
     if (!id || id === 'undefined') {
       setLoading(false);
-      router.push(ROUTES.dashboard);
+      router.push(ROUTES.jobs);
       return;
     }
 
-    Promise.all([
-      api.get<Job>(`/jobs/${id}`),
-      api.get<{ hasApplied: boolean }>(`/applications/jobs/${id}/check`).catch(() => ({ data: { hasApplied: false } })),
-      api.get<{ resumes: ResumeListItem[] }>('/users/me/resumes').catch(() => ({ data: { resumes: [] } })),
-      api.get<Job[]>('/users/me/saved-jobs').catch(() => ({ data: [] })),
-    ])
-      .then(([jobRes, checkRes, resumeRes, savedRes]) => {
+    const fetchJobData = async () => {
+      try {
+        const jobRes = await api.get<Job>(`/jobs/${id}`);
         setJob(jobRes.data ?? null);
-        setHasApplied(checkRes.data?.hasApplied ?? false);
-        const availableResumes = Array.isArray(resumeRes.data?.resumes) ? resumeRes.data.resumes : [];
-        setResumes(availableResumes);
-        const defaultResume = availableResumes.find((resume) => resume.is_default);
-        if (defaultResume) {
-          setSelectedResumeId(defaultResume.id);
-        } else if (availableResumes.length > 0) {
-          setSelectedResumeId(availableResumes[0].id);
+
+        if (isAuthenticated) {
+          try {
+            const [checkRes, resumeRes, savedRes] = await Promise.all([
+              api.get<{ hasApplied: boolean }>(`/applications/jobs/${id}/check`),
+              api.get<{ resumes: ResumeListItem[] }>('/users/me/resumes'),
+              api.get<Job[]>('/users/me/saved-jobs'),
+            ]);
+
+            setHasApplied(checkRes.data?.hasApplied ?? false);
+            const availableResumes = Array.isArray(resumeRes.data?.resumes) ? resumeRes.data.resumes : [];
+            setResumes(availableResumes);
+            
+            const defaultResume = availableResumes.find((resume) => resume.is_default);
+            if (defaultResume) {
+              setSelectedResumeId(defaultResume.id);
+            } else if (availableResumes.length > 0) {
+              setSelectedResumeId(availableResumes[0].id);
+            }
+
+            const savedJobs = Array.isArray(savedRes.data) ? savedRes.data : [];
+            const isSavedJob = savedJobs.some((savedJob) => savedJob.id === id);
+            setIsSaved(isSavedJob);
+          } catch (err) {
+            console.error('Failed to fetch user-specific job data:', err);
+          }
         }
-        
-        // Check if job is saved - savedRes.data is an array of saved jobs
-        const savedJobs = Array.isArray(savedRes.data) ? savedRes.data : [];
-        const isSavedJob = savedJobs.some((savedJob) => savedJob.id === id);
-        setIsSaved(isSavedJob);
-      })
-      .catch(() => router.push(ROUTES.dashboard))
-      .finally(() => setLoading(false));
-  }, [id, router]);
+      } catch (err) {
+        console.error('Failed to fetch job detail:', err);
+        router.push(ROUTES.jobs);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobData();
+  }, [id, router, isAuthenticated]);
 
   // Fetch AI Insights once job is loaded
   useEffect(() => {
@@ -251,6 +266,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   }, {});
 
   const handleApply = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to apply for this job');
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+
     if (!selectedResumeId) {
       toast.error('Please select a resume before applying');
       return;
@@ -311,6 +332,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   };
 
   const handleSaveJob = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to save this job');
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
     try {
       if (isSaved) {
         await api.delete(`/users/me/saved-jobs/${job?.id}`);
@@ -327,6 +353,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   };
 
   const scrollToApplySection = () => {
+    if (!isAuthenticated) {
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
     const node = document.getElementById('apply-now-section');
     if (node) {
       node.scrollIntoView({ behavior: 'smooth', block: 'start' });

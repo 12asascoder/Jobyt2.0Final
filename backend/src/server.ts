@@ -5,7 +5,7 @@ import { connectDB } from './config/database';
 import redis from './config/redis';
 import { initSocket } from './config/socket';
 
-const PORT = parseInt(process.env.PORT || '5000', 10);
+const PORT = parseInt(process.env.PORT || '5001', 10);
 
 async function startServer() {
   try {

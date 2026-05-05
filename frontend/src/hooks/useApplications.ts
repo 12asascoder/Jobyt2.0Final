@@ -16,22 +16,7 @@ export const useApplications = () => {
     setIsLoading(true);
     try {
       const res = await api.getPaginated<Application>(`/applications/my?page=${requestedPage}&limit=${limit}`);
-      const apps = res.data ?? [];
-      
-      // Fetch latest comment for each application
-      const appsWithComments = await Promise.all(apps.map(async (app) => {
-        try {
-          const eventsRes = await api.get<any[]>(`/applications/${app.id}/events`);
-          const events = eventsRes.data || [];
-          // Get the most recent event that has notes
-          const lastEventWithNotes = [...events].reverse().find(e => e.notes && e.notes.trim());
-          return { ...app, latest_comment: lastEventWithNotes?.notes || null };
-        } catch {
-          return { ...app, latest_comment: null };
-        }
-      }));
-
-      setApplications(appsWithComments);
+      setApplications(res.data ?? []);
       setTotal(res.pagination?.total ?? 0);
       setPage(res.pagination?.page ?? requestedPage);
       setTotalPages(res.pagination?.totalPages ?? 1);

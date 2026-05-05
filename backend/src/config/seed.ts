@@ -165,7 +165,7 @@ async function seed() {
         location: 'Mountain View, CA',
         type: 'full-time',
         salary_min: 180000,
-        salary_max: 250000,
+        salary_max: 250010,
         skills: ['Go', 'Python', 'Kubernetes', 'Distributed Systems', 'SQL'],
         description:
           "Join Google's infrastructure team to build highly available, planet-scale distributed systems. You will design and implement core services used by billions of users worldwide. Strong proficiency in Go or Python and deep understanding of distributed systems are required. Experience with Kubernetes and large-scale data storage is a plus.",
@@ -186,7 +186,7 @@ async function seed() {
         title: 'Product Manager — Search',
         location: 'New York, NY',
         type: 'full-time',
-        salary_min: 150000,
+        salary_min: 150010,
         salary_max: 200000,
         skills: ['Product Strategy', 'Data Analysis', 'SQL', 'Roadmapping', 'A/B Testing'],
         description:
@@ -198,7 +198,7 @@ async function seed() {
         location: 'San Francisco, CA',
         type: 'full-time',
         salary_min: 130000,
-        salary_max: 175000,
+        salary_max: 175001,
         skills: ['Figma', 'User Research', 'Prototyping', 'Design Systems', 'Accessibility'],
         description:
           "Design intuitive and delightful user experiences for Google's flagship products. You will conduct user research, create wireframes, and prototype end-to-end flows in collaboration with product and engineering teams. A strong portfolio demonstrating user-centered design process is required. Experience designing accessible interfaces at scale is a significant advantage.",
@@ -220,7 +220,7 @@ async function seed() {
         title: 'Backend Developer',
         location: 'Redmond, WA',
         type: 'full-time',
-        salary_min: 155000,
+        salary_min: 155001,
         salary_max: 210000,
         skills: ['C#', '.NET', 'Azure', 'SQL', 'REST', 'Docker'],
         description:
@@ -232,7 +232,7 @@ async function seed() {
         location: 'Remote',
         type: 'remote',
         salary_min: 140000,
-        salary_max: 195000,
+        salary_max: 195001,
         skills: ['TypeScript', 'React', 'Node.js', 'Azure', 'PostgreSQL', 'Docker'],
         description:
           "Work on Microsoft Teams' web platform, building features that empower hybrid collaboration for enterprises. You will own full-stack features from design through production deployment. Strong proficiency in TypeScript, React, and Node.js is expected. Experience with Azure cloud services and DevOps workflows is highly valued.",
@@ -242,7 +242,7 @@ async function seed() {
         title: 'DevOps Engineer',
         location: 'Austin, TX',
         type: 'full-time',
-        salary_min: 135000,
+        salary_min: 135001,
         salary_max: 180000,
         skills: ['Azure', 'Kubernetes', 'Docker', 'Terraform', 'CI/CD', 'Git'],
         description:
@@ -253,7 +253,7 @@ async function seed() {
         title: 'Data Scientist',
         location: 'Seattle, WA',
         type: 'full-time',
-        salary_min: 145000,
+        salary_min: 145001,
         salary_max: 200000,
         skills: ['Python', 'Machine Learning', 'SQL', 'Azure', 'Pandas', 'Spark'],
         description:
@@ -265,7 +265,7 @@ async function seed() {
         location: 'Remote',
         type: 'contract',
         salary_min: 120000,
-        salary_max: 165000,
+        salary_max: 165001,
         skills: ['Swift', 'iOS', 'SwiftUI', 'REST', 'Git', 'Xcode'],
         description:
           'Build compelling iOS experiences for the Microsoft 365 mobile app suite used by millions of professionals. You will collaborate with design and backend teams to ship high-quality, performant features on iOS. Proficiency in Swift and SwiftUI with a strong understanding of iOS lifecycle and performance best practices is required. Experience with Microsoft Graph API integration is a plus.',
@@ -288,7 +288,7 @@ async function seed() {
         location: 'New York, NY',
         type: 'full-time',
         salary_min: 130000,
-        salary_max: 175000,
+        salary_max: 175001,
         skills: ['JavaScript', 'TypeScript', 'React', 'CSS', 'HTML', 'Performance Optimization'],
         description:
           'Craft fast, accessible, and beautiful shopping experiences on Amazon.com visited by hundreds of millions of customers. You will develop reusable UI components, optimize web vitals, and collaborate closely with UX designers. Expertise in React and TypeScript with a strong focus on performance and accessibility is required. Experience with A/B experimentation platforms is a plus.',
@@ -299,7 +299,7 @@ async function seed() {
         location: 'Remote',
         type: 'remote',
         salary_min: 110000,
-        salary_max: 150000,
+        salary_max: 150010,
         skills: ['Test Automation', 'Selenium', 'Python', 'CI/CD', 'REST', 'SQL'],
         description:
           "Ensure the quality and reliability of Amazon's customer-facing checkout and payments systems. You will design automated test frameworks, integrate them into CI/CD pipelines, and own QA strategy for multiple squads. Strong experience in test automation with Python and Selenium is required. A security-conscious mindset and experience testing RESTful APIs are highly valued.",
@@ -309,8 +309,8 @@ async function seed() {
         title: 'Cloud Infrastructure Engineer',
         location: 'Arlington, VA',
         type: 'full-time',
-        salary_min: 150000,
-        salary_max: 205000,
+        salary_min: 150010,
+        salary_max: 205001,
         skills: ['AWS', 'Terraform', 'Kubernetes', 'Python', 'CI/CD', 'Networking'],
         description:
           "Design and operate AWS infrastructure supporting Amazon's logistics and fulfillment services globally. You will drive infrastructure-as-code adoption, manage large Kubernetes fleets, and reduce operational toil. Expert-level AWS knowledge and strong Terraform skills are mandatory. Experience with large-scale networking, VPCs, and hybrid cloud connectivity is strongly preferred.",
@@ -320,8 +320,8 @@ async function seed() {
         title: 'Data Engineer',
         location: 'Remote',
         type: 'remote',
-        salary_min: 135000,
-        salary_max: 185000,
+        salary_min: 135001,
+        salary_max: 185001,
         skills: ['Python', 'Spark', 'AWS', 'SQL', 'Airflow', 'Redshift'],
         description:
           "Build robust, scalable data pipelines that feed Amazon's analytics and ML platforms. You will design ETL workflows, manage data quality, and collaborate with data scientists to productionize models. Proficiency in Python, Spark, and SQL with deep AWS data services experience is required. Familiarity with Airflow-based orchestration and data governance practices is a plus.",
@@ -331,8 +331,8 @@ async function seed() {
         title: 'Product Manager — Prime',
         location: 'Seattle, WA',
         type: 'full-time',
-        salary_min: 145000,
-        salary_max: 195000,
+        salary_min: 145001,
+        salary_max: 195001,
         skills: ['Product Strategy', 'Data Analysis', 'SQL', 'Customer Obsession', 'Roadmapping'],
         description:
           "Define and execute the product strategy for Amazon Prime's benefits and subscription experience. You will synthesize customer feedback, usage data, and market trends to build a compelling product roadmap. Strong analytical skills, SQL proficiency, and experience owning end-to-end consumer product features are required. Demonstrated ability to influence without authority in a fast-paced, cross-functional environment is essential.",
@@ -343,8 +343,8 @@ async function seed() {
         title: 'Site Reliability Engineer',
         location: 'Chicago, IL',
         type: 'full-time',
-        salary_min: 155000,
-        salary_max: 215000,
+        salary_min: 155001,
+        salary_max: 215001,
         skills: ['Go', 'Kubernetes', 'Prometheus', 'GCP', 'Python', 'Incident Management'],
         description:
           "Improve reliability, scalability, and performance across Google's production systems. You will be on-call for critical services, drive post-mortems, and build tooling that reduces toil. Expertise in Go or Python, Kubernetes, and observability stacks such as Prometheus and Grafana is required. A track record of improving system SLOs and reducing mean time to recovery is expected.",
@@ -354,8 +354,8 @@ async function seed() {
         title: 'Security Engineer',
         location: 'Austin, TX',
         type: 'full-time',
-        salary_min: 150000,
-        salary_max: 205000,
+        salary_min: 150010,
+        salary_max: 205001,
         skills: ['Cloud Security', 'Azure', 'Python', 'Penetration Testing', 'IAM', 'Zero Trust'],
         description:
           "Protect Microsoft's cloud products and customer data by designing and implementing security controls. You will conduct threat modelling, perform penetration testing, and champion security best practices across engineering teams. Deep expertise in cloud security with Azure and identity management is required. Industry certifications such as CISSP or OSCP are a significant plus.",
@@ -365,8 +365,8 @@ async function seed() {
         title: 'Robotics Software Engineer',
         location: 'Boston, MA',
         type: 'full-time',
-        salary_min: 165000,
-        salary_max: 225000,
+        salary_min: 165001,
+        salary_max: 225001,
         skills: ['C++', 'Python', 'ROS', 'Machine Learning', 'Computer Vision', 'AWS'],
         description:
           "Develop software for Amazon Robotics' warehouse automation systems that pick, pack, and ship millions of packages daily. You will implement real-time motion planning and perception algorithms for autonomous robots. Strong C++ and Python skills with hands-on experience in ROS and computer vision are required. Experience with ML-based perception and real-time systems is highly valued.",

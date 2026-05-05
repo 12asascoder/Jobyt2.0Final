@@ -241,7 +241,7 @@ model saved_jobs {
 }
 
 /// Uploaded resume files (S3/CloudFront URL + metadata). One row per file; use is_default for application default.
-/// DB enforces ≤1 default per user: partial unique index unique_default_resume_per_user (see migration 20260323150000).
+/// DB enforces ≤1 default per user: partial unique index unique_default_resume_per_user (see migration 20260323150010).
 model resumes {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id    String   @db.Uuid
