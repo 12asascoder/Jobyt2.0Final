@@ -162,15 +162,37 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     authStorage.clearTokens();
+    const { user } = useAuthStore.getState();
+    const wasEmployer = user?.role === 'recruiter' || user?.role === 'admin';
+    
     set({
       user: null,
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
     });
-    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-      const currentPath = window.location.pathname + window.location.search;
-      window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+
+    if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname;
+      const PUBLIC_ROUTES = [
+        '/',
+        '/jobs',
+        '/internships',
+        '/login',
+        '/register',
+        '/employer/login',
+        '/employer/register'
+      ];
+      
+      const isPublic = PUBLIC_ROUTES.some(route => 
+        pathname === route || (route !== '/' && pathname.startsWith(`${route}/`))
+      );
+
+      if (!isPublic) {
+        const loginRoute = wasEmployer ? '/employer/login' : '/login';
+        const currentPath = window.location.pathname + window.location.search;
+        window.location.href = `${loginRoute}?redirect=${encodeURIComponent(currentPath)}`;
+      }
     }
   },
 

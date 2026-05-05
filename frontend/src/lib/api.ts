@@ -67,9 +67,35 @@ const clearTokens = () => {
   tokenStore.set(null);
 };
 
+const PUBLIC_ROUTES = [
+  '/',
+  '/jobs',
+  '/internships',
+  '/about',
+  '/contact',
+  '/privacy',
+  '/terms',
+  '/login',
+  '/register',
+  '/signup',
+  '/employer-login',
+  '/employer-signup',
+  '/verify-email',
+  '/add-email',
+  '/forgot-password',
+  '/reset-password',
+  '/oauth',
+];
+
+const isPublicRoute = (path: string) => {
+  return PUBLIC_ROUTES.some(route => 
+    path === route || (route !== '/' && path.startsWith(`${route}/`))
+  );
+};
+
 const performLogoutRedirect = () => {
   clearTokens();
-  if (typeof window !== 'undefined' && window.location.pathname !== LOGIN_PATH) {
+  if (typeof window !== 'undefined' && !isPublicRoute(window.location.pathname)) {
     const currentPath = window.location.pathname + window.location.search;
     window.location.href = `${LOGIN_PATH}?redirect=${encodeURIComponent(currentPath)}`;
   }
