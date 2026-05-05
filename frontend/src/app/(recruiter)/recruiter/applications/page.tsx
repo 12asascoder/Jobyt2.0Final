@@ -265,7 +265,7 @@ export default function RecruiterApplicationsPage() {
     <div className="max-w-7xl mx-auto space-y-6 pb-6">
       <section className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Applications</h1>
+          <h1 className="text-2xl sm:text-4xl md:text-[44px] leading-[1.05] font-black tracking-tight text-black">Applications</h1>
           <p className="mt-2 text-xl leading-tight text-black/80">Review and manage candidate applications</p>
         </div>
       </section>
@@ -320,24 +320,24 @@ export default function RecruiterApplicationsPage() {
               key={app.id}
               className="rounded-xl border border-slate-200 bg-white p-6 hover:shadow-sm transition-shadow"
             >
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col sm:flex-row items-start gap-4">
                 {/* Candidate Photo */}
                 <div className="flex-shrink-0">
                   {app.photo_url ? (
                     <img
                       src={resolveAssetUrl(app.photo_url) || ''}
                       alt={app.name || 'Candidate'}
-                      className="w-16 h-16 rounded-full object-cover border border-slate-200"
+                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-slate-200"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-lg font-bold text-white">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-lg font-bold text-white">
                       {app.name?.charAt(0)?.toUpperCase() || 'C'}
                     </div>
                   )}
                 </div>
 
-                {/* Left Content */}
-                <div className="flex-1">
+                {/* Content + Actions */}
+                <div className="flex-1 w-full">
                   {/* Name and Status */}
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-base font-black text-slate-900">{app.name || 'Candidate'}</h3>
@@ -398,59 +398,59 @@ export default function RecruiterApplicationsPage() {
                   )}
 
                   {/* Applied Time */}
-                  <p className="text-xs text-slate-500">Applied {formatRelative(app.created_at)}</p>
-                </div>
+                  <p className="text-xs text-slate-500 mb-3">Applied {formatRelative(app.created_at)}</p>
 
-                {/* Right Actions */}
-                <div className="flex-shrink-0 flex flex-col gap-2 ml-auto">
-                  <Link href={ROUTES.recruiterApplicationDetail(app.id)}>
-                    <button className="px-4 py-2 bg-black text-white text-xs font-bold rounded-lg hover:bg-slate-900 transition-colors">
-                      View Details
+                  {/* Actions — full width row on mobile */}
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={ROUTES.recruiterApplicationDetail(app.id)}>
+                      <button className="px-4 py-2 bg-black text-white text-xs font-bold rounded-lg hover:bg-slate-900 transition-colors">
+                        View Details
+                      </button>
+                    </Link>
+                    {(app.status.toLowerCase() === 'applied' || app.status.toLowerCase() === 'in_review') && (
+                      <>
+                        <button
+                          onClick={() => void handleUpdateApplicationStatus(app.id, 'interview')}
+                          disabled={updatingStatusFor === `${app.id}:interview`}
+                          className="px-4 py-2 bg-lime-300 text-black text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {updatingStatusFor === `${app.id}:interview` ? 'Updating...' : 'Interview'}
+                        </button>
+                        <button
+                          onClick={() => void handleUpdateApplicationStatus(app.id, 'rejected')}
+                          disabled={updatingStatusFor === `${app.id}:rejected`}
+                          className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {updatingStatusFor === `${app.id}:rejected` ? 'Updating...' : 'Reject'}
+                        </button>
+                      </>
+                    )}
+                    {app.status.toLowerCase() === 'interview' && (
+                      <>
+                        <button
+                          onClick={() => void handleUpdateApplicationStatus(app.id, 'hired')}
+                          disabled={updatingStatusFor === `${app.id}:hired`}
+                          className="px-4 py-2 bg-lime-300 text-black text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {updatingStatusFor === `${app.id}:hired` ? 'Updating...' : 'Accept'}
+                        </button>
+                        <button
+                          onClick={() => void handleUpdateApplicationStatus(app.id, 'rejected')}
+                          disabled={updatingStatusFor === `${app.id}:rejected`}
+                          className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {updatingStatusFor === `${app.id}:rejected` ? 'Updating...' : 'Reject'}
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => void handleMessageApplicant(app)}
+                      disabled={openingConversationFor === app.id}
+                      className="px-4 py-2 border border-blue-300 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {openingConversationFor === app.id ? 'Opening...' : 'Message'}
                     </button>
-                  </Link>
-                  {(app.status.toLowerCase() === 'applied' || app.status.toLowerCase() === 'in_review') && (
-                    <>
-                      <button
-                        onClick={() => void handleUpdateApplicationStatus(app.id, 'interview')}
-                        disabled={updatingStatusFor === `${app.id}:interview`}
-                        className="px-4 py-2 bg-lime-300 text-black text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {updatingStatusFor === `${app.id}:interview` ? 'Updating...' : 'Interview'}
-                      </button>
-                      <button
-                        onClick={() => void handleUpdateApplicationStatus(app.id, 'rejected')}
-                        disabled={updatingStatusFor === `${app.id}:rejected`}
-                        className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {updatingStatusFor === `${app.id}:rejected` ? 'Updating...' : 'Reject'}
-                      </button>
-                    </>
-                  )}
-                  {app.status.toLowerCase() === 'interview' && (
-                    <>
-                      <button
-                        onClick={() => void handleUpdateApplicationStatus(app.id, 'hired')}
-                        disabled={updatingStatusFor === `${app.id}:hired`}
-                        className="px-4 py-2 bg-lime-300 text-black text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {updatingStatusFor === `${app.id}:hired` ? 'Updating...' : 'Accept'}
-                      </button>
-                      <button
-                        onClick={() => void handleUpdateApplicationStatus(app.id, 'rejected')}
-                        disabled={updatingStatusFor === `${app.id}:rejected`}
-                        className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {updatingStatusFor === `${app.id}:rejected` ? 'Updating...' : 'Reject'}
-                      </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => void handleMessageApplicant(app)}
-                    disabled={openingConversationFor === app.id}
-                    className="px-4 py-2 border border-blue-300 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {openingConversationFor === app.id ? 'Opening...' : 'Message'}
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>

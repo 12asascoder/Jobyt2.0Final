@@ -101,9 +101,9 @@ export default function RecruiterJobsPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-6">
-      <section className="flex items-start justify-between gap-4">
+      <section className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Job Listings</h1>
+            <h1 className="text-2xl sm:text-4xl md:text-[44px] leading-[1.05] font-black tracking-tight text-black">Job Listings</h1>
             <p className="mt-2 text-xl leading-tight text-black/80">Manage and track all your internship postings</p>
           </div>
           <Link href={ROUTES.recruiterNewJob} className="shrink-0">
@@ -131,35 +131,34 @@ export default function RecruiterJobsPage() {
             const statusDisplay = getJobStatusDisplay(job);
             return (
             <div key={job.id} className="rounded-xl border border-slate-200 bg-white p-6 hover:shadow-sm transition-shadow">
-              {/* Header Row: Title and Status Badge */}
-              <div className="flex items-start justify-between gap-4 mb-2">
-                <h3 className="text-lg font-black text-slate-900 flex-1">{job.title}</h3>
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 mb-2">
+                <div className="flex items-center flex-wrap gap-2">
+                  <h3 className="text-lg font-black text-slate-900 flex-1 min-w-0">{job.title}</h3>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${statusDisplay.className}`}>
                     {statusDisplay.label}
                   </span>
-                  {job.status !== 'closed' && (
-                    <>
-                      <Link href={ROUTES.recruiterJobDetail(job.id)}>
-                        <button className="px-3 h-8 rounded-lg bg-black text-lime-300 hover:bg-slate-900 text-xs font-bold transition-colors">
-                          View Details
-                        </button>
-                      </Link>
-                      <Link href={ROUTES.recruiterJobDetail(job.id)}>
-                        <button className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors">
-                          <FaPencil className="text-xs" />
-                        </button>
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(job.id, job.title)}
-                        disabled={deleting === job.id}
-                        className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 flex items-center justify-center transition-colors"
-                      >
-                        <FaTrash className="text-xs" />
-                      </button>
-                    </>
-                  )}
                 </div>
+                {job.status !== 'closed' && (
+                  <div className="flex items-center flex-wrap gap-2">
+                    <Link href={ROUTES.recruiterJobDetail(job.id)}>
+                      <button className="px-3 h-8 rounded-lg bg-black text-lime-300 hover:bg-slate-900 text-xs font-bold transition-colors">
+                        View Details
+                      </button>
+                    </Link>
+                    <Link href={ROUTES.recruiterJobDetail(job.id)}>
+                      <button className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                        <FaPencil className="text-xs" />
+                      </button>
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(job.id, job.title)}
+                      disabled={deleting === job.id}
+                      className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 flex items-center justify-center transition-colors"
+                    >
+                      <FaTrash className="text-xs" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Location, Type, Duration Row */}

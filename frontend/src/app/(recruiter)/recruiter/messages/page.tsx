@@ -269,11 +269,11 @@ export default function MessagesPage() {
     <div className="max-w-7xl mx-auto h-[calc(100vh-100px)] overflow-hidden">
       {/* Main Container */}
       <div 
-        className="w-full max-w-[1208px] h-full max-h-[731px] bg-[#F4F1EA] rounded-[32px] flex overflow-hidden p-6 gap-6 shadow-sm"
+        className="w-full max-w-[1208px] h-full max-h-[731px] bg-[#F4F1EA] rounded-[32px] flex flex-col md:flex-row overflow-hidden p-4 md:p-6 gap-4 md:gap-6 shadow-sm"
       >
         
-        {/* LEFT PANEL - Chat List */}
-        <div className="w-[340px] flex flex-col gap-4 flex-shrink-0">
+        {/* LEFT PANEL - Chat List: full on mobile when no convo, hidden on mobile when convo selected */}
+        <div className={`${selectedConvId ? 'hidden md:flex' : 'flex'} w-full md:w-[300px] lg:w-[340px] flex-col gap-4 flex-shrink-0`}>
           {/* Search Bar */}
           <div className="relative">
             <FaMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70" size={16} />
@@ -325,12 +325,19 @@ export default function MessagesPage() {
           </div>
         </div>
 
-        {/* MIDDLE PANEL - Chat Area */}
-        <div className="flex-1 flex flex-col h-full bg-transparent min-w-[400px]">
+        {/* MIDDLE PANEL - Chat Area: full on mobile when convo selected, hidden on mobile when no convo */}
+        <div className={`${selectedConvId ? 'flex' : 'hidden md:flex'} flex-1 flex-col h-full bg-transparent min-w-0`}>
           {selectedConvId ? (
             <>
-              {/* Chat Header */}
-              <div className="bg-white rounded-[20px] px-6 py-3 flex items-center gap-4 flex-shrink-0 shadow-sm mb-4">
+              {/* Chat Header with back button on mobile */}
+              <div className="bg-white rounded-[20px] px-4 md:px-6 py-3 flex items-center gap-3 md:gap-4 flex-shrink-0 shadow-sm mb-4">
+                <button
+                  className="md:hidden flex items-center justify-center w-8 h-8 rounded-full bg-black text-white shrink-0"
+                  onClick={() => setSelectedConvId(null)}
+                  aria-label="Back to conversations"
+                >
+                  &#8592;
+                </button>
                 <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden">
                   <img src={resolveAssetUrl(selectedParticipant?.avatar || selectedParticipant?.logo_url || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + selectedParticipant?.name)} alt="" className="w-full h-full object-cover" />
                 </div>
@@ -401,8 +408,8 @@ export default function MessagesPage() {
           )}
         </div>
 
-        {/* RIGHT PANEL - General Info */}
-        <div className="w-[280px] flex flex-col gap-4 flex-shrink-0">
+        {/* RIGHT PANEL - General Info: hidden on mobile and tablet */}
+        <div className="hidden lg:flex w-[280px] flex-col gap-4 flex-shrink-0">
           <h4 className="text-[18px] font-bold text-black px-2 mt-2">General Info</h4>
           
           <div className="bg-white rounded-[20px] p-5 shadow-sm">

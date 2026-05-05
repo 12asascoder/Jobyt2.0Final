@@ -71,7 +71,7 @@ export default function AnalyticsPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-6">
       <section>
-        <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Analytics</h1>
+        <h1 className="text-2xl sm:text-4xl md:text-[44px] leading-[1.05] font-black tracking-tight text-black">Analytics</h1>
       </section>
 
       {/* Stats Grid */}
@@ -82,7 +82,7 @@ export default function AnalyticsPage() {
           { label: ['TOTAL', 'APPLICATIONS'], value: data.summary.total_applications },
           { label: ['TOTAL', 'VIEWS'], value: data.summary.total_views },
         ].map((stat) => (
-          <article key={stat.label.join('-')} className="rounded-2xl bg-black text-lime-300 px-5 py-4 shadow-xl w-[199px] h-[100px] flex items-center">
+          <article key={stat.label.join('-')} className="rounded-2xl bg-black text-lime-300 px-5 py-4 shadow-xl flex-1 min-w-[140px] max-w-[220px] h-[100px] flex items-center">
             <div className="flex items-end gap-4">
               <p className="text-[38px] leading-none font-black tracking-tight">{stat.value}</p>
               <div className="pb-1">
