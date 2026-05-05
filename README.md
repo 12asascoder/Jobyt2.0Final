@@ -172,7 +172,7 @@ cp .env.example .env
 docker-compose up --build
 ```
 
-- Backend: http://localhost:5000
+- Backend: http://localhost:5001
 - Postgres and Redis start automatically
 - Run `npm run db:init` once to apply the schema
 

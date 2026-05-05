@@ -10,7 +10,6 @@ type ApplicationView = {
     companyName?: string | null;
     job_title?: string;
     status_updated_at?: string;
-    latest_comment?: string | null;
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -118,9 +117,9 @@ export default function ApplicationsPage() {
                                 <div className="col-span-2">Company</div>
                                 <div className="col-span-2">Profile</div>
                                 <div className="col-span-2">Applied On</div>
-                                <div className="col-span-1">Status</div>
-                                <div className="col-span-2">Comments</div>
+                                <div className="col-span-2">Status</div>
                                 <div className="col-span-1 text-center">View</div>
+                                <div className="col-span-1">Last Updated</div>
                             </div>
                         </div>
 
@@ -129,55 +128,55 @@ export default function ApplicationsPage() {
                             {applications.map((app) => {
                                 const view = app as typeof app & ApplicationView;
                                 return (
-                                <div
-                                    key={app.id}
-                                    className="bg-white border border-[#e8e4dc] rounded-2xl px-6 py-5 hover:shadow-md transition-shadow"
-                                >
-                                    <div className="grid grid-cols-10 gap-3 items-center">
-                                        <div className="col-span-2">
-                                            <span className="text-sm font-semibold text-[#1a1a1a]">
-                                                {view.companyName || 'N/A'}
-                                            </span>
-                                        </div>
-                                        <div className="col-span-2">
-                                            <span className="text-sm text-slate-600">
-                                                {view.job_title || 'Position'}
-                                            </span>
-                                        </div>
-                                        <div className="col-span-2">
-                                            <span className="text-sm text-slate-500">
-                                                {formatDate(app.created_at)}
-                                            </span>
-                                        </div>
-                                        <div className="col-span-1">
-                                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
-                                                {APPLICATION_STATUS_LABELS[app.status] || app.status}
-                                            </span>
-                                        </div>
-                                        <div className="col-span-2 min-w-0">
-                                            <div className="group relative">
-                                                <p className="text-xs text-slate-500 italic line-clamp-2 leading-relaxed">
-                                                    {app.latest_comment || 'No comments yet'}
-                                                </p>
-                                                {app.latest_comment && (
-                                                    <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-1">
-                                                        {app.latest_comment}
-                                                        <div className="absolute top-full left-4 border-8 border-transparent border-t-slate-900" />
-                                                    </div>
-                                                )}
+                                    <div
+                                        key={app.id}
+                                        className="bg-white border border-[#e8e4dc] rounded-2xl px-6 py-5 hover:shadow-md transition-shadow"
+                                    >
+                                        <div className="grid grid-cols-10 gap-3 items-center">
+                                            <div className="col-span-2">
+                                                <span className="text-sm font-semibold text-[#1a1a1a]">
+                                                    {view.companyName || 'Company'}
+                                                </span>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <span className="text-sm text-slate-600">
+                                                    {view.job_title || 'Position'}
+                                                </span>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <span className="text-sm text-slate-500">
+                                                    {formatDate(app.created_at)}
+                                                </span>
+                                            </div>
+                                            <div className="col-span-1">
+                                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
+                                                    {APPLICATION_STATUS_LABELS[app.status] || app.status}
+                                                </span>
+                                            </div>
+                                            <div className="col-span-2 min-w-0">
+                                                <div className="group relative">
+                                                    <p className="text-xs text-slate-500 italic line-clamp-2 leading-relaxed">
+                                                        {app.latest_comment || 'No comments yet'}
+                                                    </p>
+                                                    {app.latest_comment && (
+                                                        <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-1">
+                                                            {app.latest_comment}
+                                                            <div className="absolute top-full left-4 border-8 border-transparent border-t-slate-900" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="col-span-1 flex justify-center">
+                                                <button
+                                                    onClick={() => router.push(`/jobs/${app.job_id}`)}
+                                                    className="w-9 h-9 rounded-lg bg-[#f4f1ea] hover:bg-[#e8e4dc] flex items-center justify-center transition-colors"
+                                                    aria-label="Open job details"
+                                                >
+                                                    <FaArrowUpRightFromSquare className="text-xs text-[#1a1a1a]" />
+                                                </button>
                                             </div>
                                         </div>
-                                        <div className="col-span-1 flex justify-center">
-                                            <button
-                                                onClick={() => router.push(`/jobs/${app.job_id}`)}
-                                                className="w-9 h-9 rounded-lg bg-[#f4f1ea] hover:bg-[#e8e4dc] flex items-center justify-center transition-colors"
-                                                aria-label="Open job details"
-                                            >
-                                                <FaArrowUpRightFromSquare className="text-xs text-[#1a1a1a]" />
-                                            </button>
-                                        </div>
                                     </div>
-                                </div>
                                 );
                             })}
                         </div>
@@ -188,42 +187,36 @@ export default function ApplicationsPage() {
                         {applications.map((app) => {
                             const view = app as typeof app & ApplicationView;
                             return (
-                            <div
-                                key={app.id}
-                                className="bg-white border border-[#e8e4dc] rounded-2xl p-5"
-                            >
-                                <div className="flex items-start justify-between mb-3">
-                                    <div>
-                                        <p className="text-sm font-bold text-[#1a1a1a]">
-                                            {view.companyName || 'N/A'}
-                                        </p>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            {view.job_title || 'Position'}
-                                        </p>
+                                <div
+                                    key={app.id}
+                                    className="bg-white border border-[#e8e4dc] rounded-2xl p-5"
+                                >
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div>
+                                            <p className="text-sm font-bold text-[#1a1a1a]">
+                                                {view.companyName || 'Company'}
+                                            </p>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                {view.job_title || 'Position'}
+                                            </p>
+                                        </div>
+                                        <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
+                                            {APPLICATION_STATUS_LABELS[app.status] || app.status}
+                                        </span>
                                     </div>
-                                    <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
-                                        {APPLICATION_STATUS_LABELS[app.status] || app.status}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs text-slate-400">
-                                        Applied {formatDate(app.created_at)}
-                                    </span>
-                                    <button
-                                        onClick={() => router.push(`/jobs/${app.job_id}`)}
-                                        className="w-8 h-8 rounded-lg bg-[#f4f1ea] flex items-center justify-center"
-                                        aria-label="Open job details"
-                                    >
-                                        <FaArrowUpRightFromSquare className="text-[10px] text-[#1a1a1a]" />
-                                    </button>
-                                </div>
-                                {app.latest_comment && (
-                                    <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Latest Comment</p>
-                                        <p className="text-xs text-slate-600 italic">"{app.latest_comment}"</p>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-slate-400">
+                                            Applied {formatDate(app.created_at)}
+                                        </span>
+                                        <button
+                                            onClick={() => router.push(`/jobs/${app.job_id}`)}
+                                            className="w-8 h-8 rounded-lg bg-[#f4f1ea] flex items-center justify-center"
+                                            aria-label="Open job details"
+                                        >
+                                            <FaArrowUpRightFromSquare className="text-[10px] text-[#1a1a1a]" />
+                                        </button>
                                     </div>
-                                )}
-                            </div>
+                                </div>
                             );
                         })}
                     </div>
@@ -249,11 +242,10 @@ export default function ApplicationsPage() {
                                     <button
                                         key={p}
                                         onClick={() => goToPage(p as number)}
-                                        className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${
-                                            p === page
+                                        className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${p === page
                                                 ? 'bg-[#1a1a1a] text-white'
                                                 : 'bg-[#f4f1ea] text-[#1a1a1a] hover:bg-[#e8e4dc]'
-                                        }`}
+                                            }`}
                                     >
                                         {p}
                                     </button>

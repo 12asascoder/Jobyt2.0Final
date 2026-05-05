@@ -102,7 +102,7 @@ async function fetchWithRetry(url: string, maxRetries = 3, timeoutMs = 15000): P
 
 async function getFileContent(slug: string, filename: string): Promise<{ content: string; source: 'local' | 'github' }> {
   const localRepo = process.env.ROADMAP_LOCAL_REPO_PATH;
-  
+
   if (localRepo) {
     try {
       const filePath = path.join(localRepo, 'src', 'data', 'roadmaps', slug, filename);
@@ -259,10 +259,10 @@ function parseMarkdownStructure(content: string, slug: string) {
   const nodes: RawNode[] = [];
   const edges: RawEdge[] = [];
   const lines = content.split('\n');
-  
+
   // Track the most recent node created at each heading level (1 to 6)
   const activeStack: (RawNode | null)[] = Array(7).fill(null);
-  
+
   let inFrontmatter = false;
   let sortOrders = Array(7).fill(0);
 
@@ -282,7 +282,7 @@ function parseMarkdownStructure(content: string, slug: string) {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
+
     // Skip frontmatter
     if (line === '---' && i < 5) {
       inFrontmatter = !inFrontmatter;
@@ -310,7 +310,7 @@ function parseMarkdownStructure(content: string, slug: string) {
       parentLevel--;
     }
     const parentNode = parentLevel > 0 ? activeStack[parentLevel] : rootNode;
-    
+
     // Prevent self-referencing or creating duplicate root
     if (level === 1 && nodes.length === 1) {
       // It's the first H1, just rename the root node
@@ -319,7 +319,7 @@ function parseMarkdownStructure(content: string, slug: string) {
     }
 
     const nodeId = `${slug}-${slugify(title)}-L${level}-${sortOrders[level]}`;
-    
+
     const node: RawNode = {
       id: nodeId,
       title,
@@ -338,7 +338,7 @@ function parseMarkdownStructure(content: string, slug: string) {
       edges.push({ sourceId: parentNode.id, targetId: nodeId });
       parentNode.children.push(node);
     }
-    
+
     // Clear out deeper levels from stack since we climbed up or stayed parallel
     for (let l = level + 1; l <= 6; l++) {
       activeStack[l] = null;
@@ -348,7 +348,7 @@ function parseMarkdownStructure(content: string, slug: string) {
   // Create sequential edges between all same-level top categories (H2s)
   const categories = nodes.filter(n => n.type === 'category');
   for (let i = 0; i < categories.length - 1; i++) {
-    edges.push({ sourceId: categories[i].id, targetId: categories[i+1].id });
+    edges.push({ sourceId: categories[i].id, targetId: categories[i + 1].id });
   }
 
   return { nodes, edges };
