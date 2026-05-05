@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { ROUTES } from '@/constants';
 import { ApiError } from '@/lib/api';
@@ -17,9 +17,14 @@ import { AuthTokens, AuthUser } from '@/types';
 export default function LoginPage() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const redirectTarget = searchParams.get('redirect');
   const isEmployerLogin = pathname.includes('employer-login');
   const roleFromRoute = isEmployerLogin ? 'recruiter' : 'applicant';
-  const signupRoute = isEmployerLogin ? ROUTES.employerSignup : ROUTES.userSignup;
+  const signupBaseRoute = isEmployerLogin ? ROUTES.employerSignup : ROUTES.userSignup;
+  const signupRoute = redirectTarget 
+    ? `${signupBaseRoute}?redirect=${encodeURIComponent(redirectTarget)}` 
+    : signupBaseRoute;
   const login = useAuthStore((s) => s.login);
   const setSession = useAuthStore((s) => s.setSession);
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -42,7 +47,7 @@ export default function LoginPage() {
       router.push(ROUTES.addEmail);
       return;
     }
-    router.push(routeByRole(user));
+    router.push(redirectTarget || routeByRole(user));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,7 +55,7 @@ export default function LoginPage() {
     setError('');
     try {
       const user = await login(email, password);
-      router.push(routeByRole(user));
+      router.push(redirectTarget || routeByRole(user));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Invalid credentials. Please try again.');
     }
@@ -179,6 +184,7 @@ export default function LoginPage() {
               onRequiresEmail={() => router.push(ROUTES.addEmail)}
               onRequiresVerification={() => router.push(`${ROUTES.verifyEmail}?pending=1`)}
               onError={setError}
+              redirectTarget={redirect}
             />
             <GitHubLoginButton
               role={roleFromRoute}
@@ -186,6 +192,7 @@ export default function LoginPage() {
               onStart={() => setOauthPending(true)}
               onComplete={() => setOauthPending(false)}
               onError={setError}
+              redirectTarget={redirect}
             />
             <div className="sm:col-span-2">
               <LinkedInLoginButton
@@ -194,6 +201,7 @@ export default function LoginPage() {
                 onStart={() => setOauthPending(true)}
                 onComplete={() => setOauthPending(false)}
                 onError={setError}
+                redirectTarget={redirect}
               />
             </div>
           </div>

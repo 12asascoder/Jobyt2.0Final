@@ -36,7 +36,8 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
     }
 
     if (!isAuthenticated) {
-      router.replace(unauthenticatedRoute);
+      const currentPath = window.location.pathname + window.location.search;
+      router.replace(`${unauthenticatedRoute}?redirect=${encodeURIComponent(currentPath)}`);
       return;
     }
 

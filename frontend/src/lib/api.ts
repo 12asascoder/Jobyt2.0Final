@@ -70,7 +70,8 @@ const clearTokens = () => {
 const performLogoutRedirect = () => {
   clearTokens();
   if (typeof window !== 'undefined' && window.location.pathname !== LOGIN_PATH) {
-    window.location.href = LOGIN_PATH;
+    const currentPath = window.location.pathname + window.location.search;
+    window.location.href = `${LOGIN_PATH}?redirect=${encodeURIComponent(currentPath)}`;
   }
 };
 

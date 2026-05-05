@@ -12,6 +12,8 @@ import {
   clearOAuthRole,
   getOAuthReferralCode,
   getOAuthRole,
+  getOAuthRedirectTarget,
+  clearOAuthRedirectTarget,
   OAuthResponseData,
   parseOAuthResponse,
   readOAuthState,
@@ -90,14 +92,17 @@ export default function OAuthCallbackPage() {
           return;
         }
 
-        const destination =
+        const redirectTarget = getOAuthRedirectTarget();
+        clearOAuthRedirectTarget();
+
+        const defaultDestination =
           parsed.user.role === 'recruiter'
             ? ROUTES.recruiterDashboard
             : parsed.user.role === 'admin'
               ? ROUTES.adminDashboard
               : ROUTES.dashboard;
 
-        router.replace(destination);
+        router.replace(redirectTarget || defaultDestination);
       } catch (err) {
         setStatus('error');
         setMessage(err instanceof Error ? err.message : 'Login failed. Please try again.');
