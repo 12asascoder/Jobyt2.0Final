@@ -16,7 +16,7 @@ export const ScraperService = {
 
       // Optimize scraping by blocking unnecessary resources
       await page.setRequestInterception(true);
-      page.on('request', (req) => {
+      page.on('request', (req: any) => {
         const resourceType = req.resourceType();
         if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
           req.abort();
