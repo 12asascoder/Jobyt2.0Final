@@ -184,7 +184,7 @@ export default function LoginPage() {
               onRequiresEmail={() => router.push(ROUTES.addEmail)}
               onRequiresVerification={() => router.push(`${ROUTES.verifyEmail}?pending=1`)}
               onError={setError}
-              redirectTarget={redirect}
+              redirectTarget={redirectTarget}
             />
             <GitHubLoginButton
               role={roleFromRoute}
@@ -192,7 +192,7 @@ export default function LoginPage() {
               onStart={() => setOauthPending(true)}
               onComplete={() => setOauthPending(false)}
               onError={setError}
-              redirectTarget={redirect}
+              redirectTarget={redirectTarget}
             />
             <div className="sm:col-span-2">
               <LinkedInLoginButton
@@ -201,7 +201,7 @@ export default function LoginPage() {
                 onStart={() => setOauthPending(true)}
                 onComplete={() => setOauthPending(false)}
                 onError={setError}
-                redirectTarget={redirect}
+                redirectTarget={redirectTarget}
               />
             </div>
           </div>
