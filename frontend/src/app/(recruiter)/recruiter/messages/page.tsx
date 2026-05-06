@@ -24,6 +24,7 @@ interface ConversationDetail {
   recruiter?: User;
   applicant?: User;
   last_message_at: string;
+  created_at?: string;
 }
 
 interface Message {
@@ -52,8 +53,10 @@ interface Conversation {
     email?: string | null;
     avatar?: string | null;
     logo_url?: string | null;
+    phone?: string | null;
   };
   unread?: boolean;
+  created_at?: string;
 }
 
 interface PublicUserProfile {
@@ -65,6 +68,7 @@ interface PublicUserProfile {
     companyName?: string | null;
     photo_url?: string | null;
     logo_url?: string | null;
+    phone?: string | null;
   };
 }
 
@@ -160,7 +164,9 @@ export default function MessagesPage() {
             email: profile?.email || null,
             avatar: profile?.profile?.photo_url || null,
             logo_url: profile?.profile?.logo_url || null,
+            phone: profile?.profile?.phone || null,
           },
+          created_at: conv.created_at,
         };
       });
 
@@ -189,6 +195,7 @@ export default function MessagesPage() {
               applicant_id: selectedMeta.applicant_id,
               job_id: selectedMeta.job_id,
               last_message_at: selectedMeta.last_message_at,
+              created_at: selectedMeta.created_at,
             }
           : null,
       );
@@ -279,6 +286,23 @@ export default function MessagesPage() {
   );
 
   const selectedParticipant = selectedConversationItem?.participant;
+
+  const sharedLinks = useMemo(() => {
+    const links: string[] = [];
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    messages.forEach((msg) => {
+      const found = msg.body.match(urlRegex);
+      if (found) links.push(...found);
+    });
+    return [...new Set(links)];
+  }, [messages]);
+
+  const sharedFiles = useMemo(() => {
+    // In the future, if we have an attachments field in messages, we can extract it here.
+    // For now, we can check for common file extension patterns in links.
+    const fileExtensions = ['.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.zip'];
+    return sharedLinks.filter((link) => fileExtensions.some((ext) => link.toLowerCase().includes(ext)));
+  }, [sharedLinks]);
 
   if (loading) {
     return (
@@ -611,7 +635,7 @@ export default function MessagesPage() {
               </div>
               <div>
                 <p className="text-[15px] font-bold text-black leading-tight">
-                  {selectedParticipant?.name || 'User'}
+                  {selectedParticipant?.name || 'Applicant'}
                 </p>
                 <p className="text-[12px] text-slate-500 leading-tight mt-0.5">Applicant</p>
               </div>
@@ -620,26 +644,38 @@ export default function MessagesPage() {
             <div className="space-y-3">
               <div>
                 <p className="text-[11px] text-slate-400 mb-0.5">Email</p>
-                <p className="text-[12px] text-black font-medium">{selectedParticipant?.email || 'N/A'}</p>
+                <p className="text-[12px] text-black font-medium truncate" title={selectedParticipant?.email || ''}>{selectedParticipant?.email || 'N/A'}</p>
               </div>
+              {selectedParticipant?.phone && (
+                <div>
+                  <p className="text-[11px] text-slate-400 mb-0.5">Phone</p>
+                  <p className="text-[12px] text-black font-medium">{selectedParticipant.phone}</p>
+                </div>
+              )}
               <div>
                 <p className="text-[11px] text-slate-400 mb-0.5">Date Created</p>
                 <p className="text-[12px] text-black font-medium">
-                  {formatDateTime(selectedConversationItem?.last_message_at || selectedConversation?.last_message_at)}
+                  {formatDateTime(selectedConversationItem?.created_at || selectedConversation?.created_at || selectedConversationItem?.last_message_at)}
                 </p>
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-[20px] p-4 flex items-center justify-between shadow-sm cursor-pointer hover:bg-slate-50">
-            <span className="text-[14px] font-bold text-black">Shared Files</span>
+            <div className="flex flex-col">
+              <span className="text-[14px] font-bold text-black">Shared Files</span>
+              <span className="text-[11px] text-slate-400">{sharedFiles.length} files</span>
+            </div>
             <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white">
               <FaChevronDown size={10} />
             </div>
           </div>
 
           <div className="bg-white rounded-[20px] p-4 flex items-center justify-between shadow-sm cursor-pointer hover:bg-slate-50">
-            <span className="text-[14px] font-bold text-black">Shared Links</span>
+            <div className="flex flex-col">
+              <span className="text-[14px] font-bold text-black">Shared Links</span>
+              <span className="text-[11px] text-slate-400">{sharedLinks.length} links</span>
+            </div>
             <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white">
               <FaChevronDown size={10} />
             </div>
