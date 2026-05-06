@@ -217,29 +217,37 @@ function RecruiterFloatingSidebar() {
         </div>
       </div>
 
-      <Modal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} title="Log out?">
-        <div className="space-y-4">
-          <p className="text-sm text-slate-600">You will be signed out from this device.</p>
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setShowLogoutModal(false)}
-              className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
-              disabled={isLoggingOut}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmLogout}
-              className="px-4 py-2 rounded-lg bg-black text-lime-300 hover:bg-slate-900 disabled:opacity-60"
-              disabled={isLoggingOut}
-            >
-              {isLoggingOut ? 'Logging out...' : 'Log out'}
-            </button>
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div 
+            className="bg-black rounded-[24px] flex flex-col justify-center items-center text-center p-8"
+            style={{ width: '479px', height: '293px', boxShadow: '0px 0px 50px 0px #00000040' }}
+          >
+            <h3 className="text-[32px] font-bold text-white mb-4" style={{ fontFamily: 'Myanmar Khyay, sans-serif' }}>Log Out?</h3>
+            <p className="text-white text-[14px] leading-tight max-w-[360px] mb-8" style={{ fontFamily: 'Myanmar Sans Pro, sans-serif' }}>
+              Your progress is saved. Come back anytime to track your candidate applications.
+            </p>
+            <div className="flex items-center justify-center gap-12 w-full px-8">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                disabled={isLoggingOut}
+                className="w-[120px] py-2.5 rounded-[12px] border-[0.8px] border-white/40 text-white text-[16px] hover:bg-white/10 transition-colors disabled:opacity-50"
+                style={{ fontFamily: 'Myanmar Sans Pro, sans-serif' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmLogout}
+                disabled={isLoggingOut}
+                className="w-[120px] py-2.5 rounded-[12px] bg-[#C3FF3D] text-black text-[16px] font-semibold hover:bg-[#aee62d] transition-colors disabled:opacity-50"
+                style={{ fontFamily: 'Myanmar Sans Pro, sans-serif' }}
+              >
+                {isLoggingOut ? 'Wait...' : 'Confirm'}
+              </button>
+            </div>
           </div>
         </div>
-      </Modal>
+      )}
     </>
   );
 }

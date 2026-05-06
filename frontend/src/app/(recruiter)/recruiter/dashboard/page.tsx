@@ -207,9 +207,9 @@ export default function RecruiterDashboardPage() {
 
     return (
         <div className="max-w-7xl mx-auto space-y-6 pb-6">
-            <section className="flex items-start justify-between gap-4">
+            <section className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-[44px] leading-[1.05] font-black tracking-tight text-black">Welcome back!</h1>
+                    <h1 className="text-2xl sm:text-4xl md:text-[44px] leading-[1.05] font-black tracking-tight text-black">Welcome back!</h1>
                     <p className="mt-2 text-xl leading-tight text-black/80">Here's what's happening with your internships</p>
                 </div>
                 <Link href={ROUTES.recruiterNewJob} className="shrink-0">
@@ -220,10 +220,10 @@ export default function RecruiterDashboardPage() {
                 </Link>
             </section>
 
-            <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <section className="flex flex-wrap gap-4 sm:gap-6">
                 {statCards.map((stat) => {
                     return (
-                        <article key={stat.label.join('-')} className="rounded-2xl bg-black text-lime-300 px-5 py-4 shadow-xl min-h-[92px] flex items-center">
+                        <article key={stat.label.join('-')} className="rounded-2xl bg-black text-lime-300 px-5 py-4 shadow-xl flex-1 min-w-[140px] max-w-[220px] h-[100px] flex items-center">
                             <div className="flex items-end gap-4">
                                 <p className="text-[38px] leading-none font-black tracking-tight">{stat.value}</p>
                                 <div className="pb-1">
@@ -242,7 +242,7 @@ export default function RecruiterDashboardPage() {
             <section className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                 <article className="rounded-2xl bg-[#ece9e2] border border-black/5 shadow-sm p-4">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Recent Applications</h2>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Recent Applications</h2>
                         <Link href={ROUTES.recruiterApplications} className="rounded-full bg-black text-white text-xs font-semibold px-4 py-1.5 hover:bg-slate-900 inline-flex items-center gap-1">
                             View All <FaArrowRight className="text-[10px]" />
                         </Link>
@@ -282,7 +282,7 @@ export default function RecruiterDashboardPage() {
 
                 <article className="rounded-2xl bg-[#ece9e2] border border-black/5 shadow-sm p-4">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Active Job Posts</h2>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Active Job Posts</h2>
                         <Link href={ROUTES.recruiterJobs} className="rounded-full bg-black text-white text-xs font-semibold px-4 py-1.5 hover:bg-slate-900 inline-flex items-center gap-1">
                             View All <FaArrowRight className="text-[10px]" />
                         </Link>
