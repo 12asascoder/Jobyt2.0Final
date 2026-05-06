@@ -13,6 +13,8 @@ interface JobFilters {
   salary_min?: number;
   salary_max?: number;
   skills?: string;
+  wfh?: boolean;
+  partTime?: boolean;
   page?: number;
   limit?: number;
   sort?: string;
@@ -38,6 +40,15 @@ export const useJobs = () => {
       limit: requestedLimit,
     };
 
+    if (normalizedFilters.wfh && !normalizedFilters.location) {
+      normalizedFilters.location = 'remote';
+    }
+    if (normalizedFilters.partTime && !normalizedFilters.type) {
+      normalizedFilters.type = 'part-time';
+    }
+
+    const { wfh, partTime, ...apiFilters } = normalizedFilters;
+
     if (requestedPage === 1) {
       setIsLoading(true);
       setActiveFilters({ ...normalizedFilters, page: undefined });
@@ -48,7 +59,7 @@ export const useJobs = () => {
     setError(null);
     try {
       const params = new URLSearchParams(
-        Object.entries(normalizedFilters)
+        Object.entries(apiFilters)
           .filter(([, v]) => v !== undefined && v !== '')
           .map(([k, v]) => [k, String(v)])
       );
