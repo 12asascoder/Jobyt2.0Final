@@ -17,8 +17,11 @@ export const JobController = {
   },
   async getJobs(req: Request, res: Response, next: NextFunction) {
     try {
+      // Parse and validate pagination parameters
       const page = Math.max(1, Number(req.query.page) || 1);
       const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+      
+      // Extract and normalize filter parameters
       const status = req.query.status as string | undefined;
       const type = req.query.type as JobType | undefined;
       const keywordRaw = req.query.keyword;
@@ -28,15 +31,35 @@ export const JobController = {
       const skillsRaw = req.query.skills;
       const excludeAppliedRaw = req.query.exclude_applied;
 
+      // Safely parse string inputs
       const keyword = typeof keywordRaw === 'string' ? keywordRaw.trim() : undefined;
       const location = typeof locationRaw === 'string' ? locationRaw.trim() : undefined;
-      const salary_min = typeof salaryMinRaw === 'string' ? Number(salaryMinRaw) : undefined;
-      const salary_max = typeof salaryMaxRaw === 'string' ? Number(salaryMaxRaw) : undefined;
+      
+      // Parse numeric values with validation
+      let salary_min: number | undefined = undefined;
+      let salary_max: number | undefined = undefined;
+      
+      if (typeof salaryMinRaw === 'string') {
+        const parsed = Number(salaryMinRaw);
+        if (Number.isFinite(parsed) && parsed >= 0) {
+          salary_min = parsed;
+        }
+      }
+      
+      if (typeof salaryMaxRaw === 'string') {
+        const parsed = Number(salaryMaxRaw);
+        if (Number.isFinite(parsed) && parsed >= 0) {
+          salary_max = parsed;
+        }
+      }
+
+      // Handle exclude_applied for applicants (to hide already applied jobs)
       const excludeApplied =
         typeof excludeAppliedRaw === 'string' && ['1', 'true', 'yes'].includes(excludeAppliedRaw.toLowerCase());
       const excludeAppliedForApplicantId =
         excludeApplied && req.user?.role === 'applicant' ? req.user.userId : undefined;
 
+      // Normalize skills array from comma-separated or array format
       const normalizedSkills = (() => {
         if (!skillsRaw) return undefined;
 
@@ -51,6 +74,10 @@ export const JobController = {
         return normalized.length > 0 ? Array.from(new Set(normalized)) : undefined;
       })();
 
+      // Determine if in public discovery mode (no user or applicant)
+      const isDiscoveryMode = !req.user || req.user.role === 'applicant';
+      
+      // Fetch jobs with filters
       const { jobs, pagination } = await JobService.getJobs({
         page,
         limit,
@@ -62,10 +89,11 @@ export const JobController = {
         salary_max,
         skills: normalizedSkills,
         excludeAppliedForApplicantId,
-        onlyApproved: req.user?.role === 'applicant',
-        prioritizeSpazorlabs: req.user?.role === 'applicant',
+        onlyApproved: isDiscoveryMode,
+        prioritizeSpazorlabs: isDiscoveryMode,
       });
 
+      // Send paginated response with metadata
       sendPaginated(res, jobs, pagination.total, pagination.page, pagination.limit, 'Jobs fetched successfully');
     } catch (err) {
       next(err);
@@ -95,8 +123,28 @@ export const JobController = {
   async getJobById(req: Request, res: Response, next: NextFunction) {
     try {
       const jobId = req.params.id as string;
+      
+      // Validate job ID format
+      if (!jobId || jobId.trim().length === 0) {
+        res.status(400).json({ success: false, message: 'Job ID is required' });
+        return;
+      }
+
       const userId = req.user?.userId || null;
+      
+      // Fetch job with full details including company info
       const job = await JobService.getJobById(jobId, userId);
+      
+      if (!job) {
+        res.status(404).json({ success: false, message: 'Job not found' });
+        return;
+      }
+
+      // Increment view count asynchronously (non-blocking)
+      JobService.recordJobView(jobId).catch((err) => {
+        console.error(`Failed to record job view for ${jobId}:`, err);
+      });
+
       sendSuccess(res, job, 'Job fetched successfully');
     } catch (err) {
       next(err);
