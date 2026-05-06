@@ -118,6 +118,7 @@ export default function MessagesPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const fetchConversations = useCallback(async () => {
     try {
