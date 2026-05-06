@@ -82,15 +82,7 @@ export default function AnalyticsPage() {
           { label: ['TOTAL', 'APPLICATIONS'], value: data.summary.total_applications },
           { label: ['TOTAL', 'VIEWS'], value: data.summary.total_views },
         ].map((stat) => (
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-          <article key={stat.label.join('-')} className="rounded-2xl bg-black text-lime-300 px-5 py-4 shadow-xl min-h-[92px] flex items-center">
-=======
           <article key={stat.label.join('-')} className="rounded-2xl bg-black text-lime-300 px-5 py-4 shadow-xl flex-1 min-w-[140px] max-w-[220px] h-[100px] flex items-center">
->>>>>>> Stashed changes
-=======
-          <article key={stat.label.join('-')} className="rounded-2xl bg-black text-lime-300 px-5 py-4 shadow-xl flex-1 min-w-[140px] max-w-[220px] h-[100px] flex items-center">
->>>>>>> main
             <div className="flex items-end gap-4">
               <p className="text-[38px] leading-none font-black tracking-tight">{stat.value}</p>
               <div className="pb-1">

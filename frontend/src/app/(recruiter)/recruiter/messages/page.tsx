@@ -290,85 +290,6 @@ export default function MessagesPage() {
   }
 
   return (
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-    <div className="max-w-7xl mx-auto space-y-4 pb-6">
-      {/* Main Chat Container with Blue Border */}
-      <div className="rounded-xl border-2 md:border-4 border-blue-500 bg-white overflow-hidden">
-        <div className="flex h-[calc(100dvh-12rem)] min-h-[540px] md:h-[600px]">
-          {/* Left Sidebar - Conversations */}
-          <div
-            className={`border-r border-slate-200 flex flex-col bg-white w-full md:w-[360px] md:flex-shrink-0 ${
-              selectedConvId ? 'hidden md:flex' : 'flex'
-            }`}
-          >
-            {/* Search Bar */}
-            <div className="p-4 border-b border-slate-200">
-              <div className="relative">
-                <FaMagnifyingGlass className="absolute left-3 top-3 text-slate-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-full bg-black text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto">
-              {sortedConversations.length === 0 ? (
-                <div className="p-4 text-center text-slate-500 text-sm">
-                  <p className="font-semibold text-slate-700">Inbox is empty</p>
-                  <p className="mt-1">Start messaging applicants to see chats here.</p>
-                </div>
-              ) : (
-                sortedConversations.map((conv) => {
-                  const participant = conv.participant;
-                  const isSelected = conv.id === selectedConvId;
-                  const avatarUrl = participant?.avatar || participant?.logo_url;
-
-                  return (
-                    <div
-                      key={conv.id}
-                      onClick={() => {
-                        setSelectedConvId(conv.id);
-                        router.replace(`${ROUTES.recruiterMessages}?conversationId=${conv.id}`);
-                      }}
-                      className={`p-3 md:p-3.5 border-b border-slate-100 cursor-pointer transition ${
-                        isSelected
-                          ? 'bg-lime-100 border-l-4 border-l-lime-300'
-                          : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden text-sm font-semibold flex-shrink-0">
-                          {avatarUrl ? (
-                            <img
-                              src={resolveAssetUrl(avatarUrl) || ''}
-                              alt={participant?.name || ''}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            getInitials(participant?.name || 'User')
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">
-                            {participant?.name || participant?.email || 'Conversation'}
-                          </p>
-                          <p className="text-xs text-slate-600 truncate">{conv.last_message || 'No messages yet'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-=======
-=======
->>>>>>> main
     <div className="max-w-7xl mx-auto h-[calc(100vh-100px)] overflow-hidden">
       {/* Main Container */}
       <div 
@@ -387,136 +308,12 @@ export default function MessagesPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-3.5 rounded-[20px] bg-black text-white text-[15px] placeholder-white/50 focus:outline-none"
             />
-<<<<<<< HEAD
->>>>>>> Stashed changes
-          </div>
-
-          {/* Right Side - Messages & Info */}
-          <div className={`flex-1 flex-col bg-white ${selectedConvId ? 'flex' : 'hidden md:flex'}`}>
-            {selectedConvId ? (
-              <>
-                {/* Header */}
-                <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedConvId(null);
-                        router.replace(ROUTES.recruiterMessages);
-                      }}
-                      className="md:hidden inline-flex items-center justify-center w-8 h-8 rounded-full border border-slate-200 text-slate-700"
-                      aria-label="Back to conversations"
-                    >
-                      <FaArrowLeft size={14} />
-                    </button>
-                    <h3 className="font-bold text-slate-900 truncate">
-                      {selectedParticipant?.name || selectedParticipant?.email || 'Conversation'}
-                    </h3>
-                  </div>
-                </div>
-
-<<<<<<< Updated upstream
-                <div className="flex-1 min-h-0 flex">
-                  <div className="flex-1 min-h-0 flex flex-col">
-                    {/* Messages Area */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
-                      {messagesLoading ? (
-                        <div className="flex justify-center items-center h-full">
-                          <Spinner />
-                        </div>
-                      ) : messages.length === 0 ? (
-                        <div className="text-center text-slate-500 text-sm mt-12">No messages yet</div>
-                      ) : (
-                        messages.map((msg) => {
-                          const isOwnMessage = msg.sender_id === user?.id;
-                          return (
-                            <div
-                              key={msg.id}
-                              className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                            >
-                              <div
-                                className={`max-w-[85%] md:max-w-xs px-4 py-2 rounded-lg ${
-                                  isOwnMessage
-                                    ? 'bg-lime-300 text-black'
-                                    : 'bg-white text-slate-900 border border-slate-200'
-                                }`}
-                              >
-                                <p className="text-sm break-words">{msg.body}</p>
-                                <p className="text-xs text-slate-500 mt-1">{formatTime(msg.created_at)}</p>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-=======
-                return (
-                  <div
-                    key={conv.id}
-                    onClick={() => {
-                      setSelectedConvId(conv.id);
-                      router.replace(`${ROUTES.recruiterMessages}?conversationId=${conv.id}`);
-                    }}
-                    className={`flex items-center gap-3 p-3 rounded-[20px] cursor-pointer transition-all ${
-                      isSelected ? 'bg-white border-[1.5px] border-[#C3FF3D] shadow-sm' : 'bg-white/60 hover:bg-white border-[1.5px] border-transparent'
-                    }`}
-                  >
-                    <div className="w-[46px] h-[46px] rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
-                      <img src={resolveAssetUrl(avatarUrl) || undefined} alt="" className="w-full h-full object-cover" />
->>>>>>> Stashed changes
-                    </div>
-
-                    {/* Input Area */}
-                    <div className="p-4 border-t border-slate-200 bg-white">
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Type a message..."
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSendMessage();
-                          }}
-                          disabled={sendingMessage}
-                          className="flex-1 px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <button
-                          onClick={handleSendMessage}
-                          disabled={sendingMessage || !newMessage.trim()}
-                          className="px-4 py-2 rounded-lg bg-lime-300 text-black font-semibold text-sm hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                        >
-                          {sendingMessage ? 'Sending...' : 'Send'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Side Info Panel */}
-                  <aside className="hidden lg:block w-72 border-l border-slate-200 bg-slate-50 p-4 overflow-y-auto">
-                    <h4 className="text-base font-bold text-slate-900 mb-3">General Info</h4>
-                    <div className="rounded-xl bg-white border border-slate-200 p-3 mb-3">
-                      <p className="text-sm font-semibold text-slate-900">
-                        {selectedParticipant?.name || 'N/A'}
-                      </p>
-                      <p className="text-xs text-slate-600 mt-2">
-                        <span className="font-semibold">Email:</span>{' '}
-                        {selectedParticipant?.email || 'N/A'}
-                      </p>
-                      <p className="text-xs text-slate-600 mt-1">
-                        <span className="font-semibold">Last activity:</span>{' '}
-                        {formatDateTime(selectedConversationItem?.last_message_at || selectedConversation?.last_message_at)}
-                      </p>
-                    </div>
-                  </aside>
-                </div>
-              </>
-=======
           </div>
 
           {/* Chat List with Custom Scrollbar */}
           <div className="flex-1 overflow-y-auto pr-2 space-y-3 [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-[3px] [&::-webkit-scrollbar-thumb]:border-[#F4F1EA]">
             {sortedConversations.length === 0 ? (
               <div className="p-4 text-center text-slate-500 text-sm">Inbox is empty</div>
->>>>>>> main
             ) : (
               sortedConversations.map((conv) => {
                 const participant = conv.participant;
@@ -551,11 +348,6 @@ export default function MessagesPage() {
             )}
           </div>
         </div>
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> main
 
         {/* MIDDLE PANEL - Chat Area: full on mobile when convo selected, hidden on mobile when no convo */}
         <div className={`${selectedConvId ? 'flex' : 'hidden md:flex'} flex-1 flex-col h-full bg-transparent min-w-0`}>
@@ -698,10 +490,6 @@ export default function MessagesPage() {
           </div>
         </div>
 
-<<<<<<< HEAD
->>>>>>> Stashed changes
-=======
->>>>>>> main
       </div>
     </div>
   );
