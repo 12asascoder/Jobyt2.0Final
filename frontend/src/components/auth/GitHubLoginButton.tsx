@@ -12,6 +12,7 @@ interface GitHubLoginButtonProps {
   onStart?: () => void;
   onComplete?: () => void;
   onError: (message: string) => void;
+  redirectTarget?: string | null;
 }
 
 // Inline SVG avoids react-icons baseline/viewBox quirks for pixel-perfect alignment
@@ -26,19 +27,21 @@ const GitHubIcon = () => (
   </svg>
 );
 
-export function GitHubLoginButton({ referralCode, role, disabled, className, onStart, onComplete, onError }: GitHubLoginButtonProps) {
+export function GitHubLoginButton({ referralCode, role, disabled, className, onStart, onComplete, onError, redirectTarget }: GitHubLoginButtonProps) {
   const roleRef = useRef<typeof role>(role);
   const referralCodeRef = useRef(referralCode);
+  const redirectTargetRef = useRef(redirectTarget);
 
   useEffect(() => {
     roleRef.current = role;
     referralCodeRef.current = referralCode;
-  }, [role, referralCode]);
+    redirectTargetRef.current = redirectTarget;
+  }, [role, referralCode, redirectTarget]);
 
   const handleClick = async () => {
     onStart?.();
     try {
-      await beginOAuthRedirect('github', referralCodeRef.current, roleRef.current);
+      await beginOAuthRedirect('github', referralCodeRef.current, roleRef.current, redirectTargetRef.current);
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {

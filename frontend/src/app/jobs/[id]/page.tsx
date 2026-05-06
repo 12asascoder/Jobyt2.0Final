@@ -102,7 +102,7 @@ function getCompanyName(job: Job): string {
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
@@ -133,6 +133,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const [skillSuggestions, setSkillSuggestions] = useState<Record<string, string>>({});
   const [loadingInsights, setLoadingInsights] = useState(false);
 
+  const [showAllSkills, setShowAllSkills] = useState(false);
+  const [showAllMissing, setShowAllMissing] = useState(false);
+
   const [roadmap, setRoadmap] = useState<RoadmapWeek[] | null>(null);
   const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
   const [showRoadmapModal, setShowRoadmapModal] = useState(false);
@@ -145,36 +148,58 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   useEffect(() => {
     if (!id || id === 'undefined') {
       setLoading(false);
-      router.push(ROUTES.dashboard);
+      router.push(ROUTES.jobs);
       return;
     }
 
-    Promise.all([
-      api.get<Job>(`/jobs/${id}`),
-      api.get<{ hasApplied: boolean }>(`/applications/jobs/${id}/check`).catch(() => ({ data: { hasApplied: false } })),
-      api.get<{ resumes: ResumeListItem[] }>('/users/me/resumes').catch(() => ({ data: { resumes: [] } })),
-      api.get<Job[]>('/users/me/saved-jobs').catch(() => ({ data: [] })),
-    ])
-      .then(([jobRes, checkRes, resumeRes, savedRes]) => {
-        setJob(jobRes.data ? normalizeCompany(jobRes.data) : null);
-        setHasApplied(checkRes.data?.hasApplied ?? false);
-        const availableResumes = Array.isArray(resumeRes.data?.resumes) ? resumeRes.data.resumes : [];
-        setResumes(availableResumes);
-        const defaultResume = availableResumes.find((resume) => resume.is_default);
-        if (defaultResume) {
-          setSelectedResumeId(defaultResume.id);
-        } else if (availableResumes.length > 0) {
-          setSelectedResumeId(availableResumes[0].id);
+    const fetchJobData = async () => {
+      try {
+        const jobRes = await api.get<Job>(`/jobs/${id}`);
+        const jobData = jobRes.data ?? null;
+        setJob(jobData);
+
+        // Auto-open apply modal if redirecting back from login
+        const applyRequested = new URLSearchParams(window.location.search).get('apply') === '1';
+        if (applyRequested && jobData && isAuthenticated) {
+          setShowModal(true);
         }
-        
-        // Check if job is saved - savedRes.data is an array of saved jobs
-        const savedJobs = Array.isArray(savedRes.data) ? savedRes.data : [];
-        const isSavedJob = savedJobs.some((savedJob) => savedJob.id === id);
-        setIsSaved(isSavedJob);
-      })
-      .catch(() => router.push(ROUTES.dashboard))
-      .finally(() => setLoading(false));
-  }, [id, router]);
+
+        if (isAuthenticated) {
+          try {
+            const [checkRes, resumeRes, savedRes] = await Promise.all([
+              api.get<{ hasApplied: boolean }>(`/applications/jobs/${id}/check`),
+              api.get<{ resumes: ResumeListItem[] }>('/users/me/resumes'),
+              api.get<Job[]>('/users/me/saved-jobs'),
+            ]);
+
+            setHasApplied(checkRes.data?.hasApplied ?? false);
+            const availableResumes = Array.isArray(resumeRes.data?.resumes) ? resumeRes.data.resumes : [];
+            setResumes(availableResumes);
+            
+            const defaultResume = availableResumes.find((resume) => resume.is_default);
+            if (defaultResume) {
+              setSelectedResumeId(defaultResume.id);
+            } else if (availableResumes.length > 0) {
+              setSelectedResumeId(availableResumes[0].id);
+            }
+
+            const savedJobs = Array.isArray(savedRes.data) ? savedRes.data : [];
+            const isSavedJob = savedJobs.some((savedJob) => savedJob.id === id);
+            setIsSaved(isSavedJob);
+          } catch (err) {
+            console.error('Failed to fetch user-specific job data:', err);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch job detail:', err);
+        router.push(ROUTES.jobs);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobData();
+  }, [id, router, isAuthenticated]);
 
   // Fetch AI Insights once job is loaded
   useEffect(() => {
@@ -225,6 +250,15 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   }, {});
 
   const handleApply = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to apply for this job');
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('apply', '1');
+      const redirectTarget = currentUrl.pathname + currentUrl.search;
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(redirectTarget)}`);
+      return;
+    }
+
     if (!selectedResumeId) {
       toast.error('Please select a resume before applying');
       return;
@@ -285,6 +319,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   };
 
   const handleSaveJob = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to save this job');
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      return;
+    }
     try {
       if (isSaved) {
         await api.delete(`/users/me/saved-jobs/${job?.id}`);
@@ -301,6 +340,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   };
 
   const scrollToApplySection = () => {
+    if (!isAuthenticated) {
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      return;
+    }
     const node = document.getElementById('apply-now-section');
     if (node) {
       node.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -385,6 +428,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   const companyName = getCompanyName(job);
   const jobRole = deriveJobRole(job.title);
+
+  const displaySkills =
+    user?.role === 'applicant' && !loadingInsights && matchScore !== null
+      ? matchedSkills
+      : job.skills;
 
   return (
     <div className="mx-auto max-w-[1180px] rounded-[30px] bg-[#edf3df] px-4 pb-8 pt-4 md:px-8">
@@ -537,7 +585,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 <p className="mb-3 text-sm text-[#444]">Your current resume will be submitted along with this application.</p>
                 {resumes.length > 0 ? (
                   <select
-                    className="w-full sm:w-auto max-w-full rounded-xl border border-black bg-black px-4 py-2.5 text-sm font-semibold text-white"
+                    className="max-w-[250px] rounded-xl border border-black bg-black px-3 py-2 text-sm font-semibold text-white"
                     value={selectedResumeId}
                     onChange={(e) => {
                       setSelectedResumeId(e.target.value);
@@ -545,15 +593,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                       setAtsScore(null);
                     }}
                   >
-                    {resumes.map((resume) => {
-                      const name = resume.file_name || '';
-                      const displayName = name.length > 35 ? name.substring(0, 32) + '...' : name;
-                      return (
-                        <option key={resume.id} value={resume.id}>
-                          {displayName}{resume.is_default ? ' (Default)' : ''}
-                        </option>
-                      );
-                    })}
+                    {resumes.map((resume) => (
+                      <option key={resume.id} value={resume.id}>
+                        {resume.file_name}{resume.is_default ? ' (Default)' : ''}
+                      </option>
+                    ))}
                   </select>
                 ) : (
                   <p className="inline-block rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -670,20 +714,25 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               </>
             )}
 
-            <h3 className="mb-2 text-lg font-black">Skills</h3>
+            <h3 className="mb-2 text-lg font-black">
+              {user?.role === 'applicant' && !loadingInsights && matchScore !== null ? 'Matched Skills' : 'Required Skills'}
+            </h3>
             <div className="flex flex-wrap gap-1.5">
-              {job.skills.slice(0, 6).map((skill) => (
+              {(showAllSkills ? displaySkills : displaySkills.slice(0, 6)).map((skill) => (
                 <span
                   key={skill}
-                  className="rounded-full border border-[#9acd32] px-2 py-0.5 text-xs text-[#bbf52f]"
+                  className="rounded-full border border-[#9acd32] bg-black px-2 py-0.5 text-xs text-[#bbf52f]"
                 >
                   {skill}
                 </span>
               ))}
-              {job.skills.length > 6 && (
-                <span className="rounded-full bg-[#bbf52f] px-2 py-0.5 text-xs font-bold text-black">
-                  +{job.skills.length - 6}
-                </span>
+              {displaySkills.length > 6 && (
+                <button
+                  onClick={() => setShowAllSkills((prev) => !prev)}
+                  className="rounded-full bg-[#bbf52f] px-2 py-0.5 text-xs font-bold text-black hover:bg-[#aee62d] transition-colors cursor-pointer"
+                >
+                  {showAllSkills ? 'Show less' : `+${displaySkills.length - 6}`}
+                </button>
               )}
             </div>
 
@@ -691,15 +740,18 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               <div className="mt-3 space-y-1">
                 <p className="text-xs font-bold uppercase tracking-wider text-gray-300">Missing</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {missingSkills.slice(0, 4).map((skill) => (
+                  {(showAllMissing ? missingSkills : missingSkills.slice(0, 4)).map((skill) => (
                     <span key={skill} className="rounded-full border border-white px-2 py-0.5 text-xs text-white">
                       {skill}
                     </span>
                   ))}
                   {missingSkills.length > 4 && (
-                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-black">
-                      +{missingSkills.length - 4}
-                    </span>
+                    <button
+                      onClick={() => setShowAllMissing((prev) => !prev)}
+                      className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-black hover:bg-gray-200 transition-colors cursor-pointer"
+                    >
+                      {showAllMissing ? 'Show less' : `+${missingSkills.length - 4}`}
+                    </button>
                   )}
                 </div>
                 <button

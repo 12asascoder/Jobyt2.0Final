@@ -185,7 +185,7 @@ npm run db:seed
 
 ### Step 3: Get a Token
 ```bash
-curl -X POST http://localhost:5000/api/v1/auth/login \
+curl -X POST http://localhost:5001/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com",
@@ -195,7 +195,7 @@ curl -X POST http://localhost:5000/api/v1/auth/login \
 
 ### Step 4: Test an Endpoint
 ```bash
-curl -X GET "http://localhost:5000/api/v1/applications/my" \
+curl -X GET "http://localhost:5001/api/v1/applications/my" \
   -H "Authorization: Bearer <TOKEN>"
 ```
 
@@ -444,7 +444,7 @@ npm run type-check
 npm run lint
 
 # 5. Test an endpoint
-curl -X GET "http://localhost:5000/api/v1/applications/my" \
+curl -X GET "http://localhost:5001/api/v1/applications/my" \
   -H "Authorization: Bearer <TOKEN>"
 ```
 

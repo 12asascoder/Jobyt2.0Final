@@ -118,7 +118,7 @@ export default function MessagesPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedSection, setExpandedSection] = useState<'about' | 'files' | 'links' | null>(null);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -188,12 +188,12 @@ export default function MessagesPage() {
       setSelectedConversation(
         selectedMeta
           ? {
-              id: selectedMeta.id,
-              recruiter_id: selectedMeta.recruiter_id,
-              applicant_id: selectedMeta.applicant_id,
-              job_id: selectedMeta.job_id,
-              last_message_at: selectedMeta.last_message_at,
-            }
+            id: selectedMeta.id,
+            recruiter_id: selectedMeta.recruiter_id,
+            applicant_id: selectedMeta.applicant_id,
+            job_id: selectedMeta.job_id,
+            last_message_at: selectedMeta.last_message_at,
+          }
           : null,
       );
 
@@ -241,10 +241,10 @@ export default function MessagesPage() {
     return [...conversations]
       .sort((a, b) => toTime(b.last_message_at) - toTime(a.last_message_at))
       .filter((conv) =>
-        (!searchQuery ||
-          conv.participant?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          conv.participant?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          conv.last_message?.toLowerCase().includes(searchQuery.toLowerCase()))
+      (!searchQuery ||
+        conv.participant?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        conv.participant?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        conv.last_message?.toLowerCase().includes(searchQuery.toLowerCase()))
       );
   }, [conversations, searchQuery]);
 
@@ -303,11 +303,10 @@ export default function MessagesPage() {
                         setSelectedConvId(conv.id);
                         void fetchMessages(conv.id);
                       }}
-                      className={`rounded-2xl border cursor-pointer transition px-3 py-2.5 ${
-                        isSelected
+                      className={`rounded-2xl border cursor-pointer transition px-3 py-2.5 ${isSelected
                           ? 'bg-white border-lime-300'
                           : 'bg-white border-[#ecebe7] hover:border-slate-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden text-sm font-semibold flex-shrink-0">
@@ -385,11 +384,10 @@ export default function MessagesPage() {
                               className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                             >
                               <div
-                                className={`max-w-[85%] md:max-w-[75%] px-4 py-3 rounded-[20px] ${
-                                  isOwnMessage
+                                className={`max-w-[85%] md:max-w-[75%] px-4 py-3 rounded-[20px] ${isOwnMessage
                                     ? 'bg-[#d6f2a5] text-black rounded-br-sm shadow-sm'
                                     : 'bg-[#f5f4f0] text-slate-900 rounded-bl-sm'
-                                }`}
+                                  }`}
                               >
                                 <p className="text-[14px] leading-relaxed break-words">{msg.body}</p>
                                 <p className={`text-[11px] mt-1.5 ${isOwnMessage ? 'text-black/60' : 'text-slate-500'}`}>
@@ -457,7 +455,6 @@ export default function MessagesPage() {
                         <p>{formatDate(selectedConversationItem?.last_message_at || selectedConversation?.last_message_at)}</p>
                       </div>
                     </div>
-                    
                     <div className="space-y-3">
                       {/* About Company */}
                       <div className="rounded-[20px] bg-white border border-[#e6e3dc] overflow-hidden shadow-sm">

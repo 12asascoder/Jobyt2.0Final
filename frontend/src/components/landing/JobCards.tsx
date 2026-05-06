@@ -13,6 +13,7 @@ interface JobsApiResult {
 
 
 
+
 export function JobCards() {
     const [jobs, setJobs] = useState<BackendJob[]>([]);
     const [loading, setLoading] = useState(true);

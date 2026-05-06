@@ -7,13 +7,13 @@ async function runTests() {
   let client;
   try {
     client = await pool.connect();
-    
+
     // 1. Setup mock data
     console.log('1. Setting up mock test data...');
     const recruiterRes = await client.query("INSERT INTO users (email, password_hash, role, referral_code) VALUES ('testr@example.com', 'pwd', 'recruiter', 'REF_TEST1') RETURNING id");
     const recruiterId = recruiterRes.rows[0].id;
     await client.query("INSERT INTO recruiter_profiles (user_id, company_name, created_at, updated_at) VALUES ($1, 'Test Company', NOW(), NOW())", [recruiterId]);
-    
+
     const applicantRes = await client.query("INSERT INTO users (email, password_hash, role, referral_code) VALUES ('testa@example.com', 'pwd', 'applicant', 'REF_TEST2') RETURNING id");
     const applicantId = applicantRes.rows[0].id;
 
@@ -21,7 +21,7 @@ async function runTests() {
     await client.query("INSERT INTO applicant_profiles (user_id, name, skills) VALUES ($1, 'TestApplicantName', ARRAY['React'])", [applicantId]);
 
     const jobRes = await client.query("INSERT INTO jobs (recruiter_id, title, description, location, type, salary_min, salary_max) " +
-       "VALUES ($1, 'Test Job', 'Desc', 'Remote', 'full-time', 50000, 60000) RETURNING id", [recruiterId]);
+      "VALUES ($1, 'Test Job', 'Desc', 'Remote', 'full-time', 50000, 60000) RETURNING id", [recruiterId]);
     const jobId = jobRes.rows[0].id;
 
     const appRes = await client.query("INSERT INTO applications (job_id, applicant_id, status) VALUES ($1, $2, 'applied') RETURNING id", [jobId, applicantId]);

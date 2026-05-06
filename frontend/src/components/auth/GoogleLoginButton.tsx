@@ -17,6 +17,7 @@ interface GoogleLoginButtonProps {
   onRequiresEmail?: () => void;
   onRequiresVerification?: () => void;
   onError: (message: string) => void;
+  redirectTarget?: string | null;
 }
 
 const GoogleIcon = () => (
@@ -36,12 +37,15 @@ export function GoogleLoginButton({
   onStart,
   onComplete,
   onError,
+  redirectTarget,
 }: GoogleLoginButtonProps) {
   const handleClick = async () => {
     onStart?.();
     try {
       saveOAuthRole(role);
       saveOAuthReferralCode(referralCode);
+      const { saveOAuthRedirectTarget } = await import('@/lib/oauth');
+      saveOAuthRedirectTarget(redirectTarget);
       await signIn('google', { callbackUrl: ROUTES.oauthGoogleBridge });
     } catch {
       onError('Login failed. Please try again.');

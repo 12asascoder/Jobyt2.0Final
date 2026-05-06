@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 import { ROUTES, APP_NAME } from '@/constants';
 import { AuthTokens, AuthUser } from '@/types';
@@ -55,9 +55,14 @@ const validatePassword = (value: string, email?: string): string | null => {
 export default function RegisterPage() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const redirectTarget = searchParams.get('redirect');
   const isEmployerSignup = pathname.includes('employer-signup');
   const roleFromRoute = isEmployerSignup ? 'recruiter' : 'applicant';
-  const loginRoute = isEmployerSignup ? ROUTES.employerLogin : ROUTES.login;
+  const loginBaseRoute = isEmployerSignup ? ROUTES.employerLogin : ROUTES.login;
+  const loginRoute = redirectTarget 
+    ? `${loginBaseRoute}?redirect=${encodeURIComponent(redirectTarget)}` 
+    : loginBaseRoute;
 
   // DEBUG: Log the pathname and role detection
   console.log('[RegisterPage] pathname:', pathname, 'isEmployerSignup:', isEmployerSignup, 'roleFromRoute:', roleFromRoute);
@@ -90,7 +95,7 @@ export default function RegisterPage() {
       router.push(ROUTES.addEmail);
       return;
     }
-    router.push(routeByRole(user));
+    router.push(redirectTarget || routeByRole(user));
   };
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -360,6 +365,7 @@ export default function RegisterPage() {
               onRequiresEmail={() => router.push(ROUTES.addEmail)}
               onRequiresVerification={() => router.push(`${ROUTES.verifyEmail}?pending=1`)}
               onError={setError}
+              redirectTarget={redirectTarget}
             />
             <GitHubLoginButton
               referralCode={form.referralCode}
@@ -368,6 +374,7 @@ export default function RegisterPage() {
               onStart={() => setOauthPending(true)}
               onComplete={() => setOauthPending(false)}
               onError={setError}
+              redirectTarget={redirectTarget}
             />
             <LinkedInLoginButton
               referralCode={form.referralCode}
@@ -376,6 +383,7 @@ export default function RegisterPage() {
               onStart={() => setOauthPending(true)}
               onComplete={() => setOauthPending(false)}
               onError={setError}
+              redirectTarget={redirectTarget}
               className="sm:col-span-2 flex items-center justify-center gap-2 bg-[#0a66c2] border border-[#0a66c2] text-white px-4 py-2 rounded-xl hover:bg-[#08549d] transition-all font-semibold shadow-sm text-sm"
             />
           </div>

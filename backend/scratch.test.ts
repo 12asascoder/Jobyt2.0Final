@@ -13,7 +13,7 @@ async function runTests() {
   try {
     const adminToken = await generateToken('admin@hiringplatform.com', 'admin');
     const recruiterToken = await generateToken('recruiter1@google.com', 'recruiter');
-    const BASE_URL = 'http://localhost:5000';
+    const BASE_URL = 'http://localhost:5001';
 
     // TEST 1: Admin Route Authorization
     console.log('\n[Test 1] Admin Route Auth');
@@ -21,7 +21,7 @@ async function runTests() {
       headers: { Authorization: `Bearer ${recruiterToken}` }
     });
     console.log('Recruiter accessing Admin:', res.status === 403 ? 'PASS (403 Forbidden)' : `FAIL (${res.status})`);
-    
+
     // TEST 2: Admin Global Dashboard
     console.log('\n[Test 2] Admin Global Dashboard');
     res = await fetch(`${BASE_URL}/api/v1/admin/applications?limit=50`, {
@@ -29,7 +29,7 @@ async function runTests() {
     });
     let data: any = await res.json();
     console.log('Total Platform Applications retrieved:', data.data?.length);
-    const hasMultipleJobs = new Set((data.data || []).map((a:any) => a.job_id)).size > 1;
+    const hasMultipleJobs = new Set((data.data || []).map((a: any) => a.job_id)).size > 1;
     console.log('Global Bypass active (Multiple distinct jobs from different recruiters):', hasMultipleJobs ? 'PASS' : 'FAIL');
 
     if (!data.data || data.data.length === 0) {
@@ -43,7 +43,7 @@ async function runTests() {
       });
       data = await res.json();
       console.log('Application retrieved successfully:', data.success ? 'PASS' : 'FAIL');
-      
+
       // TEST 4: Admin Status Update
       console.log('\n[Test 4] Admin Status Update');
       const previousStatus = targetApp.status;
@@ -55,7 +55,7 @@ async function runTests() {
       });
       data = await res.json();
       console.log('Status update request:', res.status === 200 ? 'PASS' : `FAIL (${data.message})`);
-      
+
       // Verify Database update
       const dbCheck = await pool.query('SELECT status FROM applications WHERE id = $1', [targetApp.id]);
       console.log('Database verification:', dbCheck.rows[0].status === testStatus ? 'PASS' : `FAIL (Expected ${testStatus}, got ${dbCheck.rows[0].status})`);
@@ -68,7 +68,7 @@ async function runTests() {
       headers: { Authorization: `Bearer ${recruiterToken}` }
     });
     data = await res.json();
-    const foundJane = (data.data || []).some((a:any) => a.name === 'Jane Smith');
+    const foundJane = (data.data || []).some((a: any) => a.name === 'Jane Smith');
     console.log('Search by Applicant Name ("Jane"):', foundJane ? 'PASS' : 'FAIL');
 
     // Search for "Manager" (Job Title)
@@ -76,7 +76,7 @@ async function runTests() {
       headers: { Authorization: `Bearer ${recruiterToken}` }
     });
     data = await res.json();
-    const foundManager = (data.data || []).some((a:any) => a.job_title?.includes('Manager'));
+    const foundManager = (data.data || []).some((a: any) => a.job_title?.includes('Manager'));
     console.log('Search by Job Title ("Manager"):', foundManager ? 'PASS' : 'FAIL');
 
     console.log('\n--- ALL TESTS COMPLETED SUCCESSFULLY ---');

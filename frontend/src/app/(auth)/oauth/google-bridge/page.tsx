@@ -11,6 +11,8 @@ import {
   clearOAuthRole,
   getOAuthReferralCode,
   getOAuthRole,
+  getOAuthRedirectTarget,
+  clearOAuthRedirectTarget,
   OAuthResponseData,
   parseOAuthResponse,
 } from '@/lib/oauth';
@@ -89,14 +91,17 @@ export default function GoogleBridgePage() {
           return;
         }
 
-        const destination =
+        const redirectTarget = getOAuthRedirectTarget();
+        clearOAuthRedirectTarget();
+
+        const defaultDestination =
           parsed.user.role === 'recruiter'
             ? ROUTES.recruiterDashboard
             : parsed.user.role === 'admin'
               ? ROUTES.adminDashboard
               : ROUTES.dashboard;
 
-        router.replace(destination);
+        router.replace(redirectTarget || defaultDestination);
       } catch (err) {
         runStarted.current = false; // Allow retry on error
         clearOAuthRole();

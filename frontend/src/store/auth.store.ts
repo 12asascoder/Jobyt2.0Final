@@ -117,6 +117,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           role: fallbackUser.role,
           email_verified: fallbackUser.email_verified,
         });
+        set({ isLoading: false });
       }
 
       const res = await api.get<{ user: AuthUser }>('/auth/me');
@@ -161,13 +162,38 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     authStorage.clearTokens();
+    const { user } = useAuthStore.getState();
+    const wasEmployer = user?.role === 'recruiter' || user?.role === 'admin';
+    
     set({
       user: null,
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
     });
-    if (typeof window !== 'undefined') window.location.href = '/login';
+
+    if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname;
+      const PUBLIC_ROUTES = [
+        '/',
+        '/jobs',
+        '/internships',
+        '/login',
+        '/register',
+        '/employer/login',
+        '/employer/register'
+      ];
+      
+      const isPublic = PUBLIC_ROUTES.some(route => 
+        pathname === route || (route !== '/' && pathname.startsWith(`${route}/`))
+      );
+
+      if (!isPublic) {
+        const loginRoute = wasEmployer ? '/employer/login' : '/login';
+        const currentPath = window.location.pathname + window.location.search;
+        window.location.href = `${loginRoute}?redirect=${encodeURIComponent(currentPath)}`;
+      }
+    }
   },
 
   logoutWithApi: async () => {

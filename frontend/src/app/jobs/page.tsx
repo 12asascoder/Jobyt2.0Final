@@ -2,11 +2,13 @@
 
 import { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobFilters } from '@/components/jobs/JobFilters';
 import { Spinner, Button } from '@/components/ui';
 import { useJobs } from '@/hooks/useJobs';
 import { FaMagnifyingGlass } from 'react-icons/fa6';
+import { ROUTES } from '@/constants';
 
 function JobsContent() {
     const searchParams = useSearchParams();
@@ -44,7 +46,15 @@ function JobsContent() {
 
                 <div className="flex flex-col gap-3">
                     {jobs.map((job) => (
-                        <JobCard key={job.id} job={job} actions={<Button size="sm">Apply Now</Button>} />
+                        <JobCard
+                            key={job.id}
+                            job={job}
+                            actions={
+                                <Link href={ROUTES.jobDetail(job.id)}>
+                                    <Button size="sm">Apply Now</Button>
+                                </Link>
+                            }
+                        />
                     ))}
                 </div>
 
