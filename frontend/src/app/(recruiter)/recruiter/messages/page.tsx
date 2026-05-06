@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { api, ApiError } from '@/lib/api';
 import { Spinner } from '@/components/ui';
 import { resolveAssetUrl } from '@/lib/assetUrl';
-import { FaArrowLeft, FaMagnifyingGlass } from 'react-icons/fa6';
+import { FaMagnifyingGlass, FaChevronDown } from 'react-icons/fa6';
 import { ROUTES } from '@/constants';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -100,7 +100,7 @@ const formatDateTime = (value?: string | null) => {
   if (!value) return 'N/A';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'N/A';
-  return date.toLocaleString();
+  return date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
 };
 
 const toTime = (value?: string | null) => {
@@ -124,21 +124,15 @@ export default function MessagesPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchConversations = useCallback(async () => {
     try {
       const res = await api.get<any>('/messages/conversations');
-      const rawConversations = Array.isArray(res.data?.conversations)
-        ? res.data.conversations
-        : Array.isArray(res.data)
-          ? res.data
-          : [];
-
-      const participantIds = [...new Set(
-        rawConversations
-          .map((conv: Conversation) => conv.applicant_id)
-          .filter((id: string | undefined) => Boolean(id)),
-      )] as string[];
+      const rawConversations = Array.isArray(res.data?.conversations) ? res.data.conversations : Array.isArray(res.data) ? res.data : [];
+      
+      const participantIds = [...new Set(rawConversations.map((conv: Conversation) => conv.applicant_id).filter((id: string | undefined) => Boolean(id)))] as string[];
 
       const profileEntries = await Promise.all(
         participantIds.map(async (id) => {
@@ -172,18 +166,18 @@ export default function MessagesPage() {
 
       setConversations(enrichedConversations);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Failed to load conversations';
-      toast.error(message);
+      toast.error('Failed to load conversations');
       setConversations([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   const fetchMessages = useCallback(async (conversationId: string) => {
     if (!conversationId) return;
     setMessagesLoading(true);
     try {
+
       const msgRes = await api.get<any>(`/messages/conversations/${conversationId}?page=1&limit=50`);
 
       const selectedMeta = conversations.find((conv) => conv.id === conversationId);
@@ -204,32 +198,33 @@ export default function MessagesPage() {
       if (!Array.isArray(msgs)) msgs = [];
       const sortedMsgs = msgs.sort((a: Message, b: Message) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       setMessages(sortedMsgs);
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Failed to load messages';
-      toast.error(message);
+      toast.error('Failed to load messages');
       setSelectedConversation(null);
       setMessages([]);
     } finally {
       setMessagesLoading(false);
     }
-  }, [conversations]);
+  }, [conversations, user?.id]);
 
   const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || !selectedConvId) return;
     setSendingMessage(true);
     try {
+
       const response = await api.post<SendMessageData>(`/messages/conversations/${selectedConvId}`, {
         content: newMessage,
       });
       const createdMessage = response.data?.message;
       if (createdMessage) {
         setMessages((prev) => [...prev, createdMessage]);
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
       }
       setNewMessage('');
       void fetchConversations();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Failed to send message';
-      toast.error(message);
+      toast.error('Failed to send message');
     } finally {
       setSendingMessage(false);
     }
@@ -244,29 +239,15 @@ export default function MessagesPage() {
       setSelectedConvId(initialConversationId);
       return;
     }
-
-    // On mobile, keep list-first UX and avoid auto-selecting a conversation.
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      return;
-    }
-
+    if (typeof window !== 'undefined' && window.innerWidth < 768) return;
     if (!selectedConvId && conversations.length > 0) {
-      const firstValidConversation = conversations.find((conv) => {
-        const participantName = conv.participant?.name?.trim();
-        const participantEmail = conv.participant?.email?.trim();
-        return Boolean(participantName || participantEmail);
-      });
-
-      if (firstValidConversation) {
-        setSelectedConvId(firstValidConversation.id);
-      }
+      const firstValidConversation = conversations.find((conv) => Boolean(conv.participant?.name?.trim() || conv.participant?.email?.trim()));
+      if (firstValidConversation) setSelectedConvId(firstValidConversation.id);
     }
   }, [initialConversationId, selectedConvId, conversations]);
 
   useEffect(() => {
-    if (selectedConvId) {
-      void fetchMessages(selectedConvId);
-    }
+    if (selectedConvId) void fetchMessages(selectedConvId);
   }, [selectedConvId, fetchMessages]);
 
   const sortedConversations = useMemo(() => {
@@ -274,9 +255,9 @@ export default function MessagesPage() {
       .sort((a, b) => toTime(b.last_message_at) - toTime(a.last_message_at))
       .filter((conv) =>
         (!searchQuery ||
-          conv.participant?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          conv.participant?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          conv.last_message?.toLowerCase().includes(searchQuery.toLowerCase()))
+          (conv.participant?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (conv.participant?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (conv.last_message || '').toLowerCase().includes(searchQuery.toLowerCase()))
       );
   }, [conversations, searchQuery]);
 
@@ -305,14 +286,11 @@ export default function MessagesPage() {
   }, [sharedLinks]);
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-96">
-        <Spinner />
-      </div>
-    );
+    return <div className="flex justify-center items-center h-96"><Spinner size="lg" /></div>;
   }
 
   return (
+<<<<<<< HEAD
 <<<<<<< Updated upstream
     <div className="max-w-7xl mx-auto space-y-4 pb-6">
       {/* Main Chat Container with Blue Border */}
@@ -389,6 +367,8 @@ export default function MessagesPage() {
               )}
             </div>
 =======
+=======
+>>>>>>> main
     <div className="max-w-7xl mx-auto h-[calc(100vh-100px)] overflow-hidden">
       {/* Main Container */}
       <div 
@@ -407,6 +387,7 @@ export default function MessagesPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-3.5 rounded-[20px] bg-black text-white text-[15px] placeholder-white/50 focus:outline-none"
             />
+<<<<<<< HEAD
 >>>>>>> Stashed changes
           </div>
 
@@ -528,18 +509,53 @@ export default function MessagesPage() {
                   </aside>
                 </div>
               </>
+=======
+          </div>
+
+          {/* Chat List with Custom Scrollbar */}
+          <div className="flex-1 overflow-y-auto pr-2 space-y-3 [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-[3px] [&::-webkit-scrollbar-thumb]:border-[#F4F1EA]">
+            {sortedConversations.length === 0 ? (
+              <div className="p-4 text-center text-slate-500 text-sm">Inbox is empty</div>
+>>>>>>> main
             ) : (
-              <div className="hidden md:flex flex-1 items-center justify-center">
-                <div className="text-center text-slate-500">
-                  <p className="text-lg font-semibold">Inbox is empty</p>
-                  <p className="text-sm mt-1">Start a new message from the Applicants page.</p>
-                </div>
-              </div>
+              sortedConversations.map((conv) => {
+                const participant = conv.participant;
+                const isSelected = conv.id === selectedConvId;
+                const avatarUrl = participant?.avatar || participant?.logo_url || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + participant?.name;
+
+                return (
+                  <div
+                    key={conv.id}
+                    onClick={() => {
+                      setSelectedConvId(conv.id);
+                      router.replace(`${ROUTES.recruiterMessages}?conversationId=${conv.id}`);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-[20px] cursor-pointer transition-all ${
+                      isSelected ? 'bg-white border-[1.5px] border-[#C3FF3D] shadow-sm' : 'bg-white/60 hover:bg-white border-[1.5px] border-transparent'
+                    }`}
+                  >
+                    <div className="w-[46px] h-[46px] rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
+                      <img src={resolveAssetUrl(avatarUrl) || undefined} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-bold text-black truncate leading-tight">
+                        {participant?.name || participant?.email || 'User'}
+                      </p>
+                      <p className="text-[13px] text-slate-500 truncate leading-tight mt-0.5">
+                        {conv.last_message ? (msg => msg.length > 25 ? msg.substring(0,25) + '..' : msg)(conv.last_message) : 'No messages'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 =======
+=======
+>>>>>>> main
 
         {/* MIDDLE PANEL - Chat Area: full on mobile when convo selected, hidden on mobile when no convo */}
         <div className={`${selectedConvId ? 'flex' : 'hidden md:flex'} flex-1 flex-col h-full bg-transparent min-w-0`}>
@@ -682,7 +698,10 @@ export default function MessagesPage() {
           </div>
         </div>
 
+<<<<<<< HEAD
 >>>>>>> Stashed changes
+=======
+>>>>>>> main
       </div>
     </div>
   );

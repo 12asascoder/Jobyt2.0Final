@@ -100,6 +100,7 @@ export default function RecruiterJobsPage() {
   }
 
   return (
+<<<<<<< HEAD
 <<<<<<< Updated upstream
     <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto pb-6 pt-6 px-4">
@@ -108,6 +109,10 @@ export default function RecruiterJobsPage() {
     <div className="max-w-7xl mx-auto space-y-6 pb-6">
       <section className="flex flex-wrap items-start justify-between gap-4">
 >>>>>>> Stashed changes
+=======
+    <div className="max-w-7xl mx-auto space-y-6 pb-6">
+      <section className="flex flex-wrap items-start justify-between gap-4">
+>>>>>>> main
           <div>
             <h1 className="text-2xl sm:text-4xl md:text-[44px] leading-[1.05] font-black tracking-tight text-black">Job Listings</h1>
             <p className="mt-2 text-xl leading-tight text-black/80">Manage and track all your internship postings</p>
@@ -137,7 +142,11 @@ export default function RecruiterJobsPage() {
             const statusDisplay = getJobStatusDisplay(job);
             return (
             <div key={job.id} className="rounded-xl border border-slate-200 bg-white p-6 hover:shadow-sm transition-shadow">
+<<<<<<< HEAD
               <div className="flex flex-col gap-2">
+=======
+              <div className="flex flex-col gap-2 mb-2">
+>>>>>>> main
                 <div className="flex items-center flex-wrap gap-2">
                   <h3 className="text-lg font-black text-slate-900 flex-1 min-w-0">{job.title}</h3>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${statusDisplay.className}`}>
@@ -209,7 +218,6 @@ export default function RecruiterJobsPage() {
           )})}
         </div>
       )}
-        </div>
       </div>
     </div>
   );

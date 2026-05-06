@@ -11,10 +11,25 @@ interface ModalProps {
   className?: string;
 }
 
+
+// Modal open counter to handle multiple modals
+let openModalCount = 0;
+
 export const Modal = ({ isOpen, onClose, title, children, className }: ModalProps) => {
   useEffect(() => {
-    if (isOpen) document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    if (isOpen) {
+      openModalCount++;
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      if (isOpen) {
+        openModalCount--;
+        if (openModalCount <= 0) {
+          document.body.style.overflow = '';
+          openModalCount = 0;
+        }
+      }
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;

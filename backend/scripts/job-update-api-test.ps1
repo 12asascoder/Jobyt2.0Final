@@ -28,7 +28,7 @@ function Call-JobUpdate {
   try {
     $response = Invoke-RestMethod `
       -Method PUT `
-      -Uri "http://localhost:5000/api/v1/jobs/$jobId" `
+      -Uri "http://localhost:5001/api/v1/jobs/$jobId" `
       -Headers $headers `
       -Body $jsonBody
 
@@ -97,7 +97,7 @@ $result5 | ConvertTo-Json -Depth 10
 $headers = @{
   Authorization = "Bearer $Token"
 }
-$jobSnapshot = Invoke-RestMethod -Method GET -Uri "http://localhost:5000/api/v1/jobs/$JobId" -Headers $headers
+$jobSnapshot = Invoke-RestMethod -Method GET -Uri "http://localhost:5001/api/v1/jobs/$JobId" -Headers $headers
 
 Write-Output "Final job snapshot"
 $jobSnapshot | ConvertTo-Json -Depth 10

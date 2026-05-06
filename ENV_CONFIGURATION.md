@@ -14,7 +14,7 @@ The frontend uses environment variables for the backend API connection. This rem
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `NEXT_PUBLIC_API_URL` | Backend API base URL | http://localhost:5000/api/v1 |
+| `NEXT_PUBLIC_API_URL` | Backend API base URL | http://localhost:5001/api/v1 |
 | `NEXT_PUBLIC_APP_URL` | Frontend application URL | http://localhost:3001 |
 
 ### Setup Instructions
@@ -22,7 +22,7 @@ The frontend uses environment variables for the backend API connection. This rem
 1. **Development (Next.js will automatically load `.env.local`):**
    ```bash
    # Update .env.local with your backend URL
-   NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
+   NEXT_PUBLIC_API_URL=http://localhost:5001/api/v1
    ```
 
 2. **Using Environment-Specific Files:**
@@ -45,7 +45,7 @@ Environment variables are accessed via the constants file:
 
 ```typescript
 // frontend/src/constants/index.ts
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1';
 ```
 
 All API calls use this constant:
@@ -70,7 +70,7 @@ The backend also uses environment variables for database, Redis, JWT, and OAuth 
 
 ```env
 NODE_ENV=development
-PORT=5000
+PORT=5001
 
 # Database
 DATABASE_URL="postgresql://postgres:subhro2004@localhost:5432/hiring_platform?sslmode=disable"
@@ -86,7 +86,7 @@ GOOGLE_CLIENT_ID=
 GOOGLE_AUTH_SECRET=
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
-GITHUB_REDIRECT_URI=http://localhost:5000/auth/github/callback
+GITHUB_REDIRECT_URI=http://localhost:5001/auth/github/callback
 ```
 
 ### Setup Instructions
@@ -114,7 +114,7 @@ Node.js automatically loads `.env` file using a dotenv package. Ensure `process.
 - [ ] Frontend `.env.local` is created with correct `NEXT_PUBLIC_API_URL`
 - [ ] Backend `.env` is created with database and JWT configuration
 - [ ] Frontend dev server is running on port 3001
-- [ ] Backend server is running on port 5000
+- [ ] Backend server is running on port 5001
 - [ ] Database is accessible and migrations are run
 - [ ] OAuth variables are configured (if using OAuth features)
 - [ ] CORS is configured to accept requests from `FRONTEND_URL`

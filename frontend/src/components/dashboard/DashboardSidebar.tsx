@@ -177,21 +177,26 @@ export function DashboardSidebar() {
             {/* Logout Confirmation Modal */}
             {showLogoutConfirm && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                    <div className="bg-black border border-[#222] rounded-2xl w-full max-w-sm p-8 text-center shadow-2xl font-brand">
-                        <h3 className="text-2xl font-bold text-white mb-3 tracking-wide">Log Out?</h3>
-                        <p className="text-white/60 text-sm mb-8 leading-relaxed">
-                            Your progress is saved. Come back anytime to track your internship applications and update your profile.
+                    <div 
+                        className="bg-black rounded-3xl flex flex-col justify-center items-center text-center p-8"
+                        style={{ width: '479px', height: '293px', boxShadow: '0px 0px 50px 0px #00000040' }}
+                    >
+                        <h3 className="text-[32px] font-bold text-white mb-4" style={{ fontFamily: 'Myanmar Khyay, sans-serif' }}>Log Out?</h3>
+                        <p className="text-white text-[14px] leading-tight max-w-[360px] mb-8" style={{ fontFamily: 'Myanmar Sans Pro, sans-serif' }}>
+                            Your progress is saved. Come back anytime to track your internship applications.
                         </p>
-                        <div className="flex items-center justify-center gap-4">
+                        <div className="flex items-center justify-center gap-12 w-full px-8">
                             <button
                                 onClick={() => setShowLogoutConfirm(false)}
-                                className="px-6 py-2.5 rounded-lg border border-white/20 text-white hover:border-white transition-colors text-sm"
+                                className="w-[120px] py-2.5 rounded-[12px] border-[0.8px] border-white/40 text-white text-[16px] hover:bg-white/10 transition-colors"
+                                style={{ fontFamily: 'Myanmar Sans Pro, sans-serif' }}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={confirmLogout}
-                                className="px-6 py-2.5 rounded-lg bg-[#c3ff3d] text-black font-semibold hover:bg-[#aee62d] transition-colors text-sm"
+                                className="w-[120px] py-2.5 rounded-[12px] bg-[#C3FF3D] text-black text-[16px] font-semibold hover:bg-[#aee62d] transition-colors"
+                                style={{ fontFamily: 'Myanmar Sans Pro, sans-serif' }}
                             >
                                 Confirm
                             </button>

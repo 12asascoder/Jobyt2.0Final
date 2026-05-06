@@ -114,7 +114,7 @@
               },
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"success\": true,\n  \"message\": \"Ingestion completed\",\n  \"data\": {\n    \"runId\": \"uuid-here\",\n    \"status\": \"completed\",\n    \"dryRun\": false,\n    \"totalRoadmaps\": 46,\n    \"successCount\": 44,\n    \"failCount\": 2,\n    \"durationMs\": 45000\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Ingestion completed\",\n  \"data\": {\n    \"runId\": \"uuid-here\",\n    \"status\": \"completed\",\n    \"dryRun\": false,\n    \"totalRoadmaps\": 46,\n    \"successCount\": 44,\n    \"failCount\": 2,\n    \"durationMs\": 45001\n  }\n}"
             }
           ],
           "event": [

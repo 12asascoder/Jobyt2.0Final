@@ -245,6 +245,7 @@ export function DashboardHeader({
 
 const NotificationPopover = () => {
     const { notifications, unread, isLoading, fetchNotifications, markRead, markAllRead } = useNotifications();
+    const [activeTab, setActiveTab] = useState('Today');
 
     useEffect(() => {
         void fetchNotifications(1);
@@ -262,10 +263,10 @@ const NotificationPopover = () => {
     return (
         <div 
             onClick={(e) => e.stopPropagation()} 
-            className="absolute right-0 top-14 sm:top-16 mt-1 w-[340px] max-w-[calc(100vw-32px)] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 p-5 z-50 animate-in fade-in slide-in-from-top-2 text-left cursor-auto"
+            className="absolute right-0 top-14 sm:top-16 mt-1 w-[399px] h-[276px] bg-white rounded-[14px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 pt-[21px] pr-[17.5px] pb-[14px] pl-[17.5px] z-50 animate-in fade-in slide-in-from-top-2 text-left cursor-auto flex flex-col gap-[16.8px]"
         >
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-display font-medium text-slate-900">Notifications {unread > 0 ? `(${unread})` : ''}</h3>
+            <div className="flex items-center justify-between shrink-0">
+                <h3 className="text-[20px] font-display font-semibold text-slate-900 leading-none">Notifications {unread > 0 ? `(${unread})` : ''}</h3>
                 {unread > 0 && (
                     <button
                         onClick={() => void markAllRead()}
@@ -276,7 +277,19 @@ const NotificationPopover = () => {
                 )}
             </div>
 
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+            <div className="flex bg-black rounded-[8px] p-1 shrink-0 h-[36px]">
+                {['Today', 'This Week', 'Earlier'].map((tab) => (
+                    <button 
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`flex-1 text-[13px] font-medium rounded-md transition-colors ${activeTab === tab ? 'bg-[#c1f237] text-black' : 'text-[#c1f237] hover:bg-white/10'}`}
+                    >
+                        {tab}
+                    </button>
+                ))}
+            </div>
+
+            <div className="space-y-[10px] overflow-y-auto pr-1 flex-1">
                 {isLoading ? (
                     <p className="text-sm text-slate-500 py-4 text-center">Loading notifications...</p>
                 ) : notifications.length === 0 ? (
@@ -287,12 +300,11 @@ const NotificationPopover = () => {
                             key={notif.id}
                             type="button"
                             onClick={() => void handleNotificationClick(notif.id, notif.action_url, notif.read)}
-                            className="w-full text-left bg-[#f8f6f0] rounded-[16px] p-4 flex items-start gap-3 hover:bg-[#f1eee6] transition-colors"
+                            className={`w-full text-left rounded-[10px] p-3.5 flex items-start gap-3 transition-colors ${notif.read ? 'bg-[#f5f5f5] hover:bg-[#ebebeb]' : 'bg-[#f4f9e3] hover:bg-[#edf4d8]'}`}
                         >
-                            <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${notif.read ? 'bg-[#d9d9d9]' : 'bg-[#c1f237]'}`} />
-                            <div>
-                                <p className="text-slate-800 text-[13px] leading-snug font-semibold">{notif.title}</p>
-                                <p className="text-slate-600 text-[12px] leading-snug mt-1">{notif.body}</p>
+                            <div className={`w-3 h-3 rounded-full mt-0.5 shrink-0 ${notif.read ? 'bg-[#d9d9d9]' : 'bg-[#c1f237]'}`} />
+                            <div className="flex-1">
+                                <p className="text-slate-800 text-[12.5px] leading-[1.4] font-medium">{notif.title}</p>
                             </div>
                         </button>
                     ))

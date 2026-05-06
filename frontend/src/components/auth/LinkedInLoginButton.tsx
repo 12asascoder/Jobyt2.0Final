@@ -12,6 +12,7 @@ interface LinkedInLoginButtonProps {
   onStart?: () => void;
   onComplete?: () => void;
   onError: (message: string) => void;
+  redirectTarget?: string | null;
 }
 
 const LinkedInIcon = () => (
@@ -25,19 +26,21 @@ const LinkedInIcon = () => (
   </svg>
 );
 
-export function LinkedInLoginButton({ referralCode, role, disabled, className, onStart, onComplete, onError }: LinkedInLoginButtonProps) {
+export function LinkedInLoginButton({ referralCode, role, disabled, className, onStart, onComplete, onError, redirectTarget }: LinkedInLoginButtonProps) {
   const roleRef = useRef<typeof role>(role);
   const referralCodeRef = useRef(referralCode);
+  const redirectTargetRef = useRef(redirectTarget);
 
   useEffect(() => {
     roleRef.current = role;
     referralCodeRef.current = referralCode;
-  }, [role, referralCode]);
+    redirectTargetRef.current = redirectTarget;
+  }, [role, referralCode, redirectTarget]);
 
   const handleClick = async () => {
     onStart?.();
     try {
-      await beginOAuthRedirect('linkedin', referralCodeRef.current, roleRef.current);
+      await beginOAuthRedirect('linkedin', referralCodeRef.current, roleRef.current, redirectTargetRef.current);
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
