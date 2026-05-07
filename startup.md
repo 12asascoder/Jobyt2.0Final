@@ -10,7 +10,7 @@ Make sure your terminal is at:
 cd C:\Users\gupta\Hiring_platform
 ```
 
-## 2) Start the backend (port 5001)
+## 2) Start the backend (port 5000)
 
 Open a new terminal tab/window and run:
 
@@ -22,10 +22,10 @@ npm run dev
 ```
 
 Expected backend URL:
-- http://localhost:5001
+- http://localhost:5000
 
 Health check:
-- http://localhost:5001/api/v1/health
+- http://localhost:5000/api/v1/health
 
 ## 3) Start the frontend (port 3000)
 
@@ -45,7 +45,7 @@ Expected frontend URL:
 From any terminal, run:
 
 ```powershell
-Get-NetTCPConnection -LocalPort 3000,5001 -State Listen |
+Get-NetTCPConnection -LocalPort 3000,5000 -State Listen |
   Select-Object LocalPort, OwningProcess, State |
   Sort-Object LocalPort
 ```
@@ -72,4 +72,4 @@ Ctrl + C
 ## Notes
 
 - If Redis/Postgres are not running locally, backend may log warnings depending on `.env` values.
-- If port 3000 or 5001 is already in use, stop the existing process or change the app port in environment/config.
+- If port 3000 or 5000 is already in use, stop the existing process or change the app port in environment/config.

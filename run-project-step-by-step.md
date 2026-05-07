@@ -16,10 +16,10 @@ npm run dev
 ```
 
 Backend runs on:
-- http://localhost:5001
+- http://localhost:5000
 
 Backend health endpoint:
-- http://localhost:5001/api/v1/health
+- http://localhost:5000/api/v1/health
 
 ## 3. Start frontend (Terminal B)
 
@@ -37,19 +37,19 @@ Frontend runs on:
 Open a third terminal and run:
 
 ```powershell
-Get-NetTCPConnection -LocalPort 3000,5001 -State Listen |
+Get-NetTCPConnection -LocalPort 3000,5000 -State Listen |
   Select-Object LocalPort, OwningProcess, State |
   Sort-Object LocalPort
 ```
 
 Expected:
 - Port 3000 in Listen state
-- Port 5001 in Listen state
+- Port 5000 in Listen state
 
 ## 5. Verify by HTTP requests
 
 ```powershell
-Invoke-WebRequest http://localhost:5001/api/v1/health -UseBasicParsing | Select-Object StatusCode
+Invoke-WebRequest http://localhost:5000/api/v1/health -UseBasicParsing | Select-Object StatusCode
 Invoke-WebRequest http://localhost:3000 -UseBasicParsing | Select-Object StatusCode
 ```
 

@@ -67,7 +67,7 @@ while old modules continue using `user_id` safely.
 1. Prisma schema validation passed.
 2. Prisma client generation passed.
 3. TypeScript compile check passed (`tsc --noEmit`).
-4. Backend startup path remains intact; local run showed expected infra issues only (`Redis unavailable`, `port 5001 already in use`), not schema/type failures.
+4. Backend startup path remains intact; local run showed expected infra issues only (`Redis unavailable`, `port 5000 already in use`), not schema/type failures.
 
 ---
 

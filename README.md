@@ -20,7 +20,7 @@ A cloud-based two-sided hiring marketplace connecting job applicants with recrui
 ```
 Hiring_platform/
 ├── frontend/              # Next.js app (port 3000)
-├── backend/               # Express REST API (port 5001)
+├── backend/               # Express REST API (port 5000)
 │   ├── src/
 │   │   ├── config/        # Database, Redis, Socket.io, migrations
 │   │   ├── controllers/   # Request handlers
@@ -83,7 +83,7 @@ DB_PORT=5432
 DB_NAME=hiring_platform
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
-PORT=5001
+PORT=5000
 
 # Required for auth
 JWT_SECRET=your_jwt_secret_key_min_32_chars
@@ -103,7 +103,7 @@ FRONTEND_URL=http://localhost:3000
 ```bash
 cd frontend
 # Create .env.local if needed
-echo "NEXT_PUBLIC_API_URL=http://localhost:5001/api/v1" > .env.local
+echo "NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1" > .env.local
 ```
 
 ### 3. Initialize the Database
@@ -144,7 +144,7 @@ cd backend
 npm run dev
 ```
 
-Backend starts at: **http://localhost:5001**
+Backend starts at: **http://localhost:5000**
 
 **Terminal 2 — Frontend:**
 
@@ -157,7 +157,7 @@ Frontend starts at: **http://localhost:3000**
 
 ### 6. Verify
 
-- Health check: http://localhost:5001/api/v1/health
+- Health check: http://localhost:5000/api/v1/health
 - Frontend: http://localhost:3000
 
 ---
@@ -172,7 +172,7 @@ cp .env.example .env
 docker-compose up --build
 ```
 
-- Backend: http://localhost:5001
+- Backend: http://localhost:5000
 - Postgres and Redis start automatically
 - Run `npm run db:init` once to apply the schema
 
@@ -246,12 +246,12 @@ npm run roadmap:ingest -- --dry-run
 
 ```bash
 # Full ingestion
-curl -X POST http://localhost:5001/api/v1/roadmaps/ingest \
+curl -X POST http://localhost:5000/api/v1/roadmaps/ingest \
   -H "Content-Type: application/json" \
   -d '{"dryRun": false}'
 
 # Dry run
-curl -X POST http://localhost:5001/api/v1/roadmaps/ingest \
+curl -X POST http://localhost:5000/api/v1/roadmaps/ingest \
   -H "Content-Type: application/json" \
   -d '{"dryRun": true}'
 ```
@@ -285,7 +285,7 @@ The system automatically maps an applicant's `skills` array to roadmap nodes.
 
 ## API Reference
 
-**Base URL:** `http://localhost:5001/api/v1`
+**Base URL:** `http://localhost:5000/api/v1`
 
 ### Core Endpoints
 
@@ -308,7 +308,7 @@ The system automatically maps an applicant's `skills` array to roadmap nodes.
 Import `backend/roadmap-api-collection.json` into Postman for ready-to-use requests with automated test scripts.
 
 1. Open Postman → **Import** → Upload `roadmap-api-collection.json`
-2. Set the `baseUrl` variable to `http://localhost:5001/api/v1`
+2. Set the `baseUrl` variable to `http://localhost:5000/api/v1`
 3. Run the collection — all tests should pass
 
 ---
