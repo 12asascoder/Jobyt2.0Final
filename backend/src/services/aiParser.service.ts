@@ -1,4 +1,5 @@
 import { AppError } from '../utils/appError';
+import { PromptTemplatesService } from './promptTemplates.service';
 
 export interface AIParsedJob {
   title: string;
@@ -20,24 +21,9 @@ export const AiParserService = {
       throw new Error('OPENAI_API_KEY is missing');
     }
 
-    const systemPrompt = `
-You are an expert HR data extraction AI. You will be provided with raw text scraped from a job listing webpage.
-Extract the relevant job details and output them STRICTLY as a JSON object matching this schema:
-{
-  "title": "Job Title (string)",
-  "companyName": "Company Name (string)",
-  "description": "A well-formatted HTML or Markdown description of the job, including responsibilities and requirements (string)",
-  "location": "Job location if found, e.g., 'Remote', 'New York, NY', else null",
-  "salary_min": integer or null (e.g., 50000),
-  "salary_max": integer or null (e.g., 80000),
-  "skills": ["Array", "Of", "Relevant", "Technical", "Or", "Soft", "Skills"]
-}
-Rules:
-1. ONLY return the JSON object, absolutely no markdown formatting blocks (do not wrap in \`\`\`json).
-2. If a field like salary or location is missing, use null.
-3. Clean up the description to remove header/footer website navigation links or cookie consent text. Focus purely on the job description.
-4. If you cannot determine the company name, return "External Company".
-`;
+    const systemPrompt = PromptTemplatesService.renderTemplate('job_parsing', {
+      rawText,
+    });
 
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {

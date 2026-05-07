@@ -6,6 +6,7 @@ import {
   JobApplicationQuestion,
 } from '../models/job.model';
 import { CreditService } from './credit.service';
+import { PromptTemplatesService } from './promptTemplates.service';
 import { UserModel } from '../models/user.model';
 import { AppError, badRequest, notFound } from '../utils/appError';
 import { ProfileRequirementsService } from './profileRequirements.service';
@@ -424,7 +425,10 @@ export const JobService = {
       }
 
       try {
-          const prompt = `Generate 5 technical interview questions for a ${role} role requiring the following skills: ${skills.join(', ')}. Return only the questions separated by newlines, without numbering.`;
+          const prompt = PromptTemplatesService.renderTemplate('interview_questions', {
+            role,
+            skills: skills.join(', '),
+          });
           const response = await fetch('https://api.openai.com/v1/chat/completions', {
               method: 'POST',
               headers: {

@@ -1,6 +1,7 @@
 import { ResumeDeleteResult, ResumeListItem, ResumeModel } from '../models/resume.model';
 import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import { StorageService } from './storage.service';
+import { PromptTemplatesService } from './promptTemplates.service';
 import { withTransaction } from '../utils/transaction';
 import fs from 'fs/promises';
 import path from 'path';
@@ -282,30 +283,10 @@ export const ResumeService = {
       // Optional: LLM enrichment if available
       if (process.env.OPENAI_API_KEY) {
         try {
-          const prompt = `You are a strict, senior technical recruiter AI parsing a resume string against a job description.
-          You must output ONLY valid JSON without any markdown formatting.
-          Analyze the exact raw resume text and job description provided below.
-          
-          Calculate based exactly on real industry expectations:
-          1. keywordDensity: top 3 most repeated tech skill keywords and their frequencies in the resume.
-          2. explanation: highly specific 2-sentence rationale for the overall resume strength compared to the job description.
-          3. feedback: { "missingSections": [], "weakAreas": [], "improvements": ["Actionable suggestion 1", "Suggestion 2"] }
-          4. qualityScore: 0 to 100 purely based on grammar, wording, length optimization, and detail. Deduct heavily for duplicate filler content.
-          5. rolePrediction: The best job title the candidate actually deserves based solely on the resume.
-          6. experience: Calculate total years/months from chronological dates found in the resume (e.g. "5 Years 2 Months"). Return "0 Years" if none found.
-
-          Resume Text: "${resumeText.substring(0, 3000)}"
-          Job Description: "${jobDescription.substring(0, 1500)}"
-          
-          JSON schema required:
-          {
-            "keywordDensity": { "keywordString": number },
-            "explanation": string,
-            "feedback": { "missingSections": [string], "weakAreas": [string], "improvements": [string] },
-            "qualityScore": number,
-            "rolePrediction": string,
-            "experience": string
-          }`;
+          const prompt = PromptTemplatesService.renderTemplate('ats_scoring', {
+            resumeText: resumeText.substring(0, 3000),
+            jobDescription: jobDescription.substring(0, 1500),
+          });
 
           const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
