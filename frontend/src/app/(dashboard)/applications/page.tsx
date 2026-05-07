@@ -80,7 +80,7 @@ export default function ApplicationsPage() {
     };
 
     return (
-        <div className="max-w-[1400px] ml-4 sm:ml-6 lg:ml-8 pr-4">
+        <div className="max-w-[1200px] mx-auto pb-10">
             <div className="flex items-center justify-between mb-4">
                 <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight">
                     My Applications
@@ -116,10 +116,10 @@ export default function ApplicationsPage() {
                             <div className="grid grid-cols-10 gap-3 text-[11px] font-bold uppercase tracking-widest">
                                 <div className="col-span-2">Company</div>
                                 <div className="col-span-2">Profile</div>
+                                <div className="col-span-1 pl-6">Status</div>
                                 <div className="col-span-2">Applied On</div>
-                                <div className="col-span-2">Status</div>
+                                <div className="col-span-2">Latest Comment</div>
                                 <div className="col-span-1 text-center">View</div>
-                                <div className="col-span-1">Last Updated</div>
                             </div>
                         </div>
 
@@ -143,14 +143,14 @@ export default function ApplicationsPage() {
                                                     {view.job_title || 'Position'}
                                                 </span>
                                             </div>
+                                            <div className="col-span-1 pl-6">
+                                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
+                                                    {APPLICATION_STATUS_LABELS[app.status] || app.status}
+                                                </span>
+                                            </div>
                                             <div className="col-span-2">
                                                 <span className="text-sm text-slate-500">
                                                     {formatDate(app.created_at)}
-                                                </span>
-                                            </div>
-                                            <div className="col-span-1">
-                                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
-                                                    {APPLICATION_STATUS_LABELS[app.status] || app.status}
                                                 </span>
                                             </div>
                                             <div className="col-span-2 min-w-0">
