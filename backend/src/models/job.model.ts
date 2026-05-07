@@ -705,8 +705,10 @@ export const JobModel = {
     }
 
     if (filters.keyword) {
-      conditions.push(`(jobs.title ILIKE $${index} OR jobs.description ILIKE $${index})`);
-      values.push(`%${filters.keyword}%`);
+      const normalizedKeyword = filters.keyword.trim();
+      // Use plainto_tsquery for simple keyword matching, or websearch_to_tsquery for more advanced syntax
+      conditions.push(`jobs.search_vector @@ plainto_tsquery('english', $${index})`);
+      values.push(normalizedKeyword);
       index++;
     }
 
@@ -750,11 +752,24 @@ export const JobModel = {
     }
 
     const whereClause = `WHERE ${conditions.join(' AND ')}`;
+    
+    // Base ranking: Boost Spazorlabs jobs
     const priorityOrderClause =
       "CASE WHEN regexp_replace(lower(COALESCE(NULLIF(jobs.company_name, ''), recruiter_profiles.company_name, '')), '[^a-z0-9]', '', 'g') LIKE '%spazorlabs%' THEN 0 ELSE 1 END";
-    const orderByClause = filters.prioritizeSpazorlabs
-      ? `${priorityOrderClause}, jobs.created_at DESC, jobs.id DESC`
-      : 'jobs.created_at DESC, jobs.id DESC';
+    
+    // If keyword is present, also order by ts_rank for relevance
+    let orderByClause = '';
+    if (filters.keyword) {
+      // The keyword parameter is the first value in 'values' if it was added. 
+      // But index management is dynamic. We need to find the correct index for the keyword.
+      // Since we rebuild orderByClause here, let's find the value index.
+      const keywordIndex = values.indexOf(filters.keyword.trim()) + 1;
+      orderByClause = `${priorityOrderClause}, ts_rank(jobs.search_vector, plainto_tsquery('english', $${keywordIndex})) DESC, jobs.created_at DESC, jobs.id DESC`;
+    } else {
+      orderByClause = filters.prioritizeSpazorlabs
+        ? `${priorityOrderClause}, jobs.created_at DESC, jobs.id DESC`
+        : 'jobs.created_at DESC, jobs.id DESC';
+    }
 
     const countQuery = `SELECT COUNT(*) FROM jobs ${whereClause}`;
     const selectQuery = `SELECT

@@ -450,4 +450,18 @@ export const JobService = {
           return { questions: staticFallback };
       }
   },
+
+  /**
+   * Record a job view/impression asynchronously
+   * Increments the views_count for analytics
+   * Non-blocking operation to avoid impacting response time
+   */
+  async recordJobView(jobId: string): Promise<void> {
+    try {
+      await JobModel.incrementViews(jobId);
+    } catch (err) {
+      // Silently fail - view tracking should not break the request
+      console.error(`Failed to record view for job ${jobId}:`, err);
+    }
+  },
 };

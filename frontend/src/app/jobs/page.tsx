@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, Suspense, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { JobCard } from '@/components/jobs/JobCard';
@@ -14,6 +14,18 @@ function JobsContent() {
     const searchParams = useSearchParams();
     const { jobs, total, isLoading, isLoadingMore, hasMore, searchJobs, loadMore } = useJobs();
 
+    const observer = useRef<IntersectionObserver | null>(null);
+    const lastJobElementRef = useCallback((node: HTMLDivElement | null) => {
+        if (isLoading || isLoadingMore) return;
+        if (observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && hasMore) {
+                loadMore();
+            }
+        });
+        if (node) observer.current.observe(node);
+    }, [isLoading, isLoadingMore, hasMore, loadMore]);
+
     useEffect(() => {
         const keyword = searchParams.get('keyword') || undefined;
         const type = searchParams.get('type') || undefined;
@@ -21,8 +33,8 @@ function JobsContent() {
     }, [searchParams, searchJobs]);
 
     return (
-        <div className="flex gap-6">
-            <div className="w-64 shrink-0">
+        <div className="flex flex-col lg:flex-row gap-6">
+            <div className="w-full lg:w-[320px] shrink-0">
                 <JobFilters
                     onApply={searchJobs}
                     initialKeyword={searchParams.get('keyword') || ''}
@@ -30,7 +42,7 @@ function JobsContent() {
                 />
             </div>
 
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
                 <div className="mb-4 flex items-center justify-between">
                     <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                         <FaMagnifyingGlass className="text-brand-primary" />
@@ -45,25 +57,32 @@ function JobsContent() {
                 )}
 
                 <div className="flex flex-col gap-3">
-                    {jobs.map((job) => (
-                        <JobCard
-                            key={job.id}
-                            job={job}
-                            actions={
-                                <Link href={ROUTES.jobDetail(job.id)}>
-                                    <Button size="sm">Apply Now</Button>
-                                </Link>
-                            }
-                        />
-                    ))}
+                    {jobs.map((job, index) => {
+                        const isLast = index === jobs.length - 1;
+                        return (
+                            <div key={job.id} ref={isLast ? lastJobElementRef : null}>
+                                <JobCard
+                                    job={job}
+                                    actions={
+                                        <Link href={ROUTES.jobDetail(job.id)}>
+                                            <Button size="sm">Apply Now</Button>
+                                        </Link>
+                                    }
+                                />
+                            </div>
+                        );
+                    })}
                 </div>
 
-                {!isLoading && jobs.length > 0 && (
-                    <div className="mt-6 flex flex-col items-center gap-3">
-                        <Button variant="brand" onClick={loadMore} isLoading={isLoadingMore} disabled={isLoadingMore || !hasMore}>
-                            {isLoadingMore ? 'Loading more jobs...' : (hasMore ? 'Load more jobs' : 'No more jobs')}
-                        </Button>
-                        <p className="text-sm text-slate-500">Showing {jobs.length} of {total} jobs</p>
+                {isLoadingMore && (
+                    <div className="mt-6 flex justify-center py-4">
+                        <Spinner size="md" />
+                    </div>
+                )}
+                
+                {!isLoading && !isLoadingMore && jobs.length > 0 && !hasMore && (
+                    <div className="mt-6 text-center text-sm text-slate-500 py-4 border-t border-slate-100">
+                        You have reached the end of the list. Showing {jobs.length} of {total} jobs.
                     </div>
                 )}
             </div>

@@ -158,10 +158,15 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         const jobData = jobRes.data ?? null;
         setJob(jobData);
 
-        // Auto-open apply modal if redirecting back from login
+        // Auto-scroll to apply section if redirecting back from login
         const applyRequested = new URLSearchParams(window.location.search).get('apply') === '1';
         if (applyRequested && jobData && isAuthenticated) {
-          setShowModal(true);
+          setTimeout(() => {
+            const node = document.getElementById('apply-now-section');
+            if (node) {
+              node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 500);
         }
 
         if (isAuthenticated) {
@@ -341,7 +346,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
   const scrollToApplySection = () => {
     if (!isAuthenticated) {
-      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('apply', '1');
+      const redirectTarget = currentUrl.pathname + currentUrl.search;
+      router.push(`${ROUTES.login}?redirect=${encodeURIComponent(redirectTarget)}`);
       return;
     }
     const node = document.getElementById('apply-now-section');
