@@ -206,113 +206,146 @@ export default function RecruiterProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <Spinner size="lg" />
+      <div className="max-w-7xl mx-auto space-y-8 pb-6 animate-pulse">
+        <div className="h-12 bg-slate-200 rounded-lg w-1/4" />
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+            <div className="h-[600px] bg-slate-100 rounded-2xl" />
+            <div className="space-y-6">
+                <div className="h-40 bg-black rounded-2xl" />
+                <div className="h-80 bg-slate-100 rounded-2xl" />
+            </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1120px] pb-8">
-      <h1 className="text-[44px] leading-[1.02] font-black tracking-tight text-slate-900 mb-5">Profile</h1>
+    <div className="max-w-[1200px] mx-auto pb-8 px-4">
+      <h1 className="text-[44px] leading-tight font-black tracking-tight text-black mb-8 font-display">Account Settings</h1>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5">
-        <section className="rounded-2xl bg-[#ece9e2] border border-lime-300 p-5">
-          <div className="rounded-2xl bg-white p-5 border border-black/5">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-              <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-200 border border-black/10 flex items-center justify-center text-xl font-bold text-slate-700">
-                {logoUrl ? <img src={logoUrl} alt="Company logo" className="w-full h-full object-cover" /> : profileInitials}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-8">
+        <section className="rounded-3xl bg-[#ece9e2] p-6 sm:p-8 space-y-10">
+          <div className="space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6 pb-8 border-b border-black/5">
+              <div className="relative group">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden bg-white border-2 border-white shadow-xl flex items-center justify-center text-3xl font-black text-black/20">
+                    {logoUrl ? <img src={logoUrl} alt="Company logo" className="w-full h-full object-cover transition-transform group-hover:scale-110" /> : profileInitials}
+                </div>
+                {uploadingLogo && (
+                    <div className="absolute inset-0 bg-black/40 rounded-3xl flex items-center justify-center backdrop-blur-sm">
+                        <Spinner size="sm" className="text-white" />
+                    </div>
+                )}
               </div>
-              <div>
-                <label className="inline-flex items-center rounded-lg bg-black text-lime-300 px-4 py-2 text-sm font-semibold cursor-pointer hover:bg-slate-900">
-                  {uploadingLogo ? 'Uploading...' : 'Upload Company Logo'}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    disabled={uploadingLogo}
-                    onChange={handleLogoUpload}
-                  />
-                </label>
-                <p className="text-xs text-slate-500 mt-1">PNG, JPG or WEBP</p>
+              <div className="space-y-3">
+                <h3 className="text-xl font-black text-black">Company Identity</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                    <label className="inline-flex items-center gap-2 rounded-xl bg-black text-lime-300 px-5 py-2.5 text-xs font-black cursor-pointer hover:bg-slate-900 transition-all active:scale-95 shadow-lg shadow-black/10">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                        {uploadingLogo ? 'Processing...' : 'Upload New Logo'}
+                        <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            disabled={uploadingLogo}
+                            onChange={handleLogoUpload}
+                        />
+                    </label>
+                    <p className="text-[11px] font-bold text-black/40 uppercase tracking-widest px-2">PNG, JPG or WEBP (Max 2MB)</p>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label="Your Name" value={form.name} onChange={(v) => onChange('name', v)} placeholder="Hiring manager name" />
-              <Field label="Email" value={email} disabled onChange={() => undefined} placeholder="" />
-              <Field label="Company Name" value={form.companyName} onChange={(v) => onChange('companyName', v)} placeholder="Acme Inc." />
-              <Field label="Industry" value={form.industry} onChange={(v) => onChange('industry', v)} placeholder="Software" />
-              <Field label="Company Size" value={form.company_size} onChange={(v) => onChange('company_size', v)} placeholder="11-50" />
-              <Field label="Location" value={form.location} onChange={(v) => onChange('location', v)} placeholder="Bengaluru, India" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
+              <Field label="Manager Name" value={form.name} onChange={(v) => onChange('name', v)} placeholder="Your full name" />
+              <Field label="Email Address" value={email} disabled onChange={() => undefined} placeholder="" />
+              <Field label="Company Name" value={form.companyName} onChange={(v) => onChange('companyName', v)} placeholder="e.g. Google" />
+              <Field label="Industry Sector" value={form.industry} onChange={(v) => onChange('industry', v)} placeholder="e.g. Technology" />
+              <Field label="Team Size" value={form.company_size} onChange={(v) => onChange('company_size', v)} placeholder="e.g. 50-100" />
+              <Field label="Primary Location" value={form.location} onChange={(v) => onChange('location', v)} placeholder="City, Country" />
               <div className="md:col-span-2">
-                <Field label="Website" value={form.website} onChange={(v) => onChange('website', v)} placeholder="https://example.com" type="url" />
+                <Field label="Official Website" value={form.website} onChange={(v) => onChange('website', v)} placeholder="https://company.com" type="url" />
               </div>
-              <div className="md:col-span-2">
-                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Company Description</label>
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-[11px] font-black uppercase tracking-[0.1em] text-black/40 ml-1">Company Vision & Mission</label>
                 <textarea
-                  rows={4}
+                  rows={5}
                   value={form.description}
                   onChange={(e) => onChange('description', e.target.value)}
-                  placeholder="Tell candidates about your company."
-                  className="mt-1 w-full rounded-xl border border-black/10 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                  placeholder="Share your company's story and what makes it a great place to work..."
+                  className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[15px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all resize-none shadow-sm"
                 />
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end">
+            <div className="pt-4 flex justify-end">
               <button
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded-lg bg-black text-lime-300 px-5 py-2.5 text-sm font-bold hover:bg-slate-900 disabled:opacity-60"
+                className="w-full sm:w-auto rounded-2xl bg-black text-lime-300 px-10 py-4 text-[16px] font-black hover:bg-slate-900 transition-all active:scale-95 disabled:opacity-50 shadow-xl shadow-black/10"
               >
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? 'Synchronizing...' : 'Save Profile Changes'}
               </button>
             </div>
           </div>
         </section>
 
-        <aside className="space-y-5 h-fit">
-          <div className="rounded-2xl bg-black text-white p-5">
-            <h2 className="text-lg font-bold mb-3">Profile Completion</h2>
-            <div className="w-full h-2 rounded-full bg-white/20 overflow-hidden">
-              <div className="h-full bg-lime-400" style={{ width: `${Math.min(100, Math.max(0, completeness))}%` }} />
+        <aside className="space-y-6">
+          <div className="rounded-3xl bg-black text-white p-6 shadow-2xl relative overflow-hidden group">
+            {/* Subtle Gradient Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-lime-400/10 to-transparent pointer-events-none" />
+            
+            <h2 className="text-xl font-black mb-4 flex items-center justify-between relative z-10">
+                Profile Health
+                <span className="text-[10px] bg-lime-400 text-black px-2 py-0.5 rounded-full uppercase tracking-widest font-black">Official</span>
+            </h2>
+            <div className="relative z-10 space-y-4">
+                <div className="w-full h-3 rounded-full bg-white/10 overflow-hidden border border-white/5">
+                    <div className="h-full bg-lime-400 shadow-[0_0_15px_rgba(163,230,53,0.5)] transition-all duration-1000 ease-out" style={{ width: `${Math.min(100, Math.max(0, completeness))}%` }} />
+                </div>
+                <div className="flex items-end justify-between">
+                    <p className="text-5xl font-black text-lime-400 tracking-tighter">{completeness}%</p>
+                    <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest text-right max-w-[120px] mb-1">Based on identity verification and bio data</p>
+                </div>
             </div>
-            <p className="text-3xl font-black text-lime-300 mt-3">{completeness}%</p>
-            <p className="text-xs text-white/70 mt-2">Completeness is calculated from your recruiter profile fields and logo.</p>
           </div>
 
-          <div className="rounded-2xl bg-black text-white p-5 border border-gray-900">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold">Notifications {unreadNotifications > 0 ? `(${unreadNotifications})` : ''}</h2>
+          <div className="rounded-3xl bg-white border border-black/5 p-6 shadow-sm space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-black text-black">Alerts {unreadNotifications > 0 ? `(${unreadNotifications})` : ''}</h2>
               {unreadNotifications > 0 && (
                 <button
                   type="button"
                   onClick={handleMarkAllNotificationsRead}
-                  className="text-xs text-lime-300 hover:text-lime-200 font-semibold"
+                  className="text-[10px] font-black text-black/40 hover:text-black uppercase tracking-widest transition-colors"
                 >
-                  Mark all read
+                  Mark All
                 </button>
               )}
             </div>
 
             {notificationsLoading ? (
-              <div className="py-4 flex justify-center"><Spinner size="sm" /></div>
+              <div className="py-8 flex justify-center"><Spinner size="sm" /></div>
             ) : notifications.length === 0 ? (
-              <p className="text-sm text-white/70">No notifications yet.</p>
+              <div className="py-10 text-center space-y-2">
+                  <div className="mx-auto w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  </div>
+                  <p className="text-[11px] font-bold text-black/30 uppercase tracking-widest">No alerts yet</p>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {notifications.map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => void handleNotificationClick(item.id, item.action_url, item.read)}
-                    className={`w-full text-left rounded-xl border p-3 transition-colors ${item.read ? 'border-white/10 bg-white/5' : 'border-lime-400/30 bg-lime-400/10'}`}
+                    className={`w-full text-left rounded-2xl p-4 transition-all hover:scale-[1.02] border ${item.read ? 'border-black/5 bg-slate-50/50 grayscale opacity-60' : 'border-lime-400/20 bg-lime-50 shadow-sm'}`}
                   >
-                    <p className={`text-sm ${item.read ? 'text-white/90' : 'text-white font-semibold'}`}>{item.title}</p>
-                    <p className="text-xs text-white/70 mt-1 line-clamp-2">{item.body}</p>
-                    <p className="text-[11px] text-white/50 mt-2">{new Date(item.created_at).toLocaleString()}</p>
+                    <p className={`text-[13px] ${item.read ? 'text-black/60 font-bold' : 'text-black font-black'}`}>{item.title}</p>
+                    <p className="text-[11px] text-black/50 mt-1 line-clamp-2 leading-tight">{item.body}</p>
+                    <p className="text-[9px] font-black text-black/30 mt-3 uppercase tracking-widest">{new Date(item.created_at).toLocaleDateString()}</p>
                   </button>
                 ))}
               </div>
@@ -340,15 +373,15 @@ function Field({
   disabled?: boolean;
 }) {
   return (
-    <div>
-      <label className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</label>
+    <div className="space-y-2">
+      <label className="text-[11px] font-black uppercase tracking-[0.1em] text-black/40 ml-1">{label}</label>
       <input
         type={type}
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1 w-full rounded-xl border border-black/10 px-3 py-2 text-sm text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:outline-none focus:ring-2 focus:ring-lime-400"
+        className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[15px] font-bold text-black disabled:bg-slate-50/50 disabled:text-black/30 outline-none focus:ring-2 focus:ring-lime-300 transition-all shadow-sm"
       />
     </div>
   );

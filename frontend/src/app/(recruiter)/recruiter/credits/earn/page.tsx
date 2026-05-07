@@ -212,35 +212,37 @@ export default function RecruiterEarnCreditsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-8">
-      <h1 className="text-3xl font-display font-medium text-center text-slate-900 tracking-tight">Credits & Plans</h1>
+    <div className="mx-auto max-w-[1200px] px-4 pb-12">
+      <h1 className="text-center text-[44px] leading-tight font-black tracking-tight text-black mb-2 font-display">Credits &amp; Plans</h1>
 
-      <div className="relative mt-6 sm:mt-8 mb-6 sm:mb-8 flex items-center justify-center">
+      <div className="relative mt-8 mb-12 flex items-center justify-center">
         <button
           onClick={() => router.push(ROUTES.recruiterCredits)}
-          className="absolute left-0 w-9 h-9 sm:w-10 sm:h-10 bg-black rounded-full flex items-center justify-center text-white hover:text-[#c1f237] transition-colors"
+          className="absolute left-0 w-12 h-12 bg-black rounded-full flex items-center justify-center text-white hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-black/10 group"
         >
-          <FaChevronLeft className="text-sm pr-0.5" />
+          <FaChevronLeft className="text-lg pr-0.5 group-hover:-translate-x-0.5 transition-transform" />
         </button>
-        <h2 className="text-[28px] sm:text-3xl font-display font-medium text-slate-900 tracking-tight">Earn Credits</h2>
+        <h2 className="text-[32px] font-black tracking-tight text-slate-900 font-display">Earn Free Credits</h2>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         {earnTasks.map((task) => (
-          <div key={task.key} className="bg-[#0a0a0a] rounded-xl p-5 sm:p-6 text-center flex flex-col items-center min-h-60 sm:min-h-63.75">
-            <h3 className="text-white text-[22px] font-display font-medium mb-1">{task.title}</h3>
-            <p className="text-white/40 text-[11px] mb-5">{task.subtitle}</p>
+          <div key={task.key} className="bg-black rounded-3xl p-6 text-center flex flex-col items-center min-h-[280px] shadow-xl relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
+            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+            
+            <h3 className="text-white text-[20px] font-black tracking-tight mb-2 relative z-10">{task.title}</h3>
+            <p className="text-white/50 text-[11px] font-bold leading-relaxed mb-6 relative z-10 px-2">{task.subtitle}</p>
 
-            <div className="mb-0">
-              <span className="text-[#c1f237] text-[36px] font-semibold">{task.credits}</span>
+            <div className="mb-1 relative z-10">
+              <span className="text-lime-300 text-[48px] font-black leading-none tracking-tighter">{task.credits}</span>
             </div>
-            <p className="text-[#c1f237] text-[9px] tracking-widest mb-6">CREDITS</p>
+            <p className="text-lime-300/60 text-[10px] font-black uppercase tracking-[0.3em] mb-8 relative z-10">Credits</p>
 
-            <div className="mt-auto w-full px-0 sm:px-1">
+            <div className="mt-auto w-full relative z-10">
               <button
                 onClick={() => void handleTaskAction(task)}
                 disabled={task.key === 'signup' || (task.key === 'completeProfile' && completeProfileClaimed) || (task.key === 'instagram' && instagramClaimed) || claimingTask === task.key}
-                className="w-full bg-[#c1f237] hover:bg-[#b0e025] text-black py-2.5 rounded-xl font-medium text-[13px] transition-colors disabled:bg-[#323232] disabled:text-[#8e8e8e] disabled:cursor-not-allowed"
+                className="w-full bg-lime-400 hover:bg-lime-300 text-black py-3.5 rounded-2xl font-black text-[13px] uppercase tracking-wide transition-all shadow-lg shadow-lime-400/20 active:scale-95 disabled:bg-white/10 disabled:text-white/30 disabled:border disabled:border-white/5 disabled:shadow-none disabled:cursor-not-allowed"
               >
                 {claimingTask === task.key ? 'Claiming...' : taskButtonLabel(task)}
               </button>

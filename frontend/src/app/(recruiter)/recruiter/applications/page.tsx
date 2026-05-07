@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Spinner } from '@/components/ui';
 import { ROUTES } from '@/constants';
-import { FaMagnifyingGlass } from 'react-icons/fa6';
+import { FaMagnifyingGlass, FaComments } from 'react-icons/fa6';
 import toast from 'react-hot-toast';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import { createConversation } from '@/lib/messages';
@@ -122,13 +122,7 @@ export default function RecruiterApplicationsPage() {
         const params = new URLSearchParams();
         params.append('limit', '100');
         if (searchLower) params.append('search', searchLower);
-        if (selectedStatus) {
-          if (selectedStatus === 'rejected,hired,offer') {
-            // Client-side multi-status filter for job-scoped view
-          } else {
-            params.append('status', selectedStatus);
-          }
-        }
+        
         const res = await api.getPaginated<RecruiterApplication>(`/applications/jobs/${selectedJobId}?${params.toString()}`);
         let base = (res.data ?? []).map(normalizeCompany);
 
@@ -138,6 +132,12 @@ export default function RecruiterApplicationsPage() {
             const s = app.status?.toLowerCase() || '';
             return s === 'rejected' || s === 'hired' || s === 'offer';
           });
+        } else if (selectedStatus) {
+            base = base.filter(app => app.status?.toLowerCase() === selectedStatus);
+        }
+
+        if (requestId === activeRequestRef.current) {
+            setApplications(base as any);
         }
         return;
       }
@@ -270,31 +270,31 @@ export default function RecruiterApplicationsPage() {
         </div>
       </section>
 
-        <div className="rounded-2xl p-6 space-y-6" style={{ backgroundColor: '#ece9e2' }}>
+        <div className="rounded-2xl p-4 sm:p-6 space-y-6" style={{ backgroundColor: '#ece9e2' }}>
       <div className="flex flex-col lg:flex-row lg:items-center gap-4">
         {/* Search Bar */}
-        <div className="flex-1 relative max-w-xs">
-          <FaMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-black/60 text-sm" />
+        <div className="flex-1 relative max-w-sm">
+          <FaMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-black/40 text-sm" />
           <input
             type="text"
-            placeholder="Position or Name"
+            placeholder="Search by candidate name or job..."
             value={searchQuery}
             onChange={handleSearch}
-            className="w-full pl-10 pr-4 py-2.5 rounded-full bg-lime-300 text-black placeholder-black/60 font-medium focus:outline-none"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-black/5 text-black placeholder-black/40 font-medium focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
           />
         </div>
 
         {/* Status Filter Tabs */}
-        <div className="flex items-center gap-3 overflow-x-auto lg:ml-auto">
+        <div className="flex items-center gap-3 overflow-x-auto pb-1 lg:pb-0 lg:ml-auto scrollbar-none">
           <div className="flex items-center gap-1 bg-black rounded-full p-1.5">
             {statusFilters.map((filter) => (
               <button
                 key={filter.value}
                 onClick={() => handleStatusChange(filter.value)}
-                className={`px-4 py-1.5 rounded-full font-bold text-xs whitespace-nowrap transition-all ${
+                className={`px-4 py-1.5 rounded-full font-bold text-[11px] whitespace-nowrap transition-all ${
                   selectedStatus === filter.value
-                    ? 'bg-lime-300 text-black'
-                    : 'text-white hover:text-lime-300'
+                    ? 'bg-lime-300 text-black shadow-sm'
+                    : 'text-white/70 hover:text-white'
                 }`}
               >
                 {filter.label}
@@ -306,105 +306,109 @@ export default function RecruiterApplicationsPage() {
 
       {/* Applications List */}
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Spinner size="lg" />
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl border border-slate-200 bg-white p-6 animate-pulse">
+                <div className="flex gap-4">
+                    <div className="w-16 h-16 rounded-full bg-slate-100" />
+                    <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-slate-100 rounded w-1/4" />
+                        <div className="h-3 bg-slate-100 rounded w-1/3" />
+                        <div className="h-3 bg-slate-100 rounded w-1/2" />
+                    </div>
+                </div>
+            </div>
+          ))}
         </div>
       ) : applications.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 p-12 text-center bg-white">
-          <p className="text-sm text-slate-500">No applications found.</p>
+        <div className="rounded-2xl border-2 border-dashed border-black/10 p-12 sm:p-20 text-center bg-white/50">
+          <div className="mx-auto w-16 h-16 bg-black/5 rounded-full flex items-center justify-center mb-4">
+            <FaMagnifyingGlass className="text-black/20 text-2xl" />
+          </div>
+          <h3 className="text-xl font-bold text-black mb-2">No applications found</h3>
+          <p className="text-sm text-black/60 max-w-xs mx-auto">
+            {searchQuery || selectedStatus 
+              ? "We couldn't find any applications matching your current filters."
+              : "You haven't received any applications yet. Make sure your job listings are active."}
+          </p>
+          {(searchQuery || selectedStatus) && (
+            <button 
+              onClick={() => { setSearchQuery(''); setSelectedStatus(''); }}
+              className="mt-6 text-sm font-bold text-black underline underline-offset-4 hover:text-lime-600"
+            >
+              Clear all filters
+            </button>
+          )}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4">
           {applications.map((app) => (
             <div
               key={app.id}
-              className="rounded-xl border border-slate-200 bg-white p-6 hover:shadow-sm transition-shadow"
+              className="group rounded-2xl border border-black/5 bg-white p-5 sm:p-6 hover:shadow-xl hover:shadow-black/5 transition-all duration-300"
             >
-              <div className="flex flex-col sm:flex-row items-start gap-4">
+              <div className="flex flex-col sm:flex-row items-start gap-5">
                 {/* Candidate Photo */}
                 <div className="flex-shrink-0">
                   {app.photo_url ? (
                     <img
                       src={resolveAssetUrl(app.photo_url) || ''}
                       alt={app.name || 'Candidate'}
-                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-slate-200"
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-slate-50 shadow-sm"
                     />
                   ) : (
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-lg font-bold text-white">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-2xl font-bold text-slate-400 border-2 border-slate-50 shadow-sm">
                       {app.name?.charAt(0)?.toUpperCase() || 'C'}
                     </div>
                   )}
                 </div>
 
                 {/* Content + Actions */}
-                <div className="flex-1 w-full">
+                <div className="flex-1 w-full min-w-0">
                   {/* Name and Status */}
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-base font-black text-slate-900">{app.name || 'Candidate'}</h3>
-                    <span
-                      className={`text-xs font-bold px-3 py-1 rounded-full ${
-                        statusBadgeClass[app.status.toLowerCase()] ||
-                        'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {statusLabelMap[app.status.toLowerCase()] ||
-                        app.status.toUpperCase()}
-                    </span>
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-3">
+                        <h3 className="text-xl font-black text-black truncate max-w-[200px]">{app.name || 'Candidate'}</h3>
+                        <span
+                        className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider ${
+                            statusBadgeClass[app.status.toLowerCase()] ||
+                            'bg-slate-100 text-slate-700'
+                        }`}
+                        >
+                        {statusLabelMap[app.status.toLowerCase()] ||
+                            app.status.toUpperCase()}
+                        </span>
+                    </div>
+                    <p className="text-[11px] font-bold text-black/40 uppercase tracking-widest">Applied {formatRelative(app.created_at)}</p>
                   </div>
 
                   {/* Job Title */}
-                  <p className="text-sm font-semibold text-slate-700 mb-2">
+                  <p className="text-[15px] font-bold text-black/70 mb-4">
                     {app.job_title}
                   </p>
 
-                  {/* Contact & Education Row */}
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 mb-2">
-                    {app.email && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-slate-400">✉</span>
-                        <a href={`mailto:${app.email}`} className="hover:text-slate-900">
-                          {app.email}
-                        </a>
-                      </div>
-                    )}
-                    {app.phone && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-slate-400">📞</span>
-                        <a href={`tel:${app.phone}`} className="hover:text-slate-900">
-                          {app.phone}
-                        </a>
-                      </div>
-                    )}
-                    {getEducationDisplay(app.education) && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-slate-400">🎓</span>
-                        <span>{getEducationDisplay(app.education)}</span>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Skills */}
                   {app.skills && app.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {app.skills.slice(0, 4).map((skill, idx) => (
+                    <div className="flex flex-wrap gap-1.5 mb-5">
+                      {app.skills.slice(0, 5).map((skill, idx) => (
                         <span
                           key={idx}
-                          className="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded"
+                          className="text-[10px] font-black bg-black/5 text-black/60 px-2.5 py-1 rounded-lg uppercase tracking-tight"
                         >
                           {skill}
                         </span>
                       ))}
+                      {app.skills.length > 5 && (
+                          <span className="text-[10px] font-black text-black/30 px-1 py-1 uppercase tracking-tight">+{app.skills.length - 5} more</span>
+                      )}
                     </div>
                   )}
 
-                  {/* Applied Time */}
-                  <p className="text-xs text-slate-500 mb-3">Applied {formatRelative(app.created_at)}</p>
-
                   {/* Actions — full width row on mobile */}
-                  <div className="flex flex-wrap gap-2">
-                    <Link href={ROUTES.recruiterApplicationDetail(app.id)}>
-                      <button className="px-4 py-2 bg-black text-white text-xs font-bold rounded-lg hover:bg-slate-900 transition-colors">
-                        View Details
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-black/5">
+                    <Link href={ROUTES.recruiterApplicationDetail(app.id)} className="flex-1 sm:flex-none">
+                      <button className="w-full sm:w-auto px-5 py-2.5 bg-black text-white text-xs font-black rounded-xl hover:bg-slate-800 transition-all active:scale-95">
+                        View Profile
                       </button>
                     </Link>
                     {(app.status.toLowerCase() === 'applied' || app.status.toLowerCase() === 'in_review') && (
@@ -412,16 +416,16 @@ export default function RecruiterApplicationsPage() {
                         <button
                           onClick={() => void handleUpdateApplicationStatus(app.id, 'interview')}
                           disabled={updatingStatusFor === `${app.id}:interview`}
-                          className="px-4 py-2 bg-lime-300 text-black text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="px-5 py-2.5 bg-lime-300 text-black text-xs font-black rounded-xl hover:bg-lime-400 transition-all disabled:opacity-60 active:scale-95"
                         >
-                          {updatingStatusFor === `${app.id}:interview` ? 'Updating...' : 'Interview'}
+                          {updatingStatusFor === `${app.id}:interview` ? 'Wait...' : 'Shortlist'}
                         </button>
                         <button
                           onClick={() => void handleUpdateApplicationStatus(app.id, 'rejected')}
                           disabled={updatingStatusFor === `${app.id}:rejected`}
-                          className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="px-5 py-2.5 bg-slate-100 text-slate-600 text-xs font-black rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-all disabled:opacity-60 active:scale-95"
                         >
-                          {updatingStatusFor === `${app.id}:rejected` ? 'Updating...' : 'Reject'}
+                          {updatingStatusFor === `${app.id}:rejected` ? 'Wait...' : 'Reject'}
                         </button>
                       </>
                     )}
@@ -430,25 +434,26 @@ export default function RecruiterApplicationsPage() {
                         <button
                           onClick={() => void handleUpdateApplicationStatus(app.id, 'hired')}
                           disabled={updatingStatusFor === `${app.id}:hired`}
-                          className="px-4 py-2 bg-lime-300 text-black text-xs font-bold rounded-lg hover:bg-lime-400 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="px-5 py-2.5 bg-lime-300 text-black text-xs font-black rounded-xl hover:bg-lime-400 transition-all disabled:opacity-60 active:scale-95"
                         >
-                          {updatingStatusFor === `${app.id}:hired` ? 'Updating...' : 'Accept'}
+                          {updatingStatusFor === `${app.id}:hired` ? 'Wait...' : 'Hire Candidate'}
                         </button>
                         <button
                           onClick={() => void handleUpdateApplicationStatus(app.id, 'rejected')}
                           disabled={updatingStatusFor === `${app.id}:rejected`}
-                          className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="px-5 py-2.5 bg-slate-100 text-slate-600 text-xs font-black rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-all disabled:opacity-60 active:scale-95"
                         >
-                          {updatingStatusFor === `${app.id}:rejected` ? 'Updating...' : 'Reject'}
+                          {updatingStatusFor === `${app.id}:rejected` ? 'Wait...' : 'Reject'}
                         </button>
                       </>
                     )}
                     <button
                       onClick={() => void handleMessageApplicant(app)}
                       disabled={openingConversationFor === app.id}
-                      className="px-4 py-2 border border-blue-300 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="ml-auto p-2.5 border border-black/10 text-black rounded-xl hover:bg-black hover:text-white transition-all disabled:opacity-60 active:scale-95"
+                      title="Message Candidate"
                     >
-                      {openingConversationFor === app.id ? 'Opening...' : 'Message'}
+                      <FaComments className="text-sm" />
                     </button>
                   </div>
                 </div>

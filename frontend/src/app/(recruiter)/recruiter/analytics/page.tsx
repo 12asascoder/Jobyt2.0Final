@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Spinner } from '@/components/ui';
 import toast from 'react-hot-toast';
+import { FaChartLine } from 'react-icons/fa6';
 
 interface AnalyticsSummary {
   total_jobs: number;
@@ -48,16 +49,24 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <Spinner />
+      <div className="max-w-7xl mx-auto space-y-8 pb-6 animate-pulse">
+        <div className="h-12 bg-slate-200 rounded-lg w-1/4" />
+        <div className="flex flex-wrap gap-6">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-slate-100 rounded-2xl flex-1 min-w-[140px]" />)}
+        </div>
+        <div className="h-96 bg-slate-50 rounded-3xl w-full max-w-2xl" />
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="text-center py-12 text-slate-500">
-        <p>No analytics data available</p>
+      <div className="max-w-7xl mx-auto py-20 text-center">
+        <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+            <FaChartLine className="text-slate-300 text-2xl" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-900">No analytics data available</h3>
+        <p className="text-slate-500 mt-2">Post some jobs and receive applications to see your performance metrics here.</p>
       </div>
     );
   }

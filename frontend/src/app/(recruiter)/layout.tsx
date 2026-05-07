@@ -130,13 +130,20 @@ function RecruiterFloatingSidebar() {
     setIsLoggingOut(false);
   };
 
+  const [isHovered, setIsHovered] = useState(false);
+  const [isHoveredBottom, setIsHoveredBottom] = useState(false);
+
   const userInitial = user?.email?.trim()?.charAt(0)?.toUpperCase() || 'U';
   const profileActive = pathname === ROUTES.recruiterProfile || pathname.startsWith(`${ROUTES.recruiterProfile}/`);
 
   return (
     <>
-      <aside className="hidden lg:flex fixed left-4 xl:left-8 top-[calc(50%-2rem)] -translate-y-1/2 z-40 flex-col items-center">
-        <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-0.5 shadow-2xl">
+      <aside 
+        className={`hidden lg:flex fixed left-4 xl:left-8 top-[calc(50%-4rem)] -translate-y-1/2 z-40 flex-col gap-3 transition-all duration-300 ease-in-out ${isHovered ? 'w-48 items-stretch' : 'w-16 items-center'}`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div className="bg-[#1a1a1a] rounded-[24px] py-2.5 px-2.5 flex flex-col gap-1 shadow-2xl">
           {recruiterNav.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href || pathname.startsWith(item.href + '/');
@@ -144,53 +151,87 @@ function RecruiterFloatingSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                title={item.label}
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                title={isHovered ? undefined : item.label}
+                className={`h-11 rounded-full flex items-center transition-colors overflow-hidden ${
+                  isHovered ? 'px-4 justify-start' : 'w-11 justify-center'
+                } ${
                   active ? 'bg-lime-400 text-black' : 'text-white/60 hover:text-white hover:bg-white/10'
                 }`}
               >
-                <Icon className="text-lg" />
+                <Icon className="text-base shrink-0" />
+                <span 
+                  className={`text-[13px] font-semibold tracking-wide whitespace-nowrap transition-all duration-300 ${
+                    isHovered ? 'ml-3 w-auto opacity-100' : 'w-0 opacity-0 ml-0'
+                  }`}
+                >
+                  {item.label}
+                </span>
               </Link>
             );
           })}
         </div>
       </aside>
 
-      <aside className="hidden lg:flex fixed left-4 xl:left-8 bottom-8 z-40 flex-col items-center">
-        <div className="bg-[#1a1a1a] rounded-full py-3 px-2 flex flex-col items-center gap-2 shadow-2xl">
+      <aside 
+        className={`hidden lg:flex fixed left-4 xl:left-8 bottom-8 z-40 flex-col transition-all duration-300 ease-in-out ${isHoveredBottom ? 'w-48 items-stretch' : 'w-16 items-center'}`}
+        onMouseEnter={() => setIsHoveredBottom(true)}
+        onMouseLeave={() => setIsHoveredBottom(false)}
+      >
+        <div className="bg-[#1a1a1a] rounded-[24px] py-3 px-2.5 flex flex-col gap-1 shadow-2xl">
           <Link
             href={ROUTES.recruiterCredits}
-            title="Credits"
-            className="w-12 h-12 rounded-full flex items-center justify-center text-lime-300 hover:bg-white/10"
+            title={isHoveredBottom ? undefined : 'Credits'}
+            className={`h-11 rounded-full flex items-center transition-colors overflow-hidden ${
+              isHoveredBottom ? 'px-4 justify-start' : 'w-11 justify-center'
+            } ${pathname === ROUTES.recruiterCredits ? 'bg-lime-400 text-black' : 'text-lime-300 hover:bg-white/10'}`}
           >
-            <FaCreditCard className="text-lg" />
+            <FaCreditCard className="text-base shrink-0" />
+            <div className={`flex flex-col ml-3 transition-all duration-300 ${isHoveredBottom ? 'w-auto opacity-100' : 'w-0 opacity-0 ml-0'}`}>
+              <span className="text-[13px] font-semibold tracking-wide whitespace-nowrap text-white">Credits</span>
+              <span className="text-[10px] font-bold text-lime-300 leading-none">{creditBalance}</span>
+            </div>
           </Link>
 
           <button
             type="button"
             onClick={() => setShowLogoutModal(true)}
-            title="Logout"
-            className="w-12 h-12 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10"
+            title={isHoveredBottom ? undefined : 'Logout'}
+            className={`h-11 rounded-full text-white/70 hover:text-white flex items-center transition-colors overflow-hidden ${
+              isHoveredBottom ? 'px-4 justify-start hover:bg-white/5' : 'w-11 justify-center hover:bg-white/10'
+            }`}
           >
-            <FaArrowRightFromBracket className="text-lg" />
+            <FaArrowRightFromBracket className="text-base shrink-0" />
+            <span 
+              className={`text-[13px] font-semibold tracking-wide whitespace-nowrap transition-all duration-300 ${
+                isHoveredBottom ? 'ml-3 w-auto opacity-100' : 'w-0 opacity-0 ml-0'
+              }`}
+            >
+              Sign Out
+            </span>
           </button>
 
           <Link
             href={ROUTES.recruiterProfile}
-            title="Profile"
-            className={`w-10 h-10 rounded-full overflow-hidden text-xs font-bold flex items-center justify-center border-2 transition-colors ${
-              profileActive
-                ? 'bg-lime-400 text-black border-lime-400'
-                : 'bg-blue-700 text-white border-black hover:bg-blue-600'
-            }`}
+            title={isHoveredBottom ? undefined : 'Profile'}
+            className={`h-11 rounded-full border-2 transition-colors flex items-center overflow-hidden ${
+              isHoveredBottom ? 'pl-0.5 pr-4 justify-start border-transparent hover:bg-white/10' : 'w-11 justify-center'
+            } ${profileActive ? 'bg-lime-400 text-black border-lime-400' : 'bg-blue-700 text-white border-black hover:bg-blue-600'}`}
           >
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              userInitial
-            )}
+            <div className="w-9 h-9 shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-slate-700 text-white text-xs font-semibold">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                userInitial
+              )}
+            </div>
+            <span 
+              className={`text-[13px] font-semibold tracking-wide whitespace-nowrap text-white/90 transition-all duration-300 ${
+                isHoveredBottom ? 'ml-3 w-auto opacity-100' : 'w-0 opacity-0 ml-0'
+              }`}
+            >
+              Profile
+            </span>
           </Link>
-          <p className="text-[10px] font-bold text-lime-300 leading-none">{creditBalance}</p>
         </div>
       </aside>
 

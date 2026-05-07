@@ -9,6 +9,7 @@ import { Button, Input, Card, CardBody, Spinner, Badge } from '@/components/ui';
 import toast from 'react-hot-toast';
 import { ROUTES, JOB_TYPES } from '@/constants';
 import { InsufficientCreditsCard } from '@/components/credits/InsufficientCreditsCard';
+import { FaChevronLeft, FaTrash, FaPlus } from 'react-icons/fa6';
 
 export default function RecruiterJobDetailPage() {
   const params = useParams();
@@ -158,189 +159,305 @@ export default function RecruiterJobDetailPage() {
   const canPublish = job.status === 'draft' && (!job.job_approval_status || job.job_approval_status === 'approved');
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{job.title}</h1>
-          <div className="mt-1 flex items-center gap-2">
-            <Badge variant={job.status === 'active' ? 'success' : primaryStatusLabel === 'under review' ? 'warning' : primaryStatusLabel === 'rejected' ? 'danger' : 'default'}>
+    <div className="relative min-h-screen w-full overflow-hidden pb-32">
+      {/* Background Blur Effect */}
+      <div className="absolute w-[1521px] h-[604px] -left-[111px] -top-[128px] border-[25px] border-[#C3FF3D] blur-[100px] -rotate-[16deg] pointer-events-none opacity-40 z-0" />
+      
+      <div className="relative z-10 max-w-[859px] mx-auto pt-8 px-4">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+            <button 
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-black hover:opacity-70 transition-opacity font-bold"
+            >
+            <FaChevronLeft className="text-xs" /> Back to Listings
+            </button>
+
+            <div className="flex items-center gap-3">
+                <Link href={`${ROUTES.recruiterApplications}?jobId=${encodeURIComponent(jobId)}`}>
+                    <button className="px-5 py-2.5 bg-white border border-black/10 text-black text-xs font-black rounded-xl hover:bg-black hover:text-white transition-all shadow-sm active:scale-95">
+                        View Applications
+                    </button>
+                </Link>
+                {canPublish && (
+                    <button 
+                        onClick={handlePublish}
+                        disabled={publishing}
+                        className="px-5 py-2.5 bg-black text-lime-300 text-xs font-black rounded-xl hover:bg-slate-900 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                    >
+                        {publishing ? 'Submitting...' : 'Submit For Review'}
+                    </button>
+                )}
+            </div>
+        </div>
+
+        <header className="mb-10">
+          <div className="flex items-center gap-4 mb-3">
+            <h1 className="text-[40px] leading-tight text-black font-display">{job.title}</h1>
+            <div className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm mt-2 ${
+                job.status === 'active' ? 'bg-lime-300 text-black' : 
+                primaryStatusLabel === 'under review' ? 'bg-black text-lime-300' : 
+                primaryStatusLabel === 'rejected' ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500'
+            }`}>
               {primaryStatusLabel}
-            </Badge>
-            <span className="text-sm text-gray-400">{job.views_count} views</span>
+            </div>
           </div>
+          <p className="text-[18px] text-black/60 font-semibold tracking-tight">
+            {job.views_count.toLocaleString()} views • Manage your listing and application flow
+          </p>
 
           {job.job_approval_status === 'pending_approval' && (
-            <div className="mt-3 rounded-lg border border-lime-300/40 bg-black p-3">
-              <p className="text-sm font-semibold text-lime-300">
-                This job is under admin review and is not visible to applicants yet.
+            <div className="mt-6 rounded-2xl bg-black p-5 border border-lime-300/20 shadow-xl">
+              <p className="text-[15px] font-bold text-lime-300 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-lime-300 animate-pulse" />
+                Under Admin Review: This job will be visible to candidates once approved.
               </p>
             </div>
           )}
 
           {job.job_approval_status === 'rejected' && (
-            <div className="mt-3 rounded-lg border border-lime-300/40 bg-black p-3">
-              <p className="text-sm font-semibold text-lime-300">
-                This job was rejected by admin. Update details and resubmit for review.
+            <div className="mt-6 rounded-2xl bg-rose-50 p-5 border border-rose-100 shadow-sm">
+              <p className="text-[15px] font-bold text-rose-600 flex items-center gap-2">
+                <FaTrash className="text-xs" />
+                This job was rejected by admin. Please update details and resubmit.
               </p>
             </div>
           )}
-        </div>
-        <div className="flex gap-2">
-          <Link href={`${ROUTES.recruiterApplications}?jobId=${encodeURIComponent(jobId)}`}>
-            <Button variant="outline" size="sm">View Applications</Button>
-          </Link>
-          {canPublish && (
-            <Button size="sm" isLoading={publishing} onClick={handlePublish}>
-              Submit For Review
-            </Button>
-          )}
-        </div>
-      </div>
+        </header>
 
-      <Card>
-        <CardBody className="p-6">
-          {error && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
+        <div className="bg-[#ece9e2] rounded-[24px] p-6 sm:p-10 shadow-sm space-y-10">
+          {error && <div className="rounded-xl bg-rose-100 border border-rose-200 p-4 text-sm font-bold text-rose-700 animate-in fade-in slide-in-from-top-2">{error}</div>}
+          
           {creditError && (
-            <div className="mb-4">
+            <div className="animate-in fade-in slide-in-from-top-2">
               <InsufficientCreditsCard
                 creditError={creditError}
                 onViewCredits={() => router.push(ROUTES.recruiterCredits)}
-                onRetry={() => {
-                  void handlePublish();
-                }}
+                onRetry={() => { void handlePublish(); }}
                 retryDisabled={publishing}
               />
             </div>
           )}
-          <form onSubmit={handleSave} className="space-y-4">
-            <Input label="Job Title *" value={form.title} onChange={(e) => set('title', e.target.value)} required />
 
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Location" value={form.location} onChange={(e) => set('location', e.target.value)} />
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Job Type *</label>
-                <select
-                  value={form.type}
-                  onChange={(e) => set('type', e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                >
-                  {JOB_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
+          <form onSubmit={handleSave} className="space-y-8">
+            <div className="space-y-6">
+                <h2 className="text-2xl font-display text-black">Job Details</h2>
+                
+                <div className="grid grid-cols-1 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-sm font-black text-black/60 uppercase tracking-widest ml-1">Job Title *</label>
+                        <input 
+                            value={form.title} 
+                            onChange={(e) => set('title', e.target.value)} 
+                            required 
+                            className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[16px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-sm font-black text-black/60 uppercase tracking-widest ml-1">Location</label>
+                        <input 
+                            value={form.location} 
+                            onChange={(e) => set('location', e.target.value)} 
+                            className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[16px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-black text-black/60 uppercase tracking-widest ml-1">Job Type *</label>
+                        <div className="relative">
+                            <select
+                                value={form.type}
+                                onChange={(e) => set('type', e.target.value as JobType)}
+                                className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[16px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all appearance-none"
+                            >
+                                {JOB_TYPES.map((t) => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-black/20">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-sm font-black text-black/60 uppercase tracking-widest ml-1">Min Salary (USD)</label>
+                        <input 
+                            type="number" 
+                            value={form.salary_min} 
+                            onChange={(e) => set('salary_min', e.target.value)} 
+                            className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[16px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-black text-black/60 uppercase tracking-widest ml-1">Max Salary (USD)</label>
+                        <input 
+                            type="number" 
+                            value={form.salary_max} 
+                            onChange={(e) => set('salary_max', e.target.value)} 
+                            className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[16px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all"
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm font-black text-black/60 uppercase tracking-widest ml-1">Skills (Comma Separated)</label>
+                    <input 
+                        value={form.skills} 
+                        onChange={(e) => set('skills', e.target.value)} 
+                        placeholder="React, TypeScript, Node.js"
+                        className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[16px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm font-black text-black/60 uppercase tracking-widest ml-1">Description *</label>
+                    <textarea
+                        value={form.description}
+                        onChange={(e) => set('description', e.target.value)}
+                        rows={8}
+                        required
+                        className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[16px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all resize-none"
+                    />
+                </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Min Salary" type="number" value={form.salary_min} onChange={(e) => set('salary_min', e.target.value)} />
-              <Input label="Max Salary" type="number" value={form.salary_max} onChange={(e) => set('salary_max', e.target.value)} />
-            </div>
+            <hr className="border-black/5" />
 
-            <Input label="Skills (comma separated)" value={form.skills} onChange={(e) => set('skills', e.target.value)} />
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Description *</label>
-              <textarea
-                value={form.description}
-                onChange={(e) => set('description', e.target.value)}
-                rows={8}
-                required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="rounded-xl border border-gray-200 p-4 space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">Application Questions</p>
-                  <p className="text-xs text-gray-500">Edit what candidates need to answer when they apply.</p>
+                  <h2 className="text-2xl font-display text-black">Application Questions</h2>
+                  <p className="text-sm font-bold text-black/40 mt-1 uppercase tracking-tight">Structured workflow for candidates</p>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={addQuestion}>Add Question</Button>
+                <button 
+                    type="button" 
+                    onClick={addQuestion}
+                    className="px-4 py-2 bg-black text-white text-[11px] font-black rounded-xl hover:bg-slate-800 transition-all active:scale-95 flex items-center gap-2"
+                >
+                    <FaPlus className="text-[10px]" /> Add Question
+                </button>
               </div>
 
               {questions.length === 0 && (
-                <div className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                  No custom questions configured.
+                <div className="rounded-2xl border-2 border-dashed border-black/5 p-8 text-center bg-white/40">
+                  <p className="text-sm font-bold text-black/30 uppercase tracking-widest">No custom questions configured.</p>
                 </div>
               )}
 
-              {questions.map((question, index) => (
-                <div key={question.id} className="rounded-lg border border-gray-200 p-3 space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Input
-                      label="Question"
-                      value={question.label}
-                      onChange={(e) => updateQuestion(index, { label: e.target.value })}
-                      placeholder="e.g. Share a portfolio project relevant to this role"
-                    />
-                    <Input
-                      label="Section (optional)"
-                      value={question.section || ''}
-                      onChange={(e) => updateQuestion(index, { section: e.target.value })}
-                      placeholder="e.g. Projects"
-                    />
-                  </div>
+              <div className="grid grid-cols-1 gap-4">
+                {questions.map((question, index) => (
+                    <div key={question.id} className="group rounded-2xl border border-black/5 bg-white p-5 space-y-5 hover:shadow-lg hover:shadow-black/5 transition-all">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-black/30 uppercase tracking-widest ml-1">Label</label>
+                                        <input
+                                            value={question.label}
+                                            onChange={(e) => updateQuestion(index, { label: e.target.value })}
+                                            placeholder="e.g. Share your GitHub profile"
+                                            className="w-full bg-slate-50 border-none rounded-xl p-3 text-[14px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-black/30 uppercase tracking-widest ml-1">Type</label>
+                                        <select
+                                            value={question.type}
+                                            onChange={(e) => updateQuestion(index, { type: e.target.value as ApplicationQuestion['type'] })}
+                                            className="w-full bg-slate-50 border-none rounded-xl p-3 text-[14px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all appearance-none"
+                                        >
+                                            <option value="text">Short Text</option>
+                                            <option value="textarea">Long Text</option>
+                                            <option value="link">Portfolio/Link</option>
+                                            <option value="select">Select</option>
+                                            <option value="rating">Rating</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-black/30 uppercase tracking-widest ml-1">Section (optional)</label>
+                                        <input
+                                            value={question.section || ''}
+                                            onChange={(e) => updateQuestion(index, { section: e.target.value })}
+                                            placeholder="e.g. Portfolio"
+                                            className="w-full bg-slate-50 border-none rounded-xl p-3 text-[14px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-black/30 uppercase tracking-widest ml-1">Placeholder</label>
+                                        <input
+                                            value={question.placeholder || ''}
+                                            onChange={(e) => updateQuestion(index, { placeholder: e.target.value })}
+                                            placeholder="Helpful hint..."
+                                            className="w-full bg-slate-50 border-none rounded-xl p-3 text-[14px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all"
+                                        />
+                                    </div>
+                                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">Type</label>
-                      <select
-                        value={question.type}
-                        onChange={(e) => updateQuestion(index, { type: e.target.value as ApplicationQuestion['type'] })}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-                      >
-                        <option value="text">Short Text</option>
-                        <option value="textarea">Long Text</option>
-                        <option value="link">Portfolio/Link</option>
-                        <option value="select">Select</option>
-                        <option value="rating">Rating</option>
-                      </select>
+                                {(question.type === 'select' || question.type === 'rating') && (
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-black/30 uppercase tracking-widest ml-1">Options (comma separated)</label>
+                                        <input
+                                            value={(question.options || []).join(', ')}
+                                            onChange={(e) => updateQuestion(index, { options: e.target.value.split(',').map(o => o.trim()).filter(Boolean) })}
+                                            placeholder={question.type === 'rating' ? '1, 2, 3, 4, 5' : 'Option A, Option B'}
+                                            className="w-full bg-slate-50 border-none rounded-xl p-3 text-[14px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all"
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="flex items-center gap-3 pt-2">
+                                    <label className="flex items-center gap-2 cursor-pointer group/check">
+                                        <div className="relative w-5 h-5 flex items-center justify-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={question.required}
+                                                onChange={(e) => updateQuestion(index, { required: e.target.checked })}
+                                                className="peer appearance-none w-5 h-5 border-2 border-black/10 rounded-md checked:bg-black checked:border-black transition-all"
+                                            />
+                                            <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                        </div>
+                                        <span className="text-xs font-bold text-black/60 uppercase tracking-tight">Required</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => removeQuestion(question.id)}
+                                className="p-2 text-black/20 hover:text-rose-500 transition-colors"
+                                title="Remove Question"
+                            >
+                                <FaTrash className="text-sm" />
+                            </button>
+                        </div>
                     </div>
-                    <Input
-                      label="Placeholder (optional)"
-                      value={question.placeholder || ''}
-                      onChange={(e) => updateQuestion(index, { placeholder: e.target.value })}
-                      placeholder="Optional helper text"
-                    />
-                  </div>
-
-                  {(question.type === 'select' || question.type === 'rating') && (
-                    <Input
-                      label="Options (comma separated)"
-                      value={(question.options || []).join(', ')}
-                      onChange={(e) =>
-                        updateQuestion(index, {
-                          options: e.target.value.split(',').map((option) => option.trim()).filter(Boolean),
-                        })
-                      }
-                      placeholder={question.type === 'rating' ? '1, 2, 3, 4, 5' : 'Option A, Option B'}
-                    />
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={question.required}
-                        onChange={(e) => updateQuestion(index, { required: e.target.checked })}
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                      Required
-                    </label>
-                    <Button type="button" variant="outline" size="sm" onClick={() => removeQuestion(question.id)}>
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button type="submit" isLoading={saving} className="flex-1">Save Changes</Button>
-              <Button type="button" variant="outline" onClick={() => router.push(ROUTES.recruiterJobs)}>Back</Button>
+            <div className="flex flex-col sm:flex-row gap-4 pt-10">
+              <button 
+                type="submit" 
+                disabled={saving} 
+                className="flex-1 bg-black text-lime-300 py-4 rounded-2xl text-[18px] font-black hover:bg-slate-900 transition-all active:scale-[0.98] shadow-xl disabled:opacity-50"
+              >
+                {saving ? 'Saving Changes...' : 'Save Job Details'}
+              </button>
+              <button 
+                type="button" 
+                onClick={() => router.push(ROUTES.recruiterJobs)}
+                className="px-8 py-4 bg-white border border-black/5 text-slate-500 rounded-2xl text-[18px] font-bold hover:bg-slate-50 transition-all active:scale-[0.98]"
+              >
+                Back
+              </button>
             </div>
           </form>
-        </CardBody>
-      </Card>
-
+        </div>
+      </div>
     </div>
   );
 }
