@@ -49,12 +49,12 @@ npm run roadmap:ingest -- --dry-run
 **Via API:**
 ```bash
 # Full ingestion
-curl -X POST http://localhost:5000/api/v1/roadmaps/ingest \
+curl -X POST http://localhost:5001/api/v1/roadmaps/ingest \
   -H "Content-Type: application/json" \
   -d '{"dryRun": false}'
 
 # Dry run
-curl -X POST http://localhost:5000/api/v1/roadmaps/ingest \
+curl -X POST http://localhost:5001/api/v1/roadmaps/ingest \
   -H "Content-Type: application/json" \
   -d '{"dryRun": true}'
 ```
@@ -63,13 +63,13 @@ curl -X POST http://localhost:5000/api/v1/roadmaps/ingest \
 
 ```bash
 # List all roadmaps (paginated)
-curl http://localhost:5000/api/v1/roadmaps?page=1&limit=20
+curl http://localhost:5001/api/v1/roadmaps?page=1&limit=20
 
 # Get single roadmap by slug
-curl http://localhost:5000/api/v1/roadmaps/frontend
+curl http://localhost:5001/api/v1/roadmaps/frontend
 
 # Get roadmap nodes and edges
-curl http://localhost:5000/api/v1/roadmaps/frontend/nodes
+curl http://localhost:5001/api/v1/roadmaps/frontend/nodes
 ```
 
 ---
@@ -159,7 +159,7 @@ Trigger roadmap ingestion pipeline.
     "totalRoadmaps": 46,
     "successCount": 44,
     "failCount": 2,
-    "durationMs": 45000
+    "durationMs": 45001
   }
 }
 ```
@@ -176,7 +176,7 @@ Import `roadmap-api-collection.json` from the backend root into Postman:
 
 1. Open Postman → Import → Upload file
 2. Select `backend/roadmap-api-collection.json`
-3. Set the `baseUrl` variable to `http://localhost:5000/api/v1`
+3. Set the `baseUrl` variable to `http://localhost:5001/api/v1`
 4. Run the collection — all tests should pass green
 
 The collection includes 8 requests across 3 folders (Health, Ingestion, Roadmaps) with automated test scripts.

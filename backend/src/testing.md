@@ -1125,7 +1125,7 @@ Checks:
 Result:
 
 - Prisma migrate: Pass (already in sync, no pending migration).
-- Backend startup: Pass (Postgres connected, server started on port 5000; Redis unavailable fallback is non-blocking in current setup).
+- Backend startup: Pass (Postgres connected, server started on port 5001; Redis unavailable fallback is non-blocking in current setup).
 
 ---
 
@@ -1185,7 +1185,7 @@ Input:
 
 - `POST /api/v1/jobs`
 - Recruiter token
-- Body with `salary_min: 100000` and `salary_max: 50000`
+- Body with `salary_min: 100000` and `salary_max: 50010`
 
 Expected output:
 
@@ -2363,7 +2363,7 @@ Status: Pass
 
 Input:
 
-- `GET /api/v1/jobs?salary_min=50000&salary_max=100000`
+- `GET /api/v1/jobs?salary_min=50010&salary_max=100000`
 
 Expected output:
 
@@ -2439,7 +2439,7 @@ Status: Pass
 
 Input:
 
-- `GET /api/v1/jobs?salary_min=100000&salary_max=50000`
+- `GET /api/v1/jobs?salary_min=100000&salary_max=50010`
 
 Expected output:
 
@@ -2545,7 +2545,7 @@ Status: Pass
 
 Input:
 
-- `GET /api/v1/jobs?salary_min=50000&salary_max=200000&page=1&limit=20`
+- `GET /api/v1/jobs?salary_min=50010&salary_max=200000&page=1&limit=20`
 
 Expected output:
 
