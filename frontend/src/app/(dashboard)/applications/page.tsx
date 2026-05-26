@@ -164,42 +164,61 @@ export default function ApplicationsPage() {
                                                 </span>
                                             </div>
                                             <div className="col-span-2 -ml-4">
-                                                <div className="flex flex-col items-start gap-1.5">
-                                                    <ATSScoreBadge score={view.ats_score} />
-                                                    {(() => {
-                                                        const prob = getSelectionProbability(view.ats_score, app.status);
-                                                        const color = prob.tier === 'hired' || prob.tier === 'offer' || prob.tier === 'high'
-                                                            ? 'text-emerald-600'
-                                                            : prob.tier === 'medium'
-                                                            ? 'text-amber-600'
-                                                            : prob.tier === 'rejected'
-                                                            ? 'text-rose-400'
-                                                            : 'text-slate-400';
-                                                        return (
-                                                            <span className={`text-[10px] font-semibold ${color}`}>
-                                                                {prob.tier === 'rejected' ? 'Not selected' : prob.tier === 'hired' ? 'Hired' : `~${prob.probability}% chance`}
+                                                {(() => {
+                                                    const s = view.ats_score;
+                                                    const scoreText = s == null ? '—' : s === 0 ? 'No Match' : `${s}%`;
+                                                    const scoreColor = s == null ? 'text-slate-300' : s >= 70 ? 'text-emerald-700' : s >= 40 ? 'text-amber-700' : s === 0 ? 'text-slate-400' : 'text-rose-600';
+                                                    const barColor = s == null || s === 0 ? '' : s >= 70 ? 'bg-emerald-500' : s >= 40 ? 'bg-amber-400' : 'bg-rose-400';
+                                                    const prob = getSelectionProbability(s, app.status);
+                                                    const thumbColor: Record<string, string> = { hired: '#10b981', offer: '#10b981', high: '#10b981', medium: '#f59e0b', low: '#fb7185', very_low: '#f43f5e', rejected: '#94a3b8' };
+                                                    const probThumb = thumbColor[prob.tier] ?? '#94a3b8';
+                                                    const tierLabel: Record<string, string> = { hired: 'Hired', offer: 'Offer', high: 'Good', medium: 'Moderate', low: 'Low', very_low: 'Very Low', rejected: 'Not Selected' };
+                                                    const probTierText = tierLabel[prob.tier] ?? '';
+                                                    return (
+                                                        <div className="flex flex-col gap-2">
+                                                            {/* Score */}
+                                                            <div>
+                                                                <div className="flex items-baseline gap-1 mb-1">
+                                                                    <span className={`text-base font-black leading-none ${scoreColor}`}>{scoreText}</span>
+                                                                    {s != null && s !== 0 && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">ATS</span>}
+                                                                </div>
+                                                                {s != null && s > 0 && (
+                                                                    <div className="h-[3px] w-14 bg-[#e8e4dc] rounded-full overflow-hidden">
+                                                                        <div className={`h-full rounded-full ${barColor}`} style={{ width: `${s}%` }} />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {/* Probability — dark badge */}
+                                                            <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 bg-[#1a1a1a] w-fit">
+                                                                <span className="text-sm font-black tabular-nums leading-none" style={{ color: probThumb }}>
+                                                                    {prob.tier === 'hired' ? '✓' : prob.tier === 'rejected' ? '✕' : `${prob.probability}%`}
+                                                                </span>
+                                                                <span className="text-[8px] font-bold uppercase tracking-widest leading-none text-lime-400">
+                                                                    {prob.tier === 'hired' ? 'Hired' : prob.tier === 'rejected' ? 'Rejected' : 'Chance'}
+                                                                </span>
                                                             </span>
-                                                        );
-                                                    })()}
-                                                    <div className="flex items-center gap-1 mt-0.5">
-                                                        {view.ats_score != null && (
-                                                            <button
-                                                                onClick={() => setExpandedAppId(expandedAppId === app.id ? null : app.id)}
-                                                                className="text-[10px] text-[#1a1a1a] font-semibold flex items-center gap-1 bg-[#f4f1ea] hover:bg-[#e8e4dc] px-2 py-0.5 rounded transition-colors"
-                                                            >
-                                                                <FaInfoCircle className="opacity-50" />
-                                                                {expandedAppId === app.id ? 'Hide' : 'Details'}
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => setDrawerApp({ id: app.id, status: app.status, atsScore: view.ats_score, jobTitle: view.job_title, companyName: view.companyName })}
-                                                            className="text-[10px] text-[#1a1a1a] font-semibold flex items-center gap-1 bg-[#f4f1ea] hover:bg-[#e8e4dc] px-2 py-0.5 rounded transition-colors"
-                                                        >
-                                                            <FaRegLightbulb className="opacity-50" />
-                                                            Insights
-                                                        </button>
-                                                    </div>
-                                                </div>
+                                                            {/* Actions */}
+                                                            <div className="flex items-center gap-1">
+                                                                {s != null && (
+                                                                    <button
+                                                                        onClick={() => setExpandedAppId(expandedAppId === app.id ? null : app.id)}
+                                                                        className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 bg-[#f4f1ea] hover:bg-[#e8e4dc] px-2 py-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a1a1a]"
+                                                                    >
+                                                                        <FaInfoCircle aria-hidden="true" className="opacity-40 text-[8px]" />
+                                                                        {expandedAppId === app.id ? 'Hide' : 'Details'}
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => setDrawerApp({ id: app.id, status: app.status, atsScore: s, jobTitle: view.job_title, companyName: view.companyName })}
+                                                                    className="text-[10px] font-semibold flex items-center gap-1 bg-[#1a1a1a] hover:bg-[#333] text-white px-2 py-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#1a1a1a]"
+                                                                >
+                                                                    <FaRegLightbulb aria-hidden="true" className="text-[8px]" />
+                                                                    Insights
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                             <div className="col-span-1 -ml-3">
                                                 <span className="text-sm text-slate-500">
