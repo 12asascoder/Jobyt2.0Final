@@ -93,7 +93,8 @@ export const AIInsightsService = {
     const profileIncomplete = isProfileIncomplete(profile);
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,6 +102,7 @@ export const AIInsightsService = {
         body: JSON.stringify({
           contents: [
             {
+              role: 'user',
               parts: [
                 {
                   text: buildPrompt(profile, job),
@@ -110,8 +112,7 @@ export const AIInsightsService = {
           ],
           generationConfig: {
             temperature: 0.3,
-            maxOutputTokens: 600,
-            responseMimeType: "application/json",
+            maxOutputTokens: 2000,
           },
         }),
       });
