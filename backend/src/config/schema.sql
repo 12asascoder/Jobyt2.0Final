@@ -106,11 +106,15 @@ CREATE TABLE applications (
   application_answers JSONB NOT NULL DEFAULT '[]'::jsonb,
   cover_letter        TEXT,
   resume_snapshot_url VARCHAR(500),
+  ats_score           INTEGER DEFAULT NULL,
+  ats_breakdown       JSONB DEFAULT NULL,
   status              application_status DEFAULT 'APPLIED',
   status_updated_at   TIMESTAMPTZ DEFAULT NOW(),
   created_at          TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (job_id, applicant_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_applications_ats_score ON applications (ats_score);
 
 -- Pipeline events
 CREATE TABLE pipeline_events (
