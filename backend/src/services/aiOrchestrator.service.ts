@@ -79,7 +79,7 @@ export const AIOrchestratorService = {
   /**
    * Handle ATS analysis requests
    */
-  private async handleATSAnalysis(data: any) {
+  async handleATSAnalysis(data: any) {
     const { resumeData, jobData } = data;
 
     if (!resumeData || !jobData) {
@@ -93,7 +93,7 @@ export const AIOrchestratorService = {
   /**
    * Handle resume processing requests
    */
-  private async handleResumeProcessing(data: any) {
+  async handleResumeProcessing(data: any) {
     const { rawText } = data;
 
     if (!rawText) {
@@ -107,7 +107,7 @@ export const AIOrchestratorService = {
   /**
    * Handle candidate/job matching workflow requests
    */
-  private async handleMatchingWorkflow(data: any) {
+  async handleMatchingWorkflow(data: any) {
     const { userSkills, jobSkills, resumeText, jobDescription } = data;
 
     if (!userSkills || !jobSkills) {
@@ -143,7 +143,7 @@ export const AIOrchestratorService = {
   /**
    * Calculate basic skill match percentage
    */
-  private calculateSkillMatch(userSkills: string[], jobSkills: string[]): number {
+  calculateSkillMatch(userSkills: string[], jobSkills: string[]): number {
     if (!jobSkills.length) return 0;
 
     const matchedSkills = jobSkills.filter(jobSkill =>
@@ -159,7 +159,7 @@ export const AIOrchestratorService = {
   /**
    * Generate matching recommendations based on scores
    */
-  private generateMatchingRecommendations(skillMatch: number, atsScore: any) {
+  generateMatchingRecommendations(skillMatch: number, atsScore: any) {
     const recommendations = [];
 
     if (skillMatch < 50) {
@@ -199,5 +199,4 @@ export const AIOrchestratorService = {
 
     return true;
   },
-};</content>
-<parameter name="filePath">d:\Harsh Profile\Desktop\hiring-platform\Hiring_platform\backend\src\services\aiOrchestrator.service.ts
+};
