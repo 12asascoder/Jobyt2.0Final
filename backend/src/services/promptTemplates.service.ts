@@ -184,5 +184,4 @@ Focus on practical, actionable recommendations for skill development.`,
 
     return template.variables.every(varName => variables.hasOwnProperty(varName));
   },
-};</content>
-<parameter name="filePath">d:\Harsh Profile\Desktop\hiring-platform\Hiring_platform\backend\src\services\promptTemplates.service.ts
+};

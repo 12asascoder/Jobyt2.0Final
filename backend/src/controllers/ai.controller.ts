@@ -110,5 +110,4 @@ export const AIController = {
       next(error);
     }
   },
-};</content>
-<parameter name="filePath">d:\Harsh Profile\Desktop\hiring-platform\Hiring_platform\backend\src\controllers\ai.controller.ts
+};
