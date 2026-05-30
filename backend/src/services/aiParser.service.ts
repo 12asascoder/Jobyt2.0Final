@@ -1,5 +1,7 @@
 import { AppError } from '../utils/appError';
 import { PromptTemplatesService } from './promptTemplates.service';
+import { AIService } from './ai.service';
+import { aiConfig } from '../config/ai.config';
 
 export interface AIParsedJob {
   title: string;
@@ -13,33 +15,37 @@ export interface AIParsedJob {
 
 export const AiParserService = {
   /**
-   * Passes raw scraped text into OpenAI to structure it into the specific Job Schema.
+   * Passes raw scraped text into AI to structure it into the specific Job Schema.
    */
   async parseJobText(rawText: string): Promise<AIParsedJob> {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is missing');
-    }
-
-    const systemPrompt = PromptTemplatesService.renderTemplate('job_parsing', {
+    const prompt = PromptTemplatesService.renderTemplate('job_parsing', {
       rawText,
     });
+
+    if (aiConfig.isConfigured) {
+      const parsed = await AIService.generateJSON<AIParsedJob>(prompt);
+      if (parsed) {
+        return parsed;
+      }
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new AppError('AI provider is not configured', 500);
+    }
 
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini', // or 'gpt-3.5-turbo' depending on availability
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: rawText }
-          ],
-          temperature: 0.1, // Low temperature for deterministic extraction
-        })
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+        }),
       });
 
       if (!response.ok) {
@@ -58,10 +64,9 @@ export const AiParserService = {
         console.error('Failed to parse AI output as JSON:', content);
         throw new AppError('AI returned malformed data', 500);
       }
-
     } catch (error) {
       console.error('AiParserService error:', error);
       throw error;
     }
-  }
+  },
 };

@@ -2,6 +2,8 @@ import { ResumeDeleteResult, ResumeListItem, ResumeModel } from '../models/resum
 import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import { StorageService } from './storage.service';
 import { PromptTemplatesService } from './promptTemplates.service';
+import { AIService } from './ai.service';
+import { aiConfig } from '../config/ai.config';
 import { withTransaction } from '../utils/transaction';
 import fs from 'fs/promises';
 import path from 'path';
@@ -280,40 +282,67 @@ export const ResumeService = {
         experience: "See resume details",
       };
 
-      // Optional: LLM enrichment if available
-      if (process.env.OPENAI_API_KEY) {
+      let usedFallback = false;
+      if (aiConfig.isConfigured) {
         try {
           const prompt = PromptTemplatesService.renderTemplate('ats_scoring', {
             resumeText: resumeText.substring(0, 3000),
             jobDescription: jobDescription.substring(0, 1500),
           });
 
-          const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-              model: 'gpt-3.5-turbo',
-              temperature: 0.1,
-              response_format: { type: 'json_object' },
-              messages: [{ role: 'system', content: prompt }]
-            })
-          });
-
-          if (response.ok) {
-            const data: any = await response.json();
-            const p = JSON.parse(data.choices[0].message.content) as any;
-            result.keywordDensity = p.keywordDensity || result.keywordDensity;
-            result.explanation = p.explanation || result.explanation;
-            result.feedback = p.feedback || result.feedback;
-            result.qualityScore = p.qualityScore || result.qualityScore;
-            result.rolePrediction = p.rolePrediction || result.rolePrediction;
-            result.experience = p.experience || result.experience;
+          const p = await AIService.generateJSON<Partial<ATSResult & { keywordDensity: Record<string, number> }>>(prompt);
+          if (p) {
+            result.keywordDensity = p.keywordDensity ?? result.keywordDensity;
+            result.explanation = p.explanation ?? result.explanation;
+            result.feedback = p.feedback ?? result.feedback;
+            result.qualityScore = typeof p.qualityScore === 'number' ? p.qualityScore : result.qualityScore;
+            result.rolePrediction = p.rolePrediction ?? result.rolePrediction;
+            result.experience = p.experience ?? result.experience;
+          } else {
+            usedFallback = true;
           }
         } catch (llmError) {
+          usedFallback = true;
           console.warn('[ATS] LLM enrichment failed, using deterministic scores:', llmError);
+        }
+      }
+
+      if (usedFallback || !aiConfig.isConfigured) {
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (apiKey) {
+          try {
+            const prompt = PromptTemplatesService.renderTemplate('ats_scoring', {
+              resumeText: resumeText.substring(0, 3000),
+              jobDescription: jobDescription.substring(0, 1500),
+            });
+
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                temperature: 0.1,
+                response_format: { type: 'json_object' },
+                messages: [{ role: 'system', content: prompt }],
+              }),
+            });
+
+            if (response.ok) {
+              const data: any = await response.json();
+              const p = JSON.parse(data.choices[0].message.content) as any;
+              result.keywordDensity = p.keywordDensity || result.keywordDensity;
+              result.explanation = p.explanation || result.explanation;
+              result.feedback = p.feedback || result.feedback;
+              result.qualityScore = p.qualityScore || result.qualityScore;
+              result.rolePrediction = p.rolePrediction || result.rolePrediction;
+              result.experience = p.experience || result.experience;
+            }
+          } catch (llmError) {
+            console.warn('[ATS] LLM enrichment failed, using deterministic scores:', llmError);
+          }
         }
       }
 

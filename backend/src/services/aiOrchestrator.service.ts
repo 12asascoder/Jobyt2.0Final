@@ -1,6 +1,8 @@
 import { ATSService } from './ats.service';
 import { AiParserService } from './aiParser.service';
 import { PromptTemplatesService } from './promptTemplates.service';
+import { AIService } from './ai.service';
+import { aiConfig } from '../config/ai.config';
 import { AppError } from '../utils/appError';
 
 export interface AIOrchestratorRequest {
@@ -18,6 +20,25 @@ export interface AIOrchestratorResponse {
   };
 }
 
+export type AITaskHandler = (data: Record<string, any>) => Promise<any>;
+
+interface AtsScoringPromptResult {
+  keywordDensity?: Record<string, number>;
+  explanation?: string;
+  feedback?: { missingSections: string[]; weakAreas: string[]; improvements: string[] };
+  qualityScore?: number;
+  rolePrediction?: string;
+  experience?: string;
+}
+
+interface SkillGapAnalysisResult {
+  matchedSkills: string[];
+  missingSkills: string[];
+  skillGapPercentage: number;
+  recommendations: string[];
+  prioritySkills: string[];
+}
+
 /**
  * AI Orchestrator Service
  *
@@ -29,43 +50,27 @@ export interface AIOrchestratorResponse {
  * Routes requests to appropriate AI services and manages prompt templates.
  */
 export const AIOrchestratorService = {
-  /**
-   * Main orchestration method that routes AI requests to appropriate handlers
-   */
   async processRequest(request: AIOrchestratorRequest): Promise<AIOrchestratorResponse> {
     const startTime = Date.now();
 
+    if (!this.validateRequest(request)) {
+      throw new AppError('Invalid AI request structure', 400);
+    }
+
+    const handler = this.getHandler(request.type);
+    if (!handler) {
+      throw new AppError(`Unsupported AI request type: ${request.type}`, 400);
+    }
+
     try {
-      let result: any;
-      let serviceName: string;
-
-      switch (request.type) {
-        case 'ats_analysis':
-          result = await this.handleATSAnalysis(request.data);
-          serviceName = 'ATSService';
-          break;
-
-        case 'resume_processing':
-          result = await this.handleResumeProcessing(request.data);
-          serviceName = 'AiParserService';
-          break;
-
-        case 'matching_workflow':
-          result = await this.handleMatchingWorkflow(request.data);
-          serviceName = 'MatchingWorkflow';
-          break;
-
-        default:
-          throw new AppError(`Unsupported AI request type: ${request.type}`, 400);
-      }
-
+      const result = await handler.call(this, request.data);
       const processingTime = Date.now() - startTime;
 
       return {
         success: true,
         result,
         metadata: {
-          service: serviceName,
+          service: request.type,
           processingTime,
           timestamp: new Date(),
         },
@@ -76,9 +81,19 @@ export const AIOrchestratorService = {
     }
   },
 
-  /**
-   * Handle ATS analysis requests
-   */
+  getHandler(type: AIOrchestratorRequest['type']): AITaskHandler | null {
+    switch (type) {
+      case 'ats_analysis':
+        return this.handleATSAnalysis.bind(this);
+      case 'resume_processing':
+        return this.handleResumeProcessing.bind(this);
+      case 'matching_workflow':
+        return this.handleMatchingWorkflow.bind(this);
+      default:
+        return null;
+    }
+  },
+
   async handleATSAnalysis(data: any) {
     const { resumeData, jobData } = data;
 
@@ -86,13 +101,18 @@ export const AIOrchestratorService = {
       throw new AppError('ATS analysis requires resumeData and jobData', 400);
     }
 
-    // Use existing ATSService for scoring
-    return ATSService.calculateATSScore(resumeData, jobData);
+    const scoreResult = ATSService.calculateATSScore(resumeData, jobData);
+    const llmInsights = await this.generateAtsInsights(
+      resumeData.fullText || resumeData.experienceText || '',
+      jobData.description || '',
+    );
+
+    return {
+      ...scoreResult,
+      llmInsights,
+    };
   },
 
-  /**
-   * Handle resume processing requests
-   */
   async handleResumeProcessing(data: any) {
     const { rawText } = data;
 
@@ -100,24 +120,19 @@ export const AIOrchestratorService = {
       throw new AppError('Resume processing requires rawText', 400);
     }
 
-    // Use existing AiParserService for job text parsing
     return AiParserService.parseJobText(rawText);
   },
 
-  /**
-   * Handle candidate/job matching workflow requests
-   */
   async handleMatchingWorkflow(data: any) {
     const { userSkills, jobSkills, resumeText, jobDescription } = data;
 
-    if (!userSkills || !jobSkills) {
+    if (!Array.isArray(userSkills) || !Array.isArray(jobSkills)) {
       throw new AppError('Matching workflow requires userSkills and jobSkills', 400);
     }
 
-    // Calculate basic skill match score
     const skillMatch = this.calculateSkillMatch(userSkills, jobSkills);
+    const skillGapAnalysis = await this.generateSkillGapAnalysis(userSkills, jobSkills);
 
-    // If resume and job description provided, get detailed ATS score
     let atsScore = null;
     if (resumeText && jobDescription) {
       atsScore = ATSService.calculateATSScore(
@@ -129,65 +144,120 @@ export const AIOrchestratorService = {
         {
           skills: jobSkills,
           description: jobDescription,
-        }
+        },
       );
     }
 
     return {
       skillMatch,
+      skillGapAnalysis,
       atsScore,
-      recommendations: this.generateMatchingRecommendations(skillMatch, atsScore),
+      recommendations: this.generateMatchingRecommendations(skillMatch, atsScore, skillGapAnalysis),
     };
   },
 
-  /**
-   * Calculate basic skill match percentage
-   */
+  async generateAtsInsights(resumeText: string, jobDescription: string): Promise<AtsScoringPromptResult | null> {
+    if (!aiConfig.isConfigured || !resumeText || !jobDescription) {
+      return null;
+    }
+
+    try {
+      const prompt = PromptTemplatesService.renderTemplate('ats_scoring', {
+        resumeText: resumeText.slice(0, 3000),
+        jobDescription: jobDescription.slice(0, 1500),
+      });
+
+      const parsed = await AIService.generateJSON<AtsScoringPromptResult>(prompt);
+      return parsed ?? null;
+    } catch (error) {
+      console.warn('[AIOrchestrator] ATS enrichment failed:', error);
+      return null;
+    }
+  },
+
+  async generateSkillGapAnalysis(userSkills: string[], jobSkills: string[]): Promise<SkillGapAnalysisResult> {
+    if (aiConfig.isConfigured) {
+      try {
+        const prompt = PromptTemplatesService.renderTemplate('skill_gap_analysis', {
+          userSkills: userSkills.join(', '),
+          requiredSkills: jobSkills.join(', '),
+        });
+        const parsed = await AIService.generateJSON<SkillGapAnalysisResult>(prompt);
+        if (parsed && Array.isArray(parsed.matchedSkills)) {
+          return parsed;
+        }
+      } catch (error) {
+        console.warn('[AIOrchestrator] Skill gap analysis AI fallback:', error);
+      }
+    }
+
+    const matchedSkills = jobSkills.filter(jobSkill =>
+      userSkills.some(userSkill =>
+        userSkill.toLowerCase().includes(jobSkill.toLowerCase()) ||
+        jobSkill.toLowerCase().includes(userSkill.toLowerCase()),
+      ),
+    );
+
+    const missingSkills = jobSkills.filter(skill => !matchedSkills.includes(skill));
+    const skillGapPercentage = jobSkills.length === 0 ? 0 : Math.round((missingSkills.length / jobSkills.length) * 100);
+
+    return {
+      matchedSkills,
+      missingSkills,
+      skillGapPercentage,
+      recommendations: missingSkills.length
+        ? [`Focus on learning: ${missingSkills.slice(0, 5).join(', ')}`]
+        : ['Your skills align well with the role requirements.'],
+      prioritySkills: missingSkills.slice(0, 5),
+    };
+  },
+
   calculateSkillMatch(userSkills: string[], jobSkills: string[]): number {
     if (!jobSkills.length) return 0;
 
     const matchedSkills = jobSkills.filter(jobSkill =>
       userSkills.some(userSkill =>
         userSkill.toLowerCase().includes(jobSkill.toLowerCase()) ||
-        jobSkill.toLowerCase().includes(userSkill.toLowerCase())
-      )
+        jobSkill.toLowerCase().includes(userSkill.toLowerCase()),
+      ),
     );
 
     return Math.round((matchedSkills.length / jobSkills.length) * 100);
   },
 
-  /**
-   * Generate matching recommendations based on scores
-   */
-  generateMatchingRecommendations(skillMatch: number, atsScore: any) {
-    const recommendations = [];
+  generateMatchingRecommendations(
+    skillMatch: number,
+    atsScore: any,
+    skillGapAnalysis: SkillGapAnalysisResult,
+  ) {
+    const recommendations: string[] = [];
 
     if (skillMatch < 50) {
-      recommendations.push('Consider upskilling in required technologies');
+      recommendations.push('Consider upskilling in required technologies.');
     }
 
     if (atsScore && atsScore.totalScore < 60) {
-      recommendations.push('Review and optimize resume content');
-      recommendations.push('Highlight relevant experience more prominently');
+      recommendations.push('Review and optimize resume content.');
+      recommendations.push('Highlight relevant experience more prominently.');
     }
 
     if (skillMatch >= 80 && (!atsScore || atsScore.totalScore >= 70)) {
-      recommendations.push('Strong match - consider applying');
+      recommendations.push('Strong match - consider applying.');
     }
 
-    return recommendations;
+    if (skillGapAnalysis.missingSkills.length > 0) {
+      recommendations.push(
+        `Skill gap detected: ${skillGapAnalysis.missingSkills.slice(0, 5).join(', ')}.`,
+      );
+    }
+
+    return recommendations.length > 0 ? recommendations : ['No specific recommendations available.'];
   },
 
-  /**
-   * Get available AI task types
-   */
-  getAvailableTaskTypes(): string[] {
+  getAvailableTaskTypes(): AIOrchestratorRequest['type'][] {
     return ['ats_analysis', 'resume_processing', 'matching_workflow'];
   },
 
-  /**
-   * Validate AI request structure
-   */
   validateRequest(request: AIOrchestratorRequest): boolean {
     if (!request.type || !this.getAvailableTaskTypes().includes(request.type)) {
       return false;
@@ -199,4 +269,4 @@ export const AIOrchestratorService = {
 
     return true;
   },
-};
+};
