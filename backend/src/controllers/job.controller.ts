@@ -3,6 +3,8 @@ import { JobService } from '../services/job.service';
 import { ExternalJobService } from '../services/externalJob.service';
 import { JobType } from '../models/job.model';
 import { sendSuccess, sendPaginated } from '../utils/response';
+import { ApplicantProfileModel } from '../models/applicantProfile.model';
+import { SkillMatchingService } from '../services/matching/skillMatching.service';
 
 export const JobController = {
   async createExternalJob(req: Request, res: Response, next: NextFunction) {
@@ -94,7 +96,22 @@ export const JobController = {
       });
 
       // Send paginated response with metadata
-      sendPaginated(res, jobs, pagination.total, pagination.page, pagination.limit, 'Jobs fetched successfully');
+      // Enrich with selectionProbability for logged-in applicants (single profile fetch, O(1) DB)
+      let enrichedJobs: any[] = jobs;
+      if (req.user?.role === 'applicant') {
+        try {
+          const profile = await ApplicantProfileModel.findByUserId(req.user.userId);
+          const candidateSkills: string[] = Array.isArray(profile?.skills) ? profile.skills : [];
+          enrichedJobs = jobs.map((job: any) => {
+            const jobSkills: string[] = Array.isArray(job.skills) ? job.skills : [];
+            const { matchPercentage } = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
+            return { ...job, selectionProbability: matchPercentage };
+          });
+        } catch (err) {
+          console.warn('[JobController] Could not enrich jobs with selectionProbability:', err);
+        }
+      }
+      sendPaginated(res, enrichedJobs, pagination.total, pagination.page, pagination.limit, 'Jobs fetched successfully');
     } catch (err) {
       next(err);
     }
@@ -114,7 +131,22 @@ export const JobController = {
         sort: req.query.sort as 'relevance' | 'date' | 'salary',
       };
       const { jobs, total } = await JobService.searchJobs(filters);
-      sendPaginated(res, jobs, total, filters.page!, filters.limit!);
+      // Enrich with selectionProbability for logged-in applicants
+      let enrichedJobs: any[] = jobs;
+      if (req.user?.role === 'applicant') {
+        try {
+          const profile = await ApplicantProfileModel.findByUserId(req.user.userId);
+          const candidateSkills: string[] = Array.isArray(profile?.skills) ? profile.skills : [];
+          enrichedJobs = jobs.map((job: any) => {
+            const jobSkills: string[] = Array.isArray(job.skills) ? job.skills : [];
+            const { matchPercentage } = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
+            return { ...job, selectionProbability: matchPercentage };
+          });
+        } catch (err) {
+          console.warn('[JobController] Could not enrich search results with selectionProbability:', err);
+        }
+      }
+      sendPaginated(res, enrichedJobs, total, filters.page!, filters.limit!);
     } catch (err) {
       next(err);
     }
@@ -151,7 +183,21 @@ export const JobController = {
         console.error(`Failed to record job view for ${jobId}:`, err);
       });
 
-      sendSuccess(res, job, 'Job fetched successfully');
+      // Enrich with selectionProbability for logged-in applicants
+      let enrichedJob: any = job;
+      if (req.user?.role === 'applicant') {
+        try {
+          const profile = await ApplicantProfileModel.findByUserId(req.user.userId);
+          const candidateSkills: string[] = Array.isArray(profile?.skills) ? profile.skills : [];
+          const jobSkills: string[] = Array.isArray(job.skills) ? job.skills : [];
+          const { matchPercentage } = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
+          enrichedJob = { ...job, selectionProbability: matchPercentage };
+        } catch (err) {
+          console.warn('[JobController] Could not enrich job with selectionProbability:', err);
+        }
+      }
+
+      sendSuccess(res, enrichedJob, 'Job fetched successfully');
     } catch (err) {
       next(err);
     }

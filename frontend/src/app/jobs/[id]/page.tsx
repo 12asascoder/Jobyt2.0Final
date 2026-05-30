@@ -29,6 +29,7 @@ import {
 } from 'react-icons/fa6';
 import { formatSalaryRange } from '@/lib/salary';
 import { useAuthStore } from '@/store/auth.store';
+import { SelectionProbability, getTier } from '@/components/jobs/SelectionProbability';
 
 interface UserProfilePayload {
   profile?: {
@@ -205,6 +206,13 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
     fetchJobData();
   }, [id, router, isAuthenticated]);
+
+  // Seed matchScore from the backend's selectionProbability if available (set before insights load)
+  useEffect(() => {
+    if (job?.selectionProbability !== undefined && matchScore === null) {
+      setMatchScore(job.selectionProbability);
+    }
+  }, [job]);
 
   // Fetch AI Insights once job is loaded
   useEffect(() => {
@@ -709,14 +717,31 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               <>
                 <div className="mb-2 text-center">
                   <p className="text-4xl font-black leading-none text-[#bbf52f]">
-                    {loadingInsights ? '--' : matchScore !== null ? `${matchScore}%` : '80%'}
+                    {loadingInsights ? '--' : matchScore !== null ? `${matchScore}%` : '--'}
                   </p>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#bbf52f]">Skill Matching</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#bbf52f]">Selection Probability</p>
+                  {!loadingInsights && matchScore !== null && (
+                    <>
+                      <p className="mt-1 text-[11px] font-bold" style={{
+                        color: matchScore >= 80 ? '#6ee7a8' : matchScore >= 60 ? '#fcd34d' : '#fca5a5'
+                      }}>
+                        {matchScore >= 80 ? 'High Selection Chance' : matchScore >= 60 ? 'Moderate Selection Chance' : 'Low Selection Chance'}
+                      </p>
+                      <p className="mt-1 text-[9px] text-gray-400 leading-relaxed">
+                        Based on your profile match with this role.
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="mb-3 h-4 rounded-full bg-[#4a4a4a]">
                   <div
-                    className="h-full rounded-full bg-[#bbf52f]"
-                    style={{ width: `${loadingInsights ? 0 : matchScore ?? 80}%` }}
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${loadingInsights ? 0 : matchScore ?? 0}%`,
+                      background: !loadingInsights && matchScore !== null
+                        ? matchScore >= 80 ? '#16c26a' : matchScore >= 60 ? '#f59e0b' : '#ef4444'
+                        : '#bbf52f',
+                    }}
                   />
                 </div>
               </>

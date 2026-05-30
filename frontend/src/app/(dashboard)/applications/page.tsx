@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useApplications } from '@/hooks/useApplications';
 import { APPLICATION_STATUS_LABELS } from '@/constants';
 import { FaArrowUpRightFromSquare, FaChevronLeft, FaChevronRight } from 'react-icons/fa6';
+import { SelectionProbabilityBadge } from '@/components/jobs/SelectionProbability';
 
 type ApplicationView = {
     companyName?: string | null;
     job_title?: string;
     status_updated_at?: string;
+    selectionProbability?: number;
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -116,9 +118,10 @@ export default function ApplicationsPage() {
                             <div className="grid grid-cols-10 gap-3 text-[11px] font-bold uppercase tracking-widest">
                                 <div className="col-span-2">Company</div>
                                 <div className="col-span-2">Profile</div>
-                                <div className="col-span-1 pl-6">Status</div>
-                                <div className="col-span-2">Applied On</div>
-                                <div className="col-span-2">Latest Comment</div>
+                                <div className="col-span-1 pl-2">Status</div>
+                                <div className="col-span-2">Match</div>
+                                <div className="col-span-1">Applied On</div>
+                                <div className="col-span-1">Comment</div>
                                 <div className="col-span-1 text-center">View</div>
                             </div>
                         </div>
@@ -143,28 +146,27 @@ export default function ApplicationsPage() {
                                                     {view.job_title || 'Position'}
                                                 </span>
                                             </div>
-                                            <div className="col-span-1 pl-6">
-                                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
+                                            <div className="col-span-1 pl-2">
+                                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
                                                     {APPLICATION_STATUS_LABELS[app.status] || app.status}
                                                 </span>
                                             </div>
                                             <div className="col-span-2">
+                                                {view.selectionProbability !== undefined ? (
+                                                    <SelectionProbabilityBadge score={view.selectionProbability} />
+                                                ) : (
+                                                    <span className="text-xs text-slate-400">—</span>
+                                                )}
+                                            </div>
+                                            <div className="col-span-1">
                                                 <span className="text-sm text-slate-500">
                                                     {formatDate(app.created_at)}
                                                 </span>
                                             </div>
-                                            <div className="col-span-2 min-w-0">
-                                                <div className="group relative">
-                                                    <p className="text-xs text-slate-500 italic line-clamp-2 leading-relaxed">
-                                                        {app.latest_comment || 'No comments yet'}
-                                                    </p>
-                                                    {app.latest_comment && (
-                                                        <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-64 p-3 bg-slate-900 text-white text-[11px] rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-1">
-                                                            {app.latest_comment}
-                                                            <div className="absolute top-full left-4 border-8 border-transparent border-t-slate-900" />
-                                                        </div>
-                                                    )}
-                                                </div>
+                                            <div className="col-span-1 min-w-0">
+                                                <p className="text-xs text-slate-500 italic line-clamp-2 leading-relaxed">
+                                                    {app.latest_comment || '—'}
+                                                </p>
                                             </div>
                                             <div className="col-span-1 flex justify-center">
                                                 <button
@@ -205,9 +207,14 @@ export default function ApplicationsPage() {
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs text-slate-400">
-                                            Applied {formatDate(app.created_at)}
-                                        </span>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-xs text-slate-400">
+                                                Applied {formatDate(app.created_at)}
+                                            </span>
+                                            {view.selectionProbability !== undefined && (
+                                                <SelectionProbabilityBadge score={view.selectionProbability} />
+                                            )}
+                                        </div>
                                         <button
                                             onClick={() => router.push(`/jobs/${app.job_id}`)}
                                             className="w-8 h-8 rounded-lg bg-[#f4f1ea] flex items-center justify-center"

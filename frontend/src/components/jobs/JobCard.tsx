@@ -6,6 +6,7 @@ import { formatSalaryRange } from '@/lib/salary';
 import { ROUTES } from '@/constants';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import { isSpazorlabsCompany } from '@/lib/companyFlags';
+import { SelectionProbabilityBadge } from '@/components/jobs/SelectionProbability';
 
 interface JobCardProps {
   job: Job;
@@ -40,6 +41,9 @@ export const JobCard = ({ job, actions }: JobCardProps) => {
           <div className="mt-0.5 flex flex-wrap items-center gap-2">
             {job.companyName && <p className="text-sm text-gray-500">{job.companyName}</p>}
             {isVerifiedCompany && <Badge variant="success">Verified</Badge>}
+            {job.selectionProbability !== undefined && (
+              <SelectionProbabilityBadge score={job.selectionProbability} />
+            )}
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-2">

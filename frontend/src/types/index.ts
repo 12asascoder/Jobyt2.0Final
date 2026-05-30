@@ -94,6 +94,8 @@ export interface Job {
   is_external_company?: boolean;
   source?: 'admin_external' | 'recruiter' | 'admin_company';
   created_at: string;
+  /** Selection Probability: 0–100 score derived from SkillMatchingService (candidate-facing only) */
+  selectionProbability?: number;
 }
 
 // ── Applications ─────────────────────────────────────────────────────────────
@@ -116,6 +118,8 @@ export interface Application {
   location?: string;
   companyName?: string | null;
   latest_comment?: string | null;
+  /** Selection Probability: 0–100 score derived from SkillMatchingService (candidate-facing only) */
+  selectionProbability?: number;
 }
 
 export interface PipelineEvent {

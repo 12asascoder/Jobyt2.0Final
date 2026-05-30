@@ -11,6 +11,7 @@ import { StorageService } from './storage.service';
 import { EmbeddingCacheService } from './embeddingCache.service';
 import { cosineSimilarity, similarityToScore } from '../utils/embedding';
 import { SkillMatchingService } from './matching/skillMatching.service';
+import { ApplicantProfileModel } from '../models/applicantProfile.model';
 
 const LOG_PREFIX = '[ApplicationService]';
 
@@ -194,7 +195,17 @@ export const ApplicationService = {
   },
 
   async getMyApplications(applicantId: string, page: number, limit: number) {
-    return ApplicationModel.findByApplicant(applicantId, page, limit);
+    const [result, profile] = await Promise.all([
+      ApplicationModel.findByApplicant(applicantId, page, limit),
+      ApplicantProfileModel.findByUserId(applicantId),
+    ]);
+    const candidateSkills: string[] = Array.isArray(profile?.skills) ? profile.skills : [];
+    const enriched = result.applications.map((app: any) => {
+      const jobSkills: string[] = Array.isArray(app.job_skills) ? app.job_skills : [];
+      const { matchPercentage } = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
+      return { ...app, selectionProbability: matchPercentage };
+    });
+    return { ...result, applications: enriched };
   },
 
   async getJobApplications(recruiterId: string, jobId: string, page: number, limit: number, filters?: { search?: string; status?: string }) {
@@ -261,7 +272,17 @@ export const ApplicationService = {
     page: number,
     limit: number,
   ) {
-    return ApplicationModel.findByApplicantWithFilters(applicantId, filters, page, limit);
+    const [result, profile] = await Promise.all([
+      ApplicationModel.findByApplicantWithFilters(applicantId, filters, page, limit),
+      ApplicantProfileModel.findByUserId(applicantId),
+    ]);
+    const candidateSkills: string[] = Array.isArray(profile?.skills) ? profile.skills : [];
+    const enriched = result.applications.map((app: any) => {
+      const jobSkills: string[] = Array.isArray(app.job_skills) ? app.job_skills : [];
+      const { matchPercentage } = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
+      return { ...app, selectionProbability: matchPercentage };
+    });
+    return { ...result, applications: enriched };
   },
 
   async getApplicationStatistics(applicantId: string) {
