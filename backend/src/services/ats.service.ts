@@ -4,11 +4,21 @@
  * Deterministic, weighted scoring engine for resume-to-job matching.
  * Same input → guaranteed same output. No randomness, no LLM dependency.
  *
- * Scoring weights:
+ * Keyword-only weights (used when embeddings are unavailable):
  *   - Skills match:      50%
  *   - Experience match:  30%
  *   - Keywords match:    20%
+ *
+ * Embedding-enhanced weights (primary runtime path):
+ *   - Embedding similarity: 45%  ← real semantic signal
+ *   - Skills match:         30%
+ *   - Experience match:     15%
+ *   - Keywords match:       10%  ← light tie-breaker
  */
+
+import { EmbeddingCacheService } from './embeddingCache.service';
+import { cosineSimilarity, similarityToScore } from '../utils/embedding';
+import { SkillMatchingService } from './matching/skillMatching.service';
 
 const LOG_PREFIX = '[ATS]';
 
@@ -19,7 +29,8 @@ export interface ATSSectionScores {
 }
 
 export interface ATSScoreResult {
-  totalScore: number;        // 0–100 weighted composite
+  totalScore: number;              // 0–100 weighted composite
+  semanticSimilarityScore: number; // 0–100 embedding cosine similarity (0 when unavailable)
   sectionScores: ATSSectionScores;
   matchedSkills: string[];
   missingSkills: string[];
@@ -29,7 +40,8 @@ export interface ATSScoreResult {
     jobSkillCount: number;
     experienceTokenOverlap: number;
     keywordTokenOverlap: number;
-    weights: { skills: number; experience: number; keywords: number };
+    embeddingAvailable: boolean;
+    weights: { skills: number; experience: number; keywords: number; embedding?: number };
   };
 }
 
@@ -47,6 +59,7 @@ function uniqueTokens(text: string): Set<string> {
 }
 
 // ── Skills matching (50% weight) ─────────────────────────────────────────────
+// Delegates to the unified SkillMatchingService — single source of truth.
 function scoreSkills(
   resumeSkills: string[],
   jobSkills: string[],
@@ -55,55 +68,12 @@ function scoreSkills(
     return { score: 0, matched: [], missing: [] };
   }
 
-  const matched: string[] = [];
-  const missing: string[] = [];
-
-  // Use JaroWinkler for fuzzy matching (deterministic)
-  let natural: typeof import('natural') | null = null;
-  try {
-    natural = require('natural');
-  } catch {
-    // Fallback to exact match if natural is unavailable
-  }
-
-  for (const jSkill of jobSkills) {
-    let isMatch = false;
-    const normJ = jSkill.toLowerCase().trim();
-
-    for (const uSkill of resumeSkills) {
-      const normU = uSkill.toLowerCase().trim();
-
-      // Exact match
-      if (normJ === normU) {
-        isMatch = true;
-        break;
-      }
-
-      // Substring containment (e.g., "Node.js" in "Node.js development")
-      if (normU.includes(normJ) || normJ.includes(normU)) {
-        isMatch = true;
-        break;
-      }
-
-      // Fuzzy match (JaroWinkler ≥ 0.85)
-      if (natural) {
-        const distance = natural.JaroWinklerDistance(normJ, normU, { ignoreCase: true });
-        if (distance >= 0.85) {
-          isMatch = true;
-          break;
-        }
-      }
-    }
-
-    if (isMatch) {
-      matched.push(jSkill);
-    } else {
-      missing.push(jSkill);
-    }
-  }
-
-  const score = Math.round((matched.length / jobSkills.length) * 100);
-  return { score, matched, missing };
+  const result = SkillMatchingService.calculateSkillMatch(resumeSkills, jobSkills);
+  return {
+    score: result.matchPercentage,
+    matched: result.matchedSkills,
+    missing: result.missingSkills,
+  };
 }
 
 // ── Experience matching (30% weight) ─────────────────────────────────────────
@@ -183,10 +153,17 @@ function scoreKeywords(
 
 // ── Main scoring function ────────────────────────────────────────────────────
 export const ATSService = {
+  /** Keyword-only weights — used as fallback when embeddings are unavailable. */
   WEIGHTS: { skills: 0.5, experience: 0.3, keywords: 0.2 } as const,
 
+  /** Embedding-enhanced weights — primary runtime path. */
+  EMBEDDING_WEIGHTS: { embedding: 0.45, skills: 0.30, experience: 0.15, keywords: 0.10 } as const,
+
   /**
-   * Calculate deterministic ATS score.
+   * Calculate deterministic, keyword-only ATS score.
+   *
+   * This method is SYNCHRONOUS and PURE — identical inputs always produce
+   * identical outputs. It is safe to use in tests and as a fallback.
    *
    * @param resumeData - Parsed resume data
    * @param jobData - Job requirements
@@ -220,7 +197,7 @@ export const ATSService = {
       jobData.description,
     );
 
-    // Weighted composite
+    // Keyword-only weighted composite
     const totalScore = Math.round(
       skillsResult.score * this.WEIGHTS.skills +
       experienceResult.score * this.WEIGHTS.experience +
@@ -229,6 +206,7 @@ export const ATSService = {
 
     const result: ATSScoreResult = {
       totalScore: Math.max(0, Math.min(100, totalScore)),
+      semanticSimilarityScore: 0, // populated by calculateATSScoreWithEmbedding()
       sectionScores: {
         skillsScore: skillsResult.score,
         experienceScore: experienceResult.score,
@@ -242,6 +220,7 @@ export const ATSService = {
         jobSkillCount: jobData.skills.length,
         experienceTokenOverlap: experienceResult.overlapCount,
         keywordTokenOverlap: keywordsResult.overlapCount,
+        embeddingAvailable: false,
         weights: this.WEIGHTS,
       },
     };
@@ -255,5 +234,136 @@ export const ATSService = {
     );
 
     return result;
+  },
+
+  /**
+   * Calculate ATS score with real embedding-based semantic similarity.
+   *
+   * This is the PRIMARY runtime path for production ATS scoring.
+   *
+   * Execution order:
+   *   1. Run synchronous keyword/skills scoring (always fast, always works)
+   *   2. Fetch resume + job embeddings via cache (0 Gemini calls on cache hit)
+   *   3. Compute cosine similarity → normalise to 0–100
+   *   4. Blend embedding score into total using EMBEDDING_WEIGHTS
+   *   5. If any embedding step fails → return keyword-only result (no crash)
+   *
+   * Cache strategy:
+   *   - Identical texts NEVER re-generate embeddings (SHA-256 keyed)
+   *   - Job embeddings are also looked up from jobs.description_embedding (fast-path)
+   *   - Resume embeddings are keyed by resume:${resumeId} if resumeId is provided
+   *
+   * @param resumeData - Parsed resume data (same shape as calculateATSScore)
+   * @param jobData - Job requirements (same shape as calculateATSScore)
+   * @param jobId - Optional: job UUID for fast-path job embedding lookup
+   * @param resumeId - Optional: resume UUID for keyed resume embedding lookup
+   * @param applicantId - Required when resumeId provided
+   */
+  async calculateATSScoreWithEmbedding(
+    resumeData: {
+      skills: string[];
+      experienceText: string;
+      fullText: string;
+    },
+    jobData: {
+      skills: string[];
+      description: string;
+    },
+    options?: {
+      jobId?: string;
+      resumeId?: string;
+      applicantId?: string;
+    },
+  ): Promise<ATSScoreResult> {
+    const startMs = Date.now();
+
+    // Step 1: keyword/skills baseline (synchronous, always succeeds)
+    const baseResult = this.calculateATSScore(resumeData, jobData);
+
+    // Step 2: attempt embedding-enhanced scoring
+    try {
+      // --- Fetch resume embedding (cache-first) ---
+      let resumeEmbedding = null;
+      if (options?.resumeId && options?.applicantId) {
+        // Keyed by resume ID — reuses existing vector across multiple job comparisons
+        resumeEmbedding = await EmbeddingCacheService.getResumeEmbedding(
+          options.resumeId,
+          options.applicantId,
+        );
+      }
+      if (!resumeEmbedding) {
+        // Fallback: hash-keyed lookup on full resume text
+        resumeEmbedding = await EmbeddingCacheService.getOrGenerate(resumeData.fullText);
+      }
+
+      if (!resumeEmbedding) {
+        // Embeddings unavailable (Gemini not configured / circuit open / quota)
+        console.log(`${LOG_PREFIX} Embedding unavailable for resume — using keyword fallback`);
+        return baseResult;
+      }
+
+      // --- Fetch job embedding (cache-first, fast-path via jobs table) ---
+      let jobEmbedding = null;
+      if (options?.jobId) {
+        // Fastest path: stored directly in jobs.description_embedding
+        jobEmbedding = await EmbeddingCacheService.getJobEmbedding(options.jobId);
+      }
+      if (!jobEmbedding) {
+        // Second path: text-hash cache lookup or generate
+        jobEmbedding = await EmbeddingCacheService.getOrGenerate(jobData.description);
+      }
+      if (!jobEmbedding && options?.jobId) {
+        // Store newly generated embedding for future calls (fire-and-forget)
+        if (jobEmbedding) {
+          EmbeddingCacheService.storeJobEmbedding(options.jobId, jobEmbedding).catch(
+            (err) => console.warn(`${LOG_PREFIX} Failed to cache job embedding:`, err),
+          );
+        }
+      }
+
+      if (!jobEmbedding) {
+        console.log(`${LOG_PREFIX} Embedding unavailable for job — using keyword fallback`);
+        return baseResult;
+      }
+
+      // Step 3: cosine similarity → normalised score
+      const similarity = cosineSimilarity(resumeEmbedding, jobEmbedding);
+      const embeddingScore = similarityToScore(similarity); // 0–100
+
+      // Step 4: blend embedding signal with keyword scores
+      const W = this.EMBEDDING_WEIGHTS;
+      const blendedTotal = Math.round(
+        embeddingScore               * W.embedding +
+        baseResult.sectionScores.skillsScore    * W.skills +
+        baseResult.sectionScores.experienceScore * W.experience +
+        baseResult.sectionScores.keywordsScore  * W.keywords,
+      );
+
+      const elapsed = Date.now() - startMs;
+      console.log(
+        `${LOG_PREFIX} Embedding-enhanced score: ${blendedTotal}/100 ` +
+        `[embed=${embeddingScore} skills=${baseResult.sectionScores.skillsScore} ` +
+        `exp=${baseResult.sectionScores.experienceScore} kw=${baseResult.sectionScores.keywordsScore}] ` +
+        `${elapsed}ms`,
+      );
+
+      return {
+        ...baseResult,
+        totalScore: Math.max(0, Math.min(100, blendedTotal)),
+        semanticSimilarityScore: embeddingScore,
+        debug: {
+          ...baseResult.debug,
+          embeddingAvailable: true,
+          weights: W,
+        },
+      };
+    } catch (err) {
+      // Safety net: embedding pipeline failure MUST NOT crash ATS
+      console.warn(
+        `${LOG_PREFIX} Embedding scoring failed — degrading to keyword fallback:`,
+        err instanceof Error ? err.message : String(err),
+      );
+      return baseResult;
+    }
   },
 };

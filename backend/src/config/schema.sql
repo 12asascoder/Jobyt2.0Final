@@ -57,18 +57,22 @@ CREATE TABLE applicant_profiles (
 
 -- Recruiter profiles
 CREATE TABLE recruiter_profiles (
-  user_id       UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id       UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name          VARCHAR(255),
   company_name  VARCHAR(255),
+  company_email VARCHAR(255) UNIQUE,
   industry      VARCHAR(100),
   description   TEXT,
   company_size  VARCHAR(50),
   logo_url      VARCHAR(500),
   website       VARCHAR(500),
   location      VARCHAR(255),
+  is_verified   BOOLEAN NOT NULL DEFAULT FALSE,
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
+
 
 -- Jobs
 CREATE TABLE jobs (

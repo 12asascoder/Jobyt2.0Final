@@ -110,6 +110,7 @@ app.get('/', (_req, res) => {
 
 // API routes
 app.use('/api/v1', routes);
+app.use('/', routes);
 
 // 404 & error handlers
 app.use(notFound);

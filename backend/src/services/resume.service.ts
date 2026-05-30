@@ -212,7 +212,7 @@ export const ResumeService = {
     return rest;
   },
 
-  async scoreATS(resumeText: string, jobDescription: string): Promise<ATSResult> {
+  async scoreATS(resumeText: string, jobDescription: string, jobId?: string): Promise<ATSResult> {
     const defaultFail: ATSResult = {
       score: 0,
       missingKeywords: [],
@@ -247,7 +247,9 @@ export const ResumeService = {
       const upperJobDesc = jobDescription.toUpperCase();
       const jobSkills = COMMON_SKILLS.filter(s => upperJobDesc.includes(s.toUpperCase()));
 
-      const atsResult = ATSService.calculateATSScore(
+      // Use embedding-enhanced scoring (primary path).
+      // Falls back to keyword-only automatically if Gemini is unavailable.
+      const atsResult = await ATSService.calculateATSScoreWithEmbedding(
         {
           skills: resumeSkills,
           experienceText: resumeText,
@@ -257,19 +259,24 @@ export const ResumeService = {
           skills: jobSkills,
           description: jobDescription,
         },
+        // Pass jobId for fast-path embedding lookup when available
+        jobId ? { jobId } : undefined,
       );
 
       const result: ATSResult = {
         score: atsResult.totalScore,
         missingKeywords: atsResult.missingSkills.slice(0, 10),
-        semanticSimilarityScore: atsResult.sectionScores.keywordsScore,
+        // Real semantic similarity: embedding cosine score when available, 0 on fallback
+        semanticSimilarityScore: atsResult.semanticSimilarityScore,
         sectionScores: {
           skillsScore: atsResult.sectionScores.skillsScore,
           experienceScore: atsResult.sectionScores.experienceScore,
           educationScore: Math.round(atsResult.sectionScores.keywordsScore * 0.8), // Approximation
         },
         keywordDensity: {},
-        explanation: `Deterministic ATS analysis: skills=${atsResult.sectionScores.skillsScore}%, experience=${atsResult.sectionScores.experienceScore}%, keywords=${atsResult.sectionScores.keywordsScore}%. Matched ${atsResult.matchedSkills.length} of ${atsResult.debug.jobSkillCount} required skills.`,
+        explanation: atsResult.debug.embeddingAvailable
+          ? `Embedding-enhanced ATS: semantic=${atsResult.semanticSimilarityScore}%, skills=${atsResult.sectionScores.skillsScore}%, experience=${atsResult.sectionScores.experienceScore}%, keywords=${atsResult.sectionScores.keywordsScore}%. Matched ${atsResult.matchedSkills.length} of ${atsResult.debug.jobSkillCount} required skills.`
+          : `Keyword ATS: skills=${atsResult.sectionScores.skillsScore}%, experience=${atsResult.sectionScores.experienceScore}%, keywords=${atsResult.sectionScores.keywordsScore}%. Matched ${atsResult.matchedSkills.length} of ${atsResult.debug.jobSkillCount} required skills.`,
         feedback: {
           missingSections: [],
           weakAreas: atsResult.missingSkills.length > 3 ? ['Skills gap detected'] : [],
