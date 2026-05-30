@@ -207,7 +207,6 @@ export const EmbeddingCacheService = {
 
     try {
       // Match by first 200 chars of description to find the corresponding job
-      const snippet = trimmed.substring(0, 200);
       const { rows } = await pool.query(
         `SELECT description_embedding FROM jobs
          WHERE description_embedding IS NOT NULL

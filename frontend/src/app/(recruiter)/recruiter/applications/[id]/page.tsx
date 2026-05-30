@@ -26,7 +26,12 @@ interface ApplicationDetail {
   job_title: string;
   job_location: string | null;
   created_at: string;
-  skill_match?: number;
+  /** Backend-computed skill match percentage (0–100). null = not computed. */
+  skill_match?: number | null;
+  /** Matched skills (backend-computed). */
+  matched_skills?: string[];
+  /** Missing skills (backend-computed). */
+  missing_skills?: string[];
   responses?: Record<string, string>;
   resume_url?: string | null;
 }
@@ -38,23 +43,6 @@ const getInitials = (name: string | null) => {
     .map((n) => n[0])
     .join('')
     .toUpperCase();
-};
-
-const computeMatchScore = (candidateSkills: string[] = [], jobSkills: string[] = []) => {
-  const normalize = (value: string) => value.trim().toLowerCase();
-  const candidate = new Set(candidateSkills.map(normalize).filter(Boolean));
-  const required = [...new Set(jobSkills.map(normalize).filter(Boolean))];
-
-  if (required.length === 0) {
-    return candidate.size > 0 ? 100 : 0;
-  }
-
-  let matched = 0;
-  required.forEach((skill) => {
-    if (candidate.has(skill)) matched += 1;
-  });
-
-  return Math.max(0, Math.min(100, Math.round((matched / required.length) * 100)));
 };
 
 export default function ApplicationDetailPage() {
@@ -137,10 +125,13 @@ export default function ApplicationDetailPage() {
     );
   }
 
-  const skillMatch =
-    typeof application.skill_match === 'number'
-      ? application.skill_match
-      : computeMatchScore(application.skills || [], application.job_skills || []);
+  // Backend is the single source of truth for skill matching.
+  // skill_match is always provided by the enriched detail endpoint.
+  // null = job has no required skills or score not yet available.
+  const skillMatch: number | null =
+    typeof application.skill_match === 'number' ? application.skill_match : null;
+  const matchedSkills: string[] = application.matched_skills ?? [];
+  const missingSkills: string[] = application.missing_skills ?? [];
   const hasResume = Boolean(
     application.resume_url ||
       application.resume_snapshot_url ||
@@ -255,30 +246,66 @@ export default function ApplicationDetailPage() {
                       fill="none"
                       stroke="#CDDC39"
                       strokeWidth="8"
-                      strokeDasharray={`${(skillMatch / 100) * 339.3} 339.3`}
+                      strokeDasharray={skillMatch !== null ? `${(skillMatch / 100) * 339.3} 339.3` : '0 339.3'}
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
-                      <div className="text-3xl font-black text-lime-300">{skillMatch}%</div>
+                      {skillMatch !== null ? (
+                        <div className="text-3xl font-black text-lime-300">{skillMatch}%</div>
+                      ) : (
+                        <div className="text-2xl font-black text-slate-400">&mdash;</div>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Matched Skills */}
-              <div className="space-y-2">
-                {application.skills && application.skills.length > 0 ? (
-                  application.skills.map((skill, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-sm">
-                      <span className="w-2 h-2 rounded-full bg-lime-300"></span>
-                      <span>{skill}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-slate-400 text-sm">No skills listed</p>
-                )}
-              </div>
+              {matchedSkills.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-bold text-lime-300 uppercase tracking-widest mb-2">Matched</p>
+                  <div className="space-y-1">
+                    {matchedSkills.map((skill, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm">
+                        <span className="w-2 h-2 rounded-full bg-lime-300 flex-shrink-0"></span>
+                        <span>{skill}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Missing Skills */}
+              {missingSkills.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-rose-400 uppercase tracking-widest mb-2">Missing</p>
+                  <div className="space-y-1">
+                    {missingSkills.map((skill, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm text-white/60">
+                        <span className="w-2 h-2 rounded-full bg-rose-400 flex-shrink-0"></span>
+                        <span>{skill}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Fallback: raw candidate skills when no job skills defined */}
+              {matchedSkills.length === 0 && missingSkills.length === 0 && (
+                <div className="space-y-2">
+                  {application.skills && application.skills.length > 0 ? (
+                    application.skills.map((skill, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm">
+                        <span className="w-2 h-2 rounded-full bg-lime-300"></span>
+                        <span>{skill}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-slate-400 text-sm">No skills listed</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* View Resume */}
