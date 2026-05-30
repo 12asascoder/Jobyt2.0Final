@@ -101,7 +101,7 @@ export const AIOrchestratorService = {
       throw new AppError('ATS analysis requires resumeData and jobData', 400);
     }
 
-    const scoreResult = ATSService.calculateATSScore(resumeData, jobData);
+    const scoreResult = await ATSService.calculateATSScoreWithEmbedding(resumeData, jobData);
     const llmInsights = await this.generateAtsInsights(
       resumeData.fullText || resumeData.experienceText || '',
       jobData.description || '',
@@ -135,7 +135,7 @@ export const AIOrchestratorService = {
 
     let atsScore = null;
     if (resumeText && jobDescription) {
-      atsScore = ATSService.calculateATSScore(
+      atsScore = await ATSService.calculateATSScoreWithEmbedding(
         {
           skills: userSkills,
           experienceText: resumeText,
