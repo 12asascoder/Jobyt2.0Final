@@ -79,6 +79,22 @@ router.get('/jobs/:jobId', authorize('recruiter'), employerGuard, ApplicationCon
 // Any role (authorized via controller): get secure resume URL for this application
 router.get('/:id/resume-url', ApplicationController.getResumeUrl);
 
+// Recruiter: lazy-generate (or return cached) AI reasoning for an application
+router.get(
+  '/recruiter/applicants/:id/ai-reasoning',
+  authorize('recruiter'),
+  employerGuard,
+  ApplicationController.getAiReasoning,
+);
+
+// Recruiter: force-refresh AI reasoning for an application
+router.post(
+  '/recruiter/applicants/:id/ai-reasoning/refresh',
+  authorize('recruiter'),
+  employerGuard,
+  ApplicationController.refreshAiReasoning,
+);
+
 // Recruiter: update application status
 router.patch(
   '/:id/status',
