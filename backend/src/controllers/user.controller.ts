@@ -1,12 +1,41 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/user.service';
 import { sendSuccess } from '../utils/response';
+import pool from '../config/database';
 
 export const UserController = {
   async getMyProfile(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await UserService.getProfile(req.user!.userId, req.user!.role);
       sendSuccess(res, data);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getPreferences(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { rows } = await pool.query(
+        'SELECT email_alerts_enabled, whatsapp_alerts_enabled FROM users WHERE id = $1',
+        [req.user!.userId]
+      );
+      sendSuccess(res, rows[0]);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async updatePreferences(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email_alerts_enabled, whatsapp_alerts_enabled } = req.body;
+      const { rows } = await pool.query(
+        `UPDATE users 
+         SET email_alerts_enabled = COALESCE($1, email_alerts_enabled),
+             whatsapp_alerts_enabled = COALESCE($2, whatsapp_alerts_enabled)
+         WHERE id = $3 RETURNING email_alerts_enabled, whatsapp_alerts_enabled`,
+        [email_alerts_enabled, whatsapp_alerts_enabled, req.user!.userId]
+      );
+      sendSuccess(res, rows[0], 'Preferences updated successfully');
     } catch (err) {
       next(err);
     }

@@ -28,7 +28,8 @@ type JWFn = (s1: string, s2: string, opts?: any) => number;
 // won't be narrowed to `never` inside conditional blocks.
 function makeJaroWinkler(): JWFn | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const natural = require('natural');
     if (typeof natural?.JaroWinklerDistance === 'function') {
       return natural.JaroWinklerDistance as JWFn;

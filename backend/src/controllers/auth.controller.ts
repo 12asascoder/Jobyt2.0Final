@@ -174,7 +174,7 @@ export const AuthController = {
 
       const normalizedCode = code.trim();
       const normalizedState = state.trim();
-      const codeKey = `oauth_code:linkedin:${normalizedCode}`;
+      const _codeKey = `oauth_code:linkedin:${normalizedCode}`;
 
       const stateValid = await OAuthStateService.consume('linkedin', normalizedState);
       if (!stateValid) {

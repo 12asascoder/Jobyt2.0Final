@@ -99,10 +99,9 @@ export const errorHandler = (
   }
 
   // Metrics hook (placeholder) — replace with Prometheus/StatsD later.
-  if (errorCode) {
-    // eslint-disable-next-line no-unused-expressions
-    errorCode;
-  }
+  // if (errorCode) {
+  //   // TODO: metrics.increment(\`error.\${errorCode}\`);
+  // }
 
   if (process.env.NODE_ENV !== 'production') {
     console.error('[Error]', err.message, err.stack);

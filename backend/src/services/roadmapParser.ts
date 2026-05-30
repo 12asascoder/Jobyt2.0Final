@@ -11,7 +11,7 @@
  * - Position and sort_order computation
  */
 
-import { RawRoadmapData, RawNode, RawEdge, slugify } from './roadmapLoader';
+import { RawRoadmapData, RawNode, slugify } from './roadmapLoader';
 
 export interface ParsedRoadmap {
   slug: string;
