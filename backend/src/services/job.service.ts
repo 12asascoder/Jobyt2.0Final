@@ -5,8 +5,10 @@ import {
   JobStatus,
   JobApplicationQuestion,
 } from '../models/job.model';
-import { CreditService } from './credit.service';
+
 import { PromptTemplatesService } from './promptTemplates.service';
+import { AIService } from './ai.service';
+import { aiConfig } from '../config/ai.config';
 import { UserModel } from '../models/user.model';
 import { AppError, badRequest, notFound } from '../utils/appError';
 import { ProfileRequirementsService } from './profileRequirements.service';
@@ -418,16 +420,32 @@ export const JobService = {
           `What is your approach to problem-solving and debugging?`
       ];
 
+      if (!role || !skills || skills.length === 0) {
+          return { questions: staticFallback };
+      }
+
+      const prompt = PromptTemplatesService.renderTemplate('interview_questions', {
+        role,
+        skills: skills.join(', '),
+      });
+
+      if (aiConfig.isConfigured) {
+        try {
+          const generated = await AIService.generateJSON<string[]>(prompt);
+          if (Array.isArray(generated) && generated.every(item => typeof item === 'string')) {
+            return { questions: generated.length > 0 ? generated : staticFallback };
+          }
+        } catch (error) {
+          console.warn('[JobService] AI interview questions generation failed:', error);
+        }
+      }
+
       const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey || !role || !skills || skills.length === 0) {
+      if (!apiKey) {
           return { questions: staticFallback };
       }
 
       try {
-          const prompt = PromptTemplatesService.renderTemplate('interview_questions', {
-            role,
-            skills: skills.join(', '),
-          });
           const response = await fetch('https://api.openai.com/v1/chat/completions', {
               method: 'POST',
               headers: {
@@ -449,7 +467,7 @@ export const JobService = {
           const questions = content.split('\n').filter((q: string) => q.trim().length > 0).map((q: string) => q.replace(/^\d+\.\s*/, '').trim());
 
           return { questions: questions.length > 0 ? questions : staticFallback };
-      } catch (error) {
+      } catch {
           return { questions: staticFallback };
       }
   },

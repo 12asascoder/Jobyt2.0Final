@@ -129,6 +129,7 @@ export const EmbeddingCacheService = {
 
     // 2. Cache MISS: Reconstruct resume text and generate embedding
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ResumeService } = require('./resume.service');
       const resumeText = await ResumeService.getResumeTextForUserResume(applicantId, resumeId);
       if (!resumeText) return null;

@@ -34,16 +34,16 @@ export const ScraperService = {
       // Extract the visible inner text of the body
       const textContent = await page.evaluate(() => {
         // Basic cleanup of script/style tags just in case
-        // @ts-ignore
+        // @ts-expect-error - document is typed as any in evaluate
         document.querySelectorAll('script, style, noscript').forEach((el: any) => el.remove());
-        // @ts-ignore
+        // @ts-expect-error - document is typed as any in evaluate
         return document.body.innerText;
       });
 
       return textContent.trim();
     } catch (error) {
       console.error(`ScraperService error for ${url}:`, error);
-      throw new Error(`Failed to scrape URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw Object.assign(new Error(`Failed to scrape URL: ${error instanceof Error ? error.message : 'Unknown error'}`), { cause: error });
     } finally {
       await browser.close().catch(() => {});
     }

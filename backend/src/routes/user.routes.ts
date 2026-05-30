@@ -49,6 +49,15 @@ router.put(
   UserController.updateProfile,
 );
 
+router.get('/me/preferences', UserController.getPreferences);
+router.put(
+  '/me/preferences',
+  body('email_alerts_enabled').optional().isBoolean(),
+  body('whatsapp_alerts_enabled').optional().isBoolean(),
+  validate,
+  UserController.updatePreferences
+);
+
 // ── File uploads ───────────────────────────────────────────────────────────────
 router.post(
   '/me/resume',

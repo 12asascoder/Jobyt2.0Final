@@ -1,6 +1,6 @@
 import { UserModel } from '../models/user.model';
 import { JobModel, normalizeQuestions } from '../models/job.model';
-import { CreditModel } from '../models/credit.model';
+
 import { AdminAuditLogModel } from '../models/adminAuditLog.model';
 import { NotificationModel } from '../models/notification.model';
 import { RecruiterProfile } from '../models/recruiterProfile.model';
@@ -9,7 +9,6 @@ import { NotificationService } from './notification.service';
 import { AppError } from '../utils/appError';
 import prisma from '../config/prisma';
 import pool from '../config/database';
-import { PoolClient } from 'pg';
 import { ApplicationModel } from '../models/application.model';
 import { ApplicationService } from './application.service';
 import logger from '../config/logger';

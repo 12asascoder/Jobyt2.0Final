@@ -1,3 +1,5 @@
+/* global process, require, console */
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { Client } = require('pg');
 
 async function main() {

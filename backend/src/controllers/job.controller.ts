@@ -5,6 +5,7 @@ import { JobType } from '../models/job.model';
 import { sendSuccess, sendPaginated } from '../utils/response';
 import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import { SkillMatchingService } from '../services/matching/skillMatching.service';
+import redis from '../config/redis';
 
 export const JobController = {
   async createExternalJob(req: Request, res: Response, next: NextFunction) {
@@ -79,6 +80,28 @@ export const JobController = {
       // Determine if in public discovery mode (no user or applicant)
       const isDiscoveryMode = !req.user || req.user.role === 'applicant';
       
+      const canCache = isDiscoveryMode && !excludeAppliedForApplicantId;
+      const cacheKey = canCache ? `public_jobs_${Buffer.from(JSON.stringify(req.query)).toString('base64')}` : null;
+
+      if (canCache && cacheKey && redis.status === 'ready') {
+        try {
+          const cachedResult = await redis.get(cacheKey);
+          if (cachedResult) {
+            const { jobs, pagination } = JSON.parse(cachedResult);
+            return sendPaginated(
+              res,
+              jobs,
+              pagination.total,
+              pagination.page,
+              pagination.limit,
+              'Jobs fetched successfully (cached)'
+            );
+          }
+        } catch (e) {
+          console.warn('[Cache Search] Redis error', e);
+        }
+      }
+
       // Fetch jobs with filters
       const { jobs, pagination } = await JobService.getJobs({
         page,
@@ -94,6 +117,12 @@ export const JobController = {
         onlyApproved: isDiscoveryMode,
         prioritizeSpazorlabs: isDiscoveryMode,
       });
+
+      if (canCache && cacheKey && redis.status === 'ready') {
+        redis.set(cacheKey, JSON.stringify({ jobs, pagination }), 'EX', 300).catch(err => {
+          console.warn('[Cache Update] Redis error:', err);
+        });
+      }
 
       // Send paginated response with metadata
       // Enrich with selectionProbability for logged-in applicants (single profile fetch, O(1) DB)

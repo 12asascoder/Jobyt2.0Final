@@ -12,6 +12,7 @@ import { EmbeddingCacheService } from './embeddingCache.service';
 import { cosineSimilarity, similarityToScore } from '../utils/embedding';
 import { SkillMatchingService } from './matching/skillMatching.service';
 import { ApplicantProfileModel } from '../models/applicantProfile.model';
+import redis from '../config/redis';
 
 const LOG_PREFIX = '[ApplicationService]';
 
@@ -214,6 +215,7 @@ export const ApplicationService = {
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
 
     const result = await ApplicationModel.findByJob(jobId, page, limit, filters);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { JobService } = require('./job.service');
 
     // Pre-fetch job embedding ONCE (not per applicant) to avoid N Gemini API calls.

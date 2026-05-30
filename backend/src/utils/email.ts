@@ -171,3 +171,20 @@ export const otpEmailHtml = (code: string, expiryMins: number = 5): string => `
   </div>
 `;
 
+export const dailyRecommendationEmailHtml = (name: string, jobs: any[]): string => `
+  <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+    <h2 style="color: #333;">Daily Job Recommendations</h2>
+    <p>Hi ${name},</p>
+    <p>Here are some top job matches for you based on your profile:</p>
+    ${jobs.map(job => `
+      <div style="background-color: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 6px; border-left: 4px solid #0056b3;">
+        <h3 style="margin: 0 0 5px 0; color: #0056b3;">${job.title}</h3>
+        <p style="margin: 0 0 5px 0; color: #555;"><strong>${job.companyName || 'Unknown Company'}</strong> - ${job.location || 'Remote/Anywhere'}</p>
+        <p style="margin: 0 0 10px 0; color: #777; font-size: 14px;">Match Score: ${job.score}%</p>
+        <a href="${process.env.FRONTEND_URL}/jobs/${job.id}" style="display: inline-block; background-color: #0056b3; color: #fff; text-decoration: none; padding: 8px 12px; border-radius: 4px; font-size: 14px;">View Job</a>
+      </div>
+    `).join('')}
+    <p style="color: #666; font-size: 12px; margin-top: 20px;">You are receiving this because you have Email Alerts enabled. You can manage your preferences in your account settings.</p>
+  </div>
+`;
+

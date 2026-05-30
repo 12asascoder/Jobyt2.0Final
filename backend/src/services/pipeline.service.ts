@@ -1,5 +1,5 @@
 import pool from '../config/database';
-import { ApplicationModel, ApplicationStatus } from '../models/application.model';
+import { ApplicationStatus } from '../models/application.model';
 import { JobModel } from '../models/job.model';
 import { PipelineEventModel } from '../models/pipeline_event.model';
 import { AppError } from '../utils/appError';

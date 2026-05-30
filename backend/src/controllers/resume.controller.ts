@@ -56,14 +56,13 @@ export const ResumeController = {
 
   async scoreATS(req: Request, res: Response, next: NextFunction) {
     try {
-      let { resumeText, jobDescription, resume_id } = req.body as {
-        resumeText?: string;
-        jobDescription: string;
-        resume_id?: string;
-      };
+      let resumeText = req.body.resumeText as string | undefined;
+      const { jobDescription } = req.body;
+      const resume_id = req.body.resume_id as string | undefined;
       
       if (req.file && req.file.mimetype === 'application/pdf') {
-        const pdfParse = require('pdf-parse');
+        const pdfParseModule = await import('pdf-parse');
+        const pdfParse = (pdfParseModule.default || pdfParseModule) as any;
         const data = await pdfParse(req.file.buffer);
         resumeText = data.text;
       }

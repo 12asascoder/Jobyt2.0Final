@@ -3,7 +3,7 @@ import { JobModel } from '../models/job.model';
 import { AppError } from '../utils/appError';
 
 export const AnalyticsService = {
-  async getJobViews(recruiterId: string, jobId: string, days = 30) {
+  async getJobViews(recruiterId: string, jobId: string, _days = 30) {
     const job = await JobModel.findById(jobId);
     if (!job) throw new AppError('Job not found', 404);
     if (job.recruiter_id !== recruiterId) throw new AppError('Forbidden', 403);

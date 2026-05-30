@@ -24,8 +24,8 @@ async function runTests() {
       "VALUES ($1, 'Test Job', 'Desc', 'Remote', 'full-time', 50000, 60000) RETURNING id", [recruiterId]);
     const jobId = jobRes.rows[0].id;
 
-    const appRes = await client.query("INSERT INTO applications (job_id, applicant_id, status) VALUES ($1, $2, 'applied') RETURNING id", [jobId, applicantId]);
-    const appId = appRes.rows[0].id;
+    await client.query("INSERT INTO applications (job_id, applicant_id, status) VALUES ($1, $2, 'applied') RETURNING id", [jobId, applicantId]);
+    const _appId = '0b1b9e07-3d91-4560-af60-d29a5f1e102f';
 
     // 2. Test Pipeline Board Aggregation
     console.log('2. Testing Pipeline Board Aggregation...');
@@ -56,7 +56,7 @@ async function runTests() {
     try {
       await PipelineService.checkEmployerPipelineAccess('bogus_id', jobId);
       throw new Error('Security guard failed to throw Forbidden exception');
-    } catch (err: any) {
+    } catch {
       console.log('✅ Security guard blocked unauthorized access successfully');
     }
 
@@ -65,8 +65,8 @@ async function runTests() {
     await client.query("DELETE FROM users WHERE email IN ('testr@example.com', 'testa@example.com')");
 
     console.log('--- ALL PIPELINE TESTS PASSED ---');
-  } catch (error) {
-    console.error('❌ Integration Test Failed:', error);
+  } catch (_err) {
+    console.error('❌ Integration Test Failed:', _err);
     if (client) {
       await client.query("DELETE FROM users WHERE email IN ('testr@example.com', 'testa@example.com')");
     }
