@@ -264,7 +264,7 @@ function parseMarkdownStructure(content: string, slug: string) {
   const activeStack: (RawNode | null)[] = Array(7).fill(null);
 
   let inFrontmatter = false;
-  let sortOrders = Array(7).fill(0);
+  const sortOrders = Array(7).fill(0);
 
   // We enforce a root node representing the roadmap itself
   const rootNode: RawNode = {
@@ -295,7 +295,7 @@ function parseMarkdownStructure(content: string, slug: string) {
     if (!match) continue;
 
     const level = match[1].length;
-    let title = match[2].replace(/\[(.*?)\]\(.*?\)/g, '$1').trim(); // Remove markdown links
+    const title = match[2].replace(/\[(.*?)\]\(.*?\)/g, '$1').trim(); // Remove markdown links
 
     if (!title) continue;
 

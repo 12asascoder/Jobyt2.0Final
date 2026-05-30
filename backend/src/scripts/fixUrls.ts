@@ -14,7 +14,7 @@ async function migrateUrls() {
     const { rows: recruiters } = await pool.query('SELECT user_id, website, logo_url FROM recruiter_profiles');
     let recruiterUpdates = 0;
     for (const rec of recruiters) {
-      let needsUpdate = false;
+      const needsUpdate = false;
       const normalizedWebsite = normalizeUrl(rec.website);
       const normalizedLogo = normalizeUrl(rec.logo_url);
       

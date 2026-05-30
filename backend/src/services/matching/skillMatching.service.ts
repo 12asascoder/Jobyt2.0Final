@@ -20,7 +20,7 @@
 
 import { normalizeSkill } from '../../config/skillTaxonomy';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type JWFn = (s1: string, s2: string, opts?: any) => number;
 
 // Load `natural` once at module level — avoids per-call require() overhead.
@@ -28,7 +28,7 @@ type JWFn = (s1: string, s2: string, opts?: any) => number;
 // won't be narrowed to `never` inside conditional blocks.
 function makeJaroWinkler(): JWFn | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     const natural = require('natural');
     if (typeof natural?.JaroWinklerDistance === 'function') {
       return natural.JaroWinklerDistance as JWFn;

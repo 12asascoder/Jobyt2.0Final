@@ -100,7 +100,7 @@ export const errorHandler = (
 
   // Metrics hook (placeholder) — replace with Prometheus/StatsD later.
   if (errorCode) {
-    // eslint-disable-next-line no-unused-expressions
+     
     errorCode;
   }
 
