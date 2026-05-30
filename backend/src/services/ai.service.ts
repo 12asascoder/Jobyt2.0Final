@@ -1,28 +1,35 @@
 /**
- * AI Service — Singleton client for Google GenAI SDK
+ * AI Service — Provider-agnostic facade
  *
- * Provides:
- *   - generateText()      → text generation with retry + timeout
- *   - generateEmbedding() → embedding generation with retry + timeout
- *   - healthCheck()       → model validation
- *   - Circuit breaker to prevent repeated failing calls
- *   - Structured error codes (AI_MODEL_UNAVAILABLE, EMBEDDING_FAILED, etc.)
- *   - Structured logging with [AI] prefix
+ * Provides a stable public API for all AI operations:
+ *   - generateText()      → Groq-powered text generation with retry + timeout
+ *   - generateJSON()      → Groq JSON generation (structured output mode)
+ *   - generateEmbedding() → HuggingFace-powered embedding (for semantic ATS scoring)
+ *   - healthCheck()       → Model validation on startup
+ *   - getCircuitStatus()  → Circuit breaker state for monitoring
+ *
+ * Text generation:  Groq API  (GROQ_API_KEY)
+ * Embeddings:       HuggingFace Inference API (HF_API_KEY / HUGGINGFACE_API_KEY, optional — falls back gracefully)
  *
  * All public methods return null on failure (never throw),
  * allowing callers to degrade gracefully.
  *
  * Retry policy:
- *   - Fast-fail (no retry) on: 404 (model not found), 400 (bad key/invalid),
- *     429 (quota exhausted). These are permanent failures.
+ *   - Fast-fail (no retry) on: 429 (quota exhausted), 400 (invalid request/key),
+ *     404 (model not found). These are permanent failures.
  *   - Retry on: network timeout, 500, 503 (transient infrastructure failures).
  */
 
-import { GoogleGenAI } from '@google/genai';
 import { aiConfig } from '../config/ai.config';
+import { AIProvider } from './ai/interfaces/aiProvider.interface';
+import { GroqProvider } from './ai/providers/groq.provider';
+import { EmbeddingProviderResolver } from './ai/providers/embedding.provider';
 
 const LOG_PREFIX = '[AI]';
 const EMBED_PREFIX = '[Embedding]';
+
+// Flag to track if we've hit an authentication failure (invalid API key)
+let isAuthFailed = false;
 
 // ── AI Error Codes ───────────────────────────────────────────────────────────
 
@@ -95,6 +102,16 @@ function recordFailure(key: string): void {
   }
 }
 
+function tripCircuit(key: string): void {
+  const cb = getCircuitBreaker(key);
+  cb.failures = aiConfig.circuitBreakerThreshold;
+  cb.isOpen = true;
+  cb.lastFailureAt = Date.now();
+  console.warn(
+    `${LOG_PREFIX} Circuit breaker FORCED OPEN for "${key}" due to authentication failure.`,
+  );
+}
+
 function isCircuitOpen(key: string): boolean {
   const cb = getCircuitBreaker(key);
   if (!cb.isOpen) return false;
@@ -113,24 +130,42 @@ function isCircuitOpen(key: string): boolean {
 
 // ── Error classification helpers ─────────────────────────────────────────────
 
+function isAuthError(message: string): boolean {
+  const msg = message.toLowerCase();
+  return (
+    msg.includes('401') ||
+    msg.includes('403') ||
+    msg.includes('invalid_api_key') ||
+    msg.includes('api_key_invalid') ||
+    msg.includes('invalid api key') ||
+    msg.includes('unauthorized')
+  );
+}
+
 /**
  * Returns true for permanent API errors that should NOT be retried.
  * Retrying these wastes quota and adds latency with no chance of success.
  */
 function isPermanentError(message: string): boolean {
+  if (isAuthError(message)) {
+    return true;
+  }
   return (
     // 429 Quota exhausted — retrying will only make it worse
     message.includes('429') ||
     message.includes('RESOURCE_EXHAUSTED') ||
     message.includes('Quota exceeded') ||
+    message.includes('rate_limit_exceeded') ||
     // 404 Model not found — model name is wrong, retry won't help
     message.includes('404') ||
     message.includes('NOT_FOUND') ||
+    message.includes('model_not_found') ||
     // 400 Invalid argument / bad API key — config error, retry won't help
     (message.includes('400') && (
       message.includes('INVALID_ARGUMENT') ||
       message.includes('API_KEY_INVALID') ||
-      message.includes('API key not valid')
+      message.includes('API key not valid') ||
+      message.includes('invalid_api_key')
     ))
   );
 }
@@ -163,8 +198,10 @@ async function withRetry<T>(
 
       // Fast-fail on permanent errors — no retry storm
       if (isPermanentError(lastError.message)) {
-        const reason = lastError.message.includes('429') ? 'QUOTA_EXHAUSTED'
-          : lastError.message.includes('404') || lastError.message.includes('NOT_FOUND') ? 'MODEL_NOT_FOUND'
+        const isAuth = isAuthError(lastError.message);
+        const reason = isAuth ? 'AUTHENTICATION_FAILED'
+          : lastError.message.includes('429') ? 'QUOTA_EXHAUSTED'
+          : lastError.message.includes('404') || lastError.message.includes('NOT_FOUND') || lastError.message.includes('model_not_found') ? 'MODEL_NOT_FOUND'
           : 'INVALID_REQUEST';
         console.error(
           `${LOG_PREFIX} ${label} permanent failure [${reason}] — short-circuiting retries.`,
@@ -185,23 +222,29 @@ async function withRetry<T>(
   throw lastError;
 }
 
-// ── Singleton client ─────────────────────────────────────────────────────────
+// ── Groq Provider (text generation) ─────────────────────────────────────────
 
-let clientInstance: GoogleGenAI | null = null;
+let groqProvider: AIProvider | null = null;
 
-function getClient(): GoogleGenAI | null {
-  if (!aiConfig.isConfigured || !aiConfig.apiKey) return null;
-  if (!clientInstance) {
-    clientInstance = new GoogleGenAI({ apiKey: aiConfig.apiKey });
+function getGroqProvider(): AIProvider | null {
+  if (!aiConfig.isConfigured || !aiConfig.groqApiKey) return null;
+  if (!groqProvider) {
+    groqProvider = new GroqProvider(
+      aiConfig.groqApiKey,
+      aiConfig.textModel,
+      aiConfig.defaultTemperature,
+    );
   }
-  return clientInstance;
+  return groqProvider;
 }
+
+
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
 export const AIService = {
   /**
-   * Generate text content using the configured text model.
+   * Generate text content using the configured text model (Groq).
    * Returns the raw text response, or null on any failure.
    */
   async generateText(
@@ -222,22 +265,19 @@ export const AIService = {
       return null;
     }
 
-    const client = getClient();
-    if (!client) return null;
+    const provider = getGroqProvider();
+    if (!provider) return null;
 
     try {
       const result = await withRetry(
         () =>
           withTimeout(
-            client.models.generateContent({
-              model,
-              contents: prompt,
-              config: {
-                temperature: options?.temperature ?? aiConfig.defaultTemperature,
-                responseMimeType: options?.responseMimeType,
-              },
+            provider.generateText({
+              prompt,
+              temperature: options?.temperature ?? aiConfig.defaultTemperature,
+              responseMimeType: options?.responseMimeType,
             }),
-            8000, // 8s timeout for text generation
+            aiConfig.timeoutMs > 0 ? Math.min(aiConfig.timeoutMs, 30000) : 30000,
           ),
         aiConfig.maxRetries,
         `generateText(${model})`,
@@ -257,16 +297,26 @@ export const AIService = {
     } catch (err) {
       const elapsed = Date.now() - startMs;
       const message = err instanceof Error ? err.message : String(err);
-      recordFailure(circuitKey);
+      
+      const isAuth = isAuthError(message);
+      if (isAuth) {
+        isAuthFailed = true;
+        console.warn(`${LOG_PREFIX} Groq Authentication Failed: Invalid API Key. Please verify GROQ_API_KEY in .env.`);
+        tripCircuit(circuitKey);
+      } else {
+        recordFailure(circuitKey);
+      }
 
       // Classify error
       const isTimeout = message.includes('timed out');
-      const is404 = message.includes('404') || message.includes('NOT_FOUND');
-      const code = isTimeout
-        ? AIErrorCode.AI_TIMEOUT
-        : is404
-          ? AIErrorCode.AI_MODEL_UNAVAILABLE
-          : AIErrorCode.INVALID_AI_RESPONSE;
+      const is404 = message.includes('404') || message.includes('NOT_FOUND') || message.includes('model_not_found');
+      const code = isAuth
+        ? AIErrorCode.AI_NOT_CONFIGURED
+        : isTimeout
+          ? AIErrorCode.AI_TIMEOUT
+          : is404
+            ? AIErrorCode.AI_MODEL_UNAVAILABLE
+            : AIErrorCode.INVALID_AI_RESPONSE;
 
       console.error(
         `${LOG_PREFIX} Text FAIL model=${model} code=${code} ${elapsed}ms: ${message}`,
@@ -276,8 +326,8 @@ export const AIService = {
   },
 
   /**
-   * Generate a JSON-parsed response from the text model.
-   * Uses responseMimeType: 'application/json' for structured output.
+   * Generate a JSON-parsed response from the text model (Groq).
+   * Uses response_format: { type: 'json_object' } for structured output.
    * Returns null on failure or parse error.
    */
   async generateJSON<T = unknown>(prompt: string): Promise<T | null> {
@@ -289,7 +339,7 @@ export const AIService = {
 
     try {
       let cleanText = raw.trim();
-      // Strip markdown code fences if present
+      // Strip markdown code fences if present (some models add them even in JSON mode)
       if (cleanText.startsWith('```json')) {
         cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '').trim();
       } else if (cleanText.startsWith('```')) {
@@ -305,19 +355,19 @@ export const AIService = {
   /**
    * Generate an embedding vector for a given text.
    *
-   * Uses gemini-embedding-001 (or configured GEMINI_EMBEDDING_MODEL).
-   * The model default dimension is 3072; cosine similarity works on any dimension
-   * as long as both vectors use the same model.
+   * Uses HuggingFace (sentence-transformers/all-MiniLM-L6-v2 or configured EMBEDDING_MODEL).
+   * Supports unauthenticated/free tier usage as well as key-based authenticated calls.
    *
    * Returns null on failure (never throws).
    */
   async generateEmbedding(text: string): Promise<number[] | null> {
     const model = aiConfig.embeddingModel;
-    const circuitKey = `embedding:${model}`;
+    const providerName = aiConfig.embeddingProvider;
+    const circuitKey = `embedding:${providerName}:${model}`;
     const startMs = Date.now();
 
-    if (!aiConfig.isConfigured) {
-      console.warn(`${EMBED_PREFIX} Not configured — skipping embedding generation`);
+    if (!aiConfig.embeddingsConfigured) {
+      // Graceful degradation — keyword scoring will be used instead
       return null;
     }
 
@@ -326,7 +376,7 @@ export const AIService = {
     }
 
     if (isCircuitOpen(circuitKey)) {
-      console.warn(`${EMBED_PREFIX} Circuit OPEN for ${model} — skipping embedding`);
+      console.warn(`${EMBED_PREFIX} Circuit OPEN for ${providerName}:${model} — skipping embedding`);
       return null;
     }
 
@@ -341,78 +391,62 @@ export const AIService = {
       ? trimmed.slice(0, aiConfig.maxEmbeddingInputChars)
       : trimmed;
 
-    const client = getClient();
-    if (!client) return null;
+    const provider = EmbeddingProviderResolver.resolve();
+    if (!provider) return null;
 
     try {
-      const result = await withRetry(
+      const embedding = await withRetry(
         () =>
           withTimeout(
-            client.models.embedContent({
-              model,
-              contents: input,
-              // Do NOT specify outputDimensionality — use model default.
-              // Forcing 768 on a 3072-dim model degrades accuracy.
-            }),
-            8000, // 8s — embedding cold-starts can take 2-4s
+            provider.generateEmbedding(input),
+            15000, // 15s — Hugging Face inference or OpenAI can take a moment
           ),
         aiConfig.maxRetries,
-        `generateEmbedding(${model})`,
+        `generateEmbedding(${providerName}:${model})`,
       );
 
-      // SDK v1.x returns embeddings in one of two shapes depending on SDK version.
-      // Try both paths defensively.
-      let embedding: number[] | undefined;
-
-      // Shape 1: result.embeddings[0].values  (batch response)
-      if (Array.isArray(result.embeddings) && result.embeddings.length > 0) {
-        embedding = result.embeddings[0]?.values;
-      }
-
-      // Shape 2: result.embedding.values  (single-content response)
-      if (!embedding || embedding.length === 0) {
-        const singleEmb = (result as any).embedding;
-        if (singleEmb && Array.isArray(singleEmb.values) && singleEmb.values.length > 0) {
-          embedding = singleEmb.values;
-        }
-      }
-
       if (!Array.isArray(embedding) || embedding.length === 0) {
-        console.error(`${EMBED_PREFIX} Unexpected response shape — no embedding array. ` +
-          `Result keys: ${Object.keys(result || {}).join(', ')}`);
+        console.error(`${EMBED_PREFIX} Unexpected response shape — no embedding array.`);
         recordFailure(circuitKey);
         return null;
       }
 
       const elapsed = Date.now() - startMs;
       recordSuccess(circuitKey);
-      console.log(`${EMBED_PREFIX} SUCCESS model=${model} dims=${embedding.length} ${elapsed}ms`);
-      console.log(`${EMBED_PREFIX} Vector Length: ${embedding.length}`);
+      console.log(`${EMBED_PREFIX} SUCCESS provider=${providerName} model=${model} dims=${embedding.length} ${elapsed}ms`);
       return embedding;
     } catch (err) {
       const elapsed = Date.now() - startMs;
       const message = err instanceof Error ? err.message : String(err);
-      recordFailure(circuitKey);
+      
+      const isAuth = isAuthError(message);
+      if (isAuth) {
+        console.warn(`${EMBED_PREFIX} Authentication Failed: Invalid credentials for ${providerName}.`);
+        tripCircuit(circuitKey);
+      } else {
+        recordFailure(circuitKey);
+      }
 
       const isTimeout = message.includes('timed out');
       const is404 = message.includes('404') || message.includes('NOT_FOUND');
       const isQuota = message.includes('429') || message.includes('RESOURCE_EXHAUSTED');
 
-      const code = isTimeout
-        ? AIErrorCode.AI_TIMEOUT
-        : is404
-          ? AIErrorCode.AI_MODEL_UNAVAILABLE
-          : AIErrorCode.EMBEDDING_FAILED;
+      const code = isAuth
+        ? AIErrorCode.AI_NOT_CONFIGURED
+        : isTimeout
+          ? AIErrorCode.AI_TIMEOUT
+          : is404
+            ? AIErrorCode.AI_MODEL_UNAVAILABLE
+            : AIErrorCode.EMBEDDING_FAILED;
 
       if (is404) {
         console.error(
-          `${EMBED_PREFIX} FAIL model=${model} — MODEL NOT FOUND (404). ` +
-          `Check GEMINI_EMBEDDING_MODEL. Valid options: gemini-embedding-001, gemini-embedding-2. ${elapsed}ms`,
+          `${EMBED_PREFIX} FAIL provider=${providerName} model=${model} — MODEL NOT FOUND (404). ${elapsed}ms`,
         );
       } else if (isQuota) {
-        console.error(`${EMBED_PREFIX} FAIL model=${model} — QUOTA EXHAUSTED (429). ${elapsed}ms`);
+        console.error(`${EMBED_PREFIX} FAIL provider=${providerName} model=${model} — QUOTA EXHAUSTED (429). ${elapsed}ms`);
       } else {
-        console.error(`${EMBED_PREFIX} FAIL model=${model} code=${code} ${elapsed}ms: ${message}`);
+        console.error(`${EMBED_PREFIX} FAIL provider=${providerName} model=${model} code=${code} ${elapsed}ms: ${message}`);
       }
       return null;
     }
@@ -426,43 +460,58 @@ export const AIService = {
   async healthCheck(): Promise<{ text: boolean; embedding: boolean }> {
     const result = { text: false, embedding: false };
 
+    console.log(`${LOG_PREFIX} ─── AI Configuration ───`);
+    console.log(`${LOG_PREFIX} Text provider:         Groq`);
+    console.log(`${LOG_PREFIX} Text model:            ${aiConfig.textModel}`);
+    console.log(`${LOG_PREFIX} Text configured:       ${aiConfig.isConfigured}`);
+    console.log(`${LOG_PREFIX} Embedding provider:    ${aiConfig.embeddingProvider}`);
+    console.log(`${LOG_PREFIX} Embedding model:       ${aiConfig.embeddingModel}`);
+    console.log(`${LOG_PREFIX} Embeddings configured: ${aiConfig.embeddingsConfigured}`);
+    console.log(`${LOG_PREFIX} Semantic scoring:      ${aiConfig.enableSemanticScoring ? 'enabled' : 'disabled'}`);
+    console.log(`${LOG_PREFIX} Max retries:           ${aiConfig.maxRetries}`);
+    console.log(`${LOG_PREFIX} Timeout:               ${aiConfig.timeoutMs}ms`);
+    console.log(`${LOG_PREFIX} Circuit breaker:       ${aiConfig.circuitBreakerThreshold} failures → ${aiConfig.circuitBreakerCooldownMs}ms cooldown`);
+
     if (!aiConfig.isConfigured) {
-      console.warn(`${LOG_PREFIX} Health check skipped — API key not configured`);
-      console.warn(`${LOG_PREFIX} AI features (semantic scoring, LLM enrichment) will be disabled`);
+      console.warn(`${LOG_PREFIX} Health check skipped — GROQ_API_KEY not configured`);
+      console.warn(`${LOG_PREFIX} AI reasoning features (strengths/weaknesses) will be disabled`);
       return result;
     }
-
-    console.log(`${LOG_PREFIX} ─── AI Configuration ───`);
-    console.log(`${LOG_PREFIX} Text model active: ${aiConfig.textModel}`);
-    console.log(`${LOG_PREFIX} Embedding model active: ${aiConfig.embeddingModel}`);
-    console.log(`${LOG_PREFIX} Semantic scoring: ${aiConfig.enableSemanticScoring ? 'enabled' : 'disabled'}`);
-    console.log(`${LOG_PREFIX} Max retries: ${aiConfig.maxRetries}`);
-    console.log(`${LOG_PREFIX} Timeout: ${aiConfig.timeoutMs}ms`);
-    console.log(`${LOG_PREFIX} Circuit breaker: ${aiConfig.circuitBreakerThreshold} failures → ${aiConfig.circuitBreakerCooldownMs}ms cooldown`);
 
     if (process.env.SKIP_AI_HEALTH_CHECK === 'true') {
       console.warn(`${LOG_PREFIX} Health check bypassed via SKIP_AI_HEALTH_CHECK=true`);
       result.text = true;
-      result.embedding = aiConfig.enableSemanticScoring;
+      result.embedding = aiConfig.embeddingsConfigured && aiConfig.enableSemanticScoring;
       return result;
     }
 
-    // Quick validation: try a minimal text generation
+    if (isAuthFailed) {
+      console.warn(`${LOG_PREFIX} ✗ Text model validation failed: Authentication Error (Invalid API Key). ` +
+        `Please check GROQ_API_KEY in your .env file.`);
+      return result;
+    }
+
+    // Quick validation: try a minimal text generation via Groq
     try {
       const testResult = await this.generateText('Respond with exactly: OK');
       if (testResult) {
         result.text = true;
-        console.log(`${LOG_PREFIX} ✓ Text model validated: ${aiConfig.textModel}`);
+        console.log(`${LOG_PREFIX} ✓ Text model validated: ${aiConfig.textModel} (Groq)`);
       } else {
-        console.warn(`${LOG_PREFIX} ✗ Text model returned empty response: ${aiConfig.textModel}`);
+        if (isAuthFailed) {
+          console.warn(`${LOG_PREFIX} ✗ Text model validation failed: Authentication Error (Invalid API Key). ` +
+            `Please check GROQ_API_KEY in your .env file.`);
+        } else {
+          console.warn(`${LOG_PREFIX} ✗ Text model returned empty response: ${aiConfig.textModel}`);
+        }
       }
     } catch {
       console.warn(`${LOG_PREFIX} ✗ Text model validation failed: ${aiConfig.textModel}`);
     }
 
-    // Embedding model validation removed from startup to minimize API calls and prevent
-    // quota exhaustion on free-tier Gemini API.
-    result.embedding = aiConfig.enableSemanticScoring;
+    // Embedding model validation is skipped on startup to prevent quota exhaustion.
+    // Embeddings will be validated lazily on the first ATS scoring request.
+    result.embedding = aiConfig.embeddingsConfigured && aiConfig.enableSemanticScoring;
 
     console.log(`${LOG_PREFIX} ─── Health check complete ───`);
     return result;
