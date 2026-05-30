@@ -125,6 +125,7 @@ export const ResumeService = {
     const mime = (resume.mime_type || '').toLowerCase();
 
     if (mime.includes('pdf') || lowerName.endsWith('.pdf')) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const pdfParse = require('pdf-parse');
       const parsedPdf = await pdfParse(buffer);
       const text = String(parsedPdf?.text || '').trim();
@@ -229,6 +230,7 @@ export const ResumeService = {
     if (!resumeText || !jobDescription) return defaultFail;
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ATSService } = require('./ats.service');
 
       // Extract skills from resume text using common skills matching

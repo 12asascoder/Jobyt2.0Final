@@ -60,7 +60,7 @@ export const AiParserService = {
       try {
         const parsed: AIParsedJob = JSON.parse(content);
         return parsed;
-      } catch (parseError) {
+      } catch {
         console.error('Failed to parse AI output as JSON:', content);
         throw new AppError('AI returned malformed data', 500);
       }

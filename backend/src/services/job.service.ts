@@ -5,7 +5,7 @@ import {
   JobStatus,
   JobApplicationQuestion,
 } from '../models/job.model';
-import { CreditService } from './credit.service';
+
 import { PromptTemplatesService } from './promptTemplates.service';
 import { AIService } from './ai.service';
 import { aiConfig } from '../config/ai.config';
@@ -467,7 +467,7 @@ export const JobService = {
           const questions = content.split('\n').filter((q: string) => q.trim().length > 0).map((q: string) => q.replace(/^\d+\.\s*/, '').trim());
 
           return { questions: questions.length > 0 ? questions : staticFallback };
-      } catch (error) {
+      } catch {
           return { questions: staticFallback };
       }
   },

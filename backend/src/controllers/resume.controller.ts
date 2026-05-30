@@ -61,8 +61,8 @@ export const ResumeController = {
       const resume_id = req.body.resume_id as string | undefined;
       
       if (req.file && req.file.mimetype === 'application/pdf') {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const pdfParse = require('pdf-parse');
+        const pdfParseModule = await import('pdf-parse');
+        const pdfParse = (pdfParseModule.default || pdfParseModule) as any;
         const data = await pdfParse(req.file.buffer);
         resumeText = data.text;
       }

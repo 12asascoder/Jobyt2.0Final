@@ -126,7 +126,7 @@ export const WhatsAppService = {
       console.error('WhatsApp API Error (Recommendations):', error);
       // We don't throw an AppError here because this is likely running in a background queue
       // and we don't want to crash the worker completely, but the queue will handle retries.
-      throw new Error('Failed to send WhatsApp recommendations');
+      throw Object.assign(new Error('Failed to send WhatsApp recommendations'), { cause: error });
     }
   }
 };

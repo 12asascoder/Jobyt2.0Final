@@ -4,7 +4,6 @@
  */
 
 import request from 'supertest';
-import { Pool } from 'pg';
 
 // Mock data for testing
 const mockJobs = [

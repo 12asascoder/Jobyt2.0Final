@@ -16,7 +16,7 @@
 
 import { AIService } from '../services/ai.service';
 
-const LOG_PREFIX = '[Embedding]';
+
 
 export type EmbeddingVector = number[];
 

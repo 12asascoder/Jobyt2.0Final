@@ -66,6 +66,7 @@ async function runTests() {
       if (err.statusCode === 402) {
          hit402 = true;
          // Ensure available credits exposes cleanly
+         // eslint-disable-next-line preserve-caught-error
          if (err.availableCredits !== 0) throw new Error('Available credits should be 0');
       }
     }

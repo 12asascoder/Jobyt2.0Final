@@ -343,7 +343,7 @@ export const UnifiedMatchService = {
     // We fetch them and compute/extract details cleanly.
     const { rows: jobRows } = await pool.query('SELECT skills, description FROM jobs WHERE id = $1', [row.job_id]);
     const jobSkills = jobRows.length > 0 && Array.isArray(jobRows[0].skills) ? jobRows[0].skills : [];
-    const jobDescription = jobRows.length > 0 ? jobRows[0].description : '';
+    const _jobDescription = jobRows.length > 0 ? jobRows[0].description : '';
 
     let candidateSkills: string[] = [];
     if (row.resume_id) {
@@ -357,7 +357,7 @@ export const UnifiedMatchService = {
           });
           candidateSkills = parsed.skills || [];
         }
-      } catch (err) {
+      } catch {
         // Fallback to profile
       }
     }

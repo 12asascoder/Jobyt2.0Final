@@ -52,7 +52,7 @@ export const RecommendationService = {
             .map(exp => `${exp.role || ''} at ${exp.company || ''}`)
             .join(', ');
           candidateFullText = parsed.rawText || candidateFullText;
-        } catch (_err) {
+        } catch {
           console.warn(`${LOG_PREFIX} Failed to parse resume for user ${userId}, falling back to profile.`);
         }
       }

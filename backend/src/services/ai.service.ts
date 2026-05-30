@@ -296,7 +296,7 @@ export const AIService = {
         cleanText = cleanText.replace(/^```/, '').replace(/```$/, '').trim();
       }
       return JSON.parse(cleanText) as T;
-    } catch (parseErr) {
+    } catch {
       console.error(`${LOG_PREFIX} JSON parse failed:`, raw.slice(0, 200));
       return null;
     }

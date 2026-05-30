@@ -203,6 +203,7 @@ export const ApplicationService = {
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
 
     const result = await ApplicationModel.findByJob(jobId, page, limit, filters);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { JobService } = require('./job.service');
 
     // Pre-fetch job embedding ONCE (not per applicant) to avoid N Gemini API calls.

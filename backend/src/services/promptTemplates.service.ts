@@ -182,6 +182,6 @@ Focus on practical, actionable recommendations for skill development.`,
       return false;
     }
 
-    return template.variables.every(varName => variables.hasOwnProperty(varName));
+    return template.variables.every(varName => Object.prototype.hasOwnProperty.call(variables, varName));
   },
 };

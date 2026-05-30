@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { NotificationService } from '../services/notification.service';
-import { sendSuccess, sendPaginated } from '../utils/response';
+import { sendSuccess } from '../utils/response';
 
 export const NotificationController = {
   async getAll(req: Request, res: Response, next: NextFunction) {
