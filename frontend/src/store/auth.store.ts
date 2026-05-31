@@ -117,7 +117,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           role: fallbackUser.role,
           email_verified: fallbackUser.email_verified,
         });
-        set({ isLoading: false });
+        set({ loading: false });
       }
 
       const res = await api.get<{ user: AuthUser }>('/auth/me');

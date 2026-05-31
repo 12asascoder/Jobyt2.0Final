@@ -5,10 +5,17 @@ import {
   JobStatus,
   JobApplicationQuestion,
 } from '../models/job.model';
-import { CreditService } from './credit.service';
+
+import { PromptTemplatesService } from './promptTemplates.service';
+import { AIService } from './ai.service';
+import { aiConfig } from '../config/ai.config';
 import { UserModel } from '../models/user.model';
 import { AppError, badRequest, notFound } from '../utils/appError';
 import { ProfileRequirementsService } from './profileRequirements.service';
+import { EmbeddingCacheService } from './embeddingCache.service';
+import { SkillMatchingService } from './matching/skillMatching.service';
+
+const LOG_PREFIX = '[JobService]';
 
 export const JobService = {
   validateApplicationQuestions(questions: unknown): JobApplicationQuestion[] {
@@ -92,11 +99,27 @@ export const JobService = {
     }
 
     const applicationQuestions = JobService.validateApplicationQuestions(data.application_questions);
-    return JobModel.create({
+    const job = await JobModel.create({
       recruiter_id: recruiterId,
       ...data,
       application_questions: applicationQuestions,
     });
+
+    // Fire-and-forget: generate + store job description embedding for future ATS scoring.
+    // Non-blocking — never delays the create response.
+    if (job?.id && job?.description) {
+      EmbeddingCacheService.getOrGenerate(job.description)
+        .then((embedding) => {
+          if (embedding) {
+            return EmbeddingCacheService.storeJobEmbedding(job.id, embedding);
+          }
+        })
+        .catch((err) =>
+          console.warn(`${LOG_PREFIX} Failed to pre-generate job embedding for ${job.id}:`, err),
+        );
+    }
+
+    return job;
   },
 
   async publishJob(recruiterId: string, jobId: string) {
@@ -337,7 +360,22 @@ export const JobService = {
       throw badRequest('salary_max must be greater than or equal to salary_min');
     }
 
-    return JobModel.update(jobId, filteredData);
+    const updated = await JobModel.update(jobId, filteredData);
+
+    // Fire-and-forget: regenerate embedding if description changed.
+    if (filteredData.description && updated?.id) {
+      EmbeddingCacheService.getOrGenerate(filteredData.description as string)
+        .then((embedding) => {
+          if (embedding) {
+            return EmbeddingCacheService.storeJobEmbedding(updated.id, embedding);
+          }
+        })
+        .catch((err) =>
+          console.warn(`${LOG_PREFIX} Failed to regenerate job embedding for ${updated.id}:`, err),
+        );
+    }
+
+    return updated;
   },
 
   async deleteJob(recruiterId: string, jobId: string) {
@@ -356,48 +394,12 @@ export const JobService = {
     if (!Array.isArray(userSkills) || !Array.isArray(jobSkills)) {
       return { matchScore: 0, matchedSkills: [], missingSkills: [] };
     }
-    
-    try {
-      const natural = require('natural');
-      
-      const matchedSkills: string[] = [];
-      const missingSkills: string[] = [];
-
-      for (const jSkill of jobSkills) {
-        let isMatch = false;
-        for (const uSkill of userSkills) {
-          const normJ = jSkill.toLowerCase().trim();
-          const normU = uSkill.toLowerCase().trim();
-          
-          if (normJ === normU) {
-            isMatch = true;
-            break;
-          }
-          
-          // Fuzzy match threshold 0.85 (accommodates e.g. Node vs Node.js)
-          const distance = natural.JaroWinklerDistance(normJ, normU, { ignoreCase: true });
-          if (distance >= 0.85) {
-            isMatch = true;
-            break;
-          }
-        }
-        
-        if (isMatch) {
-          matchedSkills.push(jSkill);
-        } else {
-          missingSkills.push(jSkill);
-        }
-      }
-
-      const matchScore = jobSkills.length > 0
-          ? Math.round((matchedSkills.length / jobSkills.length) * 100)
-          : 0;
-
-      return { matchScore, matchedSkills, missingSkills };
-    } catch (e) {
-      console.error('Job Match Error:', e);
-      return { matchScore: 0, matchedSkills: [], missingSkills: jobSkills };
-    }
+    const result = SkillMatchingService.calculateSkillMatch(userSkills, jobSkills);
+    return {
+      matchScore: result.matchPercentage,
+      matchedSkills: result.matchedSkills,
+      missingSkills: result.missingSkills,
+    };
   },
 
   async analyzeSkillGap(userSkills: string[], requiredSkills: string[]): Promise<{ missingSkills: string[], suggestions: Record<string, string> }> {
@@ -418,13 +420,32 @@ export const JobService = {
           `What is your approach to problem-solving and debugging?`
       ];
 
+      if (!role || !skills || skills.length === 0) {
+          return { questions: staticFallback };
+      }
+
+      const prompt = PromptTemplatesService.renderTemplate('interview_questions', {
+        role,
+        skills: skills.join(', '),
+      });
+
+      if (aiConfig.isConfigured) {
+        try {
+          const generated = await AIService.generateJSON<string[]>(prompt);
+          if (Array.isArray(generated) && generated.every(item => typeof item === 'string')) {
+            return { questions: generated.length > 0 ? generated : staticFallback };
+          }
+        } catch (error) {
+          console.warn('[JobService] AI interview questions generation failed:', error);
+        }
+      }
+
       const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey || !role || !skills || skills.length === 0) {
+      if (!apiKey) {
           return { questions: staticFallback };
       }
 
       try {
-          const prompt = `Generate 5 technical interview questions for a ${role} role requiring the following skills: ${skills.join(', ')}. Return only the questions separated by newlines, without numbering.`;
           const response = await fetch('https://api.openai.com/v1/chat/completions', {
               method: 'POST',
               headers: {
@@ -446,7 +467,7 @@ export const JobService = {
           const questions = content.split('\n').filter((q: string) => q.trim().length > 0).map((q: string) => q.replace(/^\d+\.\s*/, '').trim());
 
           return { questions: questions.length > 0 ? questions : staticFallback };
-      } catch (error) {
+      } catch {
           return { questions: staticFallback };
       }
   },

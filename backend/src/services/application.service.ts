@@ -11,6 +11,11 @@ import { StorageService } from './storage.service';
 import { ATSService } from './ats.service';
 import { AIInsightsService } from './aiInsights.service';
 import { ApplicantProfileModel } from '../models/applicantProfile.model';
+import { EmbeddingCacheService } from './embeddingCache.service';
+import { cosineSimilarity, similarityToScore } from '../utils/embedding';
+import { SkillMatchingService } from './matching/skillMatching.service';
+
+const LOG_PREFIX = '[ApplicationService]';
 
 export const ApplicationService = {
   async apply(
@@ -263,14 +268,54 @@ export const ApplicationService = {
       throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
 
     const result = await ApplicationModel.findByJob(jobId, page, limit, filters);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { JobService } = require('./job.service');
 
+    // Pre-fetch job embedding ONCE (not per applicant) to avoid N Gemini API calls.
+    // If the job embedding is cached in jobs.description_embedding, this is a single DB read.
+    let jobEmbedding = await EmbeddingCacheService.getJobEmbedding(jobId);
+    // Fallback: try the general text-hash cache (covers jobs created before this migration)
+    if (!jobEmbedding && job.description) {
+      jobEmbedding = await EmbeddingCacheService.getOrGenerate(job.description);
+      // Store for next time (fire-and-forget)
+      if (jobEmbedding) {
+        EmbeddingCacheService.storeJobEmbedding(jobId, jobEmbedding).catch(
+          (err) => console.warn(`${LOG_PREFIX} Failed to cache job embedding:`, err),
+        );
+      }
+    }
+
+    const embeddingAvailable = Boolean(jobEmbedding);
+    if (embeddingAvailable) {
+      console.log(`${LOG_PREFIX} Using embedding-based ranking for job ${jobId}`);
+    } else {
+      console.log(`${LOG_PREFIX} Embedding unavailable for job ${jobId} — using skills-only ranking`);
+    }
+
     const enrichedApplications = await Promise.all(result.applications.map(async (app: any) => {
+      // Attempt embedding-based match score
+      if (embeddingAvailable && app.resume_id && app.applicant_id) {
+        try {
+          const resumeEmbedding = await EmbeddingCacheService.getResumeEmbedding(
+            app.resume_id,
+            app.applicant_id,
+          );
+          if (resumeEmbedding) {
+            const similarity = cosineSimilarity(resumeEmbedding, jobEmbedding!);
+            const matchScore = similarityToScore(similarity);
+            return { ...app, matchScore, matchMethod: 'embedding' };
+          }
+        } catch (err) {
+          console.warn(`${LOG_PREFIX} Embedding match failed for application ${app.id}:`, err);
+        }
+      }
+
+      // Fallback: skills-only match score (deterministic, always works)
       const matchResult = await JobService.calculateMatchScore(app.skills || [], job.skills || []);
-      return { ...app, matchScore: matchResult.matchScore };
+      return { ...app, matchScore: matchResult.matchScore, matchMethod: 'skills' };
     }));
 
-    // Sort logically for Resume Ranking
+    // Sort by match score descending (highest similarity first)
     enrichedApplications.sort((a, b) => b.matchScore - a.matchScore);
 
     return { ...result, applications: enrichedApplications };
@@ -311,7 +356,21 @@ export const ApplicationService = {
     if (!application) {
       throw Object.assign(new Error('Application not found'), { statusCode: 404 });
     }
-    return application;
+
+    // Enrich with backend-computed skill match so the frontend never needs
+    // to calculate scores independently.
+    const candidateSkills: string[] = Array.isArray(application.skills) ? application.skills : [];
+    const jobSkills: string[] = Array.isArray(application.job_skills) ? application.job_skills : [];
+
+    const skillMatchResult = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
+
+    return {
+      ...application,
+      skill_match: skillMatchResult.matchPercentage,
+      matched_skills: skillMatchResult.matchedSkills,
+      missing_skills: skillMatchResult.missingSkills,
+      fuzzy_matched_skills: skillMatchResult.fuzzyMatchedSkills,
+    };
   },
 
   async getEvents(user: { userId: string; role: string }, applicationId: string) {

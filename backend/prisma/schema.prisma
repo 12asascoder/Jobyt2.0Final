@@ -90,7 +90,7 @@ model jobs {
   id                    String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   recruiter_id          String                   @db.Uuid
   company_id            String?                  @db.Uuid
-  companyName          String                   @map("company_name") @default("Unknown Company") @db.VarChar(255)
+  companyName           String                   @default("Unknown Company") @map("company_name") @db.VarChar(255)
   company_logo          String?                  @db.VarChar(500)
   company_website       String?                  @db.VarChar(500)
   company_location      String?                  @db.VarChar(255)
@@ -120,6 +120,7 @@ model jobs {
   conversations         conversations[]
   users                 users                    @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   saved_jobs            saved_jobs[]
+  job_recommendations   job_recommendations[]
 
   @@index([recruiter_id], map: "idx_jobs_recruiter")
   @@index([job_approval_status], map: "idx_jobs_approval_status")
@@ -260,15 +261,15 @@ model resumes {
 }
 
 model users {
-  id                                              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                                           String?               @unique @db.VarChar(255)
-  phone                                           String?               @unique @db.VarChar(30)
-  phone_verified                                  Boolean               @default(false)
-  password_hash                                   String?               @db.VarChar(255)
-  auth_provider                                   auth_provider         @default(local)
-  google_id                                       String?               @unique @db.VarChar(255)
-  github_id                                       String?               @unique @db.VarChar(255)
-  linkedin_id                                     String?               @unique @db.VarChar(255)
+  id                                              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                           String?                @unique @db.VarChar(255)
+  phone                                           String?                @unique @db.VarChar(30)
+  phone_verified                                  Boolean                @default(false)
+  password_hash                                   String?                @db.VarChar(255)
+  auth_provider                                   auth_provider          @default(local)
+  google_id                                       String?                @unique @db.VarChar(255)
+  github_id                                       String?                @unique @db.VarChar(255)
+  linkedin_id                                     String?                @unique @db.VarChar(255)
   role                                            user_role
   is_verified                                     Boolean?               @default(false)
   is_email_dummy                                  Boolean                @default(false)
@@ -280,6 +281,8 @@ model users {
   reset_token_expires_at                          DateTime?              @db.Timestamptz(6)
   referral_code                                   String                 @unique @db.VarChar(20)
   credit_balance                                  Int                    @default(0)
+  email_alerts_enabled                            Boolean                @default(true)
+  whatsapp_alerts_enabled                         Boolean                @default(true)
   created_at                                      DateTime?              @default(now()) @db.Timestamptz(6)
   updated_at                                      DateTime?              @default(now()) @db.Timestamptz(6)
   admin_audit_log                                 admin_audit_log[]
@@ -299,6 +302,7 @@ model users {
   referrals_referrals_referrer_idTousers          referrals[]            @relation("referrals_referrer_idTousers")
   resumes                                         resumes[]
   saved_jobs                                      saved_jobs[]
+  job_recommendations                             job_recommendations[]
 }
 
 enum auth_provider {
@@ -359,4 +363,31 @@ enum user_role {
   applicant
   recruiter
   admin
+}
+
+model job_recommendations {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  job_id     String    @db.Uuid
+  score      Int
+  status     String    @default("pending") @db.VarChar(30)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobs       jobs      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, job_id], map: "idx_job_recommendations_unique")
+  @@index([user_id, status], map: "idx_job_recommendations_user_status")
+}
+
+model scheduler_logs {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  run_date        DateTime  @default(now()) @db.Date
+  status          String    @default("started") @db.VarChar(30)
+  users_processed Int       @default(0)
+  emails_sent     Int       @default(0)
+  whatsapp_sent   Int       @default(0)
+  failures        Int       @default(0)
+  error_message   String?
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
 }

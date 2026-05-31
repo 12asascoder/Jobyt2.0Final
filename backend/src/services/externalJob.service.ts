@@ -8,7 +8,7 @@ export const ExternalJobService = {
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
-    } catch (err) {
+    } catch {
       throw badRequest('Invalid URL format');
     }
 

@@ -1,6 +1,9 @@
 import { ResumeDeleteResult, ResumeListItem, ResumeModel } from '../models/resume.model';
 import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import { StorageService } from './storage.service';
+import { PromptTemplatesService } from './promptTemplates.service';
+import { AIService } from './ai.service';
+import { aiConfig } from '../config/ai.config';
 import { withTransaction } from '../utils/transaction';
 import fs from 'fs/promises';
 import path from 'path';
@@ -122,6 +125,7 @@ export const ResumeService = {
     const mime = (resume.mime_type || '').toLowerCase();
 
     if (mime.includes('pdf') || lowerName.endsWith('.pdf')) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const pdfParse = require('pdf-parse');
       const parsedPdf = await pdfParse(buffer);
       const text = String(parsedPdf?.text || '').trim();
@@ -209,7 +213,7 @@ export const ResumeService = {
     return rest;
   },
 
-  async scoreATS(resumeText: string, jobDescription: string): Promise<ATSResult> {
+  async scoreATS(resumeText: string, jobDescription: string, jobId?: string): Promise<ATSResult> {
     const defaultFail: ATSResult = {
       score: 0,
       missingKeywords: [],
@@ -226,6 +230,7 @@ export const ResumeService = {
     if (!resumeText || !jobDescription) return defaultFail;
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ATSService } = require('./ats.service');
 
       // Extract skills from resume text using common skills matching
@@ -244,7 +249,9 @@ export const ResumeService = {
       const upperJobDesc = jobDescription.toUpperCase();
       const jobSkills = COMMON_SKILLS.filter(s => upperJobDesc.includes(s.toUpperCase()));
 
-      const atsResult = ATSService.calculateATSScore(
+      // Use embedding-enhanced scoring (primary path).
+      // Falls back to keyword-only automatically if Gemini is unavailable.
+      const atsResult = await ATSService.calculateATSScoreWithEmbedding(
         {
           skills: resumeSkills,
           experienceText: resumeText,
@@ -254,19 +261,24 @@ export const ResumeService = {
           skills: jobSkills,
           description: jobDescription,
         },
+        // Pass jobId for fast-path embedding lookup when available
+        jobId ? { jobId } : undefined,
       );
 
       const result: ATSResult = {
         score: atsResult.totalScore,
         missingKeywords: atsResult.missingSkills.slice(0, 10),
-        semanticSimilarityScore: atsResult.sectionScores.keywordsScore,
+        // Real semantic similarity: embedding cosine score when available, 0 on fallback
+        semanticSimilarityScore: atsResult.semanticSimilarityScore,
         sectionScores: {
           skillsScore: atsResult.sectionScores.skillsScore,
           experienceScore: atsResult.sectionScores.experienceScore,
           keywordsScore: atsResult.sectionScores.keywordsScore,
         },
         keywordDensity: {},
-        explanation: `Deterministic ATS analysis: skills=${atsResult.sectionScores.skillsScore}%, experience=${atsResult.sectionScores.experienceScore}%, keywords=${atsResult.sectionScores.keywordsScore}%. Matched ${atsResult.matchedSkills.length} of ${atsResult.debug.jobSkillCount} required skills.`,
+        explanation: atsResult.debug.embeddingAvailable
+          ? `Embedding-enhanced ATS: semantic=${atsResult.semanticSimilarityScore}%, skills=${atsResult.sectionScores.skillsScore}%, experience=${atsResult.sectionScores.experienceScore}%, keywords=${atsResult.sectionScores.keywordsScore}%. Matched ${atsResult.matchedSkills.length} of ${atsResult.debug.jobSkillCount} required skills.`
+          : `Keyword ATS: skills=${atsResult.sectionScores.skillsScore}%, experience=${atsResult.sectionScores.experienceScore}%, keywords=${atsResult.sectionScores.keywordsScore}%. Matched ${atsResult.matchedSkills.length} of ${atsResult.debug.jobSkillCount} required skills.`,
         feedback: {
           missingSections: [],
           weakAreas: atsResult.missingSkills.length > 3 ? ['Skills gap detected'] : [],
@@ -279,60 +291,67 @@ export const ResumeService = {
         experience: "See resume details",
       };
 
-      // Optional: LLM enrichment if available
-      if (process.env.OPENAI_API_KEY) {
+      let usedFallback = false;
+      if (aiConfig.isConfigured) {
         try {
-          const prompt = `You are a strict, senior technical recruiter AI parsing a resume string against a job description.
-          You must output ONLY valid JSON without any markdown formatting.
-          Analyze the exact raw resume text and job description provided below.
-          
-          Calculate based exactly on real industry expectations:
-          1. keywordDensity: top 3 most repeated tech skill keywords and their frequencies in the resume.
-          2. explanation: highly specific 2-sentence rationale for the overall resume strength compared to the job description.
-          3. feedback: { "missingSections": [], "weakAreas": [], "improvements": ["Actionable suggestion 1", "Suggestion 2"] }
-          4. qualityScore: 0 to 100 purely based on grammar, wording, length optimization, and detail. Deduct heavily for duplicate filler content.
-          5. rolePrediction: The best job title the candidate actually deserves based solely on the resume.
-          6. experience: Calculate total years/months from chronological dates found in the resume (e.g. "5 Years 2 Months"). Return "0 Years" if none found.
-
-          Resume Text: "${resumeText.substring(0, 3000)}"
-          Job Description: "${jobDescription.substring(0, 1500)}"
-          
-          JSON schema required:
-          {
-            "keywordDensity": { "keywordString": number },
-            "explanation": string,
-            "feedback": { "missingSections": [string], "weakAreas": [string], "improvements": [string] },
-            "qualityScore": number,
-            "rolePrediction": string,
-            "experience": string
-          }`;
-
-          const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-              model: 'gpt-3.5-turbo',
-              temperature: 0.1,
-              response_format: { type: 'json_object' },
-              messages: [{ role: 'system', content: prompt }]
-            })
+          const prompt = PromptTemplatesService.renderTemplate('ats_scoring', {
+            resumeText: resumeText.substring(0, 3000),
+            jobDescription: jobDescription.substring(0, 1500),
           });
 
-          if (response.ok) {
-            const data: any = await response.json();
-            const p = JSON.parse(data.choices[0].message.content) as any;
-            result.keywordDensity = p.keywordDensity || result.keywordDensity;
-            result.explanation = p.explanation || result.explanation;
-            result.feedback = p.feedback || result.feedback;
-            result.qualityScore = p.qualityScore || result.qualityScore;
-            result.rolePrediction = p.rolePrediction || result.rolePrediction;
-            result.experience = p.experience || result.experience;
+          const p = await AIService.generateJSON<Partial<ATSResult & { keywordDensity: Record<string, number> }>>(prompt);
+          if (p) {
+            result.keywordDensity = p.keywordDensity ?? result.keywordDensity;
+            result.explanation = p.explanation ?? result.explanation;
+            result.feedback = p.feedback ?? result.feedback;
+            result.qualityScore = typeof p.qualityScore === 'number' ? p.qualityScore : result.qualityScore;
+            result.rolePrediction = p.rolePrediction ?? result.rolePrediction;
+            result.experience = p.experience ?? result.experience;
+          } else {
+            usedFallback = true;
           }
         } catch (llmError) {
+          usedFallback = true;
           console.warn('[ATS] LLM enrichment failed, using deterministic scores:', llmError);
+        }
+      }
+
+      if (usedFallback || !aiConfig.isConfigured) {
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (apiKey) {
+          try {
+            const prompt = PromptTemplatesService.renderTemplate('ats_scoring', {
+              resumeText: resumeText.substring(0, 3000),
+              jobDescription: jobDescription.substring(0, 1500),
+            });
+
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                temperature: 0.1,
+                response_format: { type: 'json_object' },
+                messages: [{ role: 'system', content: prompt }],
+              }),
+            });
+
+            if (response.ok) {
+              const data: any = await response.json();
+              const p = JSON.parse(data.choices[0].message.content) as any;
+              result.keywordDensity = p.keywordDensity || result.keywordDensity;
+              result.explanation = p.explanation || result.explanation;
+              result.feedback = p.feedback || result.feedback;
+              result.qualityScore = p.qualityScore || result.qualityScore;
+              result.rolePrediction = p.rolePrediction || result.rolePrediction;
+              result.experience = p.experience || result.experience;
+            }
+          } catch (llmError) {
+            console.warn('[ATS] LLM enrichment failed, using deterministic scores:', llmError);
+          }
         }
       }
 

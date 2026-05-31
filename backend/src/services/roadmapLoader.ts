@@ -108,7 +108,7 @@ async function getFileContent(slug: string, filename: string): Promise<{ content
       const filePath = path.join(localRepo, 'src', 'data', 'roadmaps', slug, filename);
       const content = await fs.readFile(filePath, 'utf8');
       return { content, source: 'local' };
-    } catch (err) {
+    } catch {
       // Fall through to github if local fails, or throw? The requirement is "optional local repository mode"
       // If local is explicitly set, and file missing, we can try remote as fallback or just fail. Let's try remote.
     }
@@ -144,7 +144,7 @@ export async function loadRoadmap(slug: string): Promise<RawRoadmapData | null> 
       nodes = parsed.nodes;
       edges = parsed.edges;
       loadedMode = 'json';
-    } catch (err) {
+    } catch {
       // 3. Fallback to Markdown Parser
       log('info', `No JSON structure available for ${slug}, falling back to markdown parser`);
       const parsed = parseMarkdownStructure(mdContent, slug);
@@ -207,7 +207,7 @@ export function slugify(text: string): string {
 
 // ─── JSON Parser ───
 
-function parseReactFlowJson(data: any, slug: string) {
+function parseReactFlowJson(data: any, _slug: string) {
   const nodes: RawNode[] = [];
   const edges: RawEdge[] = [];
 
@@ -264,7 +264,7 @@ function parseMarkdownStructure(content: string, slug: string) {
   const activeStack: (RawNode | null)[] = Array(7).fill(null);
 
   let inFrontmatter = false;
-  let sortOrders = Array(7).fill(0);
+  const sortOrders = Array(7).fill(0);
 
   // We enforce a root node representing the roadmap itself
   const rootNode: RawNode = {
@@ -295,7 +295,7 @@ function parseMarkdownStructure(content: string, slug: string) {
     if (!match) continue;
 
     const level = match[1].length;
-    let title = match[2].replace(/\[(.*?)\]\(.*?\)/g, '$1').trim(); // Remove markdown links
+    const title = match[2].replace(/\[(.*?)\]\(.*?\)/g, '$1').trim(); // Remove markdown links
 
     if (!title) continue;
 

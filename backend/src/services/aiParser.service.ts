@@ -1,4 +1,7 @@
 import { AppError } from '../utils/appError';
+import { PromptTemplatesService } from './promptTemplates.service';
+import { AIService } from './ai.service';
+import { aiConfig } from '../config/ai.config';
 
 export interface AIParsedJob {
   title: string;
@@ -12,48 +15,37 @@ export interface AIParsedJob {
 
 export const AiParserService = {
   /**
-   * Passes raw scraped text into OpenAI to structure it into the specific Job Schema.
+   * Passes raw scraped text into AI to structure it into the specific Job Schema.
    */
   async parseJobText(rawText: string): Promise<AIParsedJob> {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is missing');
+    const prompt = PromptTemplatesService.renderTemplate('job_parsing', {
+      rawText,
+    });
+
+    if (aiConfig.isConfigured) {
+      const parsed = await AIService.generateJSON<AIParsedJob>(prompt);
+      if (parsed) {
+        return parsed;
+      }
     }
 
-    const systemPrompt = `
-You are an expert HR data extraction AI. You will be provided with raw text scraped from a job listing webpage.
-Extract the relevant job details and output them STRICTLY as a JSON object matching this schema:
-{
-  "title": "Job Title (string)",
-  "companyName": "Company Name (string)",
-  "description": "A well-formatted HTML or Markdown description of the job, including responsibilities and requirements (string)",
-  "location": "Job location if found, e.g., 'Remote', 'New York, NY', else null",
-  "salary_min": integer or null (e.g., 50000),
-  "salary_max": integer or null (e.g., 80000),
-  "skills": ["Array", "Of", "Relevant", "Technical", "Or", "Soft", "Skills"]
-}
-Rules:
-1. ONLY return the JSON object, absolutely no markdown formatting blocks (do not wrap in \`\`\`json).
-2. If a field like salary or location is missing, use null.
-3. Clean up the description to remove header/footer website navigation links or cookie consent text. Focus purely on the job description.
-4. If you cannot determine the company name, return "External Company".
-`;
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new AppError('AI provider is not configured', 500);
+    }
 
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini', // or 'gpt-3.5-turbo' depending on availability
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: rawText }
-          ],
-          temperature: 0.1, // Low temperature for deterministic extraction
-        })
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+        }),
       });
 
       if (!response.ok) {
@@ -68,14 +60,13 @@ Rules:
       try {
         const parsed: AIParsedJob = JSON.parse(content);
         return parsed;
-      } catch (parseError) {
+      } catch {
         console.error('Failed to parse AI output as JSON:', content);
         throw new AppError('AI returned malformed data', 500);
       }
-
     } catch (error) {
       console.error('AiParserService error:', error);
       throw error;
     }
-  }
+  },
 };

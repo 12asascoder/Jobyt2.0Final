@@ -5,6 +5,8 @@ import { connectDB } from './config/database';
 import redis from './config/redis';
 import { initSocket } from './config/socket';
 import { InsightsCronService } from './services/insightsCron.service';
+import { startWorkers } from './workers';
+import { setupDailyScheduler } from './scheduler/dailyScheduler';
 
 const PORT = parseInt(process.env.PORT || '5001', 10);
 
@@ -30,11 +32,19 @@ async function startServer() {
     initSocket(httpServer);
     console.log('Socket.io initialised');
 
-    httpServer.listen(PORT, () => {
+    httpServer.listen(PORT, async () => {
       console.log(
         `Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`,
       );
       InsightsCronService.startScheduler();
+
+      // Initialize background workers and scheduler
+      try {
+        startWorkers();
+        await setupDailyScheduler();
+      } catch (err) {
+        console.error('Failed to initialize workers or scheduler:', err);
+      }
     });
   } catch (error) {
     console.error('Failed to start server:', error);

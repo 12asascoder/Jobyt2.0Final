@@ -324,7 +324,7 @@ export const OAuthService = {
           // Manually decode JWT without signature verification
           const parts = idToken.split('.');
           if (parts.length !== 3) {
-            throw new Error('Invalid JWT format');
+            throw Object.assign(new Error('Invalid JWT format'), { cause: error });
           }
 
           const decoded = JSON.parse(
