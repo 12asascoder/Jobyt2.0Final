@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import { isSpazorlabsCompany } from '@/lib/companyFlags';
+import { SelectionProbabilityBadge } from '@/components/jobs/SelectionProbability';
 
 export interface BackendJob {
     id: string;
@@ -18,6 +19,8 @@ export interface BackendJob {
     status: string;
     is_boosted: boolean;
     created_at: string;
+    /** Selection Probability: 0–100 (present only for authenticated applicants) */
+    selectionProbability?: number;
 }
 
 type JobLike = Partial<BackendJob> & { _id?: string };
@@ -46,6 +49,7 @@ export function normalizeJob(job: JobLike): BackendJob {
         status: job.status || 'active',
         is_boosted: job.is_boosted || false,
         created_at: job.created_at || new Date().toISOString(),
+        selectionProbability: (job as any).selectionProbability ?? undefined,
     };
 }
 
@@ -340,6 +344,12 @@ export function JobCard({
                             </span>
                         )}
                     </div>
+                    {/* Selection Probability badge — only shown to authenticated applicants */}
+                    {job.selectionProbability !== undefined && (
+                        <div style={{ marginTop: 5 }}>
+                            <SelectionProbabilityBadge score={job.selectionProbability} />
+                        </div>
+                    )}
                 </div>
             </div>
 
