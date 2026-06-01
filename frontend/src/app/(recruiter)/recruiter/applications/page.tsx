@@ -11,6 +11,10 @@ import toast from 'react-hot-toast';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import { createConversation } from '@/lib/messages';
 import { normalizeCompany } from '@/lib/utils';
+import { ATSBreakdown } from '@/types';
+import { ATSScoreBadge } from '@/components/ui/ATSScoreBadge';
+import { ATSInsightsPanel } from '@/components/ui/ATSInsightsPanel';
+import { RecruiterInsightsReviewPanel } from '@/components/ui/RecruiterInsightsReviewPanel';
 
 interface RecruiterApplication {
   id: string;
@@ -25,6 +29,13 @@ interface RecruiterApplication {
   education?: Array<{ institution?: string; degree?: string; year?: number; field?: string }>;
   job_title: string;
   job_location: string | null;
+  ats_score?: number | null;
+  ats_breakdown?: ATSBreakdown | null;
+  fit_insights?: string | null;
+  improvement_suggestions?: string | null;
+  rejection_reason?: string | null;
+  insights_approved?: boolean;
+  insights_generated_at?: string | null;
   created_at: string;
 }
 
@@ -57,6 +68,8 @@ const statusLabelMap: Record<string, string> = {
   hired: 'HIRED',
   rejected: 'REJECTED',
 };
+
+
 
 const formatRelative = (isoDate: string) => {
   const now = Date.now();
@@ -100,6 +113,7 @@ export default function RecruiterApplicationsPage() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [openingConversationFor, setOpeningConversationFor] = useState<string | null>(null);
   const [updatingStatusFor, setUpdatingStatusFor] = useState<string | null>(null);
+  const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
   const selectedJobId = searchParams.get('jobId') || '';
 
   // 300ms debounce on search
@@ -367,17 +381,38 @@ export default function RecruiterApplicationsPage() {
                 <div className="flex-1 w-full min-w-0">
                   {/* Name and Status */}
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="text-xl font-black text-black truncate max-w-[200px]">{app.name || 'Candidate'}</h3>
-                        <span
-                        className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider ${
-                            statusBadgeClass[app.status.toLowerCase()] ||
-                            'bg-slate-100 text-slate-700'
-                        }`}
-                        >
-                        {statusLabelMap[app.status.toLowerCase()] ||
-                            app.status.toUpperCase()}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span
+                            className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider ${
+                                statusBadgeClass[app.status.toLowerCase()] ||
+                                'bg-slate-100 text-slate-700'
+                            }`}
+                            >
+                            {statusLabelMap[app.status.toLowerCase()] ||
+                                app.status.toUpperCase()}
+                            </span>
+                            
+                            {/* ATS Score Badge */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <ATSScoreBadge score={app.ats_score} />
+                                {app.ats_score != null && (
+                                    <button
+                                        onClick={() => setExpandedAppId(expandedAppId === app.id ? null : app.id)}
+                                        className="text-[10px] text-blue-600 hover:text-blue-800 font-bold px-2 py-0.5 rounded transition-colors bg-blue-50 hover:bg-blue-100"
+                                    >
+                                        {expandedAppId === app.id ? 'Hide Fit' : 'Candidate Fit'}
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setExpandedAppId(expandedAppId === `${app.id}_insights` ? null : `${app.id}_insights`)}
+                                    className="text-[10px] text-[#1a1a1a] hover:text-slate-600 font-bold px-2 py-0.5 rounded transition-colors bg-[#f4f1ea] hover:bg-[#e8e4dc]"
+                                >
+                                    {expandedAppId === `${app.id}_insights` ? 'Hide AI' : 'Review AI Insights'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <p className="text-[11px] font-bold text-black/40 uppercase tracking-widest">Applied {formatRelative(app.created_at)}</p>
                   </div>
@@ -458,6 +493,32 @@ export default function RecruiterApplicationsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Expanded ATS Panel */}
+              {expandedAppId === app.id && (
+                <div className="mt-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <ATSInsightsPanel 
+                        score={app.ats_score} 
+                        breakdown={app.ats_breakdown} 
+                        perspective="recruiter" 
+                    />
+                </div>
+              )}
+
+              {/* Expanded Recruiter AI Insights Panel */}
+              {expandedAppId === `${app.id}_insights` && (
+                <div className="mt-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <RecruiterInsightsReviewPanel
+                    applicationId={app.id}
+                    fitInsights={app.fit_insights}
+                    improvementSuggestions={app.improvement_suggestions}
+                    rejectionReason={app.rejection_reason}
+                    insightsApproved={app.insights_approved}
+                    insightsGeneratedAt={app.insights_generated_at}
+                    onApproved={() => setExpandedAppId(null)}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

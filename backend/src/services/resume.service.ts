@@ -17,7 +17,7 @@ export interface ATSResult {
   sectionScores: {
     skillsScore: number;
     experienceScore: number;
-    educationScore: number;
+    keywordsScore: number;
   };
   keywordDensity: Record<string, number>;
   explanation: string;
@@ -218,7 +218,7 @@ export const ResumeService = {
       score: 0,
       missingKeywords: [],
       semanticSimilarityScore: 0,
-      sectionScores: { skillsScore: 0, experienceScore: 0, educationScore: 0 },
+      sectionScores: { skillsScore: 0, experienceScore: 0, keywordsScore: 0 },
       keywordDensity: {},
       explanation: "Analysis failed or missing data.",
       feedback: { missingSections: [], weakAreas: [], improvements: [] },
@@ -273,7 +273,7 @@ export const ResumeService = {
         sectionScores: {
           skillsScore: atsResult.sectionScores.skillsScore,
           experienceScore: atsResult.sectionScores.experienceScore,
-          educationScore: Math.round(atsResult.sectionScores.keywordsScore * 0.8), // Approximation
+          keywordsScore: atsResult.sectionScores.keywordsScore,
         },
         keywordDensity: {},
         explanation: atsResult.debug.embeddingAvailable

@@ -96,12 +96,7 @@ const buildResumeTextFromParsed = (parsed?: ResumeDetailParsed | null): string =
     .join('\n\n');
 };
 
-const getScoreStyle = (score: number | null): string => {
-  if (score === null) return 'bg-slate-100 text-slate-600';
-  if (score >= 80) return 'bg-emerald-100 text-emerald-700';
-  if (score >= 60) return 'bg-amber-100 text-amber-700';
-  return 'bg-rose-100 text-rose-700';
-};
+import { ATSScoreBadge } from '@/components/ui/ATSScoreBadge';
 
 const formatDate = (value?: string | null): string => {
   if (!value) return 'Date unavailable';
@@ -259,11 +254,7 @@ export function ResumeListCard({ refreshKey = 0, className }: ResumeListCardProp
                     <p className="truncate text-sm font-semibold text-slate-900">{fileName}</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {resume.is_default && <Badge variant="info">Default</Badge>}
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${getScoreStyle(atsScore)}`}
-                      >
-                        ATS: {atsScore === null ? 'N/A' : `${Math.round(atsScore)}%`}
-                      </span>
+                      <ATSScoreBadge score={atsScore} size="sm" />
                       <span className="text-xs text-slate-500">{formatDate(resume.created_at)}</span>
                     </div>
                   </div>
