@@ -23,6 +23,15 @@ export interface Application {
   application_answers: ApplicationAnswer[];
   cover_letter: string | null;
   resume_snapshot_url: string | null;
+  ats_score: number | null;
+  ats_breakdown: object | null;
+  // AI Insights fields (TRACK-U3/U4/U5)
+  fit_insights: string | null;
+  rejection_reason: string | null;
+  improvement_suggestions: string | null;
+  insights_approved: boolean;
+  insights_generated_at: Date | null;
+  insights_approved_at: Date | null;
   status: ApplicationStatus;
   status_updated_at: Date;
   created_at: Date;
@@ -30,9 +39,13 @@ export interface Application {
 
 let resumeIdColumnExists: boolean | null = null;
 let applicationAnswersColumnExists: boolean | null = null;
+let atsScoreColumnExists: boolean | null = null;
 
-async function hasColumn(columnName: 'resume_id' | 'application_answers', client?: PoolClient): Promise<boolean> {
-  const cached = columnName === 'resume_id' ? resumeIdColumnExists : applicationAnswersColumnExists;
+
+async function hasColumn(columnName: 'resume_id' | 'application_answers' | 'ats_score', client?: PoolClient): Promise<boolean> {
+  const cached = columnName === 'resume_id' ? resumeIdColumnExists : 
+                 columnName === 'application_answers' ? applicationAnswersColumnExists :
+                 atsScoreColumnExists;
   if (cached !== null) return cached;
 
   const db = client ?? pool;
@@ -49,6 +62,7 @@ async function hasColumn(columnName: 'resume_id' | 'application_answers', client
   const exists = rows.length > 0;
   if (columnName === 'resume_id') resumeIdColumnExists = exists;
   if (columnName === 'application_answers') applicationAnswersColumnExists = exists;
+  if (columnName === 'ats_score') atsScoreColumnExists = exists;
   return exists;
 }
 
@@ -138,12 +152,15 @@ export const ApplicationModel = {
       application_answers?: ApplicationAnswer[];
       cover_letter?: string;
       resume_snapshot_url?: string;
+      ats_score?: number | null;
+      ats_breakdown?: object | null;
     },
     client?: PoolClient,
   ): Promise<Application> {
     const db = client ?? pool;
     const hasResumeId = await hasColumn('resume_id', client);
     const hasAnswers = await hasColumn('application_answers', client);
+    const hasAtsScore = await hasColumn('ats_score', client);
     const answers = normalizeAnswers(data.application_answers);
 
     const columns = ['job_id', 'applicant_id', 'cover_letter', 'resume_snapshot_url'];
@@ -164,6 +181,13 @@ export const ApplicationModel = {
       values.push(JSON.stringify(answers));
     }
 
+    if (hasAtsScore) {
+      columns.push('ats_score');
+      values.push(data.ats_score ?? null);
+      columns.push('ats_breakdown');
+      values.push(data.ats_breakdown ? JSON.stringify(data.ats_breakdown) : null);
+    }
+
     const placeholders = columns.map((_, index) => `$${index + 1}`).join(',');
     const { rows } = await db.query(
       `INSERT INTO applications (${columns.join(', ')})
@@ -179,6 +203,56 @@ export const ApplicationModel = {
       [status, id],
     );
     return rows[0];
+  },
+
+  /** Persist AI-generated insights after fire-and-forget generation */
+  async updateAIInsights(
+    id: string,
+    insights: {
+      fit_insights: string;
+      rejection_reason: string;
+      improvement_suggestions: string;
+    },
+  ): Promise<void> {
+    await pool.query(
+      `UPDATE applications
+       SET fit_insights = $1,
+           rejection_reason = $2,
+           improvement_suggestions = $3,
+           insights_generated_at = NOW()
+       WHERE id = $4`,
+      [insights.fit_insights, insights.rejection_reason, insights.improvement_suggestions, id],
+    );
+  },
+
+  /** Recruiter approves (or resets) the AI insights visibility flag */
+  async updateInsightsApproval(id: string, approved: boolean): Promise<void> {
+    await pool.query(
+      `UPDATE applications
+       SET insights_approved = $1,
+           insights_approved_at = CASE WHEN $1 THEN NOW() ELSE NULL END
+       WHERE id = $2`,
+      [approved, id],
+    );
+  },
+
+  /** Fetch only the insights fields for a given application (used by applicant GET /insights) */
+  async getInsightsFields(id: string): Promise<{
+    fit_insights: string | null;
+    rejection_reason: string | null;
+    improvement_suggestions: string | null;
+    insights_approved: boolean;
+    insights_generated_at: Date | null;
+    status: ApplicationStatus;
+    applicant_id: string;
+  } | null> {
+    const { rows } = await pool.query(
+      `SELECT fit_insights, rejection_reason, improvement_suggestions,
+              insights_approved, insights_generated_at, status, applicant_id
+       FROM applications WHERE id = $1`,
+      [id],
+    );
+    return rows[0] || null;
   },
 
   async findByApplicant(
@@ -202,6 +276,7 @@ export const ApplicationModel = {
     ]);
     return { applications: dataRes.rows, total: parseInt(countRes.rows[0].count) };
   },
+
 
   async findByJob(
     jobId: string,

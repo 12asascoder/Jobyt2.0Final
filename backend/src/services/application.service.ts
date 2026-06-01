@@ -8,6 +8,9 @@ import { CREDIT_COSTS } from '../config/creditCosts';
 import { ResumeModel } from '../models/resume.model';
 import { ProfileRequirementsService } from './profileRequirements.service';
 import { StorageService } from './storage.service';
+import { ATSService } from './ats.service';
+import { AIInsightsService } from './aiInsights.service';
+import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import { EmbeddingCacheService } from './embeddingCache.service';
 import { cosineSimilarity, similarityToScore } from '../utils/embedding';
 import { SkillMatchingService } from './matching/skillMatching.service';
@@ -94,6 +97,32 @@ export const ApplicationService = {
         client,
       );
 
+      // Compute ATS score before creating application
+      let atsScore = null;
+      let atsBreakdown = null;
+      try {
+        const profile = await ApplicantProfileModel.findByUserId(applicantId);
+        const resumeSkills: string[] = Array.isArray(profile?.skills) ? profile.skills : [];
+        const experienceText = (profile?.experience ?? [])
+          .map((e: any) => `${e.title || ''} ${e.description || ''}`).join(' ');
+        const fullText = [
+          profile?.bio ?? '',
+          resumeSkills.join(' '),
+          experienceText,
+        ].join(' ');
+
+        const atsResult = ATSService.calculateATSScore(
+          { skills: resumeSkills, experienceText, fullText },
+          { skills: job.skills ?? [], description: job.description ?? '' }
+        );
+
+        atsScore = atsResult.totalScore;
+        atsBreakdown = atsResult;
+      } catch (err) {
+        console.error('[ApplicationService] Error calculating ATS score during apply:', err);
+        // Continue without failing the application
+      }
+
       // 4) Create application (transaction-scoped)
       let application;
       try {
@@ -105,6 +134,8 @@ export const ApplicationService = {
             resume_snapshot_url: data.resume_snapshot_url,
             resume_id: selectedResumeId,
             application_answers: filteredAnswers,
+            ats_score: atsScore,
+            ats_breakdown: atsBreakdown,
           },
           client,
         );
@@ -156,7 +187,41 @@ export const ApplicationService = {
         ...application,
         creditsRemaining: balanceAfter,
         creditTransactionId: transactionId,
+        _jobForInsights: { title: job.title, description: job.description ?? '', skills: job.skills ?? [] },
+        _applicantIdForInsights: applicantId,
       };
+    }).then(result => {
+      // Fire-and-forget: generate AI insights AFTER transaction commits (so application row exists)
+      // Known risk: if server restarts in this window, insights stay NULL; auto-approve cron handles it after 7 days.
+      const jobCtx = result._jobForInsights;
+      const apId = result._applicantIdForInsights;
+      const appId = result.id;
+      // Strip internal fields from returned result
+      const { _jobForInsights, _applicantIdForInsights, ...cleanResult } = result as any;
+      setImmediate(async () => {
+        try {
+          const profile = await ApplicantProfileModel.findByUserId(apId);
+          const insights = await AIInsightsService.generateInsights(
+            {
+              skills: Array.isArray(profile?.skills) ? profile.skills : [],
+              bio: profile?.bio ?? null,
+              experience: profile?.experience ?? [],
+            },
+            jobCtx,
+          );
+          if (insights) {
+            await ApplicationModel.updateAIInsights(appId, {
+              fit_insights: insights.fit_insights,
+              rejection_reason: insights.rejection_reason,
+              improvement_suggestions: insights.improvement_suggestions,
+            });
+            console.log(`[ApplicationService] AI insights saved for application ${appId}`);
+          }
+        } catch (err) {
+          console.error('[ApplicationService] AI insights generation failed silently:', err);
+        }
+      });
+      return cleanResult;
     });
   },
 
@@ -378,4 +443,49 @@ export const ApplicationService = {
     // Defaulting to PDF/image type for snapshots, as they are typically PDFs
     return StorageService.generateSignedUrl(application.resume_snapshot_url, 'image');
   },
+
+  /** Recruiter approves the AI insights so the applicant can see them */
+  async approveInsights(recruiterId: string, applicationId: string): Promise<void> {
+    const application = await ApplicationModel.findById(applicationId);
+    if (!application) throw Object.assign(new Error('Application not found'), { statusCode: 404 });
+
+    const job = await JobModel.findById(application.job_id);
+    if (!job || job.recruiter_id !== recruiterId)
+      throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+
+    await ApplicationModel.updateInsightsApproval(applicationId, true);
+  },
+
+  /** Applicant retrieves their AI insights (gated by approval flag) */
+  async getApplicantInsights(applicantId: string, applicationId: string) {
+    const fields = await ApplicationModel.getInsightsFields(applicationId);
+    if (!fields) throw Object.assign(new Error('Application not found'), { statusCode: 404 });
+    if (fields.applicant_id !== applicantId)
+      throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+
+    if (!fields.insights_approved) {
+      return { pending: true };
+    }
+
+    // Approved but AI failed to generate (empty drawer case)
+    const hasContent = fields.fit_insights || fields.improvement_suggestions;
+    if (!hasContent) {
+      return {
+        pending: false,
+        unavailable: true,
+        status: fields.status,
+      };
+    }
+
+    return {
+      pending: false,
+      unavailable: false,
+      status: fields.status,
+      fit_insights: fields.fit_insights,
+      improvement_suggestions: fields.improvement_suggestions,
+      // Rejection reason only exposed if status is rejected
+      rejection_reason: fields.status === 'rejected' ? fields.rejection_reason : null,
+    };
+  },
 };
+

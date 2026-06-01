@@ -99,6 +99,25 @@ export interface Job {
 }
 
 // ── Applications ─────────────────────────────────────────────────────────────
+export interface ATSBreakdown {
+  totalScore: number;
+  sectionScores: {
+    skillsScore: number;
+    experienceScore: number;
+    keywordsScore: number;
+  };
+  matchedSkills: string[];
+  missingSkills: string[];
+  keywordOverlap: string[];
+  debug: {
+    jobSkillCount: number;
+    resumeSkillCount: number;
+    experienceTokenOverlap: number;
+    keywordTokenOverlap: number;
+    weights: { skills: number; experience: number; keywords: number };
+  };
+}
+
 export type ApplicationStatus =
   | 'applied' | 'in_review' | 'shortlisted' | 'interview' | 'offer' | 'hired' | 'rejected';
 
@@ -110,6 +129,14 @@ export interface Application {
   application_answers?: Array<{ question_id: string; answer: string }>;
   cover_letter: string | null;
   resume_snapshot_url: string | null;
+  ats_score?: number | null;
+  ats_breakdown?: ATSBreakdown | null;
+  // AI Insights fields (TRACK-U3/U4/U5)
+  fit_insights?: string | null;
+  rejection_reason?: string | null;
+  improvement_suggestions?: string | null;
+  insights_approved?: boolean;
+  insights_generated_at?: string | null;
   status: ApplicationStatus;
   status_updated_at: string;
   created_at: string;

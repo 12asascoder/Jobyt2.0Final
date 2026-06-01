@@ -20,7 +20,7 @@
 
 import { normalizeSkill } from '../../config/skillTaxonomy';
 
- 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JWFn = (s1: string, s2: string, opts?: any) => number;
 
 // Load `natural` once at module level — avoids per-call require() overhead.
