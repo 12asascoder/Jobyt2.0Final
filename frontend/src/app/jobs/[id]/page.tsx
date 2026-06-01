@@ -66,7 +66,7 @@ interface AtsScoreReport {
   sectionScores?: {
     skillsScore?: number;
     experienceScore?: number;
-    educationScore?: number;
+    keywordsScore?: number;
   };
   missingKeywords?: string[];
   feedback?: {
@@ -949,7 +949,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     {[
                       { label: 'Skills', val: atsScore.sectionScores.skillsScore || 0 },
                       { label: 'Experience', val: atsScore.sectionScores.experienceScore || 0 },
-                      { label: 'Education', val: atsScore.sectionScores.educationScore || 0 }
+                      { label: 'Keyword Overlap', val: atsScore.sectionScores.keywordsScore || 0 }
                     ].map((s) => (
                       <div key={s.label} className="bg-white border border-gray-100 rounded-lg p-2 text-center shadow-[inset_0_0_10px_rgba(0,0,0,0.02)]">
                         <div className={`text-lg font-black ${s.val >= 80 ? 'text-green-500' : s.val >= 50 ? 'text-yellow-500' : 'text-red-400'}`}>

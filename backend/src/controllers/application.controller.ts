@@ -190,4 +190,29 @@ export const ApplicationController = {
       next(err);
     }
   },
+
+  async approveInsights(req: Request, res: Response, next: NextFunction) {
+    try {
+      await ApplicationService.approveInsights(
+        req.user!.userId,
+        req.params.id as string,
+      );
+      sendSuccess(res, {}, 'Insights approved');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getApplicantInsights(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await ApplicationService.getApplicantInsights(
+        req.user!.userId,
+        req.params.id as string,
+      );
+      sendSuccess(res, result, 'Insights retrieved');
+    } catch (err) {
+      next(err);
+    }
+  },
 };
+

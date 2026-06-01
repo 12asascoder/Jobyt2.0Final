@@ -105,4 +105,19 @@ router.get(
   ApplicationController.getEvents,
 );
 
+// Recruiter: approve AI insights so applicant can view them
+router.patch(
+  '/:id/approve-insights',
+  authorize('recruiter'),
+  employerGuard,
+  ApplicationController.approveInsights,
+);
+
+// Applicant: retrieve their AI insights (gated by insights_approved flag)
+router.get(
+  '/:id/insights',
+  authorize('applicant'),
+  ApplicationController.getApplicantInsights,
+);
+
 export default router;

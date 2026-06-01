@@ -4,6 +4,7 @@ import app from './app';
 import { connectDB } from './config/database';
 import redis from './config/redis';
 import { initSocket } from './config/socket';
+import { InsightsCronService } from './services/insightsCron.service';
 import { startWorkers } from './workers';
 import { setupDailyScheduler } from './scheduler/dailyScheduler';
 
@@ -35,6 +36,7 @@ async function startServer() {
       console.log(
         `Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`,
       );
+      InsightsCronService.startScheduler();
 
       // Initialize background workers and scheduler
       try {
