@@ -10,6 +10,7 @@
 import pool from '../config/database';
 import crypto from 'crypto';
 import { EmbeddingVector, generateEmbedding } from '../utils/embedding';
+import { aiConfig } from '../config/ai.config';
 
 const LOG_PREFIX = '[EmbeddingCache]';
 
@@ -47,7 +48,8 @@ export const EmbeddingCacheService = {
     const trimmed = text.trim();
     if (!trimmed) return null;
 
-    const cacheKey = hashText(trimmed);
+    // Isolate by provider and version
+    const cacheKey = `${aiConfig.embeddingProvider}:${aiConfig.embeddingVersion}:${hashText(trimmed)}`;
 
     // 1. Try cache lookup
     if (await hasCacheTable()) {
@@ -60,8 +62,13 @@ export const EmbeddingCacheService = {
         );
 
         if (rows.length > 0 && Array.isArray(rows[0].embedding)) {
-          console.log(`${LOG_PREFIX} Cache HIT for key ${cacheKey.slice(0, 12)}…`);
-          return rows[0].embedding as EmbeddingVector;
+          const emb = rows[0].embedding as EmbeddingVector;
+          if (emb.length === aiConfig.embeddingDimensions) {
+            console.log(`${LOG_PREFIX} Cache HIT for key ${cacheKey.slice(0, 12)}…`);
+            return emb;
+          } else {
+            console.warn(`${LOG_PREFIX} Dimension mismatch for key ${cacheKey.slice(0, 12)}… Expected ${aiConfig.embeddingDimensions}, got ${emb.length}. Regenerating...`);
+          }
         }
       } catch (err) {
         console.warn(`${LOG_PREFIX} Cache lookup failed, generating fresh:`, err);
@@ -89,12 +96,12 @@ export const EmbeddingCacheService = {
   },
 
   /**
-   * Get the embedding for a candidate's resume, utilizing database-level caching under the key 'resume:${resumeId}'.
+   * Get the embedding for a candidate's resume, utilizing database-level caching under the key 'resume:${resumeId}:${provider}:${version}'.
    * If missing, downloads/extracts text, generates the embedding, caches it, and returns.
    */
   async getResumeEmbedding(resumeId: string, applicantId: string): Promise<EmbeddingVector | null> {
     if (!resumeId || !applicantId) return null;
-    const cacheKey = `resume:${resumeId}`;
+    const cacheKey = `resume:${resumeId}:${aiConfig.embeddingProvider}:${aiConfig.embeddingVersion}`;
 
     // 1. Try cache lookup
     if (await hasCacheTable()) {
@@ -107,8 +114,13 @@ export const EmbeddingCacheService = {
         );
 
         if (rows.length > 0 && Array.isArray(rows[0].embedding)) {
-          console.log(`${LOG_PREFIX} Cache HIT for resume key ${cacheKey}`);
-          return rows[0].embedding as EmbeddingVector;
+          const emb = rows[0].embedding as EmbeddingVector;
+          if (emb.length === aiConfig.embeddingDimensions) {
+            console.log(`${LOG_PREFIX} Cache HIT for resume key ${cacheKey}`);
+            return emb;
+          } else {
+            console.warn(`${LOG_PREFIX} Dimension mismatch for resume key ${cacheKey}. Expected ${aiConfig.embeddingDimensions}, got ${emb.length}. Regenerating...`);
+          }
         }
       } catch (err) {
         console.warn(`${LOG_PREFIX} Resume cache lookup failed:`, err);
@@ -172,7 +184,11 @@ export const EmbeddingCacheService = {
         [jobId],
       );
       const emb = rows[0]?.description_embedding;
-      if (Array.isArray(emb) && emb.length > 0) return emb as EmbeddingVector;
+      if (Array.isArray(emb) && emb.length === aiConfig.embeddingDimensions) {
+        return emb as EmbeddingVector;
+      } else if (Array.isArray(emb)) {
+        console.warn(`${LOG_PREFIX} Job embedding dimension mismatch for job ${jobId}. Expected ${aiConfig.embeddingDimensions}, got ${emb.length}.`);
+      }
     } catch {
       // Column may not exist — that's OK
     }
@@ -182,7 +198,7 @@ export const EmbeddingCacheService = {
   /**
    * Try to find a stored embedding for a job by matching its description text.
    * This is a fast-path: checks the jobs table for a pre-stored embedding
-   * before falling back to the general cache or Gemini API.
+   * before falling back to the general cache or HuggingFace.
    *
    * Uses a substring match on the first 200 chars of description to find the job.
    */
@@ -200,7 +216,7 @@ export const EmbeddingCacheService = {
         [trimmed],
       );
       const emb = rows[0]?.description_embedding;
-      if (Array.isArray(emb) && emb.length > 0) {
+      if (Array.isArray(emb) && emb.length === aiConfig.embeddingDimensions) {
         console.log(`${LOG_PREFIX} Job embedding found via text match (fast-path)`);
         return emb as EmbeddingVector;
       }

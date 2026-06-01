@@ -1,13 +1,16 @@
 /**
  * Centralized AI Configuration
  *
- * Single source of truth for all AI/Gemini-related configuration.
+ * Single source of truth for all AI-related configuration.
  * Reads from environment variables with sensible defaults.
  *
+ * Active text-generation provider: Groq
+ * Active embedding provider:       HuggingFace (free/local)
+ *
  * Environment variables:
- *   GEMINI_API_KEY              - Required for AI features
- *   GEMINI_TEXT_MODEL           - Text generation model (default: gemini-2.0-flash)
- *   GEMINI_EMBEDDING_MODEL     - Embedding model (default: gemini-embedding-001)
+ *   GROQ_API_KEY               - Required for text generation and JSON reasoning (Groq)
+ *   GROQ_MODEL                 - Groq model name (default: llama-3.3-70b-versatile)
+ *   HF_API_KEY / HUGGINGFACE_API_KEY - Optional. Enables authenticated inference for HuggingFace
  *   ENABLE_SEMANTIC_SCORING    - Toggle semantic scoring (default: true)
  *   AI_MAX_RETRIES             - Max retry attempts (default: 2)
  *   AI_TIMEOUT_MS              - Request timeout in ms (default: 30000)
@@ -18,14 +21,30 @@
 const LOG_PREFIX = '[AI Config]';
 
 export interface AIConfig {
-  /** Gemini API key */
-  apiKey: string | null;
-  /** Whether the API key is configured and valid */
+  /** Groq API key — powers text generation and JSON reasoning */
+  groqApiKey: string | null;
+  /** HuggingFace API Key/Token */
+  huggingfaceApiKey: string | null;
+  /**
+   * Whether the active text-generation provider (Groq) is configured.
+   * AI reasoning features will be disabled when false.
+   */
   isConfigured: boolean;
-  /** Text generation model name */
+  /**
+   * Whether embeddings are available (checked based on EMBEDDING_PROVIDER).
+   * When false, unifiedMatch falls back to keyword-only scoring.
+   */
+  embeddingsConfigured: boolean;
+  /** Active embedding provider name: 'huggingface' */
+  embeddingProvider: string;
+  /** Text generation model name (Groq model) */
   textModel: string;
   /** Embedding model name */
   embeddingModel: string;
+  /** Embedding model version tag for cache isolation */
+  embeddingVersion: string;
+  /** Custom embedding dimensions (default: 384) */
+  embeddingDimensions: number;
   /** Whether semantic scoring is enabled */
   enableSemanticScoring: boolean;
   /** Maximum retry attempts for failed API calls */
@@ -43,14 +62,39 @@ export interface AIConfig {
 }
 
 function loadAIConfig(): AIConfig {
-  const apiKey = process.env.GEMINI_API_KEY || null;
-  const isConfigured = Boolean(apiKey && apiKey !== 'your_gemini_api_key_here');
+  // ── Groq (text generation) ────────────────────────────────────────────────
+  const groqApiKey = process.env.GROQ_API_KEY || null;
+  const isConfigured = Boolean(groqApiKey && groqApiKey !== 'your_groq_api_key_here');
+
+  // ── Embedding Provider Selection ──────────────────────────────────────────
+  const huggingfaceApiKey = process.env.HF_API_KEY || process.env.HUGGINGFACE_API_KEY || null;
+
+  const embeddingProvider = (process.env.EMBEDDING_PROVIDER || 'huggingface').toLowerCase().trim();
+
+  // Validate active provider key configuration
+  let embeddingsConfigured = false;
+  if (embeddingProvider === 'huggingface') {
+    // HuggingFace is always configured as it supports unauthenticated usage
+    embeddingsConfigured = true;
+  }
+
+  // Resolve default models per provider if not explicitly defined in env
+  const defaultEmbeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
+  const embeddingModel = process.env.EMBEDDING_MODEL || defaultEmbeddingModel;
+  const embeddingVersion = process.env.EMBEDDING_VERSION || 'v2';
+
+  const embeddingDimensions = parseInt(process.env.EMBEDDING_DIMENSIONS || '384', 10);
 
   const config: AIConfig = {
-    apiKey: isConfigured ? apiKey : null,
+    groqApiKey: isConfigured ? groqApiKey : null,
+    huggingfaceApiKey: huggingfaceApiKey && huggingfaceApiKey !== 'your_huggingface_api_key_here' ? huggingfaceApiKey : null,
     isConfigured,
-    textModel: process.env.GEMINI_TEXT_MODEL || 'gemini-2.0-flash',
-    embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-001',
+    embeddingsConfigured,
+    embeddingProvider,
+    textModel: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+    embeddingModel,
+    embeddingVersion,
+    embeddingDimensions,
     enableSemanticScoring: process.env.ENABLE_SEMANTIC_SCORING !== 'false',
     maxRetries: parseInt(process.env.AI_MAX_RETRIES || '2', 10),
     timeoutMs: parseInt(process.env.AI_TIMEOUT_MS || '30000', 10),
@@ -61,7 +105,17 @@ function loadAIConfig(): AIConfig {
   };
 
   if (!isConfigured) {
-    console.warn(`${LOG_PREFIX} GEMINI_API_KEY is not configured — AI features will be disabled`);
+    console.warn(`${LOG_PREFIX} GROQ_API_KEY is not configured — AI text features will be disabled`);
+  }
+  if (!embeddingsConfigured) {
+    console.warn(
+      `${LOG_PREFIX} Embedding provider "${embeddingProvider}" is not configured — ` +
+        'semantic scoring will be disabled (keyword scoring will be used instead)',
+    );
+  } else {
+    console.log(
+      `${LOG_PREFIX} Embedding provider configured: "${embeddingProvider}" using model: "${embeddingModel}" (dims: ${embeddingDimensions}, version: ${embeddingVersion})`,
+    );
   }
 
   return config;

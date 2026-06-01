@@ -20,7 +20,7 @@
 
 import { normalizeSkill } from '../../config/skillTaxonomy';
 
- 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JWFn = (s1: string, s2: string, opts?: any) => number;
 
 // Load `natural` once at module level — avoids per-call require() overhead.
@@ -52,15 +52,23 @@ export interface FuzzyMatch {
   similarity: number;
 }
 
+export interface FuzzyMatchDetail {
+  candidateSkill: string;
+  requiredSkill: string;
+  score: number;
+}
+
 export interface SkillMatchResult {
   /** 0–100: percentage of required skills that were matched */
   matchPercentage: number;
+  matchScore: number; // For backward compatibility with HEAD (unifiedMatch.service.ts, etc.)
   /** Required skills that were matched (using original casing from requiredSkills) */
   matchedSkills: string[];
   /** Required skills that were NOT matched */
   missingSkills: string[];
   /** Fuzzy matches with similarity score, for explainability */
   fuzzyMatchedSkills: FuzzyMatch[];
+  fuzzyMatches: FuzzyMatchDetail[]; // For backward compatibility with HEAD
 }
 
 export interface SkillMatchOptions {
@@ -133,7 +141,14 @@ export const SkillMatchingService = {
 
     // Guard: empty inputs
     if (!Array.isArray(requiredSkills) || requiredSkills.length === 0) {
-      return { matchPercentage: 0, matchedSkills: [], missingSkills: [], fuzzyMatchedSkills: [] };
+      return {
+        matchPercentage: 0,
+        matchScore: candidateSkills && candidateSkills.length > 0 ? 100 : 0,
+        matchedSkills: [],
+        missingSkills: [],
+        fuzzyMatchedSkills: [],
+        fuzzyMatches: [],
+      };
     }
     if (!Array.isArray(candidateSkills)) {
       candidateSkills = [];
@@ -156,6 +171,7 @@ export const SkillMatchingService = {
     const matchedSkills: string[] = [];
     const missingSkills: string[] = [];
     const fuzzyMatchedSkills: FuzzyMatch[] = [];
+    const fuzzyMatches: FuzzyMatchDetail[] = [];
 
     // Track which candidate normalized keys are already consumed
     const usedCandidateKeys = new Set<string>();
@@ -195,10 +211,18 @@ export const SkillMatchingService = {
         if (bestCandidateKey) {
           usedCandidateKeys.add(bestCandidateKey);
           matchedSkills.push(reqSkill);
+          const candOrig = candidateNormMap.get(bestCandidateKey)!;
+          const roundedSim = Math.round(bestSimilarity * 1000) / 1000;
+          
           fuzzyMatchedSkills.push({
-            candidate: candidateNormMap.get(bestCandidateKey)!,
+            candidate: candOrig,
             required: reqSkill,
-            similarity: Math.round(bestSimilarity * 1000) / 1000,
+            similarity: roundedSim,
+          });
+          fuzzyMatches.push({
+            candidateSkill: candOrig,
+            requiredSkill: reqSkill,
+            score: roundedSim,
           });
           matched = true;
         }
@@ -220,7 +244,14 @@ export const SkillMatchingService = {
       );
     }
 
-    return { matchPercentage, matchedSkills, missingSkills, fuzzyMatchedSkills };
+    return {
+      matchPercentage,
+      matchScore: matchPercentage,
+      matchedSkills,
+      missingSkills,
+      fuzzyMatchedSkills,
+      fuzzyMatches,
+    };
   },
 
   /**

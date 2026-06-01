@@ -159,6 +159,12 @@ export const JobController = {
         return;
       }
 
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId);
+      if (!isUuid) {
+        res.status(400).json({ success: false, message: 'Invalid job ID format' });
+        return;
+      }
+
       const userId = req.user?.userId || null;
       
       // Fetch job with full details including company info

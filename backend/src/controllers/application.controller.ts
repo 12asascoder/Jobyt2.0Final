@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApplicationService } from '../services/application.service';
+import { AiReasoningService } from '../services/aiReasoning.service';
 import { sendSuccess, sendPaginated } from '../utils/response';
 
 export const ApplicationController = {
@@ -191,6 +192,15 @@ export const ApplicationController = {
     }
   },
 
+  /**
+   * GET /applications/recruiter/applicants/:id/ai-reasoning
+   * Lazy: generates AI reasoning on first call, returns cache on subsequent calls.
+   */
+  async getAiReasoning(req: Request, res: Response, next: NextFunction) {
+    try {
+      const applicationId = req.params.id as string;
+      const reasoning = await AiReasoningService.generateReasoning(applicationId, false);
+      sendSuccess(res, reasoning, 'AI reasoning retrieved');
   async approveInsights(req: Request, res: Response, next: NextFunction) {
     try {
       await ApplicationService.approveInsights(
@@ -203,6 +213,15 @@ export const ApplicationController = {
     }
   },
 
+  /**
+   * POST /applications/recruiter/applicants/:id/ai-reasoning/refresh
+   * Force-regenerates AI reasoning regardless of cache.
+   */
+  async refreshAiReasoning(req: Request, res: Response, next: NextFunction) {
+    try {
+      const applicationId = req.params.id as string;
+      const reasoning = await AiReasoningService.generateReasoning(applicationId, true);
+      sendSuccess(res, reasoning, 'AI reasoning refreshed');
   async getApplicantInsights(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await ApplicationService.getApplicantInsights(
