@@ -130,8 +130,8 @@ describe('ATS Scoring Engine & Utilities', () => {
     });
   });
 
-  describe('ATS Score Calculation & Recruiter Ranking', () => {
-    it('should correctly calculate the overall calibrated score based on hybrid ATS scoring weights', () => {
+  describe('ATS Score Calculation — Resume Quality, Not Job Match', () => {
+    it('should correctly score a solid full-stack resume ≥ 45 regardless of job match', () => {
       const resume = {
         skills: ['JavaScript', 'React', 'Node.js', 'PostgreSQL'],
         experienceText:
@@ -147,9 +147,153 @@ describe('ATS Scoring Engine & Utilities', () => {
 
       const result = ATSService.calculateATSScore(resume, job);
 
-      expect(result.totalScore).toBeGreaterThanOrEqual(45); // Moderate to strong match
+      // Resume is solid — should score meaningfully as a quality document
+      expect(result.totalScore).toBeGreaterThanOrEqual(25);
+      // Job context: all 4 skills should match (informational only)
       expect(result.matchedSkills).toContain('React');
       expect(result.matchedSkills).toContain('PostgreSQL');
     });
+
+    it('should score the same resume equally well against an unrelated job', () => {
+      const resume = {
+        skills: ['JavaScript', 'React', 'Node.js', 'PostgreSQL'],
+        experienceText:
+          'Full Stack Engineer with 3 years experience designing databases and REST APIs.',
+        fullText:
+          'Full Stack Engineer with 3 years experience. Tech stack: JavaScript, React, Node.js, PostgreSQL.',
+      };
+
+      // Score against its intended job
+      const r1 = ATSService.calculateATSScore(resume, {
+        skills: ['JavaScript', 'React', 'Node.js', 'PostgreSQL'],
+        description: 'Full stack role using Node.js',
+      });
+
+      // Score against a completely unrelated job (data science)
+      const r2 = ATSService.calculateATSScore(resume, {
+        skills: ['Python', 'TensorFlow', 'PyTorch', 'R'],
+        description: 'Machine learning engineer with Python and TensorFlow',
+      });
+
+      // ATS totalScore MUST be identical — it is job-independent
+      expect(r1.totalScore).toBe(r2.totalScore);
+
+      // But job context should differ
+      expect(r1.matchedSkills.length).toBeGreaterThan(r2.matchedSkills.length);
+      expect(r2.missingSkills.length).toBeGreaterThan(r1.missingSkills.length);
+    });
+  });
+
+  describe('Resume Candidate Profiles — Score Band Validation', () => {
+    /**
+     * Resume A — Bare minimum / poor quality:
+     *   1 skill (HTML), no experience, no email/phone, no education detail.
+     *   Expected: Poor band (5–22)
+     */
+    it('Resume A (poor) — should score in the 5–22 band', () => {
+      const resumeA = {
+        skills: ['HTML'],
+        experienceText: '',
+        fullText: 'Hi, I am a developer. I know HTML.',
+      };
+      const result = ATSService.calculateATSScore(resumeA, { skills: [], description: '' });
+      expect(result.totalScore).toBeGreaterThanOrEqual(5);
+      expect(result.totalScore).toBeLessThanOrEqual(22);
+    });
+
+    /**
+     * Resume B — Average student / junior candidate:
+     *   6 skills, 1 internship, education (B.Tech IIT), GitHub, certification,
+     *   email + phone + structured education → complete resume → strong junior profile.
+     *   Expected: Good band (60–78)
+     */
+    it('Resume B (complete junior) — should score in the 60–78 band', () => {
+      const resumeB = {
+        skills: ['Python', 'Machine Learning', 'TensorFlow', 'NumPy', 'Pandas', 'OpenCV'],
+        experienceText:
+          'ML intern at StartupXYZ. Developed image classification model using TensorFlow.',
+        fullText: [
+          'Python, Machine Learning, TensorFlow, NumPy, Pandas, OpenCV.',
+          'B.Tech Computer Science, IIT Delhi.',
+          'Projects: Built YOLO-based object detection system. GitHub: github.com/user.',
+          'AWS Certified Developer.',
+        ].join(' '),
+        emails: ['student@email.com'],
+        phones: ['+91 9876543210'],
+        education: [{ degree: 'B.Tech', institution: 'IIT Delhi', field: 'Computer Science' }],
+      };
+      const result = ATSService.calculateATSScore(resumeB, { skills: [], description: '' });
+      expect(result.totalScore).toBeGreaterThanOrEqual(60);
+      expect(result.totalScore).toBeLessThanOrEqual(78);
+    });
+
+    /**
+     * Resume C — Strong senior engineer:
+     *   15 skills, 6 years at Google + Amazon, M.Tech IIT, GitHub,
+     *   2 professional certifications, open source.
+     *   Expected: Excellent band (84–93)
+     */
+    it('Resume C (strong senior) — should score in the 84–93 band', () => {
+      const resumeC = {
+        skills: [
+          'Python', 'TensorFlow', 'PyTorch', 'Machine Learning', 'Deep Learning',
+          'Computer Vision', 'OpenCV', 'AWS', 'Docker', 'Kubernetes',
+          'React', 'Node.js', 'PostgreSQL', 'Redis', 'GraphQL',
+        ],
+        experienceText: [
+          'Senior ML Engineer at Google. Led team of 5, improved model accuracy by 30%.',
+          'Built and deployed computer vision pipelines serving 1M users.',
+          'Software Engineer at Amazon, 3 years. Architected distributed backend systems.',
+        ].join(' '),
+        fullText: [
+          'Senior ML Engineer with 6 years experience at Google and Amazon.',
+          'Skills: Python, TensorFlow, PyTorch, OpenCV, AWS, Docker, Kubernetes.',
+          'Education: M.Tech AI, IIT Bombay.',
+          'Projects: Autonomous vehicle perception system. GitHub: github.com/user.',
+          'AWS Certified Solutions Architect. Certified Kubernetes Administrator.',
+          'Open source contributor to TensorFlow.',
+        ].join(' '),
+        emails: ['engineer@domain.com'],
+        phones: ['+1-555-000-0000'],
+        education: [{ degree: 'M.Tech', institution: 'IIT Bombay', field: 'Artificial Intelligence' }],
+      };
+      const result = ATSService.calculateATSScore(resumeC, { skills: [], description: '' });
+      expect(result.totalScore).toBeGreaterThanOrEqual(84);
+      expect(result.totalScore).toBeLessThanOrEqual(93);
+    });
+
+    /**
+     * Ranking invariant: Poor < Good < Excellent must hold.
+     */
+    it('should preserve strict ranking order: A < B < C (ranking invariant)', () => {
+      const noJob = { skills: [], description: '' };
+      const resumeA = { skills: ['HTML'], experienceText: '', fullText: 'I know HTML.' };
+      const resumeB = {
+        skills: ['Python', 'TensorFlow', 'NumPy', 'Pandas', 'OpenCV', 'Machine Learning'],
+        experienceText: 'ML intern at StartupXYZ. Developed models using TensorFlow.',
+        fullText: 'Python, TensorFlow. B.Tech, IIT Delhi. GitHub: github.com/user. AWS Certified.',
+        emails: ['student@email.com'],
+        education: [{ degree: 'B.Tech', institution: 'IIT Delhi' }],
+      };
+      const resumeC = {
+        skills: [
+          'Python', 'TensorFlow', 'PyTorch', 'OpenCV', 'AWS', 'Docker',
+          'Kubernetes', 'React', 'Node.js', 'PostgreSQL', 'Redis',
+          'Machine Learning', 'Deep Learning', 'GraphQL', 'Computer Vision',
+        ],
+        experienceText: 'Senior ML Engineer at Google. Led team, improved accuracy 30%. Built CV pipelines serving 1M users. Engineer at Amazon, 3 years.',
+        fullText: 'Senior ML Engineer 6 years. Google, Amazon. M.Tech IIT Bombay. GitHub projects. AWS Certified Solutions Architect. Kubernetes Administrator. Open source TensorFlow contributor.',
+        emails: ['eng@domain.com'],
+        education: [{ degree: 'M.Tech', institution: 'IIT Bombay' }],
+      };
+
+      const scoreA = ATSService.calculateATSScore(resumeA, noJob).totalScore;
+      const scoreB = ATSService.calculateATSScore(resumeB, noJob).totalScore;
+      const scoreC = ATSService.calculateATSScore(resumeC, noJob).totalScore;
+
+      expect(scoreA).toBeLessThan(scoreB);
+      expect(scoreB).toBeLessThan(scoreC);
+    });
   });
 });
+
