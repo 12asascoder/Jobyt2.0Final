@@ -14,7 +14,6 @@ import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import { EmbeddingCacheService } from './embeddingCache.service';
 import { cosineSimilarity, similarityToScore } from '../utils/embedding';
 import { SkillMatchingService } from './matching/skillMatching.service';
-import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import redis from '../config/redis';
 
 const LOG_PREFIX = '[ApplicationService]';

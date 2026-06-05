@@ -201,6 +201,11 @@ export const ApplicationController = {
       const applicationId = req.params.id as string;
       const reasoning = await AiReasoningService.generateReasoning(applicationId, false);
       sendSuccess(res, reasoning, 'AI reasoning retrieved');
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async approveInsights(req: Request, res: Response, next: NextFunction) {
     try {
       await ApplicationService.approveInsights(
@@ -222,6 +227,11 @@ export const ApplicationController = {
       const applicationId = req.params.id as string;
       const reasoning = await AiReasoningService.generateReasoning(applicationId, true);
       sendSuccess(res, reasoning, 'AI reasoning refreshed');
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getApplicantInsights(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await ApplicationService.getApplicantInsights(
