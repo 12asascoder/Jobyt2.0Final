@@ -9,6 +9,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { parseResume } from '../utils/resumeParser';
 import pool from '../config/database';
+import { extractSkillsFromText } from '../config/skillTaxonomy';
 
 export interface ATSResult {
   score: number;
@@ -17,7 +18,12 @@ export interface ATSResult {
   sectionScores: {
     skillsScore: number;
     experienceScore: number;
+    achievementsScore: number;
     keywordsScore: number;
+    educationScore?: number;
+    completenessScore?: number;
+    projectsScore?: number;
+    certificationsScore?: number;
   };
   keywordDensity: Record<string, number>;
   explanation: string;
@@ -218,7 +224,7 @@ export const ResumeService = {
       score: 0,
       missingKeywords: [],
       semanticSimilarityScore: 0,
-      sectionScores: { skillsScore: 0, experienceScore: 0, keywordsScore: 0 },
+      sectionScores: { skillsScore: 0, experienceScore: 0, achievementsScore: 0, keywordsScore: 0 },
       keywordDensity: {},
       explanation: "Analysis failed or missing data.",
       feedback: { missingSections: [], weakAreas: [], improvements: [] },
@@ -233,21 +239,13 @@ export const ResumeService = {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ATSService } = require('./ats.service');
 
-      // Extract skills from resume text using common skills matching
-      const COMMON_SKILLS = [
-        'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'Java', 'Go',
-        'Rust', 'SQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Docker', 'Kubernetes',
-        'AWS', 'GCP', 'Azure', 'Git', 'GraphQL', 'REST', 'HTML', 'CSS',
-        'Tailwind', 'Next.js', 'Vue', 'Angular', 'Spring', 'Django', 'FastAPI',
-        'C++', 'C#', 'Swift', 'Kotlin', 'Flutter', 'Machine Learning',
-        'TensorFlow', 'PyTorch', 'Pandas', 'NumPy', 'Linux', 'Terraform',
-      ];
-      const upperResumeText = resumeText.toUpperCase();
-      const resumeSkills = COMMON_SKILLS.filter(s => upperResumeText.includes(s.toUpperCase()));
+      // Extract skills from resume text using taxonomy-based word-boundary matching.
+      // Uses extractSkillsFromText() which enforces regex \b boundaries — eliminates
+      // false positives like 'Java' matching inside 'JavaScript'.
+      const resumeSkills = extractSkillsFromText(resumeText);
 
-      // Extract job skills from description similarly
-      const upperJobDesc = jobDescription.toUpperCase();
-      const jobSkills = COMMON_SKILLS.filter(s => upperJobDesc.includes(s.toUpperCase()));
+      // Extract job skills from description using the same accurate taxonomy extractor
+      const jobSkills = extractSkillsFromText(jobDescription);
 
       // Use embedding-enhanced scoring (primary path).
       // Falls back to keyword-only automatically if Gemini is unavailable.
@@ -273,7 +271,12 @@ export const ResumeService = {
         sectionScores: {
           skillsScore: atsResult.sectionScores.skillsScore,
           experienceScore: atsResult.sectionScores.experienceScore,
+          achievementsScore: atsResult.sectionScores.achievementsScore,
           keywordsScore: atsResult.sectionScores.keywordsScore,
+          educationScore: atsResult.sectionScores.educationScore,
+          completenessScore: atsResult.sectionScores.completenessScore,
+          projectsScore: atsResult.sectionScores.projectsScore,
+          certificationsScore: atsResult.sectionScores.certificationsScore,
         },
         keywordDensity: {},
         explanation: atsResult.debug.embeddingAvailable
