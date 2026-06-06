@@ -1,6 +1,7 @@
 import { PDFParse } from 'pdf-parse';
 import axios from 'axios';
 import FormData from 'form-data';
+import { extractSkillsFromText } from '../config/skillTaxonomy';
 
 type ParsedExperienceItem = {
   company?: string;
@@ -35,65 +36,6 @@ type PythonParserResponse = {
   education?: unknown;
 };
 
-const COMMON_SKILLS = [
-  'JavaScript',
-  'TypeScript',
-  'React',
-  'Node.js',
-  'Python',
-  'Java',
-  'Go',
-  'Rust',
-  'SQL',
-  'PostgreSQL',
-  'MongoDB',
-  'Redis',
-  'Docker',
-  'Kubernetes',
-  'AWS',
-  'GCP',
-  'Azure',
-  'Git',
-  'GraphQL',
-  'REST',
-  'HTML',
-  'CSS',
-  'Tailwind',
-  'Next.js',
-  'Vue',
-  'Angular',
-  'Spring',
-  'Django',
-  'FastAPI',
-  'C++',
-  'C#',
-  'Swift',
-  'Kotlin',
-  'Flutter',
-  'Machine Learning',
-  'TensorFlow',
-  'PyTorch',
-  'Pandas',
-  'NumPy',
-  'Cloud Security',
-  'Penetration Testing',
-  'IAM',
-  'Zero Trust',
-  'DevSecOps',
-  'SIEM',
-  'SOC',
-  'Nmap',
-  'Burp Suite',
-  'OWASP',
-  'Kali Linux',
-  'Terraform',
-  'Ansible',
-  'Linux',
-  'Bash',
-  'PowerShell',
-  'Jenkins',
-  'CI/CD',
-];
 
 const normalizeLines = (text: string): string[] =>
   text
@@ -310,9 +252,9 @@ async function parseResumeLocal(buffer: Buffer): Promise<ParsedResume> {
     ),
   ];
 
-  // Extract skills (case-insensitive match against known skills list)
-  const upperText = text.toUpperCase();
-  const matchedCommonSkills = COMMON_SKILLS.filter((s) => upperText.includes(s.toUpperCase()));
+  // Extract skills using taxonomy-based word-boundary matching (prevents false positives
+  // such as 'Java' matching inside 'JavaScript', or 'Go' matching inside 'Google')
+  const matchedCommonSkills = extractSkillsFromText(text);
   const skillSectionLines = findSection(lines, sectionHeaders.skills, 24);
   const sectionSkills = skillSectionLines
     .join(' | ')

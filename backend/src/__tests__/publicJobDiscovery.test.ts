@@ -23,10 +23,6 @@ const mockJobs = [
     id: '11111111-1111-4111-8111-111111111111',
     title: 'Senior TypeScript Developer',
     description: 'We are looking for an experienced TypeScript developer',
-    companyName: 'Tech Corp',
-    company_logo: null,
-    company_website: null,
-    company_location: null,
     type: 'full-time',
     location: 'San Francisco, CA',
     salary_min: 120000,
@@ -410,7 +406,7 @@ describe('Public Job Discovery API', () => {
       const response = await requestSuper(app)
         .get('/api/v1/jobs/not-a-valid-uuid');
 
-      expect(response.status).toBe(404);
+      expect(response.status).toBe(400);
     });
 
     test('Should reject missing job ID', async () => {
@@ -477,16 +473,16 @@ describe('Public Job Discovery API', () => {
       const response = await requestSuper(app)
         .get('/api/v1/jobs/; DROP TABLE jobs; --');
 
-      expect(response.status).toBe(404); // Should reject invalid format
+      expect(response.status).toBe(400); // Should reject invalid format
     });
   });
 
   describe('Error Handling and Edge Cases', () => {
     test('Should handle very large page numbers gracefully', async () => {
-      // Offset limit protection allows up to 10,000 rows offset. Page 200 with limit 50 is offset 9950 (<10000)
+      // Offset limit protection allows up to 10,000 rows offset. Page 300 with limit 50 is offset 14950 (>10000)
       const response = await requestSuper(app)
         .get('/api/v1/jobs')
-        .query({ page: 200, limit: 50 });
+        .query({ page: 300, limit: 50 });
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('success', false);

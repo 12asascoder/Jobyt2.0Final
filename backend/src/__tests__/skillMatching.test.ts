@@ -5,6 +5,7 @@
  *   - Exact matching
  *   - Alias/taxonomy normalization (via skillTaxonomy)
  *   - Jaro-Winkler fuzzy matching
+ *   - Pass 3: category-based related-skill matching (0.5 partial credit)
  *   - Duplicate prevention (both required and candidate sides)
  *   - Missing skill calculation
  *   - Edge cases (empty inputs, null-safe guards)
@@ -27,17 +28,35 @@ describe('SkillMatchingService', () => {
       expect(result.missingSkills).toHaveLength(0);
     });
 
-    it('returns 0% when candidate has none of the required skills', () => {
+    it('returns 0% when candidate has skills from a completely different domain', () => {
+      // AI/ML skills vs Frontend requirements — no category overlap at all.
+      // Python/TensorFlow are in Languages/AI/ML; React/CSS/HTML are in Frontend.
+      // Languages is excluded from Pass 3; AI/ML ≠ Frontend → no partial credit.
+      const result = SkillMatchingService.calculateSkillMatch(
+        ['TensorFlow', 'PyTorch', 'OpenCV'],  // AI/ML category
+        ['React', 'CSS', 'HTML'],              // Frontend category (disjoint)
+      );
+      expect(result.matchPercentage).toBe(0);
+      expect(result.matchedSkills).toHaveLength(0);
+      expect(result.missingSkills).toEqual(['React', 'CSS', 'HTML']);
+    });
+
+    it('returns 25% when candidate has a same-category partial match (Pass 3 behavior)', () => {
+      // Spring (Backend) vs Node.js (Backend): same taxonomy category → 0.5 credit.
+      // Java (Languages) is excluded from Pass 3 → no credit.
+      // Result: 1 partial match out of 2 required = 0.5/2 * 100 = 25%.
+      // This is intentional: Spring developers have SOME backend overlap with Node.js.
       const result = SkillMatchingService.calculateSkillMatch(
         ['Java', 'Spring'],
         ['React', 'Node.js'],
       );
-      expect(result.matchPercentage).toBe(0);
-      expect(result.matchedSkills).toHaveLength(0);
-      expect(result.missingSkills).toEqual(['React', 'Node.js']);
+      expect(result.matchPercentage).toBe(25); // 0.5 credit for Spring↔Node.js (both Backend)
+      expect(result.matchedSkills).toHaveLength(0);        // no EXACT matches
+      expect(result.relatedMatchedSkills).toContain('Node.js'); // partial category credit
+      expect(result.missingSkills).toContain('React');    // Frontend — no category overlap
     });
 
-    it('returns 50% for partial match', () => {
+    it('returns 50% for partial exact match', () => {
       const result = SkillMatchingService.calculateSkillMatch(
         ['React', 'Java'],
         ['React', 'Node.js'],
@@ -52,10 +71,10 @@ describe('SkillMatchingService', () => {
         ['react', 'NODEJS'],
         ['React', 'Node.js'],
       );
-      // 'react' normalizes to 'react', required 'React' normalizes to 'react' — match
       expect(result.matchedSkills).toContain('React');
     });
   });
+
 
   // ── Alias / taxonomy normalization ──────────────────────────────────────────
 
@@ -135,6 +154,71 @@ describe('SkillMatchingService', () => {
       expect(result.matchPercentage).toBe(100);
     });
   });
+
+  // ── Pass 3: Category-based related-skill matching ───────────────────────────
+
+  describe('Pass 3 — category-based related-skill matching (0.5 credit)', () => {
+    it('awards 0.5 credit when candidate has related AI/ML skill (TensorFlow ↔ PyTorch)', () => {
+      // Both TensorFlow and PyTorch are in AI/ML category → partial credit.
+      // This is the primary motivating use case: ML engineer with PyTorch applying
+      // for a TensorFlow role — they have deep, transferable ML skills.
+      const result = SkillMatchingService.calculateSkillMatch(
+        ['PyTorch', 'Pandas'],       // candidate
+        ['TensorFlow', 'NumPy'],     // required
+      );
+      // PyTorch↔TensorFlow (AI/ML) = 0.5, Pandas↔NumPy (AI/ML) = 0.5
+      // matchPercentage = (0 + 2 * 0.5) / 2 * 100 = 50%
+      expect(result.matchPercentage).toBe(50);
+      expect(result.relatedMatchedSkills).toContain('TensorFlow');
+      expect(result.relatedMatchedSkills).toContain('NumPy');
+      expect(result.matchedSkills).toHaveLength(0); // no exact matches
+    });
+
+    it('awards 0.5 credit for cloud platform substitution (AWS ↔ GCP)', () => {
+      // Cloud platform experience is transferable — same category, same paradigm.
+      const result = SkillMatchingService.calculateSkillMatch(
+        ['GCP', 'Docker'],       // candidate
+        ['AWS', 'Kubernetes'],   // required
+      );
+      // GCP↔AWS (Cloud) = 0.5, Docker↔Kubernetes (DevOps) = 0.5
+      expect(result.matchPercentage).toBe(50);
+      expect(result.relatedMatchedSkills).toContain('AWS');
+      expect(result.relatedMatchedSkills).toContain('Kubernetes');
+    });
+
+    it('does NOT award credit for cross-category (AI/ML vs Frontend) — completely disjoint', () => {
+      // AI/ML skills have zero overlap with Frontend skills.
+      const result = SkillMatchingService.calculateSkillMatch(
+        ['TensorFlow', 'PyTorch', 'OpenCV'],
+        ['React', 'Vue', 'Angular'],
+      );
+      expect(result.matchPercentage).toBe(0);
+      expect(result.relatedMatchedSkills).toHaveLength(0);
+      expect(result.missingSkills).toHaveLength(3);
+    });
+
+    it('does NOT award credit for Languages category (Python ≠ JavaScript)', () => {
+      // Languages are excluded from Pass 3 — language proficiency is too specific.
+      const result = SkillMatchingService.calculateSkillMatch(
+        ['Python'],
+        ['JavaScript'],
+      );
+      expect(result.matchPercentage).toBe(0);
+      expect(result.relatedMatchedSkills).toHaveLength(0);
+      expect(result.missingSkills).toContain('JavaScript');
+    });
+
+    it('relatedMatchedSkills is empty when all matches are exact', () => {
+      const result = SkillMatchingService.calculateSkillMatch(
+        ['React', 'Node.js'],
+        ['React', 'Node.js'],
+      );
+      expect(result.matchPercentage).toBe(100);
+      expect(result.relatedMatchedSkills).toHaveLength(0);
+      expect(result.matchedSkills).toHaveLength(2);
+    });
+  });
+
 
   // ── Duplicate prevention ────────────────────────────────────────────────────
 
