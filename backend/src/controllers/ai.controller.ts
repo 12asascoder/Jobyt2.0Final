@@ -87,6 +87,27 @@ export const AIController = {
     }
   },
 
+  async ingestJob(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { rawText } = req.body;
+
+      if (!rawText) {
+        throw new AppError('rawText is required', 400);
+      }
+
+      const request: AIOrchestratorRequest = {
+        type: 'job_ingestion',
+        data: { rawText },
+      };
+
+      const response = await AIOrchestratorService.processRequest(request);
+
+      sendSuccess(res, response.result, 'Job parsing completed');
+    } catch (error) {
+      next(error);
+    }
+  },
+
   /**
    * Matching Workflow endpoint (convenience wrapper)
    */
@@ -110,4 +131,4 @@ export const AIController = {
       next(error);
     }
   },
-};
+};

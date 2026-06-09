@@ -6,7 +6,7 @@ import { aiConfig } from '../config/ai.config';
 import { AppError } from '../utils/appError';
 
 export interface AIOrchestratorRequest {
-  type: 'ats_analysis' | 'resume_processing' | 'matching_workflow';
+  type: 'ats_analysis' | 'resume_processing' | 'matching_workflow' | 'job_ingestion';
   data: Record<string, any>;
 }
 
@@ -89,6 +89,8 @@ export const AIOrchestratorService = {
         return this.handleResumeProcessing.bind(this);
       case 'matching_workflow':
         return this.handleMatchingWorkflow.bind(this);
+      case 'job_ingestion':
+        return this.handleJobIngestion.bind(this);
       default:
         return null;
     }
@@ -118,6 +120,16 @@ export const AIOrchestratorService = {
 
     if (!rawText) {
       throw new AppError('Resume processing requires rawText', 400);
+    }
+
+    return AiParserService.parseJobText(rawText);
+  },
+
+  async handleJobIngestion(data: any) {
+    const { rawText } = data;
+
+    if (!rawText) {
+      throw new AppError('Job ingestion requires rawText', 400);
     }
 
     return AiParserService.parseJobText(rawText);
@@ -255,7 +267,7 @@ export const AIOrchestratorService = {
   },
 
   getAvailableTaskTypes(): AIOrchestratorRequest['type'][] {
-    return ['ats_analysis', 'resume_processing', 'matching_workflow'];
+    return ['ats_analysis', 'resume_processing', 'matching_workflow', 'job_ingestion'];
   },
 
   validateRequest(request: AIOrchestratorRequest): boolean {
