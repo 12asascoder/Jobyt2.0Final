@@ -320,7 +320,8 @@ export const AIService = {
       const isAuth = isAuthError(message);
       if (isAuth) {
         isAuthFailed = true;
-        console.warn(`${LOG_PREFIX} Groq Authentication Failed: Invalid API Key. Please verify GROQ_API_KEY in .env.`);
+        const authProvider = providerChoice === 'grok' ? 'Grok' : 'Groq';
+        console.warn(`${LOG_PREFIX} ${authProvider} Authentication Failed: Invalid API Key. Please verify ${providerChoice === 'grok' ? 'XAI_API_KEY' : 'GROQ_API_KEY'} in .env.`);
         tripCircuit(circuitKey);
       } else {
         recordFailure(circuitKey);

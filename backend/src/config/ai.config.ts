@@ -27,6 +27,8 @@ export interface AIConfig {
   xaiApiKey: string | null;
   /** xAI model name (e.g. grok-1) */
   xaiModel: string;
+  /** Whether xAI / Grok is configured */
+  xaiConfigured: boolean;
   /** HuggingFace API Key/Token */
   huggingfaceApiKey: string | null;
   /**
@@ -92,10 +94,13 @@ function loadAIConfig(): AIConfig {
 
   const embeddingDimensions = parseInt(process.env.EMBEDDING_DIMENSIONS || '384', 10);
 
+  const xaiConfigured = Boolean(xaiApiKey && xaiApiKey !== 'your_xai_api_key_here');
+
   const config: AIConfig = {
     groqApiKey: isConfigured ? groqApiKey : null,
-    xaiApiKey: xaiApiKey && xaiApiKey !== 'your_xai_api_key_here' ? xaiApiKey : null,
+    xaiApiKey: xaiConfigured ? xaiApiKey : null,
     xaiModel,
+    xaiConfigured,
     huggingfaceApiKey: huggingfaceApiKey && huggingfaceApiKey !== 'your_huggingface_api_key_here' ? huggingfaceApiKey : null,
     isConfigured,
     embeddingsConfigured,
