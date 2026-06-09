@@ -69,7 +69,7 @@ Extract the relevant job details and output them STRICTLY as a JSON object match
   "skills": ["Array", "Of", "Relevant", "Technical", "Or", "Soft", "Skills"]
 }
 Rules:
-1. ONLY return the JSON object, absolutely no markdown formatting blocks (do not wrap in ```json).
+1. ONLY return the JSON object, absolutely no markdown formatting blocks (do not wrap in \`\`\`json).
 2. If a field like salary or location is missing, use null.
 3. Clean up the description to remove header/footer website navigation links or cookie consent text. Focus purely on the job description.
 4. If you cannot determine the company name, return "External Company".
@@ -123,7 +123,7 @@ Output a JSON object with this schema:
   }
 }
 
-Return the JSON object only, with no markdown wrappers and no extra text.",
+Return the JSON object only, with no markdown wrappers and no extra text.`,
     variables: ['name', 'bio', 'skills', 'experience', 'education', 'links'],
     description: 'Generate a structured resume draft from profile data',
   } as PromptTemplate,
