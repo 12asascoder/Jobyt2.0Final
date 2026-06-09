@@ -23,6 +23,10 @@ const LOG_PREFIX = '[AI Config]';
 export interface AIConfig {
   /** Groq API key — powers text generation and JSON reasoning */
   groqApiKey: string | null;
+  /** xAI / Grok API key — used specifically for Resume Builder when configured */
+  xaiApiKey: string | null;
+  /** xAI model name (e.g. grok-1) */
+  xaiModel: string;
   /** HuggingFace API Key/Token */
   huggingfaceApiKey: string | null;
   /**
@@ -65,6 +69,9 @@ function loadAIConfig(): AIConfig {
   // ── Groq (text generation) ────────────────────────────────────────────────
   const groqApiKey = process.env.GROQ_API_KEY || null;
   const isConfigured = Boolean(groqApiKey && groqApiKey !== 'your_groq_api_key_here');
+  // ── xAI / Grok (optional) ───────────────────────────────────────────────
+  const xaiApiKey = process.env.XAI_API_KEY || null;
+  const xaiModel = process.env.XAI_MODEL || process.env.GROQ_MODEL || 'grok-1';
 
   // ── Embedding Provider Selection ──────────────────────────────────────────
   const huggingfaceApiKey = process.env.HF_API_KEY || process.env.HUGGINGFACE_API_KEY || null;
@@ -87,6 +94,8 @@ function loadAIConfig(): AIConfig {
 
   const config: AIConfig = {
     groqApiKey: isConfigured ? groqApiKey : null,
+    xaiApiKey: xaiApiKey && xaiApiKey !== 'your_xai_api_key_here' ? xaiApiKey : null,
+    xaiModel,
     huggingfaceApiKey: huggingfaceApiKey && huggingfaceApiKey !== 'your_huggingface_api_key_here' ? huggingfaceApiKey : null,
     isConfigured,
     embeddingsConfigured,
@@ -106,6 +115,9 @@ function loadAIConfig(): AIConfig {
 
   if (!isConfigured) {
     console.warn(`${LOG_PREFIX} GROQ_API_KEY is not configured — AI text features will be disabled`);
+  }
+  if (!xaiApiKey) {
+    console.log(`${LOG_PREFIX} XAI_API_KEY not provided — Grok provider will be disabled until configured`);
   }
   if (!embeddingsConfigured) {
     console.warn(

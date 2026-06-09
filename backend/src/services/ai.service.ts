@@ -23,6 +23,7 @@
 import { aiConfig } from '../config/ai.config';
 import { AIProvider } from './ai/interfaces/aiProvider.interface';
 import { GroqProvider } from './ai/providers/groq.provider';
+import { GrokProvider } from './ai/providers/grok.provider';
 import { EmbeddingProviderResolver } from './ai/providers/embedding.provider';
 
 const LOG_PREFIX = '[AI]';
@@ -238,6 +239,19 @@ function getGroqProvider(): AIProvider | null {
   return groqProvider;
 }
 
+let grokProvider: AIProvider | null = null;
+function getGrokProvider(): AIProvider | null {
+  if (!aiConfig.xaiApiKey) return null;
+  if (!grokProvider) {
+    grokProvider = new GrokProvider(
+      aiConfig.xaiApiKey,
+      aiConfig.xaiModel,
+      aiConfig.defaultTemperature,
+    );
+  }
+  return grokProvider;
+}
+
 
 
 // ── Public API ───────────────────────────────────────────────────────────────
@@ -249,24 +263,29 @@ export const AIService = {
    */
   async generateText(
     prompt: string,
-    options?: { temperature?: number; responseMimeType?: string },
+    options?: { temperature?: number; responseMimeType?: string; provider?: 'grok' | 'groq' },
   ): Promise<string | null> {
-    const model = aiConfig.textModel;
-    const circuitKey = `text:${model}`;
+    const providerChoice = options?.provider;
+    const model = providerChoice === 'grok' ? aiConfig.xaiModel : aiConfig.textModel;
+    const circuitKey = `text:${providerChoice ?? 'groq'}:${model}`;
     const startMs = Date.now();
 
-    if (!aiConfig.isConfigured) {
-      console.warn(`${LOG_PREFIX} Not configured — skipping text generation`);
-      return null;
-    }
-
+    // Allow provider-specific availability: Groq remains the default configured provider.
     if (isCircuitOpen(circuitKey)) {
       console.warn(`${LOG_PREFIX} Circuit OPEN for ${model} — skipping text generation`);
       return null;
     }
 
-    const provider = getGroqProvider();
-    if (!provider) return null;
+    let provider: AIProvider | null = null;
+    if (providerChoice === 'grok') {
+      provider = getGrokProvider();
+    } else {
+      provider = getGroqProvider();
+    }
+    if (!provider) {
+      console.warn(`${LOG_PREFIX} No provider configured for choice=${providerChoice ?? 'groq'}`);
+      return null;
+    }
 
     try {
       const result = await withRetry(
@@ -330,9 +349,11 @@ export const AIService = {
    * Uses response_format: { type: 'json_object' } for structured output.
    * Returns null on failure or parse error.
    */
-  async generateJSON<T = unknown>(prompt: string): Promise<T | null> {
+  async generateJSON<T = unknown>(prompt: string, options?: { provider?: 'grok' | 'groq' }): Promise<T | null> {
+    // Backwards-compatible: default to configured text provider (Groq).
     const raw = await this.generateText(prompt, {
       responseMimeType: 'application/json',
+      provider: options?.provider,
     });
 
     if (!raw) return null;
