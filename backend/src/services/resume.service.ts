@@ -198,10 +198,10 @@ export const ResumeService = {
     }
 
     const promptPayload = ResumeService.buildResumePromptPayload(profile);
-    if (aiConfig.isConfigured) {
+    if (aiConfig.xaiConfigured) {
       try {
         const prompt = PromptTemplatesService.renderTemplate('resume_generation', promptPayload);
-        const aiDraft = await AIService.generateJSON<ResumeDraft>(prompt);
+        const aiDraft = await AIService.generateJSON<ResumeDraft>(prompt, { provider: 'grok' });
         if (aiDraft && typeof aiDraft.summary === 'string' && Array.isArray(aiDraft.skills)) {
           return {
             summary: safeString(aiDraft.summary) || safeString(profile.bio) || 'Resume draft generated from profile.',

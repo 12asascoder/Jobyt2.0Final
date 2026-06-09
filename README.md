@@ -96,6 +96,11 @@ AWS_ACCESS_KEY_ID=your_aws_access_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key
 STRIPE_SECRET_KEY=your_stripe_secret_key
 FRONTEND_URL=http://localhost:3000
+# AI: Resume Builder (Grok / xAI)
+# Set XAI_API_KEY to enable Grok forResume Builder AI features only.
+# Example:
+# XAI_API_KEY=your_xai_api_key
+# XAI_MODEL=grok-1
 ```
 
 #### Frontend
