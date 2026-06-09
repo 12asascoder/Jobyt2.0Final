@@ -60,7 +60,7 @@ export class GrokProvider implements AIProvider {
       throw new Error(`${LOG_PREFIX} xAI request failed ${res.status}: ${txt}`);
     }
 
-    const data = await res.json().catch(() => null);
+    const data: any = await res.json().catch(() => null);
 
     // Attempt to extract text from several possible shapes
     let text = '';
@@ -73,8 +73,8 @@ export class GrokProvider implements AIProvider {
     else if (typeof data.text === 'string') text = data.text;
     else if (Array.isArray(data.choices) && data.choices[0]) {
       text = data.choices[0].text || data.choices[0].message?.content || '';
-    } else if (typeof data.candidates === 'object' && Array.isArray((data as any).candidates)) {
-      text = (data as any).candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } else if (typeof data.candidates === 'object' && Array.isArray(data.candidates)) {
+      text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
 
     if (!text) {
