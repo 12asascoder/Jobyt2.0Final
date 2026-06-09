@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { body } from 'express-validator';
+import { body, query } from 'express-validator';
 import { UserController } from '../controllers/user.controller';
 import { ResumeController } from '../controllers/resume.controller';
 import * as RoadmapProgressController from '../controllers/roadmapProgress.controller';
@@ -71,6 +71,16 @@ router.post(
   authorize('applicant'),
   uploadResume.single('resume'),
   UserController.parseResume,
+);
+
+router.post('/me/resume-draft', authorize('applicant'), ResumeController.generateDraft);
+router.get(
+  '/me/resume-latex',
+  authorize('applicant'),
+  query('download').optional().isBoolean(),
+  query('resume_id').optional().isUUID(),
+  validate,
+  ResumeController.getLatex,
 );
 
 router.post('/me/photo', uploadImage.single('photo'), UserController.uploadPhoto);
