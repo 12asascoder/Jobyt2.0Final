@@ -15,7 +15,8 @@
     "db:seed": "dotenv -e .env -- ts-node src/config/seed.ts",
     "roadmap:ingest": "dotenv -e .env -- ts-node src/scripts/runIngestion.ts",
     "db:migrate:coding": "dotenv -e .env -- ts-node src/scripts/migrateCoding.ts",
-    "db:seed:coding": "dotenv -e .env -- ts-node src/scripts/seedCoding.ts"
+    "db:seed:coding": "dotenv -e .env -- ts-node src/scripts/seedCoding.ts",
+    "test:backend": "dotenv -e .env -- ts-node src/scripts/testBackend.ts"
   },
   "keywords": [],
   "author": "Parth Nath Chauhan",
