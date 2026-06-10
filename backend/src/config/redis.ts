@@ -1,9 +1,10 @@
 import Redis from 'ioredis';
 
 const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
+  host: process.env.REDIS_HOST || '127.0.0.1',
   port: parseInt(process.env.REDIS_PORT || '6379'),
   password: process.env.REDIS_PASSWORD || undefined,
+  family: 4, // Force IPv4
   // Don't connect on import; connect explicitly at runtime when needed.
   lazyConnect: true,
   enableOfflineQueue: false,
