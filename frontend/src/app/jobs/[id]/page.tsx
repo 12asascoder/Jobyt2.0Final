@@ -11,6 +11,7 @@ import { avatarColor, avatarInitials } from '@/components/ui/JobCard';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import toast from 'react-hot-toast';
 import { ROUTES } from '@/constants';
+import { CodingApi } from '@/lib/api/coding.api';
 import { InsufficientCreditsCard } from '@/components/credits/InsufficientCreditsCard';
 import Link from 'next/link';
 import {
@@ -83,6 +84,16 @@ interface ResumeListItem {
   id: string;
   file_name: string;
   is_default: boolean;
+}
+
+interface PendingJobApply {
+  cover_letter: string;
+  resume_id: string;
+  answers: Array<{ question_id: string; answer: string }>;
+}
+
+function pendingApplyKey(jobId: string) {
+  return `pending_job_apply_${jobId}`;
 }
 
 
@@ -206,6 +217,50 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     fetchJobData();
   }, [id, router, isAuthenticated]);
 
+  useEffect(() => {
+    if (!job || !isAuthenticated || hasApplied) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('assessmentComplete') !== '1') return;
+
+    const pendingRaw = sessionStorage.getItem(pendingApplyKey(id));
+    if (!pendingRaw) return;
+
+    const submitAfterAssessment = async () => {
+      let pending: PendingJobApply;
+      try {
+        pending = JSON.parse(pendingRaw) as PendingJobApply;
+      } catch {
+        sessionStorage.removeItem(pendingApplyKey(id));
+        return;
+      }
+
+      setApplying(true);
+      try {
+        await api.post<{ creditsRemaining?: number }>(`/applications/jobs/${id}`, {
+          cover_letter: pending.cover_letter,
+          resume_id: pending.resume_id,
+          answers: pending.answers,
+        });
+        sessionStorage.removeItem(pendingApplyKey(id));
+        setHasApplied(true);
+        setShowSuccessOverlay(true);
+        setCreditError(null);
+        toast.success('Application submitted after coding assessment');
+        window.history.replaceState({}, '', ROUTES.jobDetail(id));
+      } catch (err: unknown) {
+        if (err instanceof ApiError) {
+          toast.error(err.message || 'Failed to submit application after assessment');
+        } else {
+          toast.error('Failed to submit application after assessment');
+        }
+      } finally {
+        setApplying(false);
+      }
+    };
+
+    void submitAfterAssessment();
+  }, [job, isAuthenticated, hasApplied, id]);
+
   // Fetch AI Insights once job is loaded
   useEffect(() => {
     if (!job || user?.role !== 'applicant') return;
@@ -278,22 +333,74 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       }
     }
 
+    const answersPayload = dynamicQuestions
+      .map((question) => ({
+        question_id: question.id,
+        answer: (questionAnswers[question.id] || '').trim(),
+      }))
+      .filter((answer) => answer.answer.length > 0);
+
+    const needsDuringApplyAssessment =
+      Boolean(job?.active_assessment_version_id) && job?.assessment_timing === 'during_apply';
+
+    if (needsDuringApplyAssessment && job?.active_assessment_version_id) {
+      setApplying(true);
+      try {
+        const pending: PendingJobApply = {
+          cover_letter: coverLetter,
+          resume_id: selectedResumeId,
+          answers: answersPayload,
+        };
+        sessionStorage.setItem(pendingApplyKey(id), JSON.stringify(pending));
+
+        const sessionRes = await CodingApi.startSession(job.active_assessment_version_id);
+        const sessionId = sessionRes.data?.id;
+        if (!sessionId) {
+          toast.error('Could not start coding assessment');
+          return;
+        }
+
+        setShowModal(false);
+        toast.success('Complete the coding assessment to finish your application');
+        router.push(`${ROUTES.codingAssessment(sessionId)}?jobId=${encodeURIComponent(id)}`);
+      } catch (err: unknown) {
+        sessionStorage.removeItem(pendingApplyKey(id));
+        if (err instanceof ApiError) {
+          toast.error(err.message || 'Failed to start coding assessment');
+        } else {
+          toast.error('Failed to start coding assessment');
+        }
+      } finally {
+        setApplying(false);
+      }
+      return;
+    }
+
     setApplying(true);
     try {
       await api.post<{ creditsRemaining?: number }>(`/applications/jobs/${id}`, {
         cover_letter: coverLetter,
         resume_id: selectedResumeId,
-        answers: dynamicQuestions
-          .map((question) => ({
-            question_id: question.id,
-            answer: (questionAnswers[question.id] || '').trim(),
-          }))
-          .filter((answer) => answer.answer.length > 0),
+        answers: answersPayload,
       });
       setHasApplied(true);
       setShowModal(false);
       setShowSuccessOverlay(true);
       setCreditError(null);
+
+      if (job?.active_assessment_version_id && job.assessment_timing === 'post_apply') {
+        try {
+          const sessionRes = await CodingApi.startSession(job.active_assessment_version_id);
+          const sessionId = sessionRes.data?.id;
+          if (sessionId) {
+            toast.success('Application submitted! Complete the coding assessment next.');
+            router.push(ROUTES.codingAssessment(sessionId));
+            return;
+          }
+        } catch {
+          toast('Application submitted. Check your dashboard for the coding assessment link.');
+        }
+      }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         const creditData = err.data as
@@ -587,6 +694,20 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
             <div id="apply-now-section" className="mt-2 rounded-2xl border border-[#caf36a] bg-[#f8f8f8] px-4 py-5 md:px-6">
               <h2 className="mb-3 text-4xl font-black tracking-tight text-[#98cf2d]">Apply Now</h2>
+
+              {job.active_assessment_version_id && (
+                <div className="mb-4 rounded-xl border border-[#98cf2d]/40 bg-[#f0fce0] px-4 py-3">
+                  <p className="text-sm font-bold text-[#1c1c1c]">
+                    Coding assessment required
+                    {job.assessment_title ? `: ${job.assessment_title}` : ''}
+                  </p>
+                  <p className="mt-1 text-xs text-[#444]">
+                    {job.assessment_timing === 'during_apply'
+                      ? 'You will complete the coding assessment before your application is submitted.'
+                      : 'You will receive a coding assessment link after submitting your application.'}
+                  </p>
+                </div>
+              )}
 
               <div className="mb-5">
                 <h3 className="text-2xl font-bold text-[#1c1c1c]">Resume</h3>

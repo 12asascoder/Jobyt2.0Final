@@ -26,7 +26,11 @@ export const recommendationQueue = new Queue('recommendationQueue', defaultQueue
 // Queue for sending email/whatsapp notifications
 export const notificationQueue = new Queue('notificationQueue', defaultQueueOptions);
 
+// Queue for coding submission evaluation
+export const codingEvaluationQueue = new Queue('codingEvaluationQueue', defaultQueueOptions);
+
 export const closeQueues = async () => {
   await recommendationQueue.close();
   await notificationQueue.close();
+  await codingEvaluationQueue.close();
 };
