@@ -20,8 +20,22 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
     console.log(`\n📧 [DEV EMAIL] EmailJS config missing. Email not sent.`);
     console.log(`   To:      ${options.to}`);
     console.log(`   Subject: ${options.subject}`);
+    
+    // Extract links for password reset / email verification
     const links = options.html.match(/href="([^"]+)"/g);
     if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
+
+    // Extract OTP if present (typically 6 digits in this app)
+    const otpMatch = options.html.match(/>(\d{6})</);
+    if (otpMatch) {
+      console.log(`   OTP:     ${otpMatch[1]}`);
+    } else {
+      // Print a clean version of the HTML body so developers can read any other notifications
+      const cleanBody = options.html.replace(/<[^>]*>?/gm, '').trim();
+      console.log(`   Body:    ${cleanBody.substring(0, 500)}${cleanBody.length > 500 ? '...' : ''}`);
+    }
+    
+    console.log(`────────────────────────────────────────────────\n`);
     return;
   }
 
