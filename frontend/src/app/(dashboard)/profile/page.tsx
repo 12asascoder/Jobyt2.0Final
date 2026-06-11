@@ -10,8 +10,8 @@ import toast from 'react-hot-toast';
 import { FaPenToSquare, FaCheck } from 'react-icons/fa6';
 import { ResumeUploadCard } from '@/components/profile/ResumeUploadCard';
 import { ResumeListCard } from '@/components/profile/ResumeListCard';
+import { NotificationPreferences } from '@/components/profile/NotificationPreferences';
 import { resolveAssetUrl } from '@/lib/assetUrl';
-
 type ProfileData = Partial<ApplicantProfile & RecruiterProfile>;
 
 export default function ProfilePage() {
@@ -453,6 +453,7 @@ export default function ProfilePage() {
                 }}
               />
               <ResumeListCard refreshKey={resumeRefreshKey} />
+              <NotificationPreferences />
             </div>
           )}
         </div>
