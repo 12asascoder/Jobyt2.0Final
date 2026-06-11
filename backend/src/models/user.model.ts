@@ -14,6 +14,8 @@ export interface User {
   referral_code: string;
   credit_balance: number;
   banned_at: Date | null;
+  phone?: string | null;
+  phone_verified?: boolean;
   created_at: Date;
   updated_at: Date;
 }
