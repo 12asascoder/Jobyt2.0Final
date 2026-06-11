@@ -14,6 +14,7 @@ interface UseCodingIDEOptions {
 
 export function useCodingIDE({ problemVersionId, practiceSessionId, assessmentSessionId, onSubmitComplete }: UseCodingIDEOptions) {
   const [problem, setProblem] = useState<ProblemVersion | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [language, setLanguage] = useState<CodingLanguage>('python');
   const [code, setCode] = useState('');
   const [isRunning, setIsRunning] = useState(false);
@@ -27,16 +28,29 @@ export function useCodingIDE({ problemVersionId, practiceSessionId, assessmentSe
   const pollStartTime = useRef<number>(0);
 
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
-      const res = await CodingApi.getProblemVersion(problemVersionId);
-      const p = res.data;
-      if (!p) return;
-      setProblem(p);
-      const defaultLang = (p.supported_languages[0] || 'python') as CodingLanguage;
-      setLanguage(defaultLang);
-      setCode(p.starter_code[defaultLang] || '');
+      try {
+        const res = await CodingApi.getProblemVersion(problemVersionId);
+        const p = res.data;
+        if (!p || cancelled) return;
+        setProblem(p);
+        setLoadError(null);
+        const defaultLang = (p.supported_languages[0] || 'python') as CodingLanguage;
+        setLanguage(defaultLang);
+        setCode(p.starter_code[defaultLang] || '');
+      } catch (err: unknown) {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : 'Failed to load problem';
+          setLoadError(message);
+          toast.error(message);
+        }
+      }
     };
+
     void load();
+    return () => { cancelled = true; };
   }, [problemVersionId]);
 
   useEffect(() => {
@@ -92,7 +106,7 @@ export function useCodingIDE({ problemVersionId, practiceSessionId, assessmentSe
 
         if (sub.status === 'completed' || sub.status === 'failed') {
           setSubmissions((prev) => [sub, ...prev.filter((s) => s.id !== sub.id)]);
-          
+
           let evalData = sub.evaluation;
           if (!evalData) {
             const evalRes = await CodingApi.getEvaluation(submissionId);
@@ -106,17 +120,16 @@ export function useCodingIDE({ problemVersionId, practiceSessionId, assessmentSe
             onSubmitComplete?.(sub);
             toast.success(sub.passed ? 'All tests passed!' : 'Submission evaluated');
           } else {
-            // Check timeout (45 seconds)
+            // Hard timeout: stop polling after 45 seconds if AI feedback never arrives
             if (Date.now() - pollStartTime.current > 45000) {
               if (pollRef.current) clearInterval(pollRef.current);
               setIsEvaluating(false);
               onSubmitComplete?.(sub);
               toast.success(sub.passed ? 'All tests passed! (AI feedback unavailable)' : 'Submission evaluated');
             }
-            // Otherwise, keep polling...
           }
         }
-      } catch { /* keep polling */ }
+      } catch { /* keep polling on transient errors */ }
     }, 2500);
   }, [onSubmitComplete]);
 
@@ -142,10 +155,12 @@ export function useCodingIDE({ problemVersionId, practiceSessionId, assessmentSe
     }
   }, [problemVersionId, language, code, practiceSessionId, assessmentSessionId, pollSubmission]);
 
+  // Cleanup polling interval on unmount
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   return {
     problem,
+    loadError,
     language,
     code,
     setCode,

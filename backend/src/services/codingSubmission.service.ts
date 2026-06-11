@@ -6,8 +6,16 @@ import { badRequest, forbidden, notFound } from '../utils/appError';
 
 const EXECUTION_LOG_RETENTION = parseInt(process.env.EXECUTION_LOG_RETENTION_COUNT || '50', 10);
 
+/** Maximum allowed source code size (64 KB) */
+const MAX_SOURCE_CODE_BYTES = 65_536;
+
 export const CodingSubmissionService = {
   async runCode(userId: string, req: RunCodeRequest) {
+    // Guard: source code size
+    if (Buffer.byteLength(req.sourceCode, 'utf8') > MAX_SOURCE_CODE_BYTES) {
+      throw badRequest('Source code exceeds the maximum allowed size of 64 KB');
+    }
+
     let problemVersionId = req.problemVersionId;
     let timeLimit = 5;
     let memoryLimit = 128000;
@@ -34,18 +42,23 @@ export const CodingSubmissionService = {
       ? [{ input: req.stdin, expected_output: '' }]
       : await CodingModel.listVersionTestCases(problemVersionId, true);
 
+    // Execute all sample test cases in parallel
+    const executions = await Promise.all(
+      testCases.map((tc) =>
+        Judge0Service.execute({
+          language: req.language,
+          sourceCode: req.sourceCode,
+          stdin: tc.input,
+          expectedOutput: tc.expected_output || undefined,
+          cpuTimeLimit: timeLimit,
+          memoryLimitKb: memoryLimit,
+        }).then((result) => ({ tc, result })),
+      ),
+    );
+
     const results = [];
 
-    for (const tc of testCases) {
-      const result = await Judge0Service.execute({
-        language: req.language,
-        sourceCode: req.sourceCode,
-        stdin: tc.input,
-        expectedOutput: tc.expected_output || undefined,
-        cpuTimeLimit: timeLimit,
-        memoryLimitKb: memoryLimit,
-      });
-
+    for (const { tc, result } of executions) {
       const passed = tc.expected_output
         ? Judge0Service.isAccepted(result) && Judge0Service.compareOutput(result.stdout, tc.expected_output)
         : Judge0Service.isAccepted(result);
@@ -84,6 +97,11 @@ export const CodingSubmissionService = {
   },
 
   async submitCode(userId: string, req: SubmitCodeRequest) {
+    // Guard: source code size
+    if (Buffer.byteLength(req.sourceCode, 'utf8') > MAX_SOURCE_CODE_BYTES) {
+      throw badRequest('Source code exceeds the maximum allowed size of 64 KB');
+    }
+
     const version = await CodingModel.findProblemVersionById(req.problemVersionId);
     if (!version) throw notFound('Problem version');
 
@@ -153,10 +171,15 @@ export const CodingSubmissionService = {
       job_snapshot: jobSnapshot || undefined,
     });
 
-    await codingEvaluationQueue.add('evaluateSubmission', {
-      submissionId: submission.id,
-      passingScore,
-    });
+    // Enqueue with retry: 3 attempts, exponential back-off starting at 5s
+    await codingEvaluationQueue.add(
+      'evaluateSubmission',
+      { submissionId: submission.id, passingScore },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+      },
+    );
 
     if (req.practiceSessionId) {
       const ps = await CodingModel.findPracticeSessionById(req.practiceSessionId);
@@ -176,8 +199,25 @@ export const CodingSubmissionService = {
 
     await CodingModel.updateSubmission(submissionId, { status: 'running' });
 
-    const hiddenCases = await CodingModel.listHiddenVersionTestCases(submission.problem_version_id);
-    const version = await CodingModel.findProblemVersionById(submission.problem_version_id);
+    // Fetch hidden cases and version info concurrently
+    const [hiddenCases, version] = await Promise.all([
+      CodingModel.listHiddenVersionTestCases(submission.problem_version_id),
+      CodingModel.findProblemVersionById(submission.problem_version_id),
+    ]);
+
+    // Execute all hidden test cases in parallel (was sequential before — O(n) → O(1) latency)
+    const executions = await Promise.all(
+      hiddenCases.map((tc) =>
+        Judge0Service.execute({
+          language: submission.language,
+          sourceCode: submission.source_code,
+          stdin: tc.input,
+          expectedOutput: tc.expected_output,
+          cpuTimeLimit: version?.time_limit_sec ?? 5,
+          memoryLimitKb: version?.memory_limit_kb ?? 128000,
+        }).then((result) => ({ tc, result })),
+      ),
+    );
 
     let totalWeight = 0;
     let passedWeight = 0;
@@ -186,17 +226,9 @@ export const CodingSubmissionService = {
     let maxMemoryKb = 0;
     const tokens: string[] = [];
 
-    for (const tc of hiddenCases) {
+    // Persist results sequentially (preserves ordering, avoids DB race conditions)
+    for (const { tc, result } of executions) {
       totalWeight += tc.weight;
-      const result = await Judge0Service.execute({
-        language: submission.language,
-        sourceCode: submission.source_code,
-        stdin: tc.input,
-        expectedOutput: tc.expected_output,
-        cpuTimeLimit: version?.time_limit_sec ?? 5,
-        memoryLimitKb: version?.memory_limit_kb ?? 128000,
-      });
-
       tokens.push(result.token);
 
       const passed =
@@ -213,7 +245,8 @@ export const CodingSubmissionService = {
         submission_id: submissionId,
         test_case_id: tc.id,
         passed,
-        actual_output: passed ? result.stdout : '[hidden]',
+        // Store actual stdout; sanitization happens at the read layer (getSubmission)
+        actual_output: result.stdout,
         stderr: result.stderr,
         time_sec: result.time ? parseFloat(result.time) : null,
         memory_kb: result.memory,
@@ -262,6 +295,8 @@ export const CodingSubmissionService = {
     if (role === 'applicant' && submission.user_id !== userId) throw forbidden();
 
     const testResults = await CodingModel.listTestResults(submissionId);
+
+    // Sanitize: applicants see only pass/fail for hidden cases, never the raw output
     const sanitizedResults = testResults.map((r) => ({
       ...r,
       actual_output: r.is_hidden ? (r.passed ? '[passed]' : '[failed]') : r.actual_output,
@@ -301,7 +336,7 @@ export const CodingSubmissionService = {
     return {
       ...submission,
       passFailSource: 'hidden_tests',
-      testResults,
+      testResults, // recruiters see full raw output
       evaluation,
     };
   },

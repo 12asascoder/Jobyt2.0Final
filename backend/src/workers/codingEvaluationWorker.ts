@@ -22,8 +22,15 @@ export const codingEvaluationWorker = new Worker(
   {
     connection: redisConnection,
     concurrency: 3,
+    // Worker-level safety net: 3 attempts with exponential back-off
+    // (job-level options in submitCode take precedence when set)
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5000 },
+    },
   },
 );
+
 
 codingEvaluationWorker.on('completed', (job) => {
   console.log(`${LOG_PREFIX} Job ${job.id} completed`);

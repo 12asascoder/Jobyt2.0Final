@@ -19,9 +19,24 @@ export default function PracticeIDEPage({ params }: { params: Promise<{ problemV
 
   const ide = useCodingIDE({ problemVersionId, practiceSessionId });
 
+  if (ide.loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+        <p className="text-red-400 font-medium">{ide.loadError}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   if (!ide.problem) {
     return <div className="flex justify-center py-20"><Spinner /></div>;
   }
+
 
   return (
     <DesktopOnlyGuard>
