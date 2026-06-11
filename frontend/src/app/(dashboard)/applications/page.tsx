@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useApplications } from '@/hooks/useApplications';
 import { APPLICATION_STATUS_LABELS } from '@/constants';
 import { FaArrowUpRightFromSquare, FaChevronLeft, FaChevronRight } from 'react-icons/fa6';
+import { SelectionProbabilityBadge } from '@/components/jobs/SelectionProbability';
 import { FaInfoCircle, FaRegLightbulb } from 'react-icons/fa';
 import { ATSBreakdown, ApplicationStatus } from '@/types';
 import { ATSScoreBadge } from '@/components/ui/ATSScoreBadge';
@@ -16,6 +17,7 @@ type ApplicationView = {
     companyName?: string | null;
     job_title?: string;
     status_updated_at?: string;
+    selectionProbability?: number;
     ats_score?: number | null;
     ats_breakdown?: ATSBreakdown | null;
     fit_insights?: string | null;

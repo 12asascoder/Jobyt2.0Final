@@ -8,6 +8,7 @@ import { Spinner } from '@/components/ui';
 import { ROUTES } from '@/constants';
 import toast from 'react-hot-toast';
 import { resolveAssetUrl } from '@/lib/assetUrl';
+import { AiAnalysisPanel } from '@/components/applications/AiAnalysisPanel';
 
 interface ApplicationDetail {
   id: string;
@@ -307,6 +308,9 @@ export default function ApplicationDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* AI Analysis Panel */}
+            <AiAnalysisPanel applicationId={applicationId} />
 
             {/* View Resume */}
             <div className="bg-black rounded-2xl p-6 text-white text-center">

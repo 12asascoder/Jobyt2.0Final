@@ -51,15 +51,7 @@ type LinkedinUserInfoResponse = {
   email_verified?: boolean;
 };
 
-const GOOGLE_TOKEN_AUDIENCE = process.env.GOOGLE_CLIENT_ID;
-const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
-const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
-const GITHUB_REDIRECT_URI = process.env.GITHUB_REDIRECT_URI;
-const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
-const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
-const LINKEDIN_REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI;
-
-const GOOGLE_CLIENT = new OAuth2Client(GOOGLE_TOKEN_AUDIENCE);
+const GOOGLE_CLIENT = new OAuth2Client(); // Initialize without audience; audience is passed during verification
 
 const HTTP_TIMEOUT_MS = 10000;
 const MAX_REFERRAL_CODE_ATTEMPTS = 10;
@@ -265,7 +257,7 @@ export const OAuthService = {
     }
 
     const audience = ensureEnv(
-      GOOGLE_TOKEN_AUDIENCE,
+      process.env.GOOGLE_CLIENT_ID,
       'GOOGLE_CLIENT_ID_MISSING',
       'GOOGLE_CLIENT_ID',
     );
@@ -388,9 +380,9 @@ export const OAuthService = {
       throw new UnauthorizedError('GitHub authorization code is required', 'GITHUB_CODE_REQUIRED');
     }
 
-    const clientId = ensureEnv(GITHUB_CLIENT_ID, 'GITHUB_CLIENT_ID_MISSING', 'GITHUB_CLIENT_ID');
+    const clientId = ensureEnv(process.env.GITHUB_CLIENT_ID, 'GITHUB_CLIENT_ID_MISSING', 'GITHUB_CLIENT_ID');
     const clientSecret = ensureEnv(
-      GITHUB_CLIENT_SECRET,
+      process.env.GITHUB_CLIENT_SECRET,
       'GITHUB_CLIENT_SECRET_MISSING',
       'GITHUB_CLIENT_SECRET',
     );
@@ -402,8 +394,9 @@ export const OAuthService = {
         code,
       });
 
-      if (GITHUB_REDIRECT_URI) {
-        params.append('redirect_uri', GITHUB_REDIRECT_URI);
+      const redirectUri = process.env.GITHUB_REDIRECT_URI;
+      if (redirectUri) {
+        params.append('redirect_uri', redirectUri);
       }
 
       const tokenResponse = await axios.post<{ access_token?: string }>(
@@ -481,17 +474,17 @@ export const OAuthService = {
     }
 
     const clientId = ensureEnv(
-      LINKEDIN_CLIENT_ID,
+      process.env.LINKEDIN_CLIENT_ID,
       'LINKEDIN_CLIENT_ID_MISSING',
       'LINKEDIN_CLIENT_ID',
     );
     const clientSecret = ensureEnv(
-      LINKEDIN_CLIENT_SECRET,
+      process.env.LINKEDIN_CLIENT_SECRET,
       'LINKEDIN_CLIENT_SECRET_MISSING',
       'LINKEDIN_CLIENT_SECRET',
     );
     const redirectUri = ensureEnv(
-      LINKEDIN_REDIRECT_URI,
+      process.env.LINKEDIN_REDIRECT_URI,
       'LINKEDIN_REDIRECT_URI_MISSING',
       'LINKEDIN_REDIRECT_URI',
     );

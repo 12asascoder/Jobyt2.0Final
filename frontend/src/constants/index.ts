@@ -57,13 +57,7 @@ export const ROUTES = {
   roadmapDetail: (slug: string) => `/roadmaps/${slug}`,
   resumeDetail: (id: string) => `/resumes/${id}`,
   messageThread: (id: string) => `/messages/${id}`,
-  // Coding (Applicant)
-  coding: '/coding',
-  codingPractice: '/coding/practice',
-  codingPracticeProblem: (id: string) => `/coding/practice/${id}`,
-  codingAssessment: (sessionId: string) => `/coding/assessment/${sessionId}`,
-  codingSubmissions: '/coding/submissions',
-  codingSubmissionDetail: (id: string) => `/coding/submissions/${id}`,
+  resumeBuilder: '/resume-builder',
   // Recruiter
   recruiterDashboard: '/recruiter/dashboard',
   recruiterJobs: '/recruiter/jobs',

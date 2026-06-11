@@ -94,10 +94,8 @@ export interface Job {
   is_external_company?: boolean;
   source?: 'admin_external' | 'recruiter' | 'admin_company';
   created_at: string;
-  coding_assessment_id?: string | null;
-  active_assessment_version_id?: string | null;
-  assessment_timing?: 'during_apply' | 'post_apply' | null;
-  assessment_title?: string | null;
+  /** Selection Probability: 0–100 score derived from SkillMatchingService (candidate-facing only) */
+  selectionProbability?: number;
 }
 
 // ── Applications ─────────────────────────────────────────────────────────────
@@ -147,6 +145,8 @@ export interface Application {
   location?: string;
   companyName?: string | null;
   latest_comment?: string | null;
+  /** Selection Probability: 0–100 score derived from SkillMatchingService (candidate-facing only) */
+  selectionProbability?: number;
 }
 
 export interface PipelineEvent {

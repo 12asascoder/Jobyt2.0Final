@@ -40,6 +40,30 @@ type AtsScoreReport = {
   explanation?: string;
 };
 
+type ResumeDraft = {
+  summary: string;
+  skills: string[];
+  experience: Array<{
+    company?: string | null;
+    role?: string | null;
+    dates?: string | null;
+    description?: string | null;
+  }>;
+  education: Array<{
+    institution?: string | null;
+    degree?: string | null;
+    dates?: string | null;
+    description?: string | null;
+  }>;
+  contact: {
+    email?: string | null;
+    phone?: string | null;
+    linkedin?: string | null;
+    github?: string | null;
+    portfolio?: string | null;
+  };
+};
+
 type ResumeResponse = {
   resume?: ResumeDetail;
 };
@@ -142,6 +166,9 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
   const [atsScore, setAtsScore] = useState<number | null>(null);
   const [atsExplanation, setAtsExplanation] = useState<string | null>(null);
   const [scoringAts, setScoringAts] = useState(false);
+  const [draft, setDraft] = useState<ResumeDraft | null>(null);
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [latexLoading, setLatexLoading] = useState(false);
 
   const fetchResume = useCallback(async () => {
     try {
@@ -160,6 +187,52 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
       setLoading(false);
     }
   }, [id]);
+
+  const fetchDraft = async () => {
+    if (draftLoading) return;
+    setDraftLoading(true);
+    try {
+      const res = await api.post<{ draft: ResumeDraft }>('/users/me/resume-draft', {});
+      setDraft(res.data?.draft ?? null);
+      toast.success('AI resume draft generated successfully.');
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to generate resume draft.';
+      toast.error(message);
+    } finally {
+      setDraftLoading(false);
+    }
+  };
+
+  const downloadLatex = async () => {
+    if (latexLoading) return;
+    setLatexLoading(true);
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://hiringplatform-production-180d.up.railway.app/api/v1';
+      const response = await fetch(`${apiBase}/users/me/resume-latex?download=true`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download LaTeX resume.');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'resume.tex';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success('LaTeX resume downloaded successfully.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to download LaTeX resume.';
+      toast.error(message);
+    } finally {
+      setLatexLoading(false);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -318,6 +391,20 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
               <Button variant="outline" disabled={!secureUrl}>Download</Button>
             </a>
           )}
+          <Button
+            variant="outline"
+            isLoading={latexLoading}
+            onClick={() => void downloadLatex()}
+          >
+            Download LaTeX
+          </Button>
+          <Button
+            variant="outline"
+            isLoading={draftLoading}
+            onClick={() => void fetchDraft()}
+          >
+            Generate AI Draft
+          </Button>
           {!resume.is_default && (
             <Button variant="outline" isLoading={settingDefault} onClick={() => void setDefaultResume()}>
               Use for Applications
@@ -439,8 +526,61 @@ export default function ResumeViewPage({ params }: { params: Promise<{ id: strin
           </CardBody>
         </Card>
       </div>
-
-      <div>
+      {draft && (
+        <Card>
+          <CardBody className="space-y-4">
+            <h2 className="text-lg font-semibold text-slate-900">AI Resume Draft</h2>
+            <div>
+              <p className="text-sm text-slate-500">Summary</p>
+              <p className="mt-2 text-slate-700 text-sm">{draft.summary}</p>
+            </div>
+            {draft.skills.length > 0 && (
+              <div>
+                <p className="text-sm text-slate-500">Suggested skills</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {draft.skills.map((skill) => (
+                    <span key={skill} className="rounded-md bg-slate-100 px-2 py-1 text-sm text-slate-700">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {draft.experience.length > 0 && (
+              <div>
+                <p className="text-sm text-slate-500">Experience</p>
+                <div className="mt-2 space-y-2 text-sm text-slate-700">
+                  {draft.experience.map((item, idx) => (
+                    <div key={`${item.role}-${item.company}-${idx}`}>
+                      <p className="font-semibold text-slate-900">
+                        {item.role || 'Role'}{item.company ? ` @ ${item.company}` : ''}
+                      </p>
+                      {item.dates && <p className="text-xs text-slate-500">{item.dates}</p>}
+                      {item.description && <p>{item.description}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {draft.education.length > 0 && (
+              <div>
+                <p className="text-sm text-slate-500">Education</p>
+                <div className="mt-2 space-y-2 text-sm text-slate-700">
+                  {draft.education.map((item, idx) => (
+                    <div key={`${item.degree}-${item.institution}-${idx}`}>
+                      <p className="font-semibold text-slate-900">
+                        {item.degree || 'Degree'}{item.institution ? ` - ${item.institution}` : ''}
+                      </p>
+                      {item.dates && <p className="text-xs text-slate-500">{item.dates}</p>}
+                      {item.description && <p>{item.description}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      )}      <div>
         <Link href={ROUTES.profile} className="text-sm text-slate-600 hover:text-slate-900">
           Back to profile
         </Link>

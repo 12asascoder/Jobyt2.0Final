@@ -15,7 +15,7 @@ router.use(authenticate);
  */
 router.post(
   '/orchestrate',
-  body('type').isIn(['ats_analysis', 'resume_processing', 'matching_workflow']),
+  body('type').isIn(['ats_analysis', 'resume_processing', 'matching_workflow', 'job_ingestion']),
   body('data').isObject(),
   validate,
   AIController.orchestrate
@@ -47,6 +47,13 @@ router.post(
   AIController.processResume
 );
 
+router.post(
+  '/job-parse',
+  body('rawText').isString().notEmpty(),
+  validate,
+  AIController.ingestJob
+);
+
 // Matching Workflow
 router.post(
   '/match-workflow',
@@ -58,4 +65,4 @@ router.post(
   AIController.matchWorkflow
 );
 
-export default router;
+export default router;

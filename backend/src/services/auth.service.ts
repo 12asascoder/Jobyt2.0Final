@@ -134,7 +134,7 @@ export const AuthService = {
     }
 
     // Send verification email without blocking registration response.
-    // This prevents SMTP timeouts from making the signup request appear stuck.
+    // This prevents EmailJS from making the signup request appear stuck.
     void sendEmail({
       to: email,
       subject: 'Verify your Hiring Platform account',

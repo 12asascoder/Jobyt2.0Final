@@ -80,6 +80,55 @@ Raw Job Text: "{{rawText}}"`,
   } as PromptTemplate,
 
   /**
+   * Resume Draft Generation Template
+   * Used for producing a polished candidate resume structure from profile data
+   */
+  RESUME_GENERATION: {
+    name: 'resume_generation',
+    template: `You are a professional resume writer. Convert the candidate profile data into a polished resume draft and output only valid JSON.
+
+Candidate Name: {{name}}
+Bio: {{bio}}
+Skills: {{skills}}
+Experience: {{experience}}
+Education: {{education}}
+Links: {{links}}
+
+Output a JSON object with this schema:
+{
+  "summary": "Concise professional summary",
+  "skills": ["Skill 1", "Skill 2"],
+  "experience": [
+    {
+      "company": "Company Name",
+      "role": "Role Title",
+      "dates": "Dates or period",
+      "description": "One or two bullet-style sentences describing the main outcome and responsibilities."
+    }
+  ],
+  "education": [
+    {
+      "institution": "Institution name",
+      "degree": "Degree or program",
+      "dates": "Dates or graduation year",
+      "description": "Optional short description of coursework or honors."
+    }
+  ],
+  "contact": {
+    "email": "Email if available or null",
+    "phone": "Phone number if available or null",
+    "linkedin": "LinkedIn URL if available or null",
+    "github": "GitHub URL if available or null",
+    "portfolio": "Portfolio URL if available or null"
+  }
+}
+
+Return the JSON object only, with no markdown wrappers and no extra text.`,
+    variables: ['name', 'bio', 'skills', 'experience', 'education', 'links'],
+    description: 'Generate a structured resume draft from profile data',
+  } as PromptTemplate,
+
+  /**
    * Interview Questions Generation Template
    * Used for generating role-specific interview questions
    */
@@ -141,6 +190,7 @@ Focus on practical, actionable recommendations for skill development.`,
     return [
       this.ATS_SCORING,
       this.JOB_PARSING,
+      this.RESUME_GENERATION,
       this.INTERVIEW_QUESTIONS,
       this.SKILL_GAP_ANALYSIS,
     ];
@@ -184,4 +234,4 @@ Focus on practical, actionable recommendations for skill development.`,
 
     return template.variables.every(varName => Object.prototype.hasOwnProperty.call(variables, varName));
   },
-};
+};

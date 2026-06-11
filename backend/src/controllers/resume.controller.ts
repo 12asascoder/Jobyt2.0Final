@@ -83,6 +83,32 @@ export const ResumeController = {
     }
   },
 
+  async generateDraft(req: Request, res: Response, next: NextFunction) {
+    try {
+      const draft = await ResumeService.generateResumeDraft(req.user!.userId);
+      sendSuccess(res, { draft }, 'Resume draft generated successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getLatex(req: Request, res: Response, next: NextFunction) {
+    try {
+      const draft = await ResumeService.generateResumeDraft(req.user!.userId);
+      const latex = ResumeService.renderResumeLatex(draft);
+      const download = req.query.download === 'true';
+      if (download) {
+        res.setHeader('Content-Type', 'application/x-tex');
+        res.setHeader('Content-Disposition', 'attachment; filename="resume.tex"');
+      } else {
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      }
+      res.send(latex);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getSecureUrl(req: Request, res: Response, next: NextFunction) {
     try {
       // route is /:userId/resumes/:id/secure-url or similar

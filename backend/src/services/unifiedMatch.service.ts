@@ -69,7 +69,56 @@ function scoreEducation(
   return { score, overlap };
 }
 
+/**
+ * Compute job-specific text overlap between resume text and job description.
+ *
+ * Used ONLY inside UnifiedMatchService for the `finalMatchScore` calculation.
+ * This replaces the old ATS section score usage — since ATSService now returns
+ * job-independent resume quality scores, job-specific overlap must be computed
+ * separately here.
+ *
+ * Uses BM25-style saturation (k=0.3) to prevent score collapse caused by
+ * vocabulary mismatch between concise resumes and verbose job descriptions.
+ * Example: a resume with 20% token overlap will score ~45 instead of 20.
+ */
+function scoreJobTextOverlap(resumeText: string, jobDescription: string): number {
+  if (!resumeText?.trim() || !jobDescription?.trim()) return 0;
+
+  const stopwords = new Set([
+    'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was',
+    'one', 'our', 'out', 'has', 'have', 'been', 'will', 'with', 'that', 'this', 'from',
+    'they', 'would', 'make', 'like', 'just', 'over', 'such', 'take', 'than', 'them',
+    'very', 'some', 'could', 'what', 'there', 'their', 'about', 'which', 'when',
+    'were', 'into', 'more', 'other', 'your', 'able', 'work', 'team', 'role', 'years',
+    'year', 'experience', 'working',
+  ]);
+
+  const tokenize = (text: string): Set<string> =>
+    new Set(
+      text.toLowerCase()
+        .replace(/[^a-z0-9#+.\s]/g, ' ')
+        .split(/\s+/)
+        .filter(t => t.length >= 2 && !stopwords.has(t)),
+    );
+
+  const resumeTokens = tokenize(resumeText);
+  const jobTokens = tokenize(jobDescription);
+  if (jobTokens.size === 0) return 0;
+
+  let overlap = 0;
+  for (const token of jobTokens) {
+    if (resumeTokens.has(token)) overlap++;
+  }
+
+  const ratio = overlap / jobTokens.size;
+  // BM25 saturation k=0.3 — prevents score collapse for legitimate vocabulary mismatch
+  const k = 0.3;
+  const saturated = (ratio * (1 + k)) / (ratio + k);
+  return Math.round(Math.min(100, saturated * 100));
+}
+
 export const UnifiedMatchService = {
+
   /**
    * Run the unified hybrid scoring pipeline for a given application.
    */
@@ -147,12 +196,13 @@ export const UnifiedMatchService = {
         }
       }
 
-      // 3. Compute baseline metrics using ATSService helpers
+      // 3. Compute resume quality baseline (job-independent ATS score)
       const baseline = ATSService.calculateATSScore(
         {
           skills: candidateSkills,
           experienceText: candidateExperienceText,
           fullText: candidateFullText,
+          education: candidateEducation,
         },
         {
           skills: jobSkills,
@@ -160,8 +210,17 @@ export const UnifiedMatchService = {
         }
       );
 
-      // 4. Compute education score (5% weight)
+      // 4. Compute education score (5% weight in finalMatchScore)
       const eduResult = scoreEducation(candidateEducation, jobDescription);
+
+      // 4b. Compute job-specific text overlap for finalMatchScore components.
+      //     These are SEPARATE from baseline.sectionScores (which are now resume quality).
+      const jobExpOverlapScore  = scoreJobTextOverlap(candidateExperienceText, jobDescription);
+      const jobKwOverlapScore   = scoreJobTextOverlap(candidateFullText, jobDescription);
+
+      // 4c. Compute job-specific skill match (used for finalMatchScore AND explainability)
+      const skillMatchDetail = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
+      const fuzzyMatchedSkills: FuzzyMatch[] = (skillMatchDetail as any).fuzzyMatches || [];
 
       // 5. Attempt semantic scoring
       let semanticScore = 0;
@@ -195,33 +254,32 @@ export const UnifiedMatchService = {
         console.warn(`${LOG_PREFIX} Semantic scoring failed, using keyword fallback:`, err);
       }
 
-      // 6. Compute hybrid score using correct weights
+      // 6. Compute hybrid finalMatchScore using job-specific components.
+      //    NOTE: baseline.sectionScores are now resume-quality metrics (job-independent).
+      //    We use skillMatchDetail.matchPercentage and jobXxxOverlapScore for job-specific fit.
       let finalMatchScore = 0;
       if (embeddingAvailable) {
-        // Spec: semantic: 35%, skills: 30%, experience: 20%, keywords: 10%, education: 5%
+        // With embeddings: semantic=35%, skills=30%, experience=20%, keywords=10%, education=5%
         finalMatchScore = Math.round(
-          semanticScore * 0.35 +
-          baseline.sectionScores.skillsScore * 0.30 +
-          baseline.sectionScores.experienceScore * 0.20 +
-          baseline.sectionScores.keywordsScore * 0.10 +
-          eduResult.score * 0.05
+          semanticScore                      * 0.35 +
+          skillMatchDetail.matchPercentage   * 0.30 +
+          jobExpOverlapScore                 * 0.20 +
+          jobKwOverlapScore                  * 0.10 +
+          eduResult.score                    * 0.05
         );
       } else {
-        // Fallback spec: skills: 50%, experience: 30%, keywords: 15%, education: 5%
+        // Fallback: skills=50%, experience=30%, keywords=15%, education=5%
         finalMatchScore = Math.round(
-          baseline.sectionScores.skillsScore * 0.50 +
-          baseline.sectionScores.experienceScore * 0.30 +
-          baseline.sectionScores.keywordsScore * 0.15 +
-          eduResult.score * 0.05
+          skillMatchDetail.matchPercentage   * 0.50 +
+          jobExpOverlapScore                 * 0.30 +
+          jobKwOverlapScore                  * 0.15 +
+          eduResult.score                    * 0.05
         );
       }
 
       // Ensure score is bounded between 0 and 100
       finalMatchScore = Math.max(0, Math.min(100, finalMatchScore));
 
-      // 7. Get fuzzy match details for skill explainability
-      const skillMatchDetail = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
-      const fuzzyMatchedSkills: FuzzyMatch[] = (skillMatchDetail as any).fuzzyMatches || [];
 
       // 8. Generate dynamic recommendations
       const recommendations: string[] = [];

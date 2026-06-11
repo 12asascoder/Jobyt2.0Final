@@ -1,6 +1,6 @@
-import nodemailer from 'nodemailer';
+import emailjs from '@emailjs/nodejs';
 
-// Email utility — SMTP integration
+// Email utility — EmailJS integration
 
 interface EmailOptions {
   to: string;
@@ -8,135 +8,64 @@ interface EmailOptions {
   html: string;
 }
 
-let testAccountPromise: Promise<nodemailer.TestAccount> | null = null;
-
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
   if (process.env.NODE_ENV === 'test') return;
 
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || '587');
-  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const from = process.env.EMAIL_FROM || '"Hiring Platform" <noreply@hiringplatform.local>';
-  const connectionTimeout = Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || '30000');
-  const greetingTimeout = Number(process.env.SMTP_GREETING_TIMEOUT_MS || '15000');
-  const fallbackEnabled = process.env.SMTP_FALLBACK_ENABLED !== 'false';
+  const serviceId = process.env.EMAILJS_SERVICE_ID;
+  const templateId = process.env.EMAILJS_TEMPLATE_ID;
+  const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+  const privateKey = process.env.EMAILJS_PRIVATE_KEY;
 
-  if (!host || !user || !pass) {
-    console.log(`\n📧 [DEV EMAIL] SMTP config missing. Falling back to Ethereal Email.`);
-    try {
-      if (!testAccountPromise) {
-        testAccountPromise = nodemailer.createTestAccount();
+  if (!serviceId || !templateId || !publicKey || !privateKey) {
+    console.log(`\n📧 [DEV EMAIL] EmailJS config missing. Email not sent.`);
+    console.log(`   To:      ${options.to}`);
+    console.log(`   Subject: ${options.subject}`);
+    
+    // Extract links for password reset / email verification
+    const links = options.html.match(/href="([^"]+)"/g);
+    if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
+
+    // Extract OTP if present (typically 6 digits in this app)
+    const otpMatch = options.html.match(/>(\d{6})</);
+    if (otpMatch) {
+      console.log(`   OTP:     ${otpMatch[1]}`);
+    } else {
+      // Print a clean version of the HTML body so developers can read any other notifications
+      const cleanBody = options.html.replace(/<[^>]*>?/gm, '').trim();
+      console.log(`   Body:    ${cleanBody.substring(0, 500)}${cleanBody.length > 500 ? '...' : ''}`);
+    }
+    
+    console.log(`────────────────────────────────────────────────\n`);
+    return;
+  }
+
+  try {
+    const templateParams = {
+      to_email: options.to,
+      subject: options.subject,
+      html_content: options.html,
+    };
+
+    await emailjs.send(
+      serviceId,
+      templateId,
+      templateParams,
+      {
+        publicKey: publicKey,
+        privateKey: privateKey,
       }
-      const testAccount = await testAccountPromise;
+    );
 
-      const transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-
-      const info = await transporter.sendMail({
-        from,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-      });
-
-      console.log(`\n📧 [DEV EMAIL] ─────────────────────────────────`);
-      console.log(`   To:      ${options.to}`);
-      console.log(`   Subject: ${options.subject}`);
-      console.log(`   Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
-      const links = options.html.match(/href="([^"]+)"/g);
-      if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
-      console.log(`────────────────────────────────────────────────\n`);
-    } catch (err) {
-      console.error('Failed to send Ethereal email:', err);
-      // Fallback to console print if ethereal fails
-      console.log(`\n📧 [DEV EMAIL] ─────────────────────────────────`);
-      console.log(`   To:      ${options.to}`);
-      console.log(`   Subject: ${options.subject}`);
-      const links = options.html.match(/href="([^"]+)"/g);
-      if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
-      console.log(`   Note:    SMTP env vars missing, email not sent.`);
-      console.log(`────────────────────────────────────────────────\n`);
-    }
-    return;
+    console.log(`\n📧 [EMAILJS] ─────────────────────────────────`);
+    console.log(`   To:      ${options.to}`);
+    console.log(`   Subject: ${options.subject}`);
+    const links = options.html.match(/href="([^"]+)"/g);
+    if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
+    console.log(`────────────────────────────────────────────────\n`);
+  } catch (err) {
+    console.error('\n📧 [EMAILJS ERROR] Email delivery failed');
+    console.error(err);
   }
-
-  const attempts: Array<{ host: string; port: number; secure: boolean }> = [
-    { host, port, secure },
-  ];
-
-  if (fallbackEnabled) {
-    // Common fallback for providers where 465 may be blocked from some hosts.
-    if (!(port === 587 && secure === false)) {
-      attempts.push({ host, port: 587, secure: false });
-    }
-
-    // Zoho DC fallback (in case tenant is on another DC endpoint).
-    if (host === 'smtp.zoho.in') {
-      attempts.push({ host: 'smtp.zoho.com', port: 587, secure: false });
-    } else if (host === 'smtp.zoho.com') {
-      attempts.push({ host: 'smtp.zoho.in', port: 587, secure: false });
-    }
-  }
-
-  let lastError: unknown = null;
-
-  for (const attempt of attempts) {
-    const transporter = nodemailer.createTransport({
-      host: attempt.host,
-      port: attempt.port,
-      secure: attempt.secure,
-      connectionTimeout,
-      greetingTimeout,
-      auth: {
-        user,
-        pass,
-      },
-      tls: {
-        servername: attempt.host,
-        minVersion: 'TLSv1.2',
-      },
-    });
-
-    try {
-      await transporter.sendMail({
-        from,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-      });
-      lastError = null;
-      break;
-    } catch (err) {
-      lastError = err;
-      const code = (err as { code?: string }).code || 'UNKNOWN';
-      console.error(
-        `\n📧 [SMTP ERROR] attempt failed host=${attempt.host} port=${attempt.port} secure=${attempt.secure} code=${code}`,
-      );
-    }
-  }
-
-  if (lastError) {
-    console.error('\n📧 [SMTP ERROR] Email delivery failed after all attempts');
-    console.error(lastError);
-    return;
-  }
-
-  console.log(`\n📧 [DEV EMAIL] ─────────────────────────────────`);
-  console.log(`   To:      ${options.to}`);
-  console.log(`   Subject: ${options.subject}`);
-  // Extract any href links from html so the dev can click them
-  const links = options.html.match(/href="([^"]+)"/g);
-  if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
-  console.log(`────────────────────────────────────────────────\n`);
 };
 
 export const verificationEmailHtml = (name: string, token: string): string => `
