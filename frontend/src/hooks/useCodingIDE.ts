@@ -18,11 +18,13 @@ export function useCodingIDE({ problemVersionId, practiceSessionId, assessmentSe
   const [code, setCode] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState(false);
   const [runResults, setRunResults] = useState<RunResult[]>([]);
   const [submissions, setSubmissions] = useState<CodingSubmission[]>([]);
   const [evaluation, setEvaluation] = useState<CodeEvaluation | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollStartTime = useRef<number>(0);
 
   useEffect(() => {
     const load = async () => {
@@ -78,24 +80,44 @@ export function useCodingIDE({ problemVersionId, practiceSessionId, assessmentSe
 
   const pollSubmission = useCallback((submissionId: string) => {
     if (pollRef.current) clearInterval(pollRef.current);
+    pollStartTime.current = Date.now();
+    setIsEvaluating(true);
+    setEvaluation(null);
+
     pollRef.current = setInterval(async () => {
       try {
         const res = await CodingApi.getSubmission(submissionId);
         const sub = res.data;
         if (!sub) return;
+
         if (sub.status === 'completed' || sub.status === 'failed') {
-          if (pollRef.current) clearInterval(pollRef.current);
           setSubmissions((prev) => [sub, ...prev.filter((s) => s.id !== sub.id)]);
-          if (sub.evaluation) setEvaluation(sub.evaluation);
-          else {
+          
+          let evalData = sub.evaluation;
+          if (!evalData) {
             const evalRes = await CodingApi.getEvaluation(submissionId);
-            if (evalRes.data) setEvaluation(evalRes.data);
+            if (evalRes.data) evalData = evalRes.data;
           }
-          onSubmitComplete?.(sub);
-          toast.success(sub.passed ? 'All tests passed!' : 'Submission evaluated');
+
+          if (evalData) {
+            if (pollRef.current) clearInterval(pollRef.current);
+            setEvaluation(evalData);
+            setIsEvaluating(false);
+            onSubmitComplete?.(sub);
+            toast.success(sub.passed ? 'All tests passed!' : 'Submission evaluated');
+          } else {
+            // Check timeout (45 seconds)
+            if (Date.now() - pollStartTime.current > 45000) {
+              if (pollRef.current) clearInterval(pollRef.current);
+              setIsEvaluating(false);
+              onSubmitComplete?.(sub);
+              toast.success(sub.passed ? 'All tests passed! (AI feedback unavailable)' : 'Submission evaluated');
+            }
+            // Otherwise, keep polling...
+          }
         }
       } catch { /* keep polling */ }
-    }, 2000);
+    }, 2500);
   }, [onSubmitComplete]);
 
   const handleSubmit = useCallback(async () => {
@@ -132,6 +154,7 @@ export function useCodingIDE({ problemVersionId, practiceSessionId, assessmentSe
     handleSubmit,
     isRunning,
     isSubmitting,
+    isEvaluating,
     runResults,
     submissions,
     evaluation,

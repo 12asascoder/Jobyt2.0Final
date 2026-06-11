@@ -101,6 +101,7 @@ export default function AssessmentIDEPage({ params }: { params: Promise<{ sessio
         onSubmit={ide.handleSubmit}
         isRunning={ide.isRunning}
         isSubmitting={ide.isSubmitting}
+        isEvaluating={ide.isEvaluating}
         runResults={ide.runResults}
         submissions={ide.submissions}
         evaluation={ide.evaluation}
