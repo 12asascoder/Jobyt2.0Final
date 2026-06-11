@@ -57,6 +57,7 @@ export const ROUTES = {
   roadmapDetail: (slug: string) => `/roadmaps/${slug}`,
   resumeDetail: (id: string) => `/resumes/${id}`,
   messageThread: (id: string) => `/messages/${id}`,
+  resumeBuilder: '/resume-builder',
   // Recruiter
   recruiterDashboard: '/recruiter/dashboard',
   recruiterJobs: '/recruiter/jobs',

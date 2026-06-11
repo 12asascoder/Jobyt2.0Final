@@ -32,8 +32,9 @@ const applicantNav: NavItem[] = [
     { label: 'Saved Jobs', href: ROUTES.savedJobs, icon: FaBookmark },
     { label: 'Messages', href: ROUTES.messages, icon: FaComments },
     { label: 'Referrals', href: ROUTES.referral, icon: FaGift },
-        { label: 'Community', href: ROUTES.community, icon: FaUsers },
+    { label: 'Community', href: ROUTES.community, icon: FaUsers },
     { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
+    { label: 'Resume Builder', href: ROUTES.resumeBuilder, icon: FaFileLines },
     { label: 'Profile', href: ROUTES.profile, icon: FaCircleUser },
 ];
 
