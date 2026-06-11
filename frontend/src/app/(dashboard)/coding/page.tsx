@@ -57,7 +57,7 @@ export default function CodingHubPage() {
         {/* Stats Boxes */}
         {progress && (
           <div className="flex flex-wrap gap-5">
-            <div className="bg-[#141414] rounded-2xl px-7 py-5 flex items-center gap-5 min-w-[200px] shadow-sm hover:scale-105 transition-transform cursor-default">
+            <div className="bg-[#141414] rounded-2xl px-7 py-5 flex items-center gap-5 min-w-[200px] shadow-sm cursor-default">
               <span className="text-5xl font-extrabold text-[#c3ff3d] leading-none tracking-tight">
                 {progress.solved}
               </span>
@@ -65,7 +65,7 @@ export default function CodingHubPage() {
                 Problems<br />Solved
               </span>
             </div>
-            <div className="bg-[#141414] rounded-2xl px-7 py-5 flex items-center gap-5 min-w-[200px] shadow-sm hover:scale-105 transition-transform cursor-default">
+            <div className="bg-[#141414] rounded-2xl px-7 py-5 flex items-center gap-5 min-w-[200px] shadow-sm cursor-default">
               <span className="text-5xl font-extrabold text-[#c3ff3d] leading-none tracking-tight">
                 {accuracy}
               </span>
@@ -73,7 +73,7 @@ export default function CodingHubPage() {
                 Accuracy<br />Rate (%)
               </span>
             </div>
-            <div className="bg-[#141414] rounded-2xl px-7 py-5 flex items-center gap-5 min-w-[200px] shadow-sm hover:scale-105 transition-transform cursor-default">
+            <div className="bg-[#141414] rounded-2xl px-7 py-5 flex items-center gap-5 min-w-[200px] shadow-sm cursor-default">
               <span className="text-5xl font-extrabold text-[#c3ff3d] leading-none tracking-tight">
                 {progress.totalAttempts}
               </span>
@@ -106,21 +106,15 @@ export default function CodingHubPage() {
         </div>
 
         {/* Placeholder / Featured Design Card */}
-        <div className="glass-card rounded-2xl p-8 flex flex-col justify-between border border-[#c3ff3d]/30 bg-gradient-to-br from-[#0b1120] to-[#1a253a] relative overflow-hidden group">
+        <div className="glass-card rounded-2xl p-8 flex flex-col justify-center items-center border border-[#c3ff3d]/30 bg-gradient-to-br from-[#0b1120] to-[#1a253a] relative overflow-hidden">
           {/* Decorative background glow */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#c3ff3d]/10 blur-3xl rounded-full"></div>
           
-          <div className="relative z-10">
-            <div className="w-12 h-12 rounded-xl bg-[#c3ff3d]/20 text-[#c3ff3d] flex items-center justify-center mb-6">
-              <Play className="w-6 h-6" fill="currentColor" />
+          <div className="relative z-10 flex flex-col items-center text-center">
+            <h2 className="text-2xl font-bold text-white mb-2">Weekly Challenge</h2>
+            <div className="mt-4 px-4 py-1.5 rounded-full border border-[#c3ff3d]/30 bg-[#c3ff3d]/10 text-[#c3ff3d] text-sm font-semibold tracking-wide">
+              Coming soon
             </div>
-            <h2 className="text-2xl font-bold text-white mb-3">Weekly Challenge</h2>
-            <p className="text-slate-300 leading-relaxed mb-8 text-sm">
-              Compete in our curated weekly algorithm challenge. Earn badges and improve your global ranking.
-            </p>
-          </div>
-          <div className="relative z-10 inline-flex items-center w-fit text-[#c3ff3d] font-semibold opacity-80 cursor-not-allowed">
-            Coming Soon
           </div>
         </div>
 
