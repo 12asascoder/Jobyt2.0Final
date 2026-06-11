@@ -59,6 +59,7 @@ export const ROUTES = {
   resumeDetail: (id: string) => `/resumes/${id}`,
   messageThread: (id: string) => `/messages/${id}`,
   resumeBuilder: '/resume-builder',
+  coach: '/coach',
   // Recruiter
   recruiterDashboard: '/recruiter/dashboard',
   recruiterJobs: '/recruiter/jobs',

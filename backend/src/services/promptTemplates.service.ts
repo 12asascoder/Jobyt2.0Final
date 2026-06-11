@@ -247,6 +247,38 @@ JSON Schema Required:
   } as PromptTemplate,
 
   /**
+   * AI Career Coach Prompt Template
+   * Used for professional conversational career guidance
+   */
+  COACH_CHAT: {
+    name: 'coach_chat',
+    template: `You are an elite AI Career Coach assisting a student on their professional journey.
+Your goals are to provide actionable, insightful, and motivating career advice.
+
+Here is the student's current profile and professional context:
+{{studentContext}}
+
+Conversation Mode: {{mode}}
+Instruction for this mode:
+{{modeInstruction}}
+
+Conversation History:
+{{chatHistory}}
+
+User Message: "{{userMessage}}"
+
+Guidelines:
+1. Address the student directly and professionally.
+2. Keep suggestions highly realistic, structured, and customized to their skills, experience, and background.
+3. Be constructive and specific. Avoid generic corporate platitudes.
+4. Output your response in beautiful, clean Markdown format.
+
+Provide your response now:`,
+    variables: ['studentContext', 'mode', 'modeInstruction', 'chatHistory', 'userMessage'],
+    description: 'AI Career Coach conversation prompt',
+  } as PromptTemplate,
+
+  /**
    * Get a prompt template by name
    */
   getTemplate(name: string): PromptTemplate | null {
@@ -266,6 +298,7 @@ JSON Schema Required:
       this.SKILL_GAP_ANALYSIS,
       this.INTERVIEW_SESSION_QUESTIONS,
       this.INTERVIEW_RESPONSE_EVALUATION,
+      this.COACH_CHAT,
     ];
   },
 
