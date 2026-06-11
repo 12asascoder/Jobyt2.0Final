@@ -42,6 +42,12 @@ export const ROUTES = {
   resetPassword: '/reset-password',
   // Applicant
   dashboard: '/dashboard',
+  coding: '/coding',
+  codingPractice: '/coding/practice',
+  codingPracticeProblem: (problemVersionId: string) => `/coding/practice/${problemVersionId}`,
+  codingAssessment: (sessionId: string) => `/coding/assessment/${sessionId}`,
+  codingSubmissions: '/coding/submissions',
+  codingSubmissionDetail: (id: string) => `/coding/submissions/${id}`,
   profile: '/profile',
   jobs: '/jobs',
   internships: '/internships',

@@ -309,7 +309,7 @@ export const AIService = {
         `generateText(${model})`,
       );
 
-      const text = result.data?.choices?.[0]?.message?.content;
+      const text = result.text;
       if (!text) {
         console.warn(`${LOG_PREFIX} Empty response from ${model}`);
         recordFailure(circuitKey);
