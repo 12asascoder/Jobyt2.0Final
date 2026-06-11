@@ -53,5 +53,3 @@ async function startServer() {
 }
 
 startServer();
-
-// nodemon trigger

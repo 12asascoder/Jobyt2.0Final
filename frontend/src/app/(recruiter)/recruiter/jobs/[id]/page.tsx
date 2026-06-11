@@ -56,6 +56,7 @@ export default function RecruiterJobDetailPage() {
     salary_max: '',
     description: '',
     skills: '',
+    disallow_auto_apply: false,
   });
   const [assessments, setAssessments] = useState<CodingAssessment[]>([]);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
@@ -75,6 +76,7 @@ export default function RecruiterJobDetailPage() {
           salary_max: payload.salary_max?.toString() ?? '',
           description: payload.description,
           skills: payload.skills.join(', '),
+          disallow_auto_apply: Boolean(payload.disallow_auto_apply),
         });
         setQuestions(Array.isArray(payload.application_questions) ? payload.application_questions : []);
       })
@@ -118,6 +120,7 @@ export default function RecruiterJobDetailPage() {
         salary_max: form.salary_max ? Number(form.salary_max) : undefined,
         description: form.description,
         skills: form.skills.split(',').map((s) => s.trim()).filter(Boolean),
+        disallow_auto_apply: form.disallow_auto_apply,
         application_questions: questions
           .map((question) => ({
             ...question,
@@ -348,6 +351,21 @@ export default function RecruiterJobDetailPage() {
                         className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[16px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all resize-none"
                     />
                 </div>
+
+                <label className="flex items-start gap-3 cursor-pointer rounded-2xl border border-black/5 bg-white p-4">
+                  <input
+                    type="checkbox"
+                    checked={form.disallow_auto_apply}
+                    onChange={(e) => setForm((prev) => ({ ...prev, disallow_auto_apply: e.target.checked }))}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="text-sm font-black text-black block">Disable Auto-Apply for this listing</span>
+                    <span className="text-xs text-black/50 font-semibold">
+                      Candidates using Auto-Apply will not be matched to this job. Manual applications are still accepted.
+                    </span>
+                  </span>
+                </label>
             </div>
 
             <hr className="border-black/5" />

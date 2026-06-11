@@ -154,6 +154,41 @@ Generate exactly 5 questions that would help evaluate a candidate's fit for this
    * Skill Gap Analysis Template
    * Used for analyzing skill gaps between user and job requirements
    */
+  RESUME_TAILORING: {
+    name: 'resume_tailoring',
+    template: `You are a resume editor. Tailor the candidate resume for the job WITHOUT fabricating credentials.
+
+Rules (strict):
+- NEVER add employers, job titles, dates, degrees, certifications, or skills not present in the source resume.
+- Only rephrase, reorder, or emphasize existing content for relevance.
+- Output valid JSON only.
+
+Source Resume JSON:
+{{resumeJson}}
+
+Job Description:
+{{jobDescription}}
+
+Job Skills:
+{{jobSkills}}
+
+Output JSON schema:
+{
+  "tailoredSections": {
+    "summary": "string",
+    "skills": ["string"],
+    "experience": [{ "company": "string", "role": "string", "dates": "string", "bullets": ["string"] }],
+    "education": [{ "institution": "string", "degree": "string", "dates": "string" }]
+  },
+  "changeLog": ["brief description of each change"],
+  "fabricatedRisk": false
+}
+
+Set fabricatedRisk to true if you added any entity not in the source.`,
+    variables: ['resumeJson', 'jobDescription', 'jobSkills'],
+    description: 'Tailor resume content for a specific job without credential fabrication',
+  } as PromptTemplate,
+
   SKILL_GAP_ANALYSIS: {
     name: 'skill_gap_analysis',
     template: `Analyze the skill gap between a candidate's current skills and job requirements.
@@ -191,6 +226,7 @@ Focus on practical, actionable recommendations for skill development.`,
       this.ATS_SCORING,
       this.JOB_PARSING,
       this.RESUME_GENERATION,
+      this.RESUME_TAILORING,
       this.INTERVIEW_QUESTIONS,
       this.SKILL_GAP_ANALYSIS,
     ];

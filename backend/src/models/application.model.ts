@@ -40,12 +40,18 @@ export interface Application {
 let resumeIdColumnExists: boolean | null = null;
 let applicationAnswersColumnExists: boolean | null = null;
 let atsScoreColumnExists: boolean | null = null;
+let submissionSourceColumnExists: boolean | null = null;
 
 
-async function hasColumn(columnName: 'resume_id' | 'application_answers' | 'ats_score', client?: PoolClient): Promise<boolean> {
-  const cached = columnName === 'resume_id' ? resumeIdColumnExists : 
-                 columnName === 'application_answers' ? applicationAnswersColumnExists :
-                 atsScoreColumnExists;
+async function hasColumn(
+  columnName: 'resume_id' | 'application_answers' | 'ats_score' | 'submission_source',
+  client?: PoolClient,
+): Promise<boolean> {
+  const cached =
+    columnName === 'resume_id' ? resumeIdColumnExists :
+    columnName === 'application_answers' ? applicationAnswersColumnExists :
+    columnName === 'ats_score' ? atsScoreColumnExists :
+    submissionSourceColumnExists;
   if (cached !== null) return cached;
 
   const db = client ?? pool;
@@ -63,6 +69,7 @@ async function hasColumn(columnName: 'resume_id' | 'application_answers' | 'ats_
   if (columnName === 'resume_id') resumeIdColumnExists = exists;
   if (columnName === 'application_answers') applicationAnswersColumnExists = exists;
   if (columnName === 'ats_score') atsScoreColumnExists = exists;
+  if (columnName === 'submission_source') submissionSourceColumnExists = exists;
   return exists;
 }
 
@@ -154,6 +161,7 @@ export const ApplicationModel = {
       resume_snapshot_url?: string;
       ats_score?: number | null;
       ats_breakdown?: object | null;
+      submission_source?: 'manual' | 'auto_apply';
     },
     client?: PoolClient,
   ): Promise<Application> {
@@ -161,6 +169,7 @@ export const ApplicationModel = {
     const hasResumeId = await hasColumn('resume_id', client);
     const hasAnswers = await hasColumn('application_answers', client);
     const hasAtsScore = await hasColumn('ats_score', client);
+    const hasSubmissionSource = await hasColumn('submission_source', client);
     const answers = normalizeAnswers(data.application_answers);
 
     const columns = ['job_id', 'applicant_id', 'cover_letter', 'resume_snapshot_url'];
@@ -186,6 +195,11 @@ export const ApplicationModel = {
       values.push(data.ats_score ?? null);
       columns.push('ats_breakdown');
       values.push(data.ats_breakdown ? JSON.stringify(data.ats_breakdown) : null);
+    }
+
+    if (hasSubmissionSource) {
+      columns.push('submission_source');
+      values.push(data.submission_source || 'manual');
     }
 
     const placeholders = columns.map((_, index) => `$${index + 1}`).join(',');

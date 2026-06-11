@@ -94,6 +94,7 @@ export interface Job {
   is_external_company?: boolean;
   source?: 'admin_external' | 'recruiter' | 'admin_company';
   created_at: string;
+  disallow_auto_apply?: boolean;
   /** Selection Probability: 0–100 score derived from SkillMatchingService (candidate-facing only) */
   selectionProbability?: number;
 }
@@ -129,6 +130,7 @@ export interface Application {
   application_answers?: Array<{ question_id: string; answer: string }>;
   cover_letter: string | null;
   resume_snapshot_url: string | null;
+  submission_source?: 'manual' | 'auto_apply';
   ats_score?: number | null;
   ats_breakdown?: ATSBreakdown | null;
   // AI Insights fields (TRACK-U3/U4/U5)

@@ -66,7 +66,7 @@ export const AssessmentSessionService = {
 
     return CodingModel.updateSession(sessionId, {
       remaining_time_seconds: remaining ?? undefined,
-      last_heartbeat_at: new Date() as unknown as AssessmentSession['last_heartbeat_at'],
+      last_heartbeat_at: new Date(),
       status: 'active',
     });
   },
@@ -78,9 +78,22 @@ export const AssessmentSessionService = {
     if (!version.allow_resume) throw badRequest('Resume is not allowed for this assessment');
     if (session.status === 'expired') throw badRequest('Session has expired');
 
+    // Recalculate remaining time against wall clock (same logic as heartbeat)
+    let remaining = session.remaining_time_seconds;
+    if (session.last_heartbeat_at && remaining !== null) {
+      const elapsed = Math.floor((Date.now() - new Date(session.last_heartbeat_at).getTime()) / 1000);
+      remaining = Math.max(0, remaining - elapsed);
+    }
+
+    if (remaining !== null && remaining <= 0) {
+      await CodingModel.updateSession(sessionId, { status: 'expired', remaining_time_seconds: 0 });
+      throw badRequest('Assessment session has expired');
+    }
+
     return CodingModel.updateSession(sessionId, {
       status: 'active',
-      last_heartbeat_at: new Date() as unknown as AssessmentSession['last_heartbeat_at'],
+      last_heartbeat_at: new Date(),
+      remaining_time_seconds: remaining ?? undefined,
     });
   },
 
@@ -108,9 +121,16 @@ export const AssessmentSessionService = {
 
   async complete(sessionId: string, userId: string) {
     const session = await this.getSession(sessionId, userId);
+    // Idempotency guard: if already submitted or completed, return current state
+    if (session.status === 'submitted' || session.status === 'completed') {
+      return CodingModel.findSessionById(sessionId);
+    }
+    if (session.status !== 'active') {
+      throw badRequest(`Session cannot be completed in status: ${session.status}`);
+    }
     await CodingModel.updateSession(sessionId, {
       status: 'submitted',
-      completed_at: new Date() as unknown as AssessmentSession['completed_at'],
+      completed_at: new Date(),
     });
     return (await CodingModel.tryFinalizeAssessmentSession(sessionId)) ?? CodingModel.findSessionById(sessionId);
   },
@@ -125,12 +145,8 @@ export const AssessmentSessionService = {
     const assessment = await CodingModel.findAssessmentById(version.assessment_id);
     if (!assessment || assessment.recruiter_id !== recruiterId) throw forbidden();
 
-    const { rows } = await (await import('../config/database')).default.query(
-      `SELECT * FROM coding_submissions WHERE assessment_session_id = $1 ORDER BY created_at`,
-      [sessionId],
-    );
-
-    return { session, submissions: rows };
+    const submissions = await CodingModel.listSubmissionsBySession(sessionId);
+    return { session, submissions };
   },
 
   async listSessionsForVersion(versionId: string, recruiterId: string) {
@@ -140,16 +156,6 @@ export const AssessmentSessionService = {
     const assessment = await CodingModel.findAssessmentById(version.assessment_id);
     if (!assessment || assessment.recruiter_id !== recruiterId) throw forbidden();
 
-    const { rows } = await (await import('../config/database')).default.query(
-      `SELECT s.*, u.email, ap.name
-       FROM assessment_sessions s
-       INNER JOIN users u ON u.id = s.user_id
-       LEFT JOIN applicant_profiles ap ON ap.user_id = s.user_id
-       WHERE s.assessment_version_id = $1
-       ORDER BY s.started_at DESC`,
-      [versionId],
-    );
-
-    return rows;
+    return CodingModel.listSessionsForVersionWithUser(versionId);
   },
 };
