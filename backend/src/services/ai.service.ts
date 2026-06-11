@@ -24,6 +24,7 @@ import { aiConfig } from '../config/ai.config';
 import { AIProvider } from './ai/interfaces/aiProvider.interface';
 import { GroqProvider } from './ai/providers/groq.provider';
 import { GrokProvider } from './ai/providers/grok.provider';
+import { ClaudeProvider } from './ai/providers/claude.provider';
 import { EmbeddingProviderResolver } from './ai/providers/embedding.provider';
 
 const LOG_PREFIX = '[AI]';
@@ -252,6 +253,19 @@ function getGrokProvider(): AIProvider | null {
   return grokProvider;
 }
 
+let claudeProvider: AIProvider | null = null;
+function getClaudeProvider(): AIProvider | null {
+  if (!aiConfig.anthropicApiKey) return null;
+  if (!claudeProvider) {
+    claudeProvider = new ClaudeProvider(
+      aiConfig.anthropicApiKey,
+      aiConfig.anthropicModel,
+      aiConfig.defaultTemperature,
+    );
+  }
+  return claudeProvider;
+}
+
 
 
 // ── Public API ───────────────────────────────────────────────────────────────
@@ -263,22 +277,29 @@ export const AIService = {
    */
   async generateText(
     prompt: string,
-    options?: { temperature?: number; responseMimeType?: string; provider?: 'grok' | 'groq' },
+    options?: { temperature?: number; responseMimeType?: string; provider?: 'grok' | 'groq' | 'claude' },
   ): Promise<string | null> {
     const providerChoice = options?.provider;
-    const model = providerChoice === 'grok' ? aiConfig.xaiModel : aiConfig.textModel;
+    const model =
+      providerChoice === 'grok'
+        ? aiConfig.xaiModel
+        : providerChoice === 'claude'
+        ? aiConfig.anthropicModel
+        : aiConfig.textModel;
     const circuitKey = `text:${providerChoice ?? 'groq'}:${model}`;
     const startMs = Date.now();
-
+ 
     // Allow provider-specific availability: Groq remains the default configured provider.
     if (isCircuitOpen(circuitKey)) {
       console.warn(`${LOG_PREFIX} Circuit OPEN for ${model} — skipping text generation`);
       return null;
     }
-
+ 
     let provider: AIProvider | null = null;
     if (providerChoice === 'grok') {
       provider = getGrokProvider();
+    } else if (providerChoice === 'claude') {
+      provider = getClaudeProvider();
     } else {
       provider = getGroqProvider();
     }
@@ -320,8 +341,17 @@ export const AIService = {
       const isAuth = isAuthError(message);
       if (isAuth) {
         isAuthFailed = true;
-        const authProvider = providerChoice === 'grok' ? 'Grok' : 'Groq';
-        console.warn(`${LOG_PREFIX} ${authProvider} Authentication Failed: Invalid API Key. Please verify ${providerChoice === 'grok' ? 'XAI_API_KEY' : 'GROQ_API_KEY'} in .env.`);
+        const authProvider =
+          providerChoice === 'grok' ? 'Grok' : providerChoice === 'claude' ? 'Claude' : 'Groq';
+        console.warn(
+          `${LOG_PREFIX} ${authProvider} Authentication Failed: Invalid API Key. Please verify ${
+            providerChoice === 'grok'
+              ? 'XAI_API_KEY'
+              : providerChoice === 'claude'
+              ? 'ANTHROPIC_API_KEY'
+              : 'GROQ_API_KEY'
+          } in .env.`,
+        );
         tripCircuit(circuitKey);
       } else {
         recordFailure(circuitKey);
@@ -350,7 +380,7 @@ export const AIService = {
    * Uses response_format: { type: 'json_object' } for structured output.
    * Returns null on failure or parse error.
    */
-  async generateJSON<T = unknown>(prompt: string, options?: { provider?: 'grok' | 'groq' }): Promise<T | null> {
+  async generateJSON<T = unknown>(prompt: string, options?: { provider?: 'grok' | 'groq' | 'claude' }): Promise<T | null> {
     // Backwards-compatible: default to configured text provider (Groq).
     const raw = await this.generateText(prompt, {
       responseMimeType: 'application/json',
@@ -486,6 +516,8 @@ export const AIService = {
     console.log(`${LOG_PREFIX} Text provider:         Groq`);
     console.log(`${LOG_PREFIX} Text model:            ${aiConfig.textModel}`);
     console.log(`${LOG_PREFIX} Text configured:       ${aiConfig.isConfigured}`);
+    console.log(`${LOG_PREFIX} Claude model:          ${aiConfig.anthropicModel}`);
+    console.log(`${LOG_PREFIX} Claude configured:     ${aiConfig.anthropicConfigured}`);
     console.log(`${LOG_PREFIX} Embedding provider:    ${aiConfig.embeddingProvider}`);
     console.log(`${LOG_PREFIX} Embedding model:       ${aiConfig.embeddingModel}`);
     console.log(`${LOG_PREFIX} Embeddings configured: ${aiConfig.embeddingsConfigured}`);
