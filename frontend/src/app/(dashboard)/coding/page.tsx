@@ -45,7 +45,7 @@ export default function CodingHubPage() {
     <div className="max-w-6xl mx-auto px-4 py-8 pb-16 font-sans">
       
       {/* Hero Section */}
-      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
+      <div className="mb-10 flex flex-col gap-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-[#0b1120] tracking-tight mb-3 font-display">
             Coding Arena
@@ -55,7 +55,7 @@ export default function CodingHubPage() {
           </p>
         </div>
 
-        {/* Stats Boxes (Matching the uploaded design precisely) */}
+        {/* Stats Boxes */}
         {progress && (
           <div className="flex flex-wrap gap-4">
             <div className="bg-[#141414] rounded-xl px-5 py-3 flex items-center gap-4 min-w-[160px] shadow-sm">
