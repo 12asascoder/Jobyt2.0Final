@@ -21,7 +21,7 @@ export default function SubmissionsPage() {
   if (loading) return <div className="flex justify-center py-20"><Spinner /></div>;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-[1400px] ml-4 sm:ml-6 lg:ml-8 pr-4 py-8 pb-20 font-sans">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Submission History</h1>
         <Link href={ROUTES.coding}><Button variant="ghost">Back</Button></Link>

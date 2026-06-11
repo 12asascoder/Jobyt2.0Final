@@ -42,7 +42,7 @@ export default function CodingHubPage() {
     : 0;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 pb-16 font-sans">
+    <div className="max-w-[1400px] ml-4 sm:ml-6 lg:ml-8 pr-4 py-8 pb-16 font-sans">
       
       {/* Hero Section */}
       <div className="mb-10 flex flex-col gap-6">
