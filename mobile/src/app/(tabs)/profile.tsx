@@ -1,12 +1,20 @@
-import React from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
+import { useJobs } from '../../hooks/useJobs';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { User, Mail, Shield, LogOut } from 'lucide-react-native';
+import { User, Mail, Shield, Bookmark, Trash2 } from 'lucide-react-native';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user, logout } = useAuth();
+  const { savedJobs, fetchSavedJobs, toggleSaveJob } = useJobs();
+
+  useEffect(() => {
+    fetchSavedJobs();
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -59,13 +67,42 @@ export default function ProfileScreen() {
           </View>
           <Text className="text-indigo-400 font-bold text-sm uppercase">{user?.role || 'Applicant'}</Text>
         </View>
+      </Card>
 
-        {user?.phone ? (
-          <View className="flex-row items-center justify-between pt-1">
-            <Text className="text-slate-300 font-medium text-sm">Phone</Text>
-            <Text className="text-slate-200 font-semibold text-sm">{user.phone}</Text>
+      {/* Saved Jobs Bookmarks */}
+      <Card className="mb-6 p-5">
+        <Text className="text-white font-bold text-lg mb-3">Saved Jobs ({savedJobs.length})</Text>
+        {savedJobs.length > 0 ? (
+          <View className="space-y-3">
+            {savedJobs.map((job) => (
+              <View 
+                key={job.id} 
+                className="bg-slate-900 border border-slate-700/50 rounded-xl p-3 flex-row justify-between items-center"
+              >
+                <TouchableOpacity 
+                  onPress={() => router.push({ pathname: '/jobs/[id]', params: { id: job.id } })}
+                  className="flex-1 mr-3"
+                >
+                  <Text className="text-white font-bold text-sm truncate" numberOfLines={1}>
+                    {job.title}
+                  </Text>
+                  <Text className="text-slate-400 text-xs mt-0.5 truncate" numberOfLines={1}>
+                    {job.company}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  onPress={() => toggleSaveJob(job.id)}
+                  className="p-2 bg-slate-800 rounded-lg border border-slate-700/50"
+                >
+                  <Trash2 color="#ef4444" size={16} />
+                </TouchableOpacity>
+              </View>
+            ))}
           </View>
-        ) : null}
+        ) : (
+          <Text className="text-slate-400 text-sm italic">You haven't saved any jobs yet.</Text>
+        )}
       </Card>
 
       {/* Actions */}
@@ -74,8 +111,9 @@ export default function ProfileScreen() {
         variant="danger"
         size="lg"
         onPress={handleLogout}
-        className="mt-4"
+        className="mt-2"
       />
     </ScrollView>
   );
 }
+

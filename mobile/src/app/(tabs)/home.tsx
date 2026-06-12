@@ -1,37 +1,50 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
+import { useJobs } from '../../hooks/useJobs';
+import { useApplications } from '../../hooks/useApplications';
 import { creditService } from '../../services/credit.service';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { Coins, MessageSquare, Search, Award } from 'lucide-react-native';
+import { Badge } from '../../components/ui/Badge';
+import { Coins, MessageSquare, Search, Award, MapPin } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { jobs, fetchJobs } = useJobs();
+  const { applications, fetchApplications } = useApplications();
   
   const [balance, setBalance] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchCreditBalance = async () => {
+  const fetchDashboardData = async () => {
     try {
+      await Promise.all([
+        fetchApplications(),
+        fetchJobs({ limit: 5 }),
+      ]);
       const res = await creditService.getBalance();
       setBalance(res.data.balance);
     } catch (err) {
-      console.error('Failed to fetch credit balance', err);
+      console.error('Failed to fetch dashboard data', err);
     }
   };
 
   useEffect(() => {
-    fetchCreditBalance();
+    fetchDashboardData();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchCreditBalance();
+    await fetchDashboardData();
     setRefreshing(false);
   };
+
+  const getAppliedCount = () => applications.length;
+  const getInterviewCount = () => applications.filter(a => a.status === 'interview').length;
+  const getOfferCount = () => applications.filter(a => a.status === 'offer' || a.status === 'hired').length;
 
   return (
     <ScrollView
@@ -68,7 +81,7 @@ export default function HomeScreen() {
           <View className="bg-teal-500/10 p-3 rounded-xl mb-3">
             <MessageSquare color="#14b8a6" size={24} />
           </View>
-          <Text className="text-white font-semibold text-center text-sm">AI Career Coach</Text>
+          <Text className="text-white font-semibold text-center text-xs">AI Career Coach</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -78,7 +91,7 @@ export default function HomeScreen() {
           <View className="bg-indigo-500/10 p-3 rounded-xl mb-3">
             <Search color="#6366f1" size={24} />
           </View>
-          <Text className="text-white font-semibold text-center text-sm">Explore Jobs</Text>
+          <Text className="text-white font-semibold text-center text-xs">Explore Jobs</Text>
         </TouchableOpacity>
       </View>
 
@@ -86,18 +99,53 @@ export default function HomeScreen() {
       <Text className="text-slate-300 text-lg font-bold mb-4">Activity Summary</Text>
       <View className="flex-row space-x-3 mb-6">
         <Card className="flex-1 items-center p-4">
-          <Text className="text-indigo-400 text-2xl font-extrabold">0</Text>
+          <Text className="text-indigo-400 text-xl font-extrabold">{getAppliedCount()}</Text>
           <Text className="text-slate-400 text-xs mt-1 text-center font-medium">Applied</Text>
         </Card>
         <Card className="flex-1 items-center p-4">
-          <Text className="text-emerald-400 text-2xl font-extrabold">0</Text>
+          <Text className="text-emerald-400 text-xl font-extrabold">{getInterviewCount()}</Text>
           <Text className="text-slate-400 text-xs mt-1 text-center font-medium">Interviews</Text>
         </Card>
         <Card className="flex-1 items-center p-4">
-          <Text className="text-teal-400 text-2xl font-extrabold">0</Text>
+          <Text className="text-teal-400 text-xl font-extrabold">{getOfferCount()}</Text>
           <Text className="text-slate-400 text-xs mt-1 text-center font-medium">Offers</Text>
         </Card>
       </View>
+
+      {/* Recommended Jobs */}
+      {jobs.length > 0 ? (
+        <View className="mb-6">
+          <Text className="text-slate-300 text-lg font-bold mb-4">Recommended for You</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row space-x-4">
+            {jobs.map((job) => (
+              <TouchableOpacity
+                key={job.id}
+                onPress={() => router.push({ pathname: '/jobs/[id]', params: { id: job.id } })}
+              >
+                <Card className="p-4 w-64 mr-4 bg-slate-800/80 border-slate-700/80 h-36 justify-between">
+                  <View>
+                    <Text className="text-white font-bold text-sm truncate" numberOfLines={1}>
+                      {job.title}
+                    </Text>
+                    <Text className="text-indigo-400 text-xs mt-0.5 truncate" numberOfLines={1}>
+                      {job.company}
+                    </Text>
+                  </View>
+                  <View className="flex-row justify-between items-center mt-2 pt-2 border-t border-slate-700/40">
+                    <View className="flex-row items-center">
+                      <MapPin color="#94a3b8" size={12} className="mr-1" />
+                      <Text className="text-slate-400 text-2xs truncate max-w-[100px]" numberOfLines={1}>
+                        {job.location || 'Remote'}
+                      </Text>
+                    </View>
+                    <Badge label="95% Match" variant="success" className="px-1.5 py-0.5" />
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
 
       {/* Tips / Insights Section */}
       <Card className="bg-slate-800/60 border-slate-700/60 p-5 flex-row items-start">
@@ -122,5 +170,3 @@ export default function HomeScreen() {
   );
 }
 
-// React Native TouchableOpacity alias helper (since we used TouchableOpacity in the JSX)
-import { TouchableOpacity } from 'react-native';
