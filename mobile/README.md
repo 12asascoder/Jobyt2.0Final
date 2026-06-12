@@ -54,3 +54,29 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Environment Configuration
+
+The application uses the `EXPO_PUBLIC_API_URL` environment variable to determine which backend server to connect to. This variable is read from the `mobile/.env` file.
+
+### 1. Local Development Backend
+During local development, configure `EXPO_PUBLIC_API_URL` in `mobile/.env` to point to your local Node.js/Express development server (running by default on port 5001):
+
+```env
+EXPO_PUBLIC_API_URL=http://localhost:5001/api/v1
+```
+
+> [!TIP]
+> **Testing on Physical Devices:**
+> When running the app on a physical device (using Expo Go or a development build), change `localhost` to your computer's local network IP address (e.g., `192.168.1.100`) to enable connection:
+> `EXPO_PUBLIC_API_URL=http://192.168.1.100:5001/api/v1`
+
+### 2. Production Backend
+For production releases, compile the application targeting the live Railway production API backend:
+
+```env
+EXPO_PUBLIC_API_URL=https://hiring-platform-backend-production.up.railway.app/api/v1
+```
+
+Ensure you switch this environment variable in your local `.env` file before executing `eas build --profile production`.
+

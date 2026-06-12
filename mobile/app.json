@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "Jobyt",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,9 +8,14 @@
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.jobyt.mobile",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Jobyt requires Face ID authentication to secure your account session."
+      }
     },
     "android": {
+      "package": "com.jobyt.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -36,7 +41,9 @@
         }
       ],
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-local-authentication",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,
