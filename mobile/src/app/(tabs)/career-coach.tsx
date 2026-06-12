@@ -7,9 +7,13 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
-import { FileText, ChevronLeft, Brain, Cpu, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react-native';
+import { FileText, ChevronLeft, Brain, Cpu, CheckCircle, AlertTriangle, ArrowRight, TrendingUp, TrendingDown, Minus, Calendar, Clock, Trophy } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { useInterviewStore } from '../../store/interview.store';
+import { formatDate } from '../../lib/utils';
 
-type SubScreen = 'home' | 'ats_analyzer' | 'skill_gap' | 'job_match';
+type SubScreen = 'home' | 'ats_analyzer' | 'skill_gap' | 'mock_interview';
 
 export default function CareerCoachScreen() {
   const [activeScreen, setActiveScreen] = useState<SubScreen>('home');
@@ -31,9 +35,27 @@ export default function CareerCoachScreen() {
   const [processing, setProcessing] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const router = useRouter();
+  const { isOffline } = useNetworkStatus();
+  const { 
+    sessions, 
+    readinessScore, 
+    readinessHistory, 
+    loading: loadingInterview, 
+    fetchSessions, 
+    fetchReadiness 
+  } = useInterviewStore();
+
   useEffect(() => {
     fetchResumes();
   }, []);
+
+  useEffect(() => {
+    if (activeScreen === 'mock_interview') {
+      fetchSessions();
+      fetchReadiness();
+    }
+  }, [activeScreen]);
 
   const fetchResumes = async () => {
     setLoadingResumes(true);
@@ -143,6 +165,166 @@ export default function CareerCoachScreen() {
     </View>
   );
 
+  if (activeScreen === 'mock_interview') {
+    return (
+      <ScrollView className="bg-slate-900 flex-1 px-5" contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}>
+        {renderHeader('AI Mock Interview')}
+
+        {isOffline && (
+          <View className="mb-4 bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex-row items-center">
+            <AlertTriangle color="#f59e0b" size={20} className="mr-2" />
+            <Text className="text-amber-200 text-xs flex-1">
+              You are currently offline. Displaying cached readiness metrics and interview sessions.
+            </Text>
+          </View>
+        )}
+
+        {/* Readiness Rating Card */}
+        <Card className="mb-6 p-5 bg-slate-800 border border-slate-700">
+          <View className="flex-row justify-between items-center mb-4">
+            <View>
+              <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">Interview Readiness</Text>
+              <Text className="text-white text-3xl font-black mt-1">
+                {readinessScore?.current_score !== undefined && readinessScore?.current_score !== null
+                  ? `${readinessScore.current_score}/100`
+                  : 'N/A'}
+              </Text>
+            </View>
+            {readinessScore?.trend && (
+              <View>
+                {readinessScore.trend === 'improving' ? (
+                  <Badge label="Improving" variant="success" />
+                ) : readinessScore.trend === 'declining' ? (
+                  <Badge label="Declining" variant="danger" />
+                ) : (
+                  <Badge label="Stable" variant="secondary" />
+                )}
+              </View>
+            )}
+          </View>
+
+          <Text className="text-slate-400 text-xs leading-4">
+            Readiness scores are updated automatically after you complete mock interview sessions. A higher rating indicates stronger alignment with core rubrics.
+          </Text>
+        </Card>
+
+        {/* Score Progression History */}
+        <Card className="mb-6 p-5">
+          <Text className="text-white font-bold text-base mb-3">Score Progress History</Text>
+          {readinessHistory && readinessHistory.length > 0 ? (
+            <View className="space-y-3">
+              {readinessHistory.map((item, idx) => (
+                <View key={item.id || idx} className="bg-slate-900 border border-slate-800 p-3 rounded-xl flex-row justify-between items-center">
+                  <View className="flex-1 mr-2">
+                    <Text className="text-slate-300 font-semibold text-xs">
+                      {item.previous_score !== null 
+                        ? `Score updated to ${item.new_score} (was ${item.previous_score})`
+                        : `First assessment: ${item.new_score}`}
+                    </Text>
+                    <View className="flex-row items-center mt-1">
+                      <Calendar color="#94a3b8" size={10} className="mr-1" />
+                      <Text className="text-slate-500 text-[10px]">{formatDate(item.created_at)}</Text>
+                    </View>
+                  </View>
+                  <View className="flex-row items-center">
+                    {item.trend === 'improving' ? (
+                      <TrendingUp color="#10b981" size={14} className="mr-1" />
+                    ) : item.trend === 'declining' ? (
+                      <TrendingDown color="#ef4444" size={14} className="mr-1" />
+                    ) : (
+                      <Minus color="#94a3b8" size={14} className="mr-1" />
+                    )}
+                    <Text className={`text-[10px] font-bold ml-1 ${
+                      item.trend === 'improving' ? 'text-emerald-400' : item.trend === 'declining' ? 'text-red-400' : 'text-slate-400'
+                    }`}>
+                      {item.trend.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text className="text-slate-500 text-xs italic">
+              No score progression history found. Complete an interview session to compute your readiness rating.
+            </Text>
+          )}
+        </Card>
+
+        {/* CTA: Start New Mock Interview */}
+        <Button
+          label={isOffline ? 'Start Mock Interview (Online Only)' : 'Start Mock Interview'}
+          variant="primary"
+          size="lg"
+          className="mb-6"
+          disabled={isOffline}
+          onPress={() => router.push('/interviews/create')}
+        />
+
+        {/* Previous Session History */}
+        <Text className="text-white font-bold text-base mb-3">Previous Sessions</Text>
+        {loadingInterview && sessions.length === 0 ? (
+          <ActivityIndicator color="#6366f1" size="small" className="my-4" />
+        ) : sessions.length > 0 ? (
+          <View className="space-y-3">
+            {sessions.map((session) => {
+              const isCompleted = ['completed', 'evaluated', 'report_generated'].includes(session.status);
+              return (
+                <TouchableOpacity
+                  key={session.id}
+                  className="bg-slate-800 border border-slate-700 p-4 rounded-xl flex-row justify-between items-center"
+                  onPress={() => {
+                    if (isCompleted) {
+                      router.push(`/interviews/${session.id}/report` as any);
+                    } else {
+                      if (isOffline) {
+                        Alert.alert('Offline', 'Cannot resume interview while offline.');
+                      } else {
+                        router.push(`/interviews/${session.id}/question` as any);
+                      }
+                    }
+                  }}
+                >
+                  <View className="flex-1 mr-3">
+                    <Text className="text-white font-bold text-sm" numberOfLines={1}>{session.role_title}</Text>
+                    <View className="flex-row items-center mt-1 space-x-3">
+                      <View className="flex-row items-center">
+                        <Calendar color="#94a3b8" size={10} className="mr-1" />
+                        <Text className="text-slate-400 text-[10px]">{formatDate(session.created_at)}</Text>
+                      </View>
+                      <View className="flex-row items-center">
+                        <Clock color="#94a3b8" size={10} className="mr-1" />
+                        <Text className="text-slate-400 text-[10px]">{session.question_count} Questions</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View className="items-end">
+                    {isCompleted ? (
+                      <View className="items-end">
+                        <Text className="text-white font-extrabold text-sm mb-1">
+                          {session.overall_score !== null ? `${session.overall_score}%` : 'N/A'}
+                        </Text>
+                        <Badge label="Report" variant="success" />
+                      </View>
+                    ) : (
+                      <Badge label="Resume" variant="warning" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <Card className="p-4 items-center">
+            <Trophy color="#64748b" size={24} className="mb-2" />
+            <Text className="text-slate-400 text-xs italic text-center">
+              You haven't completed any mock interviews yet.
+            </Text>
+          </Card>
+        )}
+      </ScrollView>
+    );
+  }
+
   if (activeScreen === 'home') {
     return (
       <ScrollView className="bg-slate-900 flex-1 px-5" contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}>
@@ -193,10 +375,29 @@ export default function CareerCoachScreen() {
             </View>
             <ArrowRight color="#94a3b8" size={20} />
           </TouchableOpacity>
+
+          <TouchableOpacity 
+            onPress={() => setActiveScreen('mock_interview')}
+            className="bg-slate-800 border border-slate-700 rounded-2xl p-5 flex-row items-center justify-between"
+          >
+            <View className="flex-row items-center flex-1 mr-4">
+              <View className="bg-amber-600/10 p-3 rounded-xl mr-4">
+                <Brain color="#d97706" size={24} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-white font-bold text-base mb-1">AI Mock Interview</Text>
+                <Text className="text-slate-400 text-xs leading-4">
+                  Practice roles, receive question-by-question scoring and complete readiness assessments.
+                </Text>
+              </View>
+            </View>
+            <ArrowRight color="#94a3b8" size={20} />
+          </TouchableOpacity>
         </View>
       </ScrollView>
     );
   }
+
 
   if (activeScreen === 'ats_analyzer') {
     return (
