@@ -522,15 +522,20 @@ JSON Schema:
     });
 
     // 5. Generate and upload PDF report via Puppeteer
-    const reportUrl = await ReportGeneratorService.generatePdfReport(
-      session,
-      questions,
-      responses,
-      summaryText,
-      strengths,
-      weaknesses,
-      recommendations,
-    );
+    let reportUrl: string | null = null;
+    try {
+      reportUrl = await ReportGeneratorService.generatePdfReport(
+        session,
+        questions,
+        responses,
+        summaryText,
+        strengths,
+        weaknesses,
+        recommendations,
+      );
+    } catch (err) {
+      console.error(`${LOG_PREFIX} Failed to generate PDF report:`, err);
+    }
 
     // Save report in interview_reports
     await InterviewModel.createReport({
