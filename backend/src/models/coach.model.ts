@@ -8,6 +8,8 @@ export interface CoachSession {
   mode: 'general' | 'resume_review' | 'interview_prep' | 'career_advice' | 'salary_negotiation';
   context_summary: string | null;
   context_updated_at: Date | null;
+  uploaded_resume_name: string | null;
+  uploaded_resume_text: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -26,13 +28,15 @@ export const CoachModel = {
   async createSession(
     studentId: string,
     title: string,
-    mode: CoachSession['mode']
+    mode: CoachSession['mode'],
+    uploadedResumeName?: string | null,
+    uploadedResumeText?: string | null
   ): Promise<CoachSession> {
     const { rows } = await pool.query(
-      `INSERT INTO coach_sessions (student_id, title, mode)
-       VALUES ($1, $2, $3)
+      `INSERT INTO coach_sessions (student_id, title, mode, uploaded_resume_name, uploaded_resume_text)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [studentId, title, mode]
+      [studentId, title, mode, uploadedResumeName || null, uploadedResumeText || null]
     );
     return rows[0];
   },

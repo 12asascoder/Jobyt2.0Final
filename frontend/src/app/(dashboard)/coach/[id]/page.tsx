@@ -26,6 +26,8 @@ interface CoachSession {
   mode: 'general' | 'resume_review' | 'interview_prep' | 'career_advice' | 'salary_negotiation';
   context_summary: string | null;
   context_updated_at: string | null;
+  uploaded_resume_name: string | null;
+  uploaded_resume_text: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -412,8 +414,13 @@ export default function CoachChatbotPage({ params }: { params: Promise<{ id: str
                 {parsedContext.resume && (
                   <div>
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 border-l-2 border-lime-400 pl-2">
-                      Default Resume
+                      {session?.uploaded_resume_name ? 'Session Resume' : 'Default Resume'}
                     </h4>
+                    {session?.uploaded_resume_name && (
+                      <p className="text-[11px] text-lime-400 font-semibold mb-2 truncate">
+                        📁 {session.uploaded_resume_name}
+                      </p>
+                    )}
                     {(() => {
                       try {
                         const parsedResume = typeof parsedContext.resume === 'string' ? JSON.parse(parsedContext.resume) : parsedContext.resume;

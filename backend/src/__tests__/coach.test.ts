@@ -64,6 +64,8 @@ describe('AI Career Coach API End-to-End Surface Tests', () => {
         mode: 'general',
         context_summary: null,
         context_updated_at: null,
+        uploaded_resume_name: null,
+        uploaded_resume_text: null,
         created_at: new Date(),
         updated_at: new Date(),
       });
@@ -79,7 +81,52 @@ describe('AI Career Coach API End-to-End Surface Tests', () => {
       expect(CoachService.startSession).toHaveBeenCalledWith(
         mockStudentId,
         'My General Coaching',
-        'general'
+        'general',
+        null,
+        null
+      );
+    });
+
+    it('should start a session with an uploaded resume file and parse it', async () => {
+      jest.spyOn(CoachService, 'startSession').mockResolvedValue({
+        id: mockSessionId,
+        student_id: mockStudentId,
+        title: 'Career Coach - resume_review',
+        mode: 'resume_review',
+        context_summary: null,
+        context_updated_at: null,
+        uploaded_resume_name: 'test-resume.pdf',
+        uploaded_resume_text: 'Extracted raw resume text content.',
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      const resumeParser = require('../utils/resumeParser');
+      jest.spyOn(resumeParser, 'parseResume').mockResolvedValue({
+        rawText: 'Extracted raw resume text content.',
+        skills: ['TypeScript'],
+        emails: [],
+        phones: [],
+        name: 'Test Candidate',
+        experience: [],
+        education: []
+      });
+
+      const res = await requestSuper(app)
+        .post('/api/v1/coach/sessions')
+        .set('Authorization', token)
+        .attach('file', Buffer.from('%PDF-1.4 fake pdf content'), 'test-resume.pdf')
+        .field('mode', 'resume_review')
+        .field('title', 'Resume Review Test');
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(CoachService.startSession).toHaveBeenCalledWith(
+        mockStudentId,
+        'Resume Review Test',
+        'resume_review',
+        'test-resume.pdf',
+        'Extracted raw resume text content.'
       );
     });
   });
@@ -94,6 +141,8 @@ describe('AI Career Coach API End-to-End Surface Tests', () => {
           mode: 'general',
           context_summary: null,
           context_updated_at: null,
+          uploaded_resume_name: null,
+          uploaded_resume_text: null,
           created_at: new Date(),
           updated_at: new Date(),
         }
@@ -126,6 +175,8 @@ describe('AI Career Coach API End-to-End Surface Tests', () => {
         mode: 'general',
         context_summary: null,
         context_updated_at: null,
+        uploaded_resume_name: null,
+        uploaded_resume_text: null,
         created_at: new Date(),
         updated_at: new Date(),
       });

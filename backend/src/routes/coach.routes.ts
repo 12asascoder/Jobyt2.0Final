@@ -3,6 +3,7 @@ import { body, param } from 'express-validator';
 import { CoachController } from '../controllers/coach.controller';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { uploadResume } from '../middleware/upload';
 
 const router = Router();
 
@@ -12,6 +13,7 @@ router.use(authenticate);
 // Start a new coaching session
 router.post(
   '/sessions',
+  uploadResume.single('file'),
   body('mode')
     .isIn(['general', 'resume_review', 'interview_prep', 'career_advice', 'salary_negotiation'])
     .withMessage('Invalid session mode'),

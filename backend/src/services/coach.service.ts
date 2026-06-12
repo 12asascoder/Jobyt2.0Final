@@ -9,6 +9,7 @@ import { AIService } from './ai.service';
 import { PromptTemplatesService } from './promptTemplates.service';
 import { AppError, forbidden, notFound, badRequest } from '../utils/appError';
 import { UserModel } from '../models/user.model';
+import { parseResumeLocalFromText } from '../utils/resumeParser';
 
 const LOG_PREFIX = '[CoachService]';
 
@@ -55,7 +56,7 @@ export const CoachService = {
     }
   },
 
-  async loadStudentContext(studentId: string): Promise<string> {
+  async loadStudentContext(studentId: string, session?: CoachSession): Promise<string> {
     // 1. Profile Summary
     const profile = await ApplicantProfileModel.findByUserId(studentId);
     const bioText = profile?.bio ? profile.bio.substring(0, 150) : 'None';
@@ -73,30 +74,54 @@ export const CoachService = {
     // 2. Structured Resume Summary
     let resumeSummary = 'No default resume uploaded.';
     let parsedSkills: string[] = [];
-    try {
-      const defaultResume = await ResumeModel.findDefaultByUserId(studentId);
-      if (defaultResume) {
-        const details = await ResumeService.getUserResumeById(studentId, defaultResume.id);
-        const parsed = details.parsed;
-        parsedSkills = Array.isArray(parsed?.skills) ? parsed.skills : [];
-        const rawText = await ResumeService.getResumeTextForUserResume(studentId, defaultResume.id).catch(() => '');
 
+    if (session && session.uploaded_resume_text) {
+      const rawText = session.uploaded_resume_text;
+      try {
+        const parsed = parseResumeLocalFromText(rawText);
+        parsedSkills = Array.isArray(parsed?.skills) ? parsed.skills : [];
         const projectText = extractSection(rawText, ['projects', 'personal projects', 'key projects', 'academic projects']);
         const certText = extractSection(rawText, ['certifications', 'licenses', 'awards', 'certificates']);
 
         resumeSummary = JSON.stringify({
           experience: Array.isArray(parsed?.experience)
-            ? parsed.experience.map((item: any) => `${item.role || 'Role'} at ${item.company || 'Company'} (${item.dates || 'Dates'})`).slice(0, 3)
+            ? parsed.experience.map((item: any) => `${item.role || 'Role'} at ${item.company || 'Company'}`).slice(0, 3)
             : [],
           education: Array.isArray(parsed?.education)
-            ? parsed.education.map((item: any) => `${item.degree || 'Degree'} at ${item.institution || 'Institution'} (${item.dates || 'Dates'})`).slice(0, 2)
+            ? parsed.education.map((item: any) => `${item.degree || 'Degree'} at ${item.institution || 'Institution'}`).slice(0, 2)
             : [],
           projects: projectText || 'None extracted',
           certifications: certText || 'None extracted'
         });
+      } catch (err) {
+        console.warn(`${LOG_PREFIX} Failed to parse uploaded resume context:`, err);
       }
-    } catch (err) {
-      console.warn(`${LOG_PREFIX} Failed to load resume summary context:`, err);
+    } else {
+      try {
+        const defaultResume = await ResumeModel.findDefaultByUserId(studentId);
+        if (defaultResume) {
+          const details = await ResumeService.getUserResumeById(studentId, defaultResume.id);
+          const parsed = details.parsed;
+          parsedSkills = Array.isArray(parsed?.skills) ? parsed.skills : [];
+          const rawText = await ResumeService.getResumeTextForUserResume(studentId, defaultResume.id).catch(() => '');
+
+          const projectText = extractSection(rawText, ['projects', 'personal projects', 'key projects', 'academic projects']);
+          const certText = extractSection(rawText, ['certifications', 'licenses', 'awards', 'certificates']);
+
+          resumeSummary = JSON.stringify({
+            experience: Array.isArray(parsed?.experience)
+              ? parsed.experience.map((item: any) => `${item.role || 'Role'} at ${item.company || 'Company'} (${item.dates || 'Dates'})`).slice(0, 3)
+              : [],
+            education: Array.isArray(parsed?.education)
+              ? parsed.education.map((item: any) => `${item.degree || 'Degree'} at ${item.institution || 'Institution'} (${item.dates || 'Dates'})`).slice(0, 2)
+              : [],
+            projects: projectText || 'None extracted',
+            certifications: certText || 'None extracted'
+          });
+        }
+      } catch (err) {
+        console.warn(`${LOG_PREFIX} Failed to load resume summary context:`, err);
+      }
     }
 
     // 3. Skills Summary (Profile + Resume deduplicated)
@@ -176,11 +201,13 @@ export const CoachService = {
   async startSession(
     studentId: string,
     title: string,
-    mode: CoachSession['mode']
+    mode: CoachSession['mode'],
+    uploadedResumeName?: string | null,
+    uploadedResumeText?: string | null
   ): Promise<CoachSession> {
     await this._assertActiveStudent(studentId);
     const trimmedTitle = title?.trim() || `Career Coach - ${mode.replace('_', ' ')}`;
-    return CoachModel.createSession(studentId, trimmedTitle, mode);
+    return CoachModel.createSession(studentId, trimmedTitle, mode, uploadedResumeName, uploadedResumeText);
   },
 
   async listSessions(studentId: string): Promise<CoachSession[]> {
@@ -227,7 +254,7 @@ export const CoachService = {
 
     if (!studentContext || !session.context_updated_at || latestTimestamp > new Date(session.context_updated_at)) {
       console.log(`${LOG_PREFIX} Context summary cache stale or missing. Regenerating for session ${sessionId}...`);
-      studentContext = await this.loadStudentContext(studentId);
+      studentContext = await this.loadStudentContext(studentId, session);
       await CoachModel.updateSessionContext(sessionId, studentContext);
     } else {
       console.log(`${LOG_PREFIX} Reusing cached context summary for session ${sessionId}.`);

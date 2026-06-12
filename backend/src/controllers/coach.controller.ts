@@ -8,7 +8,27 @@ export const CoachController = {
     try {
       const studentId = req.user!.userId;
       const { title, mode } = req.body;
-      const session = await CoachService.startSession(studentId, title, mode);
+
+      let uploadedResumeName: string | null = null;
+      let uploadedResumeText: string | null = null;
+
+      if (req.file) {
+        uploadedResumeName = req.file.originalname;
+        const { parseResume } = await import('../utils/resumeParser');
+        const parsed = await parseResume(req.file.buffer, {
+          filename: req.file.originalname,
+          mimeType: req.file.mimetype,
+        });
+        uploadedResumeText = parsed.rawText || '';
+      }
+
+      const session = await CoachService.startSession(
+        studentId,
+        title,
+        mode,
+        uploadedResumeName,
+        uploadedResumeText
+      );
       sendSuccess(res, session, 'Coach session started successfully', 201);
     } catch (err) {
       next(err);
