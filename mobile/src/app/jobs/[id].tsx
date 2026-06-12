@@ -5,6 +5,7 @@ import { useJobs } from '../../hooks/useJobs';
 import { useApplications } from '../../hooks/useApplications';
 import { applicationService } from '../../services/application.service';
 import { careerCoachService } from '../../services/career-coach.service';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -17,6 +18,7 @@ export default function JobDetailsScreen() {
   const router = useRouter();
   const { currentJob, loading, fetchJobDetails, toggleSaveJob } = useJobs();
   const { applyToJob } = useApplications();
+  const { isOffline } = useNetworkStatus();
 
   const [hasApplied, setHasApplied] = useState(false);
   const [checkingApplied, setCheckingApplied] = useState(false);
@@ -62,10 +64,16 @@ export default function JobDetailsScreen() {
   };
 
   const handleApply = async () => {
+    if (isOffline) {
+      Alert.alert('Offline Mode', 'Applying for jobs requires an active internet connection. Please connect to the internet and try again.');
+      return;
+    }
+
     if (!selectedResumeId) {
       Alert.alert('Validation Error', 'Please select a resume to apply.');
       return;
     }
+
 
     setSubmitting(true);
     try {

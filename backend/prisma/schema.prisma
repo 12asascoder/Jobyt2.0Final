@@ -293,6 +293,7 @@ model users {
   credit_balance                                  Int                       @default(0)
   email_alerts_enabled                            Boolean                   @default(true)
   whatsapp_alerts_enabled                         Boolean                   @default(true)
+  push_alerts_enabled                             Boolean                   @default(false)
   created_at                                      DateTime?                 @default(now()) @db.Timestamptz(6)
   updated_at                                      DateTime?                 @default(now()) @db.Timestamptz(6)
   admin_audit_log                                 admin_audit_log[]
@@ -303,6 +304,7 @@ model users {
   conversations_conversations_applicant_idTousers conversations[]           @relation("conversations_applicant_idTousers")
   conversations_conversations_recruiter_idTousers conversations[]           @relation("conversations_recruiter_idTousers")
   credit_transactions                             credit_transactions[]
+  device_tokens                                   device_tokens[]
   interview_reports                               interview_reports[]
   interview_responses                             interview_responses[]
   jobs                                            jobs[]
@@ -546,3 +548,16 @@ enum user_role {
   recruiter
   admin
 }
+
+model device_tokens {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String   @db.Uuid
+  token        String   @unique
+  platform     String   @db.VarChar(20) // 'ios' or 'android'
+  last_used_at DateTime @default(now()) @db.Timestamptz(6)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+

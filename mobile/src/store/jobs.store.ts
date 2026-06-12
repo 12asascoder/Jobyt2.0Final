@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { jobService } from '../services/job.service';
 import { Job } from '../types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface JobsState {
   jobs: Job[];
@@ -32,11 +33,22 @@ export const useJobsStore = create<JobsState>((set, get) => ({
       const res = await jobService.getJobs(params);
       const data = res.data;
       
-      // Calculate matches / recommendations (mock-annotating from general feed if needed)
       const jobsWithSavedState = data.jobs.map((job) => ({
         ...job,
         is_saved: get().savedJobs.some((sj) => sj.id === job.id),
       }));
+
+      // Cache it for offline access
+      if (!append) {
+        await AsyncStorage.setItem(
+          'jobyt_cached_jobs',
+          JSON.stringify({
+            jobs: jobsWithSavedState,
+            total: data.total || 0,
+            page: data.page || 1,
+          })
+        );
+      }
 
       set((state) => ({
         jobs: append ? [...state.jobs, ...jobsWithSavedState] : jobsWithSavedState,
@@ -44,7 +56,19 @@ export const useJobsStore = create<JobsState>((set, get) => ({
         page: data.page || 1,
       }));
     } catch (err) {
-      console.error('Failed to fetch jobs', err);
+      console.error('Failed to fetch jobs, attempting to load cache', err);
+      // Offline fallback
+      if (!append) {
+        const cached = await AsyncStorage.getItem('jobyt_cached_jobs');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          set({
+            jobs: parsed.jobs || [],
+            total: parsed.total || 0,
+            page: parsed.page || 1,
+          });
+        }
+      }
     } finally {
       set({ loading: false });
     }
@@ -63,7 +87,12 @@ export const useJobsStore = create<JobsState>((set, get) => ({
       
       set({ currentJob: enrichedJob });
     } catch (err) {
-      console.error('Failed to fetch job details', err);
+      console.error('Failed to fetch job details, checking local list', err);
+      // Fallback: search locally cached jobs/savedJobs
+      const found = get().jobs.find((j) => j.id === id) || get().savedJobs.find((sj) => sj.id === id);
+      if (found) {
+        set({ currentJob: found });
+      }
     } finally {
       set({ loading: false });
     }
@@ -72,13 +101,14 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   fetchSavedJobs: async () => {
     try {
       const res = await jobService.getSavedJobs();
-      // Backend might return raw array directly or wrap in { jobs: [] }
       const list = Array.isArray(res.data) ? res.data : (res.data as any).jobs || [];
-      
       const mapped = list.map((job: any) => ({ ...job, is_saved: true }));
+
+      // Cache it for offline access
+      await AsyncStorage.setItem('jobyt_cached_saved_jobs', JSON.stringify(mapped));
+
       set({ savedJobs: mapped });
       
-      // Update is_saved flag on current list
       set((state) => ({
         jobs: state.jobs.map((j) => ({
           ...j,
@@ -86,7 +116,19 @@ export const useJobsStore = create<JobsState>((set, get) => ({
         })),
       }));
     } catch (err) {
-      console.error('Failed to fetch saved jobs', err);
+      console.error('Failed to fetch saved jobs, attempting to load cache', err);
+      // Offline fallback
+      const cached = await AsyncStorage.getItem('jobyt_cached_saved_jobs');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        set({ savedJobs: parsed });
+        set((state) => ({
+          jobs: state.jobs.map((j) => ({
+            ...j,
+            is_saved: parsed.some((sj: any) => sj.id === j.id),
+          })),
+        }));
+      }
     }
   },
 
@@ -112,6 +154,9 @@ export const useJobsStore = create<JobsState>((set, get) => ({
       }));
     }
 
+    // Cache updated list locally as well
+    await AsyncStorage.setItem('jobyt_cached_saved_jobs', JSON.stringify(updatedSaved));
+
     try {
       if (isCurrentlySaved) {
         await jobService.unsaveJob(jobId);
@@ -122,6 +167,8 @@ export const useJobsStore = create<JobsState>((set, get) => ({
       console.error('Failed to toggle save job on server, reverting state', err);
       // Revert state
       set({ jobs, savedJobs });
+      await AsyncStorage.setItem('jobyt_cached_saved_jobs', JSON.stringify(savedJobs));
     }
   },
 }));
+export default useJobsStore;
