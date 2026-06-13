@@ -15,6 +15,18 @@ router.use(authenticate, requireEmail);
 // List all interviews (candidate sees own, recruiter sees own, admin sees all)
 router.get('/', authorize('applicant', 'recruiter', 'admin'), InterviewController.listInterviews);
 
+// Bulk dispatch interviews (recruiter/admin only)
+router.post(
+  '/bulk',
+  authorize('recruiter', 'admin'),
+  employerGuard,
+  body('applicationIds').isArray({ min: 1 }).withMessage('applicationIds must be a non-empty array'),
+  body('applicationIds.*').isUUID().withMessage('Each applicationId must be a valid UUID'),
+  body('scheduledAt').optional().isISO8601().withMessage('scheduledAt must be a valid ISO8601 date string'),
+  validate,
+  InterviewController.bulkDispatchInterviews,
+);
+
 // Schedule a new interview (recruiter/admin only)
 router.post(
   '/',

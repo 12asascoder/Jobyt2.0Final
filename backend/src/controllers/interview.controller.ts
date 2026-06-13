@@ -180,4 +180,35 @@ export const InterviewController = {
       next(err);
     }
   },
+
+  async bulkDispatchInterviews(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { applicationIds, scheduledAt } = req.body as {
+        applicationIds?: string[];
+        scheduledAt?: string;
+      };
+
+      if (!applicationIds || !Array.isArray(applicationIds) || applicationIds.length === 0) {
+        throw new BadRequestError('applicationIds must be a non-empty array', 'APPLICATION_IDS_REQUIRED');
+      }
+
+      let parsedDate: Date | undefined = undefined;
+      if (scheduledAt) {
+        parsedDate = new Date(scheduledAt);
+        if (isNaN(parsedDate.getTime())) {
+          throw new BadRequestError('Invalid scheduledAt date format', 'INVALID_DATE');
+        }
+      }
+
+      const result = await InterviewService.queueBulkDispatch(
+        applicationIds,
+        req.user!.userId,
+        parsedDate,
+      );
+
+      sendSuccess(res, result, 'Bulk interview dispatch job successfully queued', 202);
+    } catch (err) {
+      next(err);
+    }
+  },
 };

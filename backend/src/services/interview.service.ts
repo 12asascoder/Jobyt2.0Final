@@ -1,6 +1,7 @@
 import axios from 'axios';
-import { InterviewModel, Interview, InterviewStatus } from '../models/interview.model';
+import { InterviewModel, Interview } from '../models/interview.model';
 import { ApplicationModel } from '../models/application.model';
+import { bulkInterviewQueue } from '../config/queue';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { JwtPayload } from '../types';
 import Groq, { toFile } from 'groq-sdk';
@@ -490,5 +491,18 @@ ${rubric}\n`;
       console.error('[Google Translate TTS] Failed:', err.message);
       throw new BadRequestError('Failed to generate Text-to-Speech audio', 'TTS_FAILED');
     }
+  },
+
+  async queueBulkDispatch(
+    applicationIds: string[],
+    interviewerId: string,
+    scheduledAt?: Date,
+  ) {
+    const job = await bulkInterviewQueue.add('dispatchInterviews', {
+      applicationIds,
+      interviewerId,
+      scheduledAt: scheduledAt || new Date(),
+    });
+    return { jobId: job.id, count: applicationIds.length };
   },
 };

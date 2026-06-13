@@ -26,7 +26,12 @@ export const recommendationQueue = new Queue('recommendationQueue', defaultQueue
 // Queue for sending email/whatsapp notifications
 export const notificationQueue = new Queue('notificationQueue', defaultQueueOptions);
 
+// Queue for bulk interview dispatching
+export const bulkInterviewQueue = new Queue('bulkInterviewQueue', defaultQueueOptions);
+
 export const closeQueues = async () => {
   await recommendationQueue.close();
   await notificationQueue.close();
+  await bulkInterviewQueue.close();
 };
+
