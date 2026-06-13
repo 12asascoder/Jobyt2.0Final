@@ -81,6 +81,9 @@ export const JobService = {
       skills?: string[];
       status?: JobStatus;
       application_questions?: JobApplicationQuestion[];
+      ai_interview_type?: string | null;
+      ai_interview_rubric?: string | null;
+      ai_interview_threshold?: number | null;
     },
   ) {
     const recruiter = await UserModel.findById(recruiterId);
@@ -332,6 +335,9 @@ export const JobService = {
       'type',
       'skills',
       'application_questions',
+      'ai_interview_type',
+      'ai_interview_rubric',
+      'ai_interview_threshold',
     ] as const;
     const filteredData = Object.fromEntries(
       Object.entries(data).filter(([key]) => (allowedFields as readonly string[]).includes(key)),

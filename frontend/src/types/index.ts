@@ -85,6 +85,9 @@ export interface Job {
   description: string;
   status: JobStatus;
   job_approval_status?: 'pending_approval' | 'approved' | 'rejected';
+  ai_interview_type?: string | null;
+  ai_interview_rubric?: string | null;
+  ai_interview_threshold?: number | null;
   is_boosted: boolean;
   views_count: number;
   companyName?: string | null;

@@ -242,13 +242,25 @@ export const InterviewService = {
     const groqApiKey = process.env.GROQ_API_KEY;
     const ollamaApiKey = process.env.OLLAMA_API_KEY;
 
-    const systemPrompt = `You are a technical interviewer conducting a live coding interview.
+    // Fetch interview details to get custom AI configurations
+    const interview = await InterviewModel.getById(interviewId);
+    const rubric = interview?.ai_interview_rubric;
+    const interviewType = interview?.ai_interview_type || 'technical';
+    const typeLabel = interviewType.charAt(0).toUpperCase() + interviewType.slice(1);
+
+    let systemPrompt = `You are a ${typeLabel.toLowerCase()} interviewer conducting a live coding interview.
 The candidate is coding in ${language}.
 Here is their current code:
 \`\`\`${language}
 ${code}
-\`\`\`
-Please generate ONE brief, highly relevant follow-up technical question or suggestion to guide the candidate or test their understanding of their code. Keep the response concise (maximum 2-3 sentences), professional, and direct.`;
+\`\`\`\n`;
+
+    if (rubric && rubric.trim()) {
+      systemPrompt += `Please evaluate the candidate according to the following rubric / guidelines:
+${rubric}\n`;
+    }
+
+    systemPrompt += `Please generate ONE brief, highly relevant follow-up question or suggestion to guide the candidate or test their understanding of their code. Keep the response concise (maximum 2-3 sentences), professional, and direct.`;
 
     // 1. Try Claude API if configured (Production)
     if (claudeApiKey && claudeApiKey.trim()) {
