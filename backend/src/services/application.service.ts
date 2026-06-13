@@ -2,6 +2,7 @@ import { ApplicationModel, ApplicationStatus } from '../models/application.model
 import { JobModel } from '../models/job.model';
 import { NotificationModel } from '../models/notification.model';
 import { PipelineEventModel } from '../models/pipeline_event.model';
+import { InterviewModel } from '../models/interview.model';
 import { withTransaction } from '../utils/transaction';
 import { CreditService } from './credit.service';
 import { CREDIT_COSTS } from '../config/creditCosts';
@@ -188,6 +189,11 @@ export const ApplicationService = {
         creditTransactionId: transactionId,
         _jobForInsights: { title: job.title, description: job.description ?? '', skills: job.skills ?? [] },
         _applicantIdForInsights: applicantId,
+        _aiInterviewConfig: job.ai_interview_type ? {
+          type: job.ai_interview_type,
+          recruiterId: job.recruiter_id,
+          title: job.title,
+        } : null,
       };
     }).then(result => {
       // Fire-and-forget: generate AI insights AFTER transaction commits (so application row exists)
@@ -195,8 +201,50 @@ export const ApplicationService = {
       const jobCtx = result._jobForInsights;
       const apId = result._applicantIdForInsights;
       const appId = result.id;
+      const aiConfig = result._aiInterviewConfig;
       // Strip internal fields from returned result
-      const { _jobForInsights, _applicantIdForInsights, ...cleanResult } = result as any;
+      const { _jobForInsights, _applicantIdForInsights, _aiInterviewConfig, ...cleanResult } = result as any;
+
+      // Auto-dispatch AI interview if enabled on the job listing
+      if (aiConfig) {
+        setImmediate(async () => {
+          try {
+            console.log(`[ApplicationService] Auto-dispatching AI interview for application ${appId}`);
+
+            // 1. Create interview record
+            await InterviewModel.createInterview({
+              application_id: appId,
+              interviewer_id: aiConfig.recruiterId,
+              candidate_id: apId,
+              scheduled_at: new Date(),
+            });
+
+            // 2. Update application status to 'interview'
+            await ApplicationModel.updateStatus(appId, 'interview');
+
+            // 3. Create pipeline event
+            await PipelineEventModel.create({
+              application_id: appId,
+              previous_status: 'applied',
+              new_status: 'interview',
+              changed_by_id: apId,
+            });
+
+            // 4. Notify applicant
+            await NotificationModel.create({
+              user_id: apId,
+              type: 'application_status',
+              title: 'AI Interview Invitation',
+              body: `You have been automatically invited to a live AI interview for "${aiConfig.title}".`,
+              action_url: `/applications`,
+            });
+
+          } catch (err) {
+            console.error('[ApplicationService] Auto-dispatching AI interview failed:', err);
+          }
+        });
+      }
+
       setImmediate(async () => {
         try {
           const profile = await ApplicantProfileModel.findByUserId(apId);
