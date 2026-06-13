@@ -92,6 +92,67 @@ export default function ApplicationDetailPage() {
     }
   };
 
+  const [interview, setInterview] = useState<any | null>(null);
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [scheduling, setScheduling] = useState(false);
+  const [starting, setStarting] = useState(false);
+
+  useEffect(() => {
+    const fetchInterview = async () => {
+      try {
+        const res = await api.get<any[]>('/interviews');
+        const list = (res as any).data || res;
+        const found = Array.isArray(list) ? list.find((i: any) => i.application_id === applicationId) : null;
+        if (found) {
+          setInterview(found);
+        }
+      } catch (err) {
+        console.error('Failed to load interview details', err);
+      }
+    };
+
+    if (applicationId) {
+      fetchInterview();
+    }
+  }, [applicationId]);
+
+  const handleScheduleInterview = async () => {
+    if (!scheduledAt) {
+      toast.error('Please select a date and time');
+      return;
+    }
+    setScheduling(true);
+    try {
+      const res = await api.post<any>('/interviews', {
+        applicationId,
+        scheduledAt: new Date(scheduledAt).toISOString(),
+      });
+      const data = (res as any).data || res;
+      if (data) {
+        setInterview(data);
+        toast.success('Interview scheduled successfully!');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to schedule interview');
+    } finally {
+      setScheduling(false);
+    }
+  };
+
+  const handleStartInterview = async () => {
+    if (!interview) return;
+    setStarting(true);
+    try {
+      await api.post(`/interviews/${interview.id}/start`, {});
+      toast.success('Interview session started! Joining room...');
+      router.push(`/interviews/${interview.id}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to start interview');
+    } finally {
+      setStarting(false);
+    }
+  };
+
   const [fetchingResume, setFetchingResume] = useState(false);
 
   const handleViewResume = async () => {
@@ -304,6 +365,89 @@ export default function ApplicationDetailPage() {
                     ))
                   ) : (
                     <p className="text-slate-400 text-sm">No skills listed</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Live Technical Interview */}
+            <div className="bg-black rounded-2xl p-6 text-white">
+              <h3 className="font-bold text-lg mb-4">Technical Interview</h3>
+              
+              {interview ? (
+                <div className="space-y-4">
+                  <div className="bg-[#222] p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs uppercase tracking-widest text-slate-400 font-bold">Status</span>
+                      <span className={`text-xs font-black uppercase px-2 py-0.5 rounded ${
+                        interview.status === 'live' ? 'bg-rose-500 text-white animate-pulse' :
+                        interview.status === 'completed' ? 'bg-green-500 text-white' : 'bg-lime-300 text-black'
+                      }`}>
+                        {interview.status}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs uppercase tracking-widest text-slate-400 font-bold">Scheduled At</span>
+                      <span className="text-sm font-semibold">{new Date(interview.scheduled_at).toLocaleString()}</span>
+                    </div>
+                    {interview.status === 'completed' && (
+                      <>
+                        <div className="border-t border-slate-700 pt-2 flex justify-between items-center">
+                          <span className="text-xs uppercase tracking-widest text-slate-400 font-bold">Rating</span>
+                          <span className="text-sm font-black text-lime-300">{interview.rating || 'N/A'}/5 Stars</span>
+                        </div>
+                        <div className="border-t border-slate-700 pt-2">
+                          <span className="text-xs uppercase tracking-widest text-slate-400 font-bold block mb-1">Feedback</span>
+                          <p className="text-xs text-slate-300 italic line-clamp-3">{interview.feedback || 'No feedback details.'}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {interview.status !== 'completed' && (
+                    <div className="space-y-2">
+                      <button
+                        onClick={handleStartInterview}
+                        disabled={starting}
+                        className="w-full px-4 py-2.5 bg-lime-300 text-black font-black rounded-lg hover:bg-lime-400 transition-colors"
+                      >
+                        {starting ? 'Launching...' : interview.status === 'live' ? 'Re-Join Live Room' : 'Start Live Session'}
+                      </button>
+                      
+                      {interview.status === 'live' && (
+                        <p className="text-[10px] text-rose-400 font-medium text-center animate-pulse">
+                          Session is currently live! Click join to enter.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {application.status === 'interview' ? (
+                    <>
+                      <p className="text-xs text-slate-400">Schedule a live coding and voice interview session for this candidate.</p>
+                      <div className="space-y-2">
+                        <label className="text-xs text-slate-400 font-bold block">Interview Date & Time</label>
+                        <input
+                          type="datetime-local"
+                          value={scheduledAt}
+                          onChange={(e) => setScheduledAt(e.target.value)}
+                          className="w-full bg-[#222] border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-lime-300"
+                        />
+                      </div>
+                      <button
+                        onClick={handleScheduleInterview}
+                        disabled={scheduling}
+                        className="w-full px-4 py-2 bg-lime-300 text-black font-bold rounded-lg hover:bg-lime-400 disabled:opacity-50 transition-colors"
+                      >
+                        {scheduling ? 'Scheduling...' : 'Schedule Live Session'}
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-xs text-slate-400">
+                      Move the candidate to the **Interview** stage to schedule a live session.
+                    </p>
                   )}
                 </div>
               )}

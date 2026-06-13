@@ -252,3 +252,30 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
     totalPages: number;
   };
 }
+
+// ── Interviews ───────────────────────────────────────────────────────────────
+export type InterviewStatus = 'scheduled' | 'live' | 'completed' | 'cancelled';
+
+export interface Interview {
+  id: string;
+  application_id: string;
+  interviewer_id: string;
+  candidate_id: string;
+  status: InterviewStatus;
+  code_content: string | null;
+  code_language: string | null;
+  notes: string | null;
+  feedback: string | null;
+  rating: number | null;
+  scheduled_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined fields
+  company_name?: string;
+  job_title?: string;
+  candidate_name?: string;
+  interviewer_name?: string;
+}
+
