@@ -5,6 +5,7 @@ import { authenticate, authorize } from '../middleware/auth';
 import { requireEmail } from '../middleware/requireEmail';
 import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
+import { uploadAudio } from '../middleware/upload';
 
 const router = Router();
 
@@ -57,6 +58,14 @@ router.post(
   body('language').optional().isString().withMessage('language must be a string'),
   validate,
   InterviewController.endInterview,
+);
+
+// Transcribe voice audio channel snippets (applicant, recruiter, admin)
+router.post(
+  '/:id/transcribe',
+  authorize('applicant', 'recruiter', 'admin'),
+  uploadAudio.single('file'),
+  InterviewController.transcribeAudio,
 );
 
 export default router;

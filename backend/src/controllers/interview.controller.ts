@@ -135,4 +135,28 @@ export const InterviewController = {
       next(err);
     }
   },
+
+  async transcribeAudio(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      if (!id) {
+        throw new BadRequestError('Interview ID is required', 'ID_REQUIRED');
+      }
+
+      if (!req.file) {
+        throw new BadRequestError('Audio file is required', 'FILE_REQUIRED');
+      }
+
+      const text = await InterviewService.transcribeAudio(
+        id,
+        req.file.buffer,
+        req.file.originalname,
+        req.user!,
+      );
+
+      sendSuccess(res, { text }, 'Audio transcribed successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
 };

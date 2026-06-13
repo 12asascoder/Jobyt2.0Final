@@ -68,3 +68,32 @@ export const uploadFile = multer({
   },
   limits: { fileSize: 10 * 1024 * 1024 },
 });
+
+const allowedAudioMime = new Set([
+  'audio/webm',
+  'audio/wav',
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/mp4',
+  'audio/m4a',
+  'audio/ogg',
+  'audio/x-m4a',
+  'audio/webm;codecs=opus',
+]);
+
+export const uploadAudio = multer({
+  storage,
+  fileFilter: (_req, file, cb) => {
+    if (allowedAudioMime.has(file.mimetype) || file.mimetype.startsWith('audio/')) {
+      cb(null, true);
+    } else {
+      cb(
+        Object.assign(new Error('Only standard audio files are allowed'), {
+          statusCode: 400,
+          code: 'INVALID_FILE_TYPE',
+        }),
+      );
+    }
+  },
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
