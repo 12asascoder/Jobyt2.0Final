@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, AppState, AppStateStatus } from 'react-native';
+import { View, ActivityIndicator, AppState, AppStateStatus, LogBox } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
+
+LogBox.ignoreAllLogs();
 import { StatusBar } from 'expo-status-bar';
 import { useAuthStore } from '../store/auth.store';
 import { useJobsStore } from '../store/jobs.store';

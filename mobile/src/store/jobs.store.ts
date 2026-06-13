@@ -30,10 +30,12 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   fetchJobs: async (params = {}, append = false) => {
     set({ loading: true });
     try {
-      const res = await jobService.getJobs(params);
-      const data = res.data;
-      
-      const jobsWithSavedState = data.jobs.map((job) => ({
+      const res = await jobService.getJobs(params) as any;
+      const jobsArray = Array.isArray(res.data) ? res.data : (res.data?.jobs || []);
+      const total = res.pagination?.total || res.data?.total || 0;
+      const page = res.pagination?.page || res.data?.page || 1;
+
+      const jobsWithSavedState = jobsArray.map((job: any) => ({
         ...job,
         is_saved: get().savedJobs.some((sj) => sj.id === job.id),
       }));
@@ -44,16 +46,16 @@ export const useJobsStore = create<JobsState>((set, get) => ({
           'jobyt_cached_jobs',
           JSON.stringify({
             jobs: jobsWithSavedState,
-            total: data.total || 0,
-            page: data.page || 1,
+            total,
+            page,
           })
         );
       }
 
       set((state) => ({
         jobs: append ? [...state.jobs, ...jobsWithSavedState] : jobsWithSavedState,
-        total: data.total || 0,
-        page: data.page || 1,
+        total,
+        page,
       }));
     } catch (err) {
       console.error('Failed to fetch jobs, attempting to load cache', err);

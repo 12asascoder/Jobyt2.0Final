@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { DeviceEventEmitter } from 'react-native';
 import { authService } from '../services/auth.service';
 import { authStorage } from '../lib/auth';
 import { User, UserPreferences } from '../types';
@@ -12,7 +13,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   biometricsEnabled: boolean;
-  
+
   initialize: () => Promise<void>;
   login: (payload: any) => Promise<void>;
   register: (payload: any) => Promise<void>;
@@ -23,12 +24,23 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
+  console.log('[AuthStore] Initializing. set:', typeof set, 'DeviceEventEmitter:', typeof DeviceEventEmitter, 'addListener:', typeof DeviceEventEmitter?.addListener);
+
   // Listen for the interceptor unauthorized event to clean up store state
-  if (typeof window !== 'undefined') {
-    window.addEventListener('auth:unauthorized', () => {
-      set({ user: null, isAuthenticated: false, preferences: null, error: 'Session expired' });
-      disconnectSocket();
-    });
+  try {
+    if (DeviceEventEmitter && typeof DeviceEventEmitter.addListener === 'function') {
+      DeviceEventEmitter.addListener('auth:unauthorized', () => {
+        console.log('[AuthStore] auth:unauthorized event received');
+        if (typeof set === 'function') {
+          set({ user: null, isAuthenticated: false, preferences: null, error: 'Session expired' });
+        }
+        disconnectSocket();
+      });
+    } else {
+      console.warn('[AuthStore] DeviceEventEmitter.addListener is not a function!');
+    }
+  } catch (e) {
+    console.warn('[AuthStore] Failed to register DeviceEventEmitter listener:', e);
   }
 
   return {
@@ -93,6 +105,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
       set({ isLoading: true, error: null });
       try {
         const res = await authService.login(payload);
+        console.log('[AuthStore] login response:', JSON.stringify(res));
         await authStorage.setTokens(res.accessToken, res.refreshToken);
         const prefRes = await authService.getPreferences();
 
@@ -117,14 +130,18 @@ export const useAuthStore = create<AuthState>((set, get) => {
       set({ isLoading: true, error: null });
       try {
         const res = await authService.register(payload);
-        await authStorage.setTokens(res.accessToken, res.refreshToken);
+        let loginRes = res;
+        if (!res || !res.accessToken) {
+          loginRes = await authService.login({ email: payload.email, password: payload.password });
+        }
+        await authStorage.setTokens(loginRes.accessToken, loginRes.refreshToken);
         const prefRes = await authService.getPreferences();
 
-        await AsyncStorage.setItem('jobyt_cached_user', JSON.stringify(res.user));
+        await AsyncStorage.setItem('jobyt_cached_user', JSON.stringify(loginRes.user));
         await AsyncStorage.setItem('jobyt_cached_preferences', JSON.stringify(prefRes.data));
 
         set({
-          user: res.user,
+          user: loginRes.user,
           preferences: prefRes.data,
           isAuthenticated: true,
         });

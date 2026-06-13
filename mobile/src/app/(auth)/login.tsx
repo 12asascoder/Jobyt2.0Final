@@ -58,7 +58,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-slate-900 px-6 py-12 justify-center">
+    <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} className="bg-slate-900 px-6 py-12">
       <View className="mb-8">
         <Text className="text-white text-4xl font-extrabold tracking-tight mb-2">Welcome Back</Text>
         <Text className="text-slate-400 text-lg">Sign in to search and apply for jobs with Jobyt</Text>

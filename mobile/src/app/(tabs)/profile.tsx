@@ -8,9 +8,16 @@ import { notificationService } from '../../services/notification.service';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { User, Mail, Shield, Bookmark, Trash2, Bell, Fingerprint } from 'lucide-react-native';
-import * as Notifications from 'expo-notifications';
 import * as LocalAuthentication from 'expo-local-authentication';
 import Constants from 'expo-constants';
+
+// Safely require expo-notifications to prevent load-time crash in Expo Go SDK 53+
+let Notifications: any = null;
+try {
+  Notifications = require('expo-notifications');
+} catch (err) {
+  console.warn('[ProfileScreen] expo-notifications could not be loaded safely:', err);
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -27,6 +34,12 @@ export default function ProfileScreen() {
   const handlePushToggle = async (value: boolean) => {
     try {
       if (value) {
+        if (!Notifications) {
+          await updatePreferences({ push_alerts_enabled: true });
+          Alert.alert('Push Notifications Activated', 'Push notifications enabled (Mock mode for emulator/Expo Go).');
+          return;
+        }
+
         // Request notifications permissions on the device
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
@@ -112,13 +125,15 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               // Retrieve and delete push token on logout if it exists
-              const { status } = await Notifications.getPermissionsAsync();
-              if (status === 'granted') {
-                const projectId =
-                  Constants.expoConfig?.extra?.eas?.projectId ??
-                  Constants.easConfig?.projectId;
-                const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-                await notificationService.removeDeviceToken(token);
+              if (Notifications) {
+                const { status } = await Notifications.getPermissionsAsync();
+                if (status === 'granted') {
+                  const projectId =
+                    Constants.expoConfig?.extra?.eas?.projectId ??
+                    Constants.easConfig?.projectId;
+                  const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+                  await notificationService.removeDeviceToken(token);
+                }
               }
             } catch (tokenErr) {
               console.warn('Could not deregister push token on server during logout', tokenErr);

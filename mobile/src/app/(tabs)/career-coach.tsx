@@ -479,7 +479,12 @@ export default function CareerCoachScreen() {
                   strong: { color: '#6366f1', fontWeight: 'bold' },
                   bullet_list: { marginTop: 4 },
                 }}>
-                  {atsResult.feedback || atsResult.analysis || atsResult.recommendations || 'ATS feedback rendering here...'}
+                  {(() => {
+                    const raw = atsResult.feedback || atsResult.analysis || atsResult.recommendations;
+                    if (!raw) return 'ATS feedback rendering here...';
+                    if (typeof raw === 'string') return raw;
+                    return JSON.stringify(raw, null, 2);
+                  })()}
                 </Markdown>
               </View>
             </Card>
@@ -565,7 +570,12 @@ export default function CareerCoachScreen() {
               strong: { color: '#14b8a6', fontWeight: 'bold' },
               bullet_list: { marginTop: 4 },
             }}>
-              {skillGapResult.recommendations || skillGapResult.pathway || 'Learning pathway recommendations rendering here...'}
+              {(() => {
+                const raw = skillGapResult.recommendations || skillGapResult.pathway;
+                if (!raw) return 'Learning pathway recommendations rendering here...';
+                if (typeof raw === 'string') return raw;
+                return JSON.stringify(raw, null, 2);
+              })()}
             </Markdown>
           </Card>
 

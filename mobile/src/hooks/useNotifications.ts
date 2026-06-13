@@ -1,21 +1,29 @@
 import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { notificationService } from '../services/notification.service';
 import { useAuthStore } from '../store/auth.store';
 
-// Configure notification presentation when app is foregrounded
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Safely require expo-notifications to prevent load-time crash in Expo Go SDK 53+ on Android
+let Notifications: any = null;
+try {
+  Notifications = require('expo-notifications');
+  
+  if (Notifications && typeof Notifications.setNotificationHandler === 'function') {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  }
+} catch (err) {
+  console.warn('[useNotifications] expo-notifications could not be loaded safely (expected in Expo Go SDK 53+):', err);
+}
 
 export const useNotifications = () => {
   const [expoPushToken, setExpoPushToken] = useState('');
@@ -52,29 +60,29 @@ export const useNotifications = () => {
 async function registerForPushNotificationsAsync() {
   if (Platform.OS === 'web') return null;
 
-  if (!Device.isDevice) {
-    console.warn('[useNotifications] Must use physical device for Push Notifications. Fallbacking to mock ExponentPushToken for local testing.');
+  if (!Device.isDevice || !Notifications) {
+    console.warn('[useNotifications] Must use physical device for Push Notifications or Notifications module is missing. Falling back to mock ExponentPushToken for local testing.');
     return 'ExponentPushToken[MockTokenForLocalTesting]';
   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-
-  if (finalStatus !== 'granted') {
-    console.log('[useNotifications] Permission not granted for push notifications!');
-    return null;
-  }
-
-  const projectId =
-    Constants.expoConfig?.extra?.eas?.projectId ??
-    Constants.easConfig?.projectId;
-
   try {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      console.log('[useNotifications] Permission not granted for push notifications!');
+      return null;
+    }
+
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      Constants.easConfig?.projectId;
+
     const token = (
       await Notifications.getExpoPushTokenAsync({
         projectId,
@@ -83,7 +91,7 @@ async function registerForPushNotificationsAsync() {
     return token;
   } catch (e) {
     console.error('[useNotifications] Error getting Expo push token:', e);
-    return null;
+    return 'ExponentPushToken[MockTokenForLocalTesting]';
   }
 }
 export default useNotifications;

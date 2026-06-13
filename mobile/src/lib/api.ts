@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { DeviceEventEmitter } from 'react-native';
 import { API_URL } from '../constants';
 import { authStorage } from './auth';
 
@@ -67,8 +68,8 @@ api.interceptors.response.use(
           refreshToken,
         });
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
-        await authStorage.setTokens(accessToken, newRefreshToken);
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+        await authStorage.setTokens(accessToken, newRefreshToken || refreshToken);
 
         isRefreshing = false;
         processQueue(null, accessToken);
@@ -81,10 +82,7 @@ api.interceptors.response.use(
 
         // Clear tokens and notify app of logout
         await authStorage.clearTokens();
-        // Dispatches global custom event for store cleanup if needed
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('auth:unauthorized'));
-        }
+        DeviceEventEmitter.emit('auth:unauthorized');
 
         return Promise.reject(refreshError);
       }

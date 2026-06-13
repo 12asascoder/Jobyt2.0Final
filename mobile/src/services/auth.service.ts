@@ -3,18 +3,18 @@ import { AuthResponse, User, UserPreferences, APIResponse } from '../types';
 
 export const authService = {
   async login(payload: any): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/login', payload);
-    return response.data;
+    const response = await api.post<APIResponse<AuthResponse>>('/auth/login', payload);
+    return response.data.data;
   },
 
   async register(payload: any): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/register', payload);
-    return response.data;
+    const response = await api.post<APIResponse<AuthResponse>>('/auth/register', payload);
+    return response.data.data;
   },
 
   async googleLogin(idToken: string): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/google', { idToken });
-    return response.data;
+    const response = await api.post<APIResponse<AuthResponse>>('/auth/google', { idToken });
+    return response.data.data;
   },
 
   async logout(refreshToken?: string): Promise<void> {

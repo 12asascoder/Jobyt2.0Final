@@ -31,7 +31,7 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-slate-900 px-6 py-12 justify-center">
+    <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} className="bg-slate-900 px-6 py-12">
       <View className="mb-8">
         <Text className="text-white text-4xl font-extrabold tracking-tight mb-2">Reset Password</Text>
         <Text className="text-slate-400 text-lg">Enter your email and we'll send reset instructions</Text>

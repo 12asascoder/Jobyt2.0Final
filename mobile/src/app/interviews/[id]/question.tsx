@@ -270,7 +270,18 @@ export default function InterviewQuestionScreen() {
                 <MessageSquare size={12} color="#818cf8" className="mr-1 inline" /> AI Feedback & Suggestions:
               </Text>
               <Text className="text-slate-400 text-xs leading-4">
-                {evaluatedResponse.ai_feedback ?? evaluatedResponse.aiFeedback ?? evaluatedResponse.feedback ?? 'No feedback suggestions available.'}
+                {(() => {
+                  const raw = evaluatedResponse.ai_feedback ?? evaluatedResponse.aiFeedback ?? evaluatedResponse.feedback;
+                  if (!raw) return 'No feedback suggestions available.';
+                  if (typeof raw === 'string') return raw;
+                  if (typeof raw === 'object') {
+                    const parts: string[] = [];
+                    if (raw.feedbackText) parts.push(String(raw.feedbackText));
+                    if (raw.suggestedImprovements) parts.push(`Improvements: ${String(raw.suggestedImprovements)}`);
+                    return parts.length > 0 ? parts.join('\n') : JSON.stringify(raw);
+                  }
+                  return String(raw);
+                })()}
               </Text>
             </View>
           </Card>
