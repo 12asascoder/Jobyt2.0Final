@@ -68,4 +68,13 @@ router.post(
   InterviewController.transcribeAudio,
 );
 
+// Synthesize text to speech audio output (applicant, recruiter, admin)
+router.post(
+  '/:id/tts',
+  authorize('applicant', 'recruiter', 'admin'),
+  body('text').isString().trim().notEmpty().withMessage('text must be a non-empty string'),
+  validate,
+  InterviewController.generateTTS,
+);
+
 export default router;
