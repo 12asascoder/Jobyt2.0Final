@@ -150,93 +150,93 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView className="bg-slate-900 flex-1 px-5" contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}>
+    <ScrollView className="flex-1 px-5" style={{ backgroundColor: '#fcfcfc' }} contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}>
       {/* Profile Header */}
       <View className="items-center my-6">
-        <View className="bg-indigo-600/10 p-5 rounded-full mb-4 border border-indigo-500/20">
-          <User color="#6366f1" size={48} />
+        <View className="p-5 rounded-full mb-4 border border-slate-200" style={{ backgroundColor: '#f0fdf4' }}>
+          <User color="#1e293b" size={48} />
         </View>
-        <Text className="text-white text-2xl font-black">{user?.name || 'User'}</Text>
-        <Text className="text-slate-400 font-medium text-sm mt-1">{user?.email}</Text>
+        <Text className="text-slate-900 text-2xl font-black">{user?.name || 'User'}</Text>
+        <Text className="text-slate-500 font-medium text-sm mt-1">{user?.email}</Text>
       </View>
 
       {/* Profile Details */}
       <Card className="mb-6 space-y-4 p-5">
-        <Text className="text-white font-bold text-lg mb-2">Account Details</Text>
+        <Text className="text-slate-900 font-bold text-lg mb-2">Account Details</Text>
         
-        <View className="flex-row items-center justify-between border-b border-slate-700/50 pb-3">
+        <View className="flex-row items-center justify-between border-b border-slate-200 pb-3">
           <View className="flex-row items-center">
-            <Mail color="#94a3b8" size={20} className="mr-3" />
-            <Text className="text-slate-300 font-medium text-sm">Email</Text>
+            <Mail color="#64748b" size={20} className="mr-3" />
+            <Text className="text-slate-600 font-medium text-sm">Email</Text>
           </View>
-          <Text className="text-slate-200 font-semibold text-sm">{user?.email}</Text>
+          <Text className="text-slate-800 font-semibold text-sm">{user?.email}</Text>
         </View>
 
-        <View className="flex-row items-center justify-between border-b border-slate-700/50 pb-3 pt-1">
+        <View className="flex-row items-center justify-between border-b border-slate-200 pb-3 pt-1">
           <View className="flex-row items-center">
-            <Shield color="#94a3b8" size={20} className="mr-3" />
-            <Text className="text-slate-300 font-medium text-sm">Role</Text>
+            <Shield color="#64748b" size={20} className="mr-3" />
+            <Text className="text-slate-600 font-medium text-sm">Role</Text>
           </View>
-          <Text className="text-indigo-400 font-bold text-sm uppercase">{user?.role || 'Applicant'}</Text>
+          <Text className="font-bold text-sm uppercase" style={{ color: '#65a30d' }}>{user?.role || 'Applicant'}</Text>
         </View>
       </Card>
 
       {/* Settings Options */}
       <Card className="mb-6 space-y-4 p-5">
-        <Text className="text-white font-bold text-lg mb-2">Settings Preferences</Text>
+        <Text className="text-slate-900 font-bold text-lg mb-2">Settings & Preferences</Text>
 
-        <View className="flex-row items-center justify-between border-b border-slate-700/50 pb-3">
+        <View className="flex-row items-center justify-between border-b border-slate-200 pb-3">
           <View className="flex-row items-center">
-            <Bell color="#94a3b8" size={20} className="mr-3" />
-            <Text className="text-slate-300 font-medium text-sm">Push Notifications</Text>
+            <Bell color="#64748b" size={20} className="mr-3" />
+            <Text className="text-slate-600 font-medium text-sm">Push Notifications</Text>
           </View>
           <Switch
             value={preferences?.push_alerts_enabled ?? false}
             onValueChange={handlePushToggle}
-            trackColor={{ false: '#334155', true: '#818cf8' }}
-            thumbColor={preferences?.push_alerts_enabled ? '#6366f1' : '#94a3b8'}
+            trackColor={{ false: '#e2e8f0', true: '#bef264' }}
+            thumbColor={preferences?.push_alerts_enabled ? '#65a30d' : '#94a3b8'}
           />
         </View>
 
         <View className="flex-row items-center justify-between pt-1">
           <View className="flex-row items-center">
-            <Fingerprint color="#94a3b8" size={20} className="mr-3" />
-            <Text className="text-slate-300 font-medium text-sm">Biometric Unlock</Text>
+            <Fingerprint color="#64748b" size={20} className="mr-3" />
+            <Text className="text-slate-600 font-medium text-sm">Biometric Unlock</Text>
           </View>
           <Switch
             value={biometricsEnabled}
             onValueChange={handleBiometricsToggle}
-            trackColor={{ false: '#334155', true: '#818cf8' }}
-            thumbColor={biometricsEnabled ? '#6366f1' : '#94a3b8'}
+            trackColor={{ false: '#e2e8f0', true: '#bef264' }}
+            thumbColor={biometricsEnabled ? '#65a30d' : '#94a3b8'}
           />
         </View>
       </Card>
 
       {/* Saved Jobs Bookmarks */}
       <Card className="mb-6 p-5">
-        <Text className="text-white font-bold text-lg mb-3">Saved Jobs ({savedJobs.length})</Text>
+        <Text className="text-slate-900 font-bold text-lg mb-3">Saved Jobs ({savedJobs.length})</Text>
         {savedJobs.length > 0 ? (
           <View className="space-y-3">
             {savedJobs.map((job) => (
               <View 
                 key={job.id} 
-                className="bg-slate-900 border border-slate-700/50 rounded-xl p-3 flex-row justify-between items-center"
+                className="bg-white border border-slate-200 rounded-xl p-3 flex-row justify-between items-center"
               >
                 <TouchableOpacity 
                   onPress={() => router.push({ pathname: '/jobs/[id]', params: { id: job.id } })}
                   className="flex-1 mr-3"
                 >
-                  <Text className="text-white font-bold text-sm truncate" numberOfLines={1}>
+                  <Text className="text-slate-900 font-bold text-sm truncate" numberOfLines={1}>
                     {job.title}
                   </Text>
-                  <Text className="text-slate-400 text-xs mt-0.5 truncate" numberOfLines={1}>
+                  <Text className="text-slate-500 text-xs mt-0.5 truncate" numberOfLines={1}>
                     {job.company}
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
                   onPress={() => toggleSaveJob(job.id)}
-                  className="p-2 bg-slate-800 rounded-lg border border-slate-700/50"
+                  className="p-2 bg-slate-50 rounded-lg border border-slate-200"
                 >
                   <Trash2 color="#ef4444" size={16} />
                 </TouchableOpacity>

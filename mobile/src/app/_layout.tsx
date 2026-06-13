@@ -86,8 +86,8 @@ export default function RootLayout() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-slate-900 justify-center items-center">
-        <ActivityIndicator size="large" color="#6366f1" />
+      <View className="flex-1 bg-[#fcfcfc] justify-center items-center">
+        <ActivityIndicator size="large" color="#0b1120" />
       </View>
     );
   }
@@ -104,7 +104,7 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <OfflineBanner />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />

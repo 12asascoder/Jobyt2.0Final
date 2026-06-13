@@ -4,7 +4,7 @@ import { COLORS } from '../../constants';
 
 interface ButtonProps extends TouchableOpacityProps {
   label: string;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'brand';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   className?: string;
@@ -20,22 +20,22 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   let btnStyle = 'rounded-xl flex-row justify-center items-center ';
-  let textStyle = 'font-semibold text-center ';
+  let textStyle = 'font-bold text-center ';
 
-  if (variant === 'primary') {
-    btnStyle += 'bg-indigo-600 ';
-    textStyle += 'text-white ';
+  if (variant === 'primary' || variant === 'brand') {
+    btnStyle += 'bg-slate-900 border border-slate-900 ';
+    textStyle += 'text-brand-primary ';
   } else if (variant === 'secondary') {
-    btnStyle += 'bg-teal-600 ';
+    btnStyle += 'bg-blue-600 border border-blue-600 ';
     textStyle += 'text-white ';
   } else if (variant === 'outline') {
-    btnStyle += 'border border-slate-700 bg-transparent ';
-    textStyle += 'text-slate-200 ';
+    btnStyle += 'border border-slate-200 bg-transparent ';
+    textStyle += 'text-slate-700 ';
   } else if (variant === 'ghost') {
     btnStyle += 'bg-transparent ';
-    textStyle += 'text-slate-400 ';
+    textStyle += 'text-slate-500 ';
   } else if (variant === 'danger') {
-    btnStyle += 'bg-red-600 ';
+    btnStyle += 'bg-rose-600 border border-rose-600 ';
     textStyle += 'text-white ';
   }
 
@@ -51,8 +51,15 @@ export const Button: React.FC<ButtonProps> = ({
   }
 
   if (disabled || loading) {
-    btnStyle += 'opacity-50 ';
+    btnStyle += 'opacity-55 ';
   }
+
+  const indicatorColor =
+    variant === 'primary' || variant === 'brand'
+      ? COLORS.primary
+      : variant === 'outline' || variant === 'ghost'
+      ? '#0b1120'
+      : '#ffffff';
 
   return (
     <TouchableOpacity
@@ -63,7 +70,7 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'outline' || variant === 'ghost' ? COLORS.primary : '#ffffff'}
+          color={indicatorColor}
           className="mr-2"
         />
       ) : null}

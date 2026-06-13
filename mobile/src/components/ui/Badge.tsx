@@ -17,23 +17,23 @@ export const Badge: React.FC<BadgeProps> = ({
   let textStyle = 'text-xs font-semibold ';
 
   if (variant === 'primary') {
-    badgeStyle += 'bg-indigo-900/40 border border-indigo-700/50 ';
-    textStyle += 'text-indigo-300 ';
+    badgeStyle += 'bg-blue-50 border border-blue-100 ';
+    textStyle += 'text-blue-700 ';
   } else if (variant === 'secondary') {
-    badgeStyle += 'bg-slate-700/40 border border-slate-600/50 ';
-    textStyle += 'text-slate-300 ';
+    badgeStyle += 'bg-slate-50 border border-slate-200 ';
+    textStyle += 'text-slate-700 ';
   } else if (variant === 'success') {
-    badgeStyle += 'bg-emerald-900/40 border border-emerald-700/50 ';
-    textStyle += 'text-emerald-300 ';
+    badgeStyle += 'bg-emerald-50 border border-emerald-100 ';
+    textStyle += 'text-emerald-700 ';
   } else if (variant === 'warning') {
-    badgeStyle += 'bg-amber-900/40 border border-amber-700/50 ';
-    textStyle += 'text-amber-300 ';
+    badgeStyle += 'bg-amber-50 border border-amber-100 ';
+    textStyle += 'text-amber-700 ';
   } else if (variant === 'danger') {
-    badgeStyle += 'bg-red-900/40 border border-red-700/50 ';
-    textStyle += 'text-red-300 ';
+    badgeStyle += 'bg-red-50 border border-red-100 ';
+    textStyle += 'text-red-700 ';
   } else if (variant === 'info') {
-    badgeStyle += 'bg-teal-900/40 border border-teal-700/50 ';
-    textStyle += 'text-teal-300 ';
+    badgeStyle += 'bg-teal-50 border border-teal-100 ';
+    textStyle += 'text-teal-700 ';
   }
 
   return (

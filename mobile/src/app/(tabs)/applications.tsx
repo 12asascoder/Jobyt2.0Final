@@ -58,31 +58,31 @@ export default function ApplicationsTabScreen() {
     : applications;
 
   return (
-    <View className="flex-1 bg-slate-900">
+    <View className="flex-1 bg-[#fcfcfc]">
       {/* Stats Cards Section */}
       <View className="px-5 pt-4">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row space-x-3 mb-4">
-          <Card className="items-center p-4 min-w-[100px] border-slate-700/50">
-            <Text className="text-white text-xs font-semibold">Total</Text>
-            <Text className="text-indigo-400 text-xl font-black mt-1">{applications.length}</Text>
-          </Card>
-          <Card className="items-center p-4 min-w-[100px] border-slate-700/50">
-            <Text className="text-white text-xs font-semibold">Active</Text>
-            <Text className="text-emerald-400 text-xl font-black mt-1">
+          <View className="items-center p-4 min-w-[100px] bg-[#141414] border border-white/5 rounded-2xl shadow-lg">
+            <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total</Text>
+            <Text className="text-[#c3ff3d] text-xl font-black mt-1">{applications.length}</Text>
+          </View>
+          <View className="items-center p-4 min-w-[100px] bg-[#141414] border border-white/5 rounded-2xl shadow-lg">
+            <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Active</Text>
+            <Text className="text-[#ff6b6b] text-xl font-black mt-1">
               {applications.filter((a) => a.status !== 'rejected' && a.status !== 'hired').length}
             </Text>
-          </Card>
-          <Card className="items-center p-4 min-w-[100px] border-slate-700/50">
-            <Text className="text-white text-xs font-semibold">Offers</Text>
-            <Text className="text-teal-400 text-xl font-black mt-1">
+          </View>
+          <View className="items-center p-4 min-w-[100px] bg-[#141414] border border-white/5 rounded-2xl shadow-lg">
+            <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Offers</Text>
+            <Text className="text-[#2563eb] text-xl font-black mt-1">
               {applications.filter((a) => a.status === 'offer' || a.status === 'hired').length}
             </Text>
-          </Card>
+          </View>
         </ScrollView>
       </View>
 
       {/* Horizontal Filter Tabs */}
-      <View className="border-b border-slate-800 pb-3">
+      <View className="border-b border-slate-200/80 pb-3">
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -95,11 +95,11 @@ export default function ApplicationsTabScreen() {
               onPress={() => setActiveStatus(filter.value)}
               className={`px-4 py-2 rounded-full border ${
                 activeStatus === filter.value
-                  ? 'bg-indigo-600/20 border-indigo-500'
-                  : 'bg-slate-800 border-slate-700'
+                  ? 'bg-slate-900 border-slate-900'
+                  : 'bg-slate-50 border-slate-200'
               }`}
             >
-              <Text className={activeStatus === filter.value ? 'text-indigo-300 text-xs font-semibold' : 'text-slate-400 text-xs font-semibold'}>
+              <Text className={activeStatus === filter.value ? 'text-[#c3ff3d] text-xs font-semibold' : 'text-slate-500 text-xs font-semibold'}>
                 {filter.label}
               </Text>
             </TouchableOpacity>
@@ -117,17 +117,17 @@ export default function ApplicationsTabScreen() {
               onPress={() => router.push({ pathname: '/applications/[id]', params: { id: item.id } })}
               activeOpacity={0.7}
             >
-              <Card className="mb-4 p-4 flex-row justify-between items-center border-slate-700/60 bg-slate-800/80">
+              <Card className="mb-4 p-4 flex-row justify-between items-center border-slate-200 bg-white shadow-sm rounded-3xl">
                 <View className="flex-1 mr-4">
-                  <Text className="text-white text-base font-bold truncate" numberOfLines={1}>
+                  <Text className="text-slate-900 text-base font-extrabold truncate" numberOfLines={1}>
                     {item.job?.title || 'Unknown Job'}
                   </Text>
-                  <Text className="text-slate-400 text-xs mt-1 font-semibold truncate" numberOfLines={1}>
+                  <Text className="text-slate-500 text-xs mt-1 font-semibold truncate" numberOfLines={1}>
                     {item.job?.company || 'Unknown Company'}
                   </Text>
                   <View className="flex-row items-center mt-2">
                     <Calendar color="#64748b" size={12} className="mr-1" />
-                    <Text className="text-slate-500 text-2xs font-medium">
+                    <Text className="text-slate-450 text-[10px] font-semibold">
                       Applied: {formatDate(item.created_at)}
                     </Text>
                   </View>
@@ -139,18 +139,18 @@ export default function ApplicationsTabScreen() {
                     variant={getStatusVariant(item.status || 'applied')}
                     className="mr-2"
                   />
-                  <ChevronRight color="#64748b" size={16} />
+                  <ChevronRight color="#0b1120" size={16} />
                 </View>
               </Card>
             </TouchableOpacity>
           )}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#6366f1" />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#0b1120" />
           }
           ListEmptyComponent={
             !loading ? (
               <View className="items-center justify-center py-20">
-                <Text className="text-slate-400 text-sm">No applications found.</Text>
+                <Text className="text-slate-500 text-sm font-medium">No applications found.</Text>
               </View>
             ) : null
           }

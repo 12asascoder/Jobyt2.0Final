@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
 import { Role } from '../../constants';
 
 export default function RegisterScreen() {
@@ -48,87 +49,104 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} className="bg-slate-900 px-6 py-12">
-      <View className="mb-8">
-        <Text className="text-white text-4xl font-extrabold tracking-tight mb-2">Create Account</Text>
-        <Text className="text-slate-400 text-lg">Join Jobyt and boost your career search</Text>
-      </View>
-
-      <View className="space-y-4">
-        <Input
-          label="Full Name"
-          placeholder="John Doe"
-          value={name}
-          onChangeText={setName}
-          error={errors.name}
-        />
-
-        <Input
-          label="Email Address"
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-          error={errors.email}
-        />
-
-        <Input
-          label="Password"
-          placeholder="••••••••"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          error={errors.password}
-        />
-
-        <View className="mb-6">
-          <Text className="text-slate-300 text-sm font-semibold mb-3">Join as a:</Text>
-          <View className="flex-row space-x-4">
-            <TouchableOpacity
-              onPress={() => setRole(Role.APPLICANT)}
-              className={`flex-1 py-3 rounded-xl border items-center ${
-                role === Role.APPLICANT
-                  ? 'bg-indigo-600/20 border-indigo-500'
-                  : 'bg-slate-800/50 border-slate-700'
-              }`}
-            >
-              <Text className={`font-semibold ${role === Role.APPLICANT ? 'text-indigo-300' : 'text-slate-400'}`}>
-                Applicant
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setRole(Role.RECRUITER)}
-              className={`flex-1 py-3 rounded-xl border items-center ${
-                role === Role.RECRUITER
-                  ? 'bg-indigo-600/20 border-indigo-500'
-                  : 'bg-slate-800/50 border-slate-700'
-              }`}
-            >
-              <Text className={`font-semibold ${role === Role.RECRUITER ? 'text-indigo-300' : 'text-slate-400'}`}>
-                Recruiter
-              </Text>
-            </TouchableOpacity>
-          </View>
+    <ScrollView 
+      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} 
+      className="bg-[#fcfcfc] px-5 py-10"
+    >
+      <Card className="bg-white rounded-[32px] p-6 shadow-xl border border-slate-100 relative overflow-hidden w-full max-w-[420px] mx-auto my-auto">
+        {/* Subtle top gradient line */}
+        <View className="absolute top-0 left-0 right-0 flex-row h-[4px]">
+          <View className="flex-1 bg-[#c3ff3d]" />
+          <View className="flex-1 bg-[#ff6b6b]" />
         </View>
 
-        <Button
-          label="Register"
-          variant="primary"
-          size="lg"
-          loading={loading}
-          onPress={handleRegister}
-          className="mt-4"
-        />
-      </View>
+        {/* Jobyt branding */}
+        <View className="items-center mt-4 mb-6">
+          <Text className="text-3xl font-black text-slate-900 tracking-tight">
+            Joby<Text className="text-[#c3ff3d]">t</Text>
+          </Text>
+          <Text className="text-slate-900 text-xl font-bold mt-3">Create Account</Text>
+          <Text className="text-slate-500 mt-1 text-sm font-medium text-center">
+            Join Jobyt and boost your career search
+          </Text>
+        </View>
 
-      <View className="flex-row justify-center mt-8">
-        <Text className="text-slate-400 text-sm">Already have an account? </Text>
-        <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-          <Text className="text-indigo-400 text-sm font-bold">Sign In</Text>
-        </TouchableOpacity>
-      </View>
+        <View className="space-y-4">
+          <Input
+            label="Full Name"
+            placeholder="John Doe"
+            value={name}
+            onChangeText={setName}
+            error={errors.name}
+          />
+
+          <Input
+            label="Email Address"
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+            error={errors.email}
+          />
+
+          <Input
+            label="Password"
+            placeholder="••••••••"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            error={errors.password}
+          />
+
+          <View className="mb-4">
+            <Text className="text-slate-700 text-sm font-semibold mb-3">Join as a:</Text>
+            <View className="flex-row space-x-4">
+              <TouchableOpacity
+                onPress={() => setRole(Role.APPLICANT)}
+                className={`flex-1 py-3 rounded-xl border items-center ${
+                  role === Role.APPLICANT
+                    ? 'bg-slate-900 border-slate-900'
+                    : 'bg-transparent border-slate-200'
+                }`}
+              >
+                <Text className={`font-bold text-sm ${role === Role.APPLICANT ? 'text-[#c3ff3d]' : 'text-slate-500'}`}>
+                  Applicant
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setRole(Role.RECRUITER)}
+                className={`flex-1 py-3 rounded-xl border items-center ${
+                  role === Role.RECRUITER
+                    ? 'bg-slate-900 border-slate-900'
+                    : 'bg-transparent border-slate-200'
+                }`}
+              >
+                <Text className={`font-bold text-sm ${role === Role.RECRUITER ? 'text-[#c3ff3d]' : 'text-slate-500'}`}>
+                  Recruiter
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Button
+            label="Register"
+            variant="primary"
+            size="lg"
+            loading={loading}
+            onPress={handleRegister}
+            className="mt-2"
+          />
+        </View>
+
+        <View className="flex-row justify-center mt-6">
+          <Text className="text-slate-500 text-xs font-medium">Already have an account? </Text>
+          <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+            <Text className="text-[#2563eb] text-xs font-bold underline">Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </Card>
     </ScrollView>
   );
 }

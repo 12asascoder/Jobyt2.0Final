@@ -7,23 +7,23 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarActiveTintColor: '#0b1120',
+        tabBarInactiveTintColor: '#64748b',
         tabBarStyle: {
-          backgroundColor: '#1e293b', // Slate 800
+          backgroundColor: '#ffffff',
           borderTopWidth: 1,
-          borderTopColor: '#334155', // Slate 700
+          borderTopColor: '#e2e8f0',
           height: 60,
           paddingBottom: 8,
           paddingTop: 8,
         },
         headerStyle: {
-          backgroundColor: '#0f172a', // Slate 900
+          backgroundColor: '#fcfcfc',
           borderBottomWidth: 1,
-          borderBottomColor: '#1e293b',
+          borderBottomColor: '#e2e8f0',
         },
         headerTitleStyle: {
-          color: '#f8fafc',
+          color: '#0b1120',
           fontWeight: 'bold',
         },
         headerShadowVisible: false,

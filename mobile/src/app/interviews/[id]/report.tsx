@@ -95,19 +95,19 @@ export default function InterviewReportScreen() {
 
   if (loading) {
     return (
-      <View className="bg-slate-900 flex-1 justify-center items-center px-6">
-        <ActivityIndicator size="large" color="#6366f1" />
-        <Text className="text-white text-sm mt-4 text-center">Retrieving performance evaluation report...</Text>
+      <View className="bg-[#fcfcfc] flex-1 justify-center items-center px-6">
+        <ActivityIndicator size="large" color="#0b1120" />
+        <Text className="text-slate-900 text-sm mt-4 text-center font-semibold">Retrieving performance evaluation report...</Text>
       </View>
     );
   }
 
   if (!report) {
     return (
-      <View className="bg-slate-900 flex-1 justify-center items-center px-6">
-        <AlertTriangle color="#f59e0b" size={48} className="mb-4" />
-        <Text className="text-white text-base font-bold text-center">Report Unavailable</Text>
-        <Text className="text-slate-400 text-sm mt-2 text-center">
+      <View className="bg-[#fcfcfc] flex-1 justify-center items-center px-6">
+        <AlertTriangle color="#d97706" size={48} className="mb-4" />
+        <Text className="text-slate-900 text-base font-bold text-center">Report Unavailable</Text>
+        <Text className="text-slate-500 text-sm mt-2 text-center font-medium">
           The evaluation report is not generated or couldn't be loaded at this time.
         </Text>
         <View className="flex-row space-x-3 mt-6 w-full">
@@ -142,134 +142,134 @@ export default function InterviewReportScreen() {
   };
 
   return (
-    <ScrollView className="bg-slate-900 flex-1 px-5" contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}>
+    <ScrollView className="bg-[#fcfcfc] flex-1 px-5" contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}>
       {/* Header */}
       <View className="flex-row items-center mb-6 mt-2 justify-between">
         <View className="flex-row items-center">
           <TouchableOpacity
             onPress={() => router.replace('/(tabs)/career-coach')}
-            className="mr-4 bg-slate-800 p-2.5 rounded-full border border-slate-700"
+            className="mr-4 bg-slate-50 p-2.5 rounded-full border border-slate-200"
           >
-            <ChevronLeft color="#f8fafc" size={20} />
+            <ChevronLeft color="#0b1120" size={20} />
           </TouchableOpacity>
           <View>
-            <Text className="text-white text-lg font-black leading-5">Performance Report</Text>
-            <Text className="text-slate-400 text-xs mt-0.5">Mock Interview Feedback</Text>
+            <Text className="text-slate-900 text-lg font-black leading-5">Performance Report</Text>
+            <Text className="text-slate-500 text-xs mt-0.5 font-semibold">Mock Interview Feedback</Text>
           </View>
         </View>
       </View>
 
       {isOffline && (
-        <View className="mb-4 bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex-row items-center">
-          <AlertTriangle color="#f59e0b" size={20} className="mr-2" />
-          <Text className="text-amber-200 text-xs flex-1">
+        <View className="mb-4 bg-amber-50 border border-amber-200 p-4 rounded-xl flex-row items-center">
+          <AlertTriangle color="#d97706" size={20} className="mr-2" />
+          <Text className="text-amber-800 text-xs flex-1 font-semibold">
             Displaying cached evaluation report. External PDF report links are unavailable offline.
           </Text>
         </View>
       )}
 
-      {/* Main Score Widget */}
-      <Card className="mb-6 p-6 items-center bg-indigo-950/20 border-indigo-500/20">
-        <Text className="text-indigo-400 text-xs font-bold uppercase tracking-wider mb-2">Overall Interview Score</Text>
-        <Text className="text-white text-5xl font-black mb-3">{overallScore}%</Text>
+      {/* Main Score Widget (Sleek dark card matching web dashboard) */}
+      <View className="mb-6 p-6 items-center bg-[#141414] border border-white/5 rounded-2xl shadow-xl">
+        <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Overall Interview Score</Text>
+        <Text className="text-[#c3ff3d] text-5xl font-black mb-3">{overallScore}%</Text>
         <Badge 
           label={overallScore >= 80 ? 'Exceptional Match' : overallScore >= 60 ? 'Competent Match' : 'Development Required'} 
           variant={overallScore >= 80 ? 'success' : overallScore >= 60 ? 'warning' : 'danger'} 
         />
-      </Card>
+      </View>
 
       {/* Conditional PDF Button */}
       {reportUrl ? (
         <TouchableOpacity
           onPress={() => handleOpenPDF(reportUrl)}
-          className="mb-6 bg-slate-800 border border-indigo-500/30 p-4 rounded-xl flex-row items-center justify-between active:bg-slate-750"
+          className="mb-6 bg-white border border-slate-200 shadow-sm p-4 rounded-xl flex-row items-center justify-between active:bg-slate-50"
         >
           <View className="flex-row items-center">
-            <FileText color="#818cf8" size={20} className="mr-3" />
-            <Text className="text-slate-250 font-bold text-sm">Open Full PDF Report</Text>
+            <FileText color="#2563eb" size={20} className="mr-3" />
+            <Text className="text-slate-800 font-bold text-sm">Open Full PDF Report</Text>
           </View>
-          <ExternalLink color="#94a3b8" size={16} />
+          <ExternalLink color="#64748b" size={16} />
         </TouchableOpacity>
       ) : null}
 
       <View className="space-y-6">
         {/* Executive Summary */}
-        <Card className="p-5">
-          <Text className="text-white font-extrabold text-base mb-3 border-b border-slate-700 pb-2">Executive Summary</Text>
-          <Text className="text-slate-300 text-sm leading-5">{summaryText}</Text>
+        <Card className="p-5 border border-slate-200 shadow-sm rounded-3xl">
+          <Text className="text-slate-900 font-extrabold text-base mb-3 border-b border-slate-100 pb-2">Executive Summary</Text>
+          <Text className="text-slate-600 text-sm leading-5 font-semibold">{summaryText}</Text>
         </Card>
 
         {/* Rubric Scores */}
-        <Card className="p-5">
-          <Text className="text-white font-extrabold text-base mb-4 border-b border-slate-700 pb-2">Rubric Breakdown</Text>
+        <Card className="p-5 border border-slate-200 shadow-sm rounded-3xl">
+          <Text className="text-slate-900 font-extrabold text-base mb-4 border-b border-slate-100 pb-2">Rubric Breakdown</Text>
           {Object.keys(rubricScores).length > 0 ? (
             Object.entries(rubricScores).map(([key, score]) => (
               <View key={key} className="mb-4">
                 <View className="flex-row justify-between items-center mb-1">
-                  <Text className="text-slate-350 font-medium text-xs">{formatKey(key)}</Text>
-                  <Text className="text-white font-bold text-xs">{score}%</Text>
+                  <Text className="text-slate-700 font-semibold text-xs">{formatKey(key)}</Text>
+                  <Text className="text-slate-900 font-bold text-xs">{score}%</Text>
                 </View>
-                <View className="h-2 bg-slate-900 rounded-full overflow-hidden">
+                <View className="h-2 bg-slate-100 rounded-full overflow-hidden">
                   <View 
-                    className="h-full bg-indigo-500 rounded-full" 
+                    className="h-full bg-blue-600 rounded-full" 
                     style={{ width: `${Math.min(100, Math.max(0, score))}%` }} 
                   />
                 </View>
               </View>
             ))
           ) : (
-            <Text className="text-slate-400 text-xs italic">No specific rubric scoring breakdowns generated.</Text>
+            <Text className="text-slate-500 text-xs italic font-semibold">No specific rubric scoring breakdowns generated.</Text>
           )}
         </Card>
 
         {/* Strengths */}
-        <Card className="p-5 border-l-4 border-emerald-500">
-          <Text className="text-white font-extrabold text-base mb-3 border-b border-slate-700 pb-2">Key Strengths</Text>
+        <Card className="p-5 border-l-4 border-emerald-500 bg-white border border-slate-200 shadow-sm rounded-3xl">
+          <Text className="text-slate-900 font-extrabold text-base mb-3 border-b border-slate-100 pb-2">Key Strengths</Text>
           {strengths.length > 0 ? (
             <View className="space-y-2.5">
               {strengths.map((strength, index) => (
                 <View key={index} className="flex-row items-start">
                   <CheckCircle color="#10b981" size={16} className="mr-2.5 mt-0.5" />
-                  <Text className="text-slate-300 text-sm flex-1 leading-5">{strength}</Text>
+                  <Text className="text-slate-600 text-sm flex-1 leading-5 font-semibold">{strength}</Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text className="text-slate-450 text-xs italic">No specific strengths listed.</Text>
+            <Text className="text-slate-500 text-xs italic font-semibold">No specific strengths listed.</Text>
           )}
         </Card>
 
         {/* Areas for Improvement (Weaknesses) */}
-        <Card className="p-5 border-l-4 border-red-500">
-          <Text className="text-white font-extrabold text-base mb-3 border-b border-slate-700 pb-2">Areas for Improvement</Text>
+        <Card className="p-5 border-l-4 border-rose-500 bg-white border border-slate-200 shadow-sm rounded-3xl">
+          <Text className="text-slate-900 font-extrabold text-base mb-3 border-b border-slate-100 pb-2">Areas for Improvement</Text>
           {weaknesses.length > 0 ? (
             <View className="space-y-2.5">
               {weaknesses.map((weakness, index) => (
                 <View key={index} className="flex-row items-start">
                   <AlertTriangle color="#ef4444" size={16} className="mr-2.5 mt-0.5" />
-                  <Text className="text-slate-300 text-sm flex-1 leading-5">{weakness}</Text>
+                  <Text className="text-slate-600 text-sm flex-1 leading-5 font-semibold">{weakness}</Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text className="text-slate-450 text-xs italic">No specific areas for improvement identified.</Text>
+            <Text className="text-slate-500 text-xs italic font-semibold">No specific areas for improvement identified.</Text>
           )}
         </Card>
 
         {/* Actionable Recommendations */}
-        <Card className="p-5 border-l-4 border-teal-500">
-          <Text className="text-white font-extrabold text-base mb-3 border-b border-slate-700 pb-2">Learning Recommendations</Text>
+        <Card className="p-5 border-l-4 border-teal-500 bg-white border border-slate-200 shadow-sm rounded-3xl">
+          <Text className="text-slate-900 font-extrabold text-base mb-3 border-b border-slate-100 pb-2">Learning Recommendations</Text>
           {recommendations.length > 0 ? (
             <View className="space-y-2.5">
               {recommendations.map((recommendation, index) => (
                 <View key={index} className="flex-row items-start">
                   <HelpCircle color="#14b8a6" size={16} className="mr-2.5 mt-0.5" />
-                  <Text className="text-slate-300 text-sm flex-1 leading-5">{recommendation}</Text>
+                  <Text className="text-slate-600 text-sm flex-1 leading-5 font-semibold">{recommendation}</Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text className="text-slate-450 text-xs italic">No recommendations provided.</Text>
+            <Text className="text-slate-500 text-xs italic font-semibold">No recommendations provided.</Text>
           )}
         </Card>
       </View>

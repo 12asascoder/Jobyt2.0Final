@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -42,14 +43,9 @@ export default function LoginScreen() {
   };
 
   const handleGoogleLogin = async () => {
-    // Standard mock / stub for Google Login since it requires client credentials
     setGoogleLoading(true);
     try {
-      // For testing, we can exchange a dummy token or simulate a success if dev
-      // In production, we'd trigger expo-auth-session to request an idToken
       Alert.alert('Google Sign In', 'OAuth session initialized...');
-      // Simulated successful OAuth flow for local dev verification
-      // await googleLogin('dummy-id-token');
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Google login failed');
     } finally {
@@ -58,70 +54,87 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} className="bg-slate-900 px-6 py-12">
-      <View className="mb-8">
-        <Text className="text-white text-4xl font-extrabold tracking-tight mb-2">Welcome Back</Text>
-        <Text className="text-slate-400 text-lg">Sign in to search and apply for jobs with Jobyt</Text>
-      </View>
-
-      <View className="space-y-4">
-        <Input
-          label="Email Address"
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-          error={errors.email}
-        />
-
-        <Input
-          label="Password"
-          placeholder="••••••••"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          error={errors.password}
-        />
-
-        <TouchableOpacity 
-          onPress={() => router.push('/(auth)/forgot-password')}
-          className="align-self-end py-1"
-        >
-          <Text className="text-indigo-400 text-sm font-semibold text-right">Forgot Password?</Text>
-        </TouchableOpacity>
-
-        <Button
-          label="Sign In"
-          variant="primary"
-          size="lg"
-          loading={loading}
-          onPress={handleLogin}
-          className="mt-4"
-        />
-
-        <View className="flex-row items-center my-6">
-          <View className="flex-1 h-px bg-slate-800" />
-          <Text className="text-slate-500 px-4 text-sm font-medium">OR</Text>
-          <View className="flex-1 h-px bg-slate-800" />
+    <ScrollView 
+      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} 
+      className="bg-[#fcfcfc] px-5 py-10"
+    >
+      <Card className="bg-white rounded-[32px] p-6 shadow-xl border border-slate-100 relative overflow-hidden w-full max-w-[420px] mx-auto my-auto">
+        {/* Subtle top gradient line */}
+        <View className="absolute top-0 left-0 right-0 flex-row h-[4px]">
+          <View className="flex-1 bg-[#c3ff3d]" />
+          <View className="flex-1 bg-[#ff6b6b]" />
         </View>
 
-        <Button
-          label="Continue with Google"
-          variant="outline"
-          size="lg"
-          loading={googleLoading}
-          onPress={handleGoogleLogin}
-          className="mb-4"
-        />
-      </View>
+        {/* Jobyt branding */}
+        <View className="items-center mt-4 mb-6">
+          <Text className="text-3xl font-black text-slate-900 tracking-tight">
+            Joby<Text className="text-[#c3ff3d]">t</Text>
+          </Text>
+          <Text className="text-slate-900 text-xl font-bold mt-3">Welcome back</Text>
+          <Text className="text-slate-500 mt-1 text-sm font-medium text-center">
+            Log in to your account to continue
+          </Text>
+        </View>
 
-      <View className="flex-row justify-center mt-8">
-        <Text className="text-slate-400 text-sm">Don't have an account? </Text>
-        <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-          <Text className="text-indigo-400 text-sm font-bold">Sign Up</Text>
-        </TouchableOpacity>
-      </View>
+        <View className="space-y-4">
+          <Input
+            label="Email Address"
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+            error={errors.email}
+          />
+
+          <Input
+            label="Password"
+            placeholder="••••••••"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            error={errors.password}
+          />
+
+          <TouchableOpacity 
+            onPress={() => router.push('/(auth)/forgot-password')}
+            className="align-self-end py-1"
+          >
+            <Text className="text-[#2563eb] text-xs font-bold text-right">Forgot password?</Text>
+          </TouchableOpacity>
+
+          <Button
+            label="Sign In"
+            variant="primary"
+            size="lg"
+            loading={loading}
+            onPress={handleLogin}
+            className="mt-2"
+          />
+
+          <View className="flex-row items-center my-5">
+            <View className="flex-1 h-px bg-slate-200" />
+            <Text className="text-slate-400 px-4 text-xs font-bold tracking-widest">OR</Text>
+            <View className="flex-1 h-px bg-slate-200" />
+          </View>
+
+          <Button
+            label="Continue with Google"
+            variant="outline"
+            size="lg"
+            loading={googleLoading}
+            onPress={handleGoogleLogin}
+            className="mb-2"
+          />
+        </View>
+
+        <View className="flex-row justify-center mt-6">
+          <Text className="text-slate-500 text-xs font-medium">Don't have an account? </Text>
+          <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+            <Text className="text-[#2563eb] text-xs font-bold underline">Create an account</Text>
+          </TouchableOpacity>
+        </View>
+      </Card>
     </ScrollView>
   );
 }

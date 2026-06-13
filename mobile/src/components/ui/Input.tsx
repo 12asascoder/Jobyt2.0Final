@@ -16,13 +16,13 @@ export const Input: React.FC<InputProps> = ({
   return (
     <View className="mb-4 w-full">
       {label ? (
-        <Text className="text-slate-300 text-sm font-semibold mb-2">{label}</Text>
+        <Text className="text-slate-700 text-sm font-semibold mb-2">{label}</Text>
       ) : null}
       <TextInput
-        placeholderTextColor="#64748b"
-        className={`bg-slate-900 border ${
-          error ? 'border-red-500' : 'border-slate-700'
-        } rounded-xl px-4 py-3 text-slate-100 text-sm focus:border-indigo-500 ${className}`}
+        placeholderTextColor="#94a3b8"
+        className={`bg-slate-50 border ${
+          error ? 'border-red-500' : 'border-slate-200'
+        } rounded-xl px-4 py-3 text-slate-900 text-sm focus:border-slate-800 ${className}`}
         {...props}
       />
       {error ? (

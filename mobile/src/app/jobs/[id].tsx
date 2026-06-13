@@ -94,41 +94,41 @@ export default function JobDetailsScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-slate-900 justify-center items-center">
-        <ActivityIndicator size="large" color="#6366f1" />
+      <View className="flex-1 bg-[#fcfcfc] justify-center items-center">
+        <ActivityIndicator size="large" color="#0b1120" />
       </View>
     );
   }
 
   if (!currentJob) {
     return (
-      <View className="flex-1 bg-slate-900 justify-center items-center px-6">
-        <Text className="text-white text-lg font-bold text-center">Job details not found</Text>
+      <View className="flex-1 bg-[#fcfcfc] justify-center items-center px-6">
+        <Text className="text-[#0b1120] text-lg font-bold text-center">Job details not found</Text>
         <Button label="Go Back" variant="outline" className="mt-4 w-full" onPress={() => router.back()} />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-slate-900">
+    <View className="flex-1 bg-[#fcfcfc]">
       {/* Custom Header */}
-      <View className="flex-row items-center justify-between px-5 py-4 border-b border-slate-800">
+      <View className="flex-row items-center justify-between px-5 py-4 border-b border-slate-200/80 bg-white">
         <TouchableOpacity
           onPress={() => router.back()}
-          className="bg-slate-800 p-2 rounded-full border border-slate-700"
+          className="bg-slate-50 p-2 rounded-full border border-slate-200"
         >
-          <ChevronLeft color="#f8fafc" size={20} />
+          <ChevronLeft color="#0b1120" size={20} />
         </TouchableOpacity>
-        <Text className="text-white text-base font-bold truncate max-w-[200px]" numberOfLines={1}>
+        <Text className="text-slate-900 text-base font-bold truncate max-w-[200px]" numberOfLines={1}>
           {currentJob.title}
         </Text>
         <TouchableOpacity
           onPress={() => toggleSaveJob(currentJob.id)}
-          className="bg-slate-800 p-2 rounded-full border border-slate-700"
+          className="bg-slate-50 p-2 rounded-full border border-slate-200"
         >
           <Bookmark
-            color={currentJob.is_saved ? COLORS.primary : '#f8fafc'}
-            fill={currentJob.is_saved ? COLORS.primary : 'transparent'}
+            color={currentJob.is_saved ? '#2563eb' : '#0b1120'}
+            fill={currentJob.is_saved ? '#2563eb' : 'transparent'}
             size={20}
           />
         </TouchableOpacity>
@@ -137,25 +137,25 @@ export default function JobDetailsScreen() {
       {/* Main Info */}
       <ScrollView className="flex-1 px-5 py-6">
         <View className="mb-6">
-          <Text className="text-white text-2xl font-black mb-1">{currentJob.title}</Text>
-          <Text className="text-indigo-400 text-lg font-bold">{currentJob.company}</Text>
+          <Text className="text-slate-900 text-2xl font-black mb-1">{currentJob.title}</Text>
+          <Text className="text-[#2563eb] text-lg font-bold">{currentJob.company}</Text>
         </View>
 
         {/* Icons Meta Cards */}
         <View className="flex-row space-x-3 mb-6">
           {currentJob.location ? (
-            <Card className="flex-1 p-3 items-center justify-center border-slate-700/50">
-              <MapPin color={COLORS.primary} size={18} className="mb-1" />
-              <Text className="text-slate-200 text-xs font-semibold text-center truncate w-full">
+            <Card className="flex-1 p-3 items-center justify-center border-slate-200 bg-white shadow-sm">
+              <MapPin color="#2563eb" size={18} className="mb-1" />
+              <Text className="text-slate-800 text-xs font-semibold text-center truncate w-full">
                 {currentJob.location}
               </Text>
             </Card>
           ) : null}
 
           {currentJob.salary_min !== undefined || currentJob.salary_max !== undefined ? (
-            <Card className="flex-1 p-3 items-center justify-center border-slate-700/50">
-              <DollarSign color={COLORS.secondary} size={18} className="mb-1" />
-              <Text className="text-slate-200 text-xs font-semibold text-center">
+            <Card className="flex-1 p-3 items-center justify-center border-slate-200 bg-white shadow-sm">
+              <DollarSign color="#10b981" size={18} className="mb-1" />
+              <Text className="text-slate-800 text-xs font-semibold text-center">
                 {currentJob.salary_min && currentJob.salary_max
                   ? `$${(currentJob.salary_min / 1000).toFixed(0)}k - $${(currentJob.salary_max / 1000).toFixed(0)}k`
                   : 'Competitive'}
@@ -163,16 +163,16 @@ export default function JobDetailsScreen() {
             </Card>
           ) : null}
 
-          <Card className="flex-1 p-3 items-center justify-center border-slate-700/50">
-            <Briefcase color="#e2e8f0" size={18} className="mb-1" />
-            <Text className="text-slate-200 text-xs font-semibold text-center">Full-Time</Text>
+          <Card className="flex-1 p-3 items-center justify-center border-slate-200 bg-white shadow-sm">
+            <Briefcase color="#64748b" size={18} className="mb-1" />
+            <Text className="text-slate-800 text-xs font-semibold text-center">Full-Time</Text>
           </Card>
         </View>
 
         {/* Skills list */}
         {currentJob.skills && currentJob.skills.length > 0 ? (
           <View className="mb-6">
-            <Text className="text-slate-300 font-bold text-sm mb-3">Required Skills</Text>
+            <Text className="text-slate-700 font-bold text-sm mb-3">Required Skills</Text>
             <View className="flex-row flex-wrap gap-2">
               {currentJob.skills.map((skill, index) => (
                 <Badge key={index} label={skill} variant="secondary" />
@@ -183,15 +183,15 @@ export default function JobDetailsScreen() {
 
         {/* Description */}
         <View className="mb-12">
-          <Text className="text-slate-300 font-bold text-sm mb-3">Job Description</Text>
-          <Text className="text-slate-400 text-base leading-6 font-medium">
+          <Text className="text-slate-700 font-bold text-sm mb-3">Job Description</Text>
+          <Text className="text-slate-600 text-sm leading-6 font-semibold">
             {currentJob.description}
           </Text>
         </View>
       </ScrollView>
 
       {/* Sticky Bottom Apply Action */}
-      <View className="px-5 py-4 border-t border-slate-800 bg-slate-900/90">
+      <View className="px-5 py-4 border-t border-slate-200 bg-white/95">
         {hasApplied ? (
           <Button label="Already Applied" variant="outline" size="lg" disabled className="w-full" />
         ) : (
@@ -212,42 +212,42 @@ export default function JobDetailsScreen() {
         transparent={true}
         onRequestClose={() => setShowApplyModal(false)}
       >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-slate-800 rounded-t-3xl border-t border-slate-700 p-6 space-y-5">
+        <View className="flex-1 justify-end bg-[#0b1120]/30">
+          <View className="bg-white rounded-t-3xl border-t border-slate-200 p-6 space-y-5">
             <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-white text-xl font-bold">Apply for this role</Text>
+              <Text className="text-slate-900 text-xl font-bold">Apply for this role</Text>
               <TouchableOpacity onPress={() => setShowApplyModal(false)}>
-                <X color="#94a3b8" size={24} />
+                <X color="#0b1120" size={24} />
               </TouchableOpacity>
             </View>
 
             <ScrollView className="max-h-96">
               {/* Resume Selection */}
               <View className="mb-4">
-                <Text className="text-slate-300 text-sm font-semibold mb-2">Select Resume</Text>
+                <Text className="text-slate-700 text-sm font-semibold mb-2">Select Resume</Text>
                 {resumes.length > 0 ? (
-                  <View className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3.5 flex-row items-center">
-                    <FileText color="#818cf8" size={20} className="mr-3" />
-                    <Text className="text-slate-200 text-sm font-semibold truncate flex-1">
+                  <View className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 flex-row items-center">
+                    <FileText color="#2563eb" size={20} className="mr-3" />
+                    <Text className="text-slate-800 text-sm font-semibold truncate flex-1">
                       {selectedResumeName || 'Default Resume'}
                     </Text>
                   </View>
                 ) : (
-                  <Text className="text-slate-400 text-sm">Please upload a resume in the Career Coach tab first.</Text>
+                  <Text className="text-slate-500 text-sm font-medium">Please upload a resume in the Career Coach tab first.</Text>
                 )}
               </View>
 
               {/* Cover Letter Input */}
               <View className="mb-4">
-                <Text className="text-slate-300 text-sm font-semibold mb-2">Cover Letter (Optional)</Text>
+                <Text className="text-slate-700 text-sm font-semibold mb-2">Cover Letter (Optional)</Text>
                 <TextInput
                   multiline
                   numberOfLines={4}
                   placeholder="Introduce yourself and explain why you're a great fit..."
-                  placeholderTextColor="#64748b"
+                  placeholderTextColor="#94a3b8"
                   value={coverLetter}
                   onChangeText={setCoverLetter}
-                  className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm h-32"
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-sm h-32"
                   style={{ textAlignVertical: 'top' }}
                 />
               </View>

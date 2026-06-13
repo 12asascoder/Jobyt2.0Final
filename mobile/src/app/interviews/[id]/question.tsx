@@ -136,16 +136,16 @@ export default function InterviewQuestionScreen() {
 
   if (loading) {
     return (
-      <View className="bg-slate-900 flex-1 justify-center items-center px-6">
-        <ActivityIndicator size="large" color="#6366f1" />
-        <Text className="text-white text-sm mt-4 text-center">Loading interview session details...</Text>
+      <View className="bg-slate-950 flex-1 justify-center items-center px-6">
+        <ActivityIndicator size="large" color="#c3ff3d" />
+        <Text className="text-slate-300 text-sm mt-4 text-center">Loading interview session details...</Text>
       </View>
     );
   }
 
   if (questions.length === 0) {
     return (
-      <View className="bg-slate-900 flex-1 justify-center items-center px-6">
+      <View className="bg-slate-950 flex-1 justify-center items-center px-6">
         <AlertTriangle color="#ef4444" size={48} className="mb-4" />
         <Text className="text-white text-base font-bold text-center">No questions found</Text>
         <Text className="text-slate-400 text-sm mt-2 text-center">There are no questions generated for this interview session.</Text>
@@ -161,20 +161,20 @@ export default function InterviewQuestionScreen() {
   // Question category label variant helper
   const getCategoryVariant = (category: string) => {
     const cat = (category || '').toLowerCase();
-    if (cat.includes('technical')) return 'primary';
+    if (cat.includes('technical')) return 'info';
     if (cat.includes('behavioral')) return 'success';
-    if (cat.includes('situational')) return 'info';
+    if (cat.includes('situational')) return 'warning';
     return 'secondary';
   };
 
   return (
-    <ScrollView className="bg-slate-900 flex-1 px-5" contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}>
+    <ScrollView className="bg-slate-950 flex-1 px-5" contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}>
       {/* Header */}
       <View className="flex-row items-center mb-6 mt-2 justify-between">
         <View className="flex-row items-center">
           <TouchableOpacity
             onPress={() => router.back()}
-            className="mr-4 bg-slate-800 p-2.5 rounded-full border border-slate-700"
+            className="mr-4 bg-slate-900 p-2.5 rounded-full border border-slate-800"
           >
             <ChevronLeft color="#f8fafc" size={20} />
           </TouchableOpacity>
@@ -187,7 +187,7 @@ export default function InterviewQuestionScreen() {
       </View>
 
       {isOffline && (
-        <View className="mb-4 bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex-row items-center">
+        <View className="mb-4 bg-red-900/20 border border-red-700/30 p-4 rounded-xl flex-row items-center">
           <AlertTriangle color="#ef4444" size={20} className="mr-2" />
           <Text className="text-red-200 text-xs flex-1">
             Offline Guard active. Submission and progression are locked until connection is re-established.
@@ -196,19 +196,19 @@ export default function InterviewQuestionScreen() {
       )}
 
       {/* Question Card */}
-      <Card className="mb-6 p-5 border border-slate-700">
+      <View className="mb-6 p-5 bg-slate-900 border border-slate-800 rounded-3xl">
         <View className="flex-row justify-between items-center mb-3">
           <Badge label={currentQuestion.category.toUpperCase()} variant={getCategoryVariant(currentQuestion.category)} />
         </View>
         <Text className="text-white font-extrabold text-base leading-6">
           {currentQuestion.question_text}
         </Text>
-      </Card>
+      </View>
 
       {!evaluatedResponse ? (
         <View className="space-y-5">
           {/* Answer Input */}
-          <Card className="p-5">
+          <View className="p-5 bg-slate-900 border border-slate-800 rounded-3xl">
             <Text className="text-white font-bold text-sm mb-2">Your Answer Response</Text>
             <TextInput
               multiline
@@ -218,7 +218,7 @@ export default function InterviewQuestionScreen() {
               value={responseText}
               onChangeText={setResponseText}
               editable={!submittingResponse && !isOffline}
-              className="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 text-sm h-40 focus:border-indigo-500"
+              className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 text-sm h-40 focus:border-[#c3ff3d]"
               style={{ textAlignVertical: 'top' }}
             />
             <View className="flex-row justify-between mt-2">
@@ -231,7 +231,7 @@ export default function InterviewQuestionScreen() {
                 </Text>
               )}
             </View>
-          </Card>
+          </View>
 
           {/* Action button */}
           <Button
@@ -241,18 +241,19 @@ export default function InterviewQuestionScreen() {
             disabled={isOffline || submittingResponse || !responseText.trim()}
             loading={submittingResponse}
             onPress={handleSubmitAnswer}
+            className="bg-[#c3ff3d] border-[#c3ff3d]"
           />
         </View>
       ) : (
         <View className="space-y-6">
           {/* Answer Review */}
-          <Card className="p-5 bg-indigo-950/10 border border-indigo-500/20">
+          <View className="p-5 bg-slate-900 border border-slate-800 rounded-3xl">
             <Text className="text-slate-400 text-xs font-semibold mb-2">Your Submitted Response:</Text>
-            <Text className="text-slate-300 text-sm italic mb-4">
+            <Text className="text-slate-350 text-sm italic mb-4">
               "{evaluatedResponse.response_text}"
             </Text>
 
-            <View className="border-t border-slate-800 pt-4">
+            <View className="border-t border-slate-800/80 pt-4">
               <View className="flex-row justify-between items-center mb-3">
                 <Text className="text-white font-bold text-sm">AI Score Evaluation</Text>
                 {(() => {
@@ -267,7 +268,7 @@ export default function InterviewQuestionScreen() {
               </View>
 
               <Text className="text-slate-300 text-xs font-semibold mb-1 flex-row items-center">
-                <MessageSquare size={12} color="#818cf8" className="mr-1 inline" /> AI Feedback & Suggestions:
+                <MessageSquare size={12} color="#c3ff3d" className="mr-1 inline" /> AI Feedback & Suggestions:
               </Text>
               <Text className="text-slate-400 text-xs leading-4">
                 {(() => {
@@ -284,7 +285,7 @@ export default function InterviewQuestionScreen() {
                 })()}
               </Text>
             </View>
-          </Card>
+          </View>
 
           {/* Action to proceed */}
           {isLastQuestion ? (
@@ -301,6 +302,7 @@ export default function InterviewQuestionScreen() {
               variant="primary"
               size="lg"
               onPress={handleNext}
+              className="bg-[#c3ff3d] border-[#c3ff3d]"
             />
           )}
         </View>

@@ -78,9 +78,9 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   };
 
   return (
-    <View className="flex-1 bg-slate-900 justify-center items-center px-6">
-      <View className="bg-indigo-600/10 p-6 rounded-full mb-6 border border-indigo-500/20">
-        <ShieldAlert color="#6366f1" size={56} />
+    <View className="flex-1 bg-slate-950 justify-center items-center px-6">
+      <View className="p-6 rounded-full mb-6 border border-slate-700" style={{ backgroundColor: 'rgba(195, 255, 61, 0.08)' }}>
+        <ShieldAlert color="#c3ff3d" size={56} />
       </View>
 
       <Text className="text-white text-2xl font-black text-center mb-2">Jobyt is Locked</Text>

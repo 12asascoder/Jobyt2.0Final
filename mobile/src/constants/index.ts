@@ -1,17 +1,18 @@
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001/api/v1';
 
 export const COLORS = {
-  primary: '#6366f1', // Indigo
-  primaryLight: '#818cf8',
-  secondary: '#14b8a6', // Teal
-  background: '#0f172a', // Slate 900
-  card: '#1e293b', // Slate 800
-  text: '#f8fafc', // Slate 50
-  textMuted: '#94a3b8', // Slate 400
-  border: '#334155', // Slate 700
-  error: '#ef4444', // Red 500
-  success: '#10b981', // Emerald 500
-  warning: '#f59e0b', // Amber 500
+  primary: '#c3ff3d', // Brand primary (lime)
+  primaryLight: '#d9ff66',
+  secondary: '#2563eb', // Brand blue
+  background: '#fcfcfc', // Light page background
+  card: '#ffffff', // White card background
+  text: '#0b1120', // Dark text color
+  textMuted: '#64748b', // Slate 500
+  border: '#e2e8f0', // Slate 200
+  error: '#ef4444',
+  success: '#10b981',
+  warning: '#f59e0b',
+  coral: '#ff6b6b', // Brand Coral
 };
 
 export const ROUTES = {

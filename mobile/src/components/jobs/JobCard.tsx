@@ -1,9 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Bookmark, MapPin, DollarSign, Briefcase } from 'lucide-react-native';
+import { Bookmark, MapPin, DollarSign, ArrowUpRight } from 'lucide-react-native';
 import { Job } from '../../types';
-import { Badge } from '../ui/Badge';
-import { Card } from '../ui/Card';
 import { COLORS } from '../../constants';
 
 interface JobCardProps {
@@ -12,70 +10,120 @@ interface JobCardProps {
   onBookmarkToggle: () => void;
 }
 
+const AVATAR_COLORS = [
+  '#5B6AF0', '#1D9E75', '#E05C3A', '#9B59B6',
+  '#E67E22', '#2980B9', '#16A085', '#C0392B',
+];
+
+const avatarColor = (name: string): string => {
+  return AVATAR_COLORS[(name || '?').charCodeAt(0) % AVATAR_COLORS.length];
+};
+
+const avatarInitials = (name: string): string => {
+  return (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+};
+
 export const JobCard: React.FC<JobCardProps> = ({ job, onPress, onBookmarkToggle }) => {
+  const companyName = job.company || 'Company';
+  const initials = avatarInitials(companyName);
+  const bgColor = avatarColor(companyName);
+
+  const formattedSalary =
+    job.salary_min && job.salary_max
+      ? `$${(job.salary_min / 1000).toFixed(0)}k - $${(job.salary_max / 1000).toFixed(0)}k`
+      : job.salary_min
+      ? `$${(job.salary_min / 1000).toFixed(0)}k+`
+      : 'Competitive';
+
   return (
-    <Card className="mb-4 p-5 bg-slate-800 border-slate-700/80">
-      <View className="flex-row justify-between items-start mb-2">
-        <View className="flex-1 mr-2">
-          <Text className="text-white text-lg font-bold truncate" numberOfLines={1}>
-            {job.title}
-          </Text>
-          <Text className="text-slate-400 text-sm font-semibold mt-0.5 truncate" numberOfLines={1}>
-            {job.company}
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={onBookmarkToggle}
-          className="p-1 bg-slate-900/50 rounded-lg border border-slate-700"
-        >
-          <Bookmark
-            color={job.is_saved ? COLORS.primary : COLORS.textMuted}
-            fill={job.is_saved ? COLORS.primary : 'transparent'}
-            size={18}
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Meta Infos */}
-      <View className="flex-row flex-wrap gap-y-2 gap-x-4 mb-4 mt-2">
-        {job.location ? (
-          <View className="flex-row items-center">
-            <MapPin color={COLORS.textMuted} size={14} className="mr-1.5" />
-            <Text className="text-slate-300 text-xs font-medium">{job.location}</Text>
+    <View className="mb-4 bg-[#F4F1EA] rounded-3xl border border-slate-200/30 p-[6px]">
+      {/* Top Details Box (White background with cut corners look mapped to rounded React Native container) */}
+      <View className="bg-white rounded-[22px] p-4">
+        <View className="flex-row justify-between items-start mb-3">
+          <View className="flex-row items-center flex-1 mr-2">
+            {/* Circular Avatar */}
+            <View
+              className="w-10 h-10 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: bgColor }}
+            >
+              <Text className="text-white text-sm font-bold">{initials}</Text>
+            </View>
+            
+            <View className="flex-1">
+              <Text className="text-[#0B0B0B] text-base font-extrabold truncate" numberOfLines={1}>
+                {job.title}
+              </Text>
+              <Text className="text-slate-500 text-xs font-semibold mt-0.5 truncate" numberOfLines={1}>
+                {companyName}
+              </Text>
+            </View>
           </View>
-        ) : null}
 
-        {job.salary_min !== undefined || job.salary_max !== undefined ? (
-          <View className="flex-row items-center">
-            <DollarSign color={COLORS.textMuted} size={14} className="mr-1.5" />
-            <Text className="text-slate-300 text-xs font-medium">
-              {job.salary_min && job.salary_max
-                ? `$${(job.salary_min / 1000).toFixed(0)}k - $${(job.salary_max / 1000).toFixed(0)}k`
-                : job.salary_min
-                ? `$${(job.salary_min / 1000).toFixed(0)}k+`
-                : 'Competitive'}
+          {/* Action buttons (Bookmark & Arrow Link) */}
+          <View className="flex-row items-center space-x-1.5">
+            <TouchableOpacity
+              onPress={onBookmarkToggle}
+              className="p-1.5 bg-slate-100 rounded-full"
+            >
+              <Bookmark
+                color={job.is_saved ? '#2563eb' : '#64748b'}
+                fill={job.is_saved ? '#2563eb' : 'transparent'}
+                size={16}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={onPress}
+              className="w-8 h-8 bg-[#0B0B0B] rounded-full items-center justify-center"
+            >
+              <ArrowUpRight color="#ffffff" size={16} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Tags Row */}
+        <View className="flex-row flex-wrap gap-1.5 mt-2">
+          <View className="border border-[#C0BAB0] rounded-full px-2.5 py-1">
+            <Text className="text-[#222] text-[10px] font-semibold">
+              {job.location?.toLowerCase().includes('remote') ? 'Remote' : 'On site'}
             </Text>
           </View>
-        ) : null}
+          {job.skills && job.skills.slice(0, 2).map((skill, i) => (
+            <View key={i} className="border border-[#C0BAB0] rounded-full px-2.5 py-1">
+              <Text className="text-[#222] text-[10px] font-semibold">{skill}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
-      {/* Badges / Bottom bar */}
-      <View className="flex-row justify-between items-center pt-3 border-t border-slate-700/40">
-        <View className="flex-row gap-x-1.5">
-          <Badge label={job.location?.toLowerCase().includes('remote') ? 'Remote' : 'On-Site'} variant="info" />
-          {job.skills && job.skills.length > 0 ? (
-            <Badge label={job.skills[0]} variant="secondary" />
-          ) : null}
+      {/* Footer Area (Inside the beige container) */}
+      <View className="flex-row justify-between items-center px-3.5 pt-3 pb-2.5">
+        <View>
+          <Text className="text-[#0B0B0B] text-base font-extrabold tracking-tight">
+            {formattedSalary}
+          </Text>
+          <View className="flex-row items-center mt-1">
+            <MapPin color="#64748b" size={11} className="mr-1" />
+            <Text className="text-slate-500 text-[10px] font-medium truncate max-w-[120px]">
+              {job.location || 'Remote'}
+            </Text>
+          </View>
         </View>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           onPress={onPress}
-          className="flex-row items-center"
+          className="bg-[#0B0B0B] px-5 py-2.5 rounded-full"
         >
-          <Text className="text-indigo-400 font-bold text-xs mr-1">View Details</Text>
+          <Text className="text-white font-bold text-xs">Apply</Text>
         </TouchableOpacity>
       </View>
-    </Card>
+    </View>
   );
 };
+
 export default JobCard;
