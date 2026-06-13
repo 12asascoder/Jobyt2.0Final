@@ -166,7 +166,35 @@ export const registerLiveInterviewHandlers = (socket: AuthSocket, io: SocketServ
     });
   });
 
-  // 8. Handle Disconnection cleanup
+  // 8. Request Dynamic Follow-up Question
+  socket.on('request_followup_question', async (payload: { interviewId: string; code: string; language: string }) => {
+    const { interviewId, code, language } = payload;
+    if (!interviewId) return;
+
+    if (!socket.activeInterviewRooms?.has(interviewId)) return;
+
+    if (user.role !== 'recruiter' && user.role !== 'admin') {
+      socket.emit('error', { message: 'Only recruiters can request follow-up questions' });
+      return;
+    }
+
+    try {
+      const question = await InterviewService.generateFollowupQuestion(interviewId, code, language);
+      if (question) {
+        io.to(`interview:${interviewId}`).emit('followup_question', {
+          question,
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        socket.emit('error', { message: 'Could not generate follow-up question. Check AI configuration.' });
+      }
+    } catch (err: any) {
+      console.error('[Socket] generateFollowupQuestion failed:', err);
+      socket.emit('error', { message: 'Failed to generate follow-up question' });
+    }
+  });
+
+  // 9. Handle Disconnection cleanup
   socket.on('disconnect', () => {
     if (socket.activeInterviewRooms) {
       for (const interviewId of socket.activeInterviewRooms) {

@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { InterviewModel, Interview, InterviewStatus } from '../models/interview.model';
 import { ApplicationModel } from '../models/application.model';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
@@ -232,5 +233,103 @@ export const InterviewService = {
       session.participants.delete(userId);
       // Clean up empty sessions if status is completed (or leave it to garbage collection/explicit end)
     }
+  },
+
+  async generateFollowupQuestion(interviewId: string, code: string, language: string): Promise<string | null> {
+    const claudeApiKey = process.env.CLAUDE_API_KEY;
+    const groqApiKey = process.env.GROQ_API_KEY;
+    const ollamaApiKey = process.env.OLLAMA_API_KEY;
+
+    const systemPrompt = `You are a technical interviewer conducting a live coding interview.
+The candidate is coding in ${language}.
+Here is their current code:
+\`\`\`${language}
+${code}
+\`\`\`
+Please generate ONE brief, highly relevant follow-up technical question or suggestion to guide the candidate or test their understanding of their code. Keep the response concise (maximum 2-3 sentences), professional, and direct.`;
+
+    // 1. Try Claude API if configured (Production)
+    if (claudeApiKey && claudeApiKey.trim()) {
+      try {
+        console.log('[Claude API] Generating follow-up question...');
+        const response = await axios.post(
+          'https://api.anthropic.com/v1/messages',
+          {
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 300,
+            messages: [{ role: 'user', content: systemPrompt }],
+          },
+          {
+            headers: {
+              'x-api-key': claudeApiKey,
+              'anthropic-version': '2023-06-01',
+              'content-type': 'application/json',
+            },
+            timeout: 15000,
+          }
+        );
+        const text = response.data?.content?.[0]?.text;
+        if (text) return text.trim();
+      } catch (err: any) {
+        console.error('[Claude API] Failed:', err.message);
+      }
+    }
+
+    // 2. Try Groq API if configured
+    if (groqApiKey && groqApiKey.trim()) {
+      try {
+        console.log('[Groq API] Generating follow-up question...');
+        const response = await axios.post(
+          'https://api.groq.com/openai/v1/chat/completions',
+          {
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: systemPrompt }],
+            temperature: 0.7,
+            max_tokens: 300,
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${groqApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 15000,
+          }
+        );
+        const text = response.data?.choices?.[0]?.message?.content;
+        if (text) return text.trim();
+      } catch (err: any) {
+        console.error('[Groq API] Failed:', err.message);
+      }
+    }
+
+    // 3. Try Ollama if configured
+    if (ollamaApiKey && ollamaApiKey.trim()) {
+      try {
+        console.log('[Ollama API] Generating follow-up question...');
+        const ollamaUrl = process.env.OLLAMA_API_URL || 'http://localhost:11434/api/chat';
+        const response = await axios.post(
+          ollamaUrl,
+          {
+            model: process.env.OLLAMA_MODEL || 'llama3',
+            messages: [{ role: 'user', content: systemPrompt }],
+            stream: false,
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${ollamaApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 15000,
+          }
+        );
+        const text = response.data?.message?.content || response.data?.choices?.[0]?.message?.content;
+        if (text) return text.trim();
+      } catch (err: any) {
+        console.error('[Ollama API] Failed:', err.message);
+      }
+    }
+
+    console.warn('[AI Services] All technical interview follow-up providers failed or are unconfigured.');
+    return null;
   },
 };
