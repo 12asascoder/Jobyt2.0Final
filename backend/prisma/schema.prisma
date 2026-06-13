@@ -53,6 +53,7 @@ model applications {
   users                       users               @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   jobs                        jobs                @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   pipeline_events             pipeline_events[]
+  interviews                  interviews[]
 
   @@unique([job_id, applicant_id])
   @@index([applicant_id, created_at(sort: Desc)], map: "idx_applications_applicant")
@@ -307,6 +308,8 @@ model users {
   resumes                                         resumes[]
   saved_jobs                                      saved_jobs[]
   job_recommendations                             job_recommendations[]
+  interviews_as_interviewer                       interviews[]           @relation("interviewer")
+  interviews_as_candidate                         interviews[]           @relation("candidate")
 }
 
 enum auth_provider {
@@ -394,4 +397,33 @@ model scheduler_logs {
   error_message   String?
   created_at      DateTime? @default(now()) @db.Timestamptz(6)
   updated_at      DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+enum interview_status {
+  scheduled
+  live
+  completed
+  cancelled
+}
+
+model interviews {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  application_id String           @db.Uuid
+  interviewer_id String           @db.Uuid
+  candidate_id   String           @db.Uuid
+  status         interview_status @default(scheduled)
+  code_content   String?
+  code_language  String?          @default("javascript") @db.VarChar(50)
+  notes          String?
+  feedback       String?
+  rating         Int?
+  scheduled_at   DateTime         @db.Timestamptz(6)
+  started_at     DateTime?        @db.Timestamptz(6)
+  ended_at       DateTime?        @db.Timestamptz(6)
+  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
+
+  applications   applications     @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  interviewer    users            @relation("interviewer", fields: [interviewer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  candidate      users            @relation("candidate", fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
