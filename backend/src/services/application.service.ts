@@ -158,15 +158,57 @@ export const ApplicationService = {
       );
       // 6) Notify recruiter (transaction-scoped for consistent state)
       await NotificationModel.create(
-        {
-          user_id: job.recruiter_id,
-          type: 'application_submitted',
-          title: 'New application received',
-          body: `A new applicant has applied to "${job.title}"`,
-          action_url: `/recruiter/jobs/${jobId}/applications`,
-        },
-        client,
-      );
+          {
+            user_id: job.recruiter_id,
+            type: 'application_submitted',
+            title: 'New application received',
+            body: `A new applicant has applied to "${job.title}"`,
+            action_url: `/recruiter/jobs/${jobId}/applications`,
+          },
+          client,
+        );
+
+        // Auto‑shortlist if match meets employer threshold
+        if (job.ai_interview_threshold !== null && job.ai_interview_threshold !== undefined) {
+          try {
+            // Load applicant profile for skill comparison
+            const profile = await ApplicantProfileModel.findByUserId(applicantId);
+            const candidateSkills: string[] = Array.isArray(profile?.skills) ? profile.skills : [];
+            const jobSkills: string[] = Array.isArray(job.skills) ? job.skills : [];
+            const { matchPercentage } = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
+            if (matchPercentage >= job.ai_interview_threshold) {
+              // Update application status to shortlisted within the same transaction
+              await client.query(`
+                UPDATE applications
+                SET status = 'shortlisted', status_updated_at = NOW()
+                WHERE id = $1
+              `, [application.id]);
+              // Record pipeline event for the status change
+              await PipelineEventModel.create(
+                {
+                  application_id: application.id,
+                  previous_status: 'applied',
+                  new_status: 'shortlisted',
+                  changed_by_id: job.recruiter_id,
+                },
+                client,
+              );
+              // Notify applicant about being shortlisted
+              await NotificationModel.create(
+                {
+                  user_id: applicantId,
+                  type: 'application_status',
+                  title: 'Application shortlisted',
+                  body: `Your application for "${job.title}" has been automatically shortlisted.`,
+                  action_url: `/applications`,
+                },
+                client,
+              );
+            }
+          } catch (err) {
+            console.error('[ApplicationService] Auto‑shortlist failed:', err);
+          }
+        }
 
       // 7) Milestone notification for recruiter on every 10 applications
       const totalApplications = await ApplicationModel.countByJob(jobId, client);
