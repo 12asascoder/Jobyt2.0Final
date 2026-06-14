@@ -5,6 +5,7 @@ import { OAuthStateService } from '../services/oauthState.service';
 import { sendSuccess } from '../utils/response';
 import { BadRequestError, UnauthorizedError } from '../utils/errors';
 import logger from '../config/logger';
+import { GithubService } from '../services/github.service';
 
 export const AuthController = {
   async register(req: Request, res: Response, next: NextFunction) {
@@ -133,7 +134,8 @@ export const AuthController = {
       }
 
       const data = await OAuthAuthService.login('github', normalizedCode, referralCode, role);
-
+      // Sync GitHub repos after successful login
+      await GithubService.syncUserRepos(data.user.id, data.tokens?.accessToken || '');
       // TODO: Move OAuth provider handlers to strategy pattern if more providers are added.
       sendSuccess(res, data, 'Login successful');
     } catch (err) {
