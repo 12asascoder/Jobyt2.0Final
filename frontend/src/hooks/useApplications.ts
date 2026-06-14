@@ -44,6 +44,8 @@ export const useApplications = () => {
       setTotal(res.pagination?.total ?? 0);
       setPage(res.pagination?.page ?? requestedPage);
       setTotalPages(res.pagination?.totalPages ?? 1);
+    } catch (error) {
+      console.error('[useApplications] Failed to fetch my applications:', error);
     } finally {
       setIsLoading(false);
     }
@@ -57,6 +59,8 @@ export const useApplications = () => {
       setTotal(res.pagination?.total ?? 0);
       setPage(res.pagination?.page ?? requestedPage);
       setTotalPages(res.pagination?.totalPages ?? 1);
+    } catch (error) {
+      console.error('[useApplications] Failed to fetch job applications:', error);
     } finally {
       setIsLoading(false);
     }

@@ -6,7 +6,7 @@ const router = Router();
 
 router.use(authenticate);
 router.get('/', NotificationController.getAll);
-router.patch('/:id/read', NotificationController.markRead);
 router.patch('/read-all', NotificationController.markAllRead);
+router.patch('/:id/read', NotificationController.markRead);
 
 export default router;

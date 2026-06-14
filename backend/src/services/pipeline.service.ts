@@ -4,6 +4,7 @@ import { JobModel } from '../models/job.model';
 import { PipelineEventModel } from '../models/pipeline_event.model';
 import { AppError } from '../utils/appError';
 import { NotificationModel } from '../models/notification.model';
+import { NotificationOrchestrator } from './notification/orchestrator';
 
 export const PipelineService = {
   // Guard access
@@ -119,13 +120,17 @@ export const PipelineService = {
       await client.query('COMMIT');
 
       // Async hooks - Create notification for applicant
-      await NotificationModel.create({
-        user_id: candidateId,
-        type: 'application_status',
-        title: 'Application Update',
-        body: `Your application for "${job.title}" has been moved to ${toStage}.`,
-        action_url: '/applications',
-      }).catch(err => console.error('Failed to send notification', err));
+      await NotificationOrchestrator.dispatch(
+        candidateId,
+        'application_status',
+        {
+          title: 'Application Update',
+          body: `Your application for "${job.title}" has been moved to ${toStage}.`,
+          action_url: '/applications',
+          job_title: job.title,
+          new_status: toStage
+        }
+      ).catch(err => console.error('Failed to send notification', err));
 
       // Return real-time snapshot
       return await this.getPipelineBoard(recruiterId, jobId);

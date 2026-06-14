@@ -9,7 +9,17 @@ export type NotificationType =
   | 'low_credit'
   | 'payment_success'
   | 'payment_failed'
-  | 'application_submitted';
+  | 'application_submitted'
+  | 'interview_invited'
+  | 'interview_cancelled'
+  | 'interview_reminder_24h'
+  | 'interview_reminder_2h'
+  | 'credits_exhausted'
+  | 'subscription_expiry'
+  | 'employer_broadcast'
+  | 'deadline_alert'
+  | 'daily_recommendation'
+  | 'auto_apply_digest';
 
 export interface Notification {
   id: string;

@@ -3,6 +3,7 @@ import { redisConnection } from '../config/queue';
 import { sendEmail, dailyRecommendationEmailHtml, autoApplyDigestEmailHtml } from '../utils/email';
 import { WhatsAppService } from '../services/whatsapp.service';
 import pool from '../config/database';
+import { NotificationOrchestrator } from '../services/notification/orchestrator';
 
 const LOG_PREFIX = '[NotificationWorker]';
 
@@ -96,6 +97,27 @@ export const notificationWorker = new Worker('notificationQueue', async (job: Jo
       subject: 'Your Auto-Apply Daily Summary',
       html,
     });
+  }
+
+  if (job.name === 'sendInterviewReminder') {
+    const { userId, type, jobTitle, scheduledAt, actionUrl, locationOrLink } = job.data;
+    
+    await NotificationOrchestrator.dispatch(
+      userId,
+      type, // 'interview_reminder_24h' or 'interview_reminder_2h'
+      {
+        title: `Interview Reminder: ${jobTitle}`,
+        body: `You have an interview scheduled for ${jobTitle} at ${new Date(scheduledAt).toLocaleString()}.`,
+        action_url: actionUrl,
+        job_title: jobTitle,
+        scheduled_at: scheduledAt,
+        location_or_link: locationOrLink
+      }
+    );
+  }
+
+  if (job.name === 'dispatchNotification') {
+    await NotificationOrchestrator.executeDelivery(job.data as any);
   }
 }, { connection: redisConnection });
 

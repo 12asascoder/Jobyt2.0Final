@@ -1,23 +1,48 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { Notification } from '@/types';
+import { getSocket } from '@/lib/socket';
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchNotifications = useCallback(async (page = 1) => {
     setIsLoading(true);
     try {
-      const res = await api.getPaginated<Notification>(`/notifications?page=${page}`);
+      const res = await api.getPaginated<Notification>(`/notifications?page=${page}&limit=20`);
       setNotifications(res.data ?? []);
-      setUnread((res as unknown as { unread: number }).unread ?? 0);
+      setUnread((res as unknown as { unread: number }).unread ?? res.unread ?? 0);
+      if (res.pagination) {
+        setPagination(res.pagination);
+      }
+    } catch (error) {
+      console.error('[useNotifications] Failed to fetch notifications:', error);
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const handleNotification = (newNotification: Notification) => {
+      setNotifications(prev => [newNotification, ...prev]);
+      setUnread(prev => prev + 1);
+    };
+
+    const socket = getSocket();
+    if (socket) {
+      socket.on('notification', handleNotification);
+    }
+
+    return () => {
+      if (socket) {
+        socket.off('notification', handleNotification);
+      }
+    };
   }, []);
 
   const markRead = useCallback(async (id: string) => {
@@ -32,5 +57,5 @@ export const useNotifications = () => {
     setUnread(0);
   }, []);
 
-  return { notifications, unread, isLoading, fetchNotifications, markRead, markAllRead };
+  return { notifications, unread, isLoading, pagination, fetchNotifications, markRead, markAllRead };
 };

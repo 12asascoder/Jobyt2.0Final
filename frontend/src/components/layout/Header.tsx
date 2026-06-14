@@ -8,19 +8,13 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    FaBell,
     FaArrowRightFromBracket,
 } from 'react-icons/fa6';
+import { NotificationDropdown } from '../notifications/NotificationDropdown';
 
 export const Header = () => {
     const router = useRouter();
     const { user, logout } = useAuthStore();
-    const { unread, fetchNotifications } = useNotifications();
-
-    useEffect(() => {
-        if (user) fetchNotifications();
-    }, [user, fetchNotifications]);
-
     const handleLogout = () => {
         logout();
         router.push('/');
@@ -38,18 +32,8 @@ export const Header = () => {
                 {/* Right Actions */}
                 {user ? (
                     <div className="flex items-center gap-3">
-                        {/* Notification Bell */}
-                        <Link
-                            href={ROUTES.notifications}
-                            className="relative p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all"
-                        >
-                            <FaBell className="text-lg" />
-                            {unread > 0 && (
-                                <span className="absolute top-1 right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-sm">
-                                    {unread > 99 ? '99+' : unread}
-                                </span>
-                            )}
-                        </Link>
+                        {/* Notification Bell Dropdown */}
+                        <NotificationDropdown />
 
                         <div className="h-8 w-px bg-slate-200" />
 

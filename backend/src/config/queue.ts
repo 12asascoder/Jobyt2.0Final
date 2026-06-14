@@ -29,7 +29,6 @@ export const notificationQueue = new Queue('notificationQueue', defaultQueueOpti
 // Queue for coding submission evaluation
 export const codingEvaluationQueue = new Queue('codingEvaluationQueue', defaultQueueOptions);
 
-// Queue for Auto-Apply matching and submission
 export const autoApplyQueue = new Queue('autoApplyQueue', {
   ...defaultQueueOptions,
   defaultJobOptions: {
@@ -39,9 +38,13 @@ export const autoApplyQueue = new Queue('autoApplyQueue', {
   },
 });
 
+// Queue for Broadcast Messaging
+export const broadcastQueue = new Queue('broadcastQueue', defaultQueueOptions);
+
 export const closeQueues = async () => {
   await recommendationQueue.close();
   await notificationQueue.close();
   await codingEvaluationQueue.close();
   await autoApplyQueue.close();
+  await broadcastQueue.close();
 };

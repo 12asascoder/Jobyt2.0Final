@@ -118,20 +118,26 @@ export default function AutoApplyDashboardPage() {
       </div>
 
       {/* Stats strip */}
-      <div className="flex flex-wrap gap-3 mb-10">
+      <div className="flex flex-wrap gap-5 mb-10">
         {[
-          { label: 'Pending', key: 'pending_approval', value: stats.pending_approval || 0 },
-          { label: 'Submitted', key: 'submitted', value: stats.submitted || 0 },
-          { label: 'Skipped', key: 'skipped', value: stats.skipped || 0 },
-          { label: 'Failed', key: 'failed', value: stats.failed || 0 },
+          { label1: 'Pending', label2: 'Approval', key: 'pending_approval', value: stats.pending_approval || 0 },
+          { label1: 'Total', label2: 'Submitted', key: 'submitted', value: stats.submitted || 0 },
+          { label1: 'Jobs', label2: 'Skipped', key: 'skipped', value: stats.skipped || 0 },
+          { label1: 'Failed', label2: 'Attempts', key: 'failed', value: stats.failed || 0 },
         ].map((s) => (
           <button
             key={s.key}
             onClick={() => setTab(s.key as Tab)}
-            className={`bg-[#141414] rounded-xl px-4 py-3 flex items-center gap-4 shadow-sm hover:-translate-y-0.5 transition-all w-[130px] justify-between border-2 ${tab === s.key ? 'border-[#c3ff3d]' : 'border-transparent'}`}
+            className={`rounded-2xl px-7 py-5 flex items-center gap-5 min-w-[200px] shadow-sm transition-all bg-[#141414] ${
+              tab === s.key ? 'ring-2 ring-[#c3ff3d]' : 'hover:bg-[#1c1c1c] ring-1 ring-transparent'
+            }`}
           >
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{s.label}</span>
-            <span className={`text-xl font-bold ${s.key === 'failed' && s.value > 0 ? 'text-red-400' : 'text-[#c3ff3d]'}`}>{s.value}</span>
+            <span className={`text-5xl font-extrabold leading-none tracking-tight ${s.key === 'failed' && s.value > 0 ? 'text-red-400' : 'text-[#c3ff3d]'}`}>
+              {s.value}
+            </span>
+            <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest leading-snug text-left">
+              {s.label1}<br />{s.label2}
+            </span>
           </button>
         ))}
       </div>

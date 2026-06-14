@@ -95,6 +95,10 @@ export interface Job {
   source?: 'admin_external' | 'recruiter' | 'admin_company';
   created_at: string;
   disallow_auto_apply?: boolean;
+  active_assessment_version_id?: string | null;
+  assessment_title?: string | null;
+  assessment_timing?: string | null;
+  coding_assessment_id?: string | null;
   /** Selection Probability: 0–100 score derived from SkillMatchingService (candidate-facing only) */
   selectionProbability?: number;
 }
@@ -203,7 +207,9 @@ export interface Message {
 // ── Notifications ─────────────────────────────────────────────────────────────
 export type NotificationType =
   | 'job_match' | 'application_status' | 'new_message'
-  | 'referral_joined' | 'low_credit' | 'payment_success' | 'payment_failed' | 'application_submitted';
+  | 'referral_joined' | 'low_credit' | 'payment_success' | 'payment_failed'
+  | 'application_submitted' | 'employer_broadcast' | 'interview_invited'
+  | 'deadline_alert' | 'auto_apply_digest';
 
 export interface Notification {
   id: string;
@@ -247,6 +253,7 @@ export interface ApiResponse<T = unknown> {
 }
 
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+  unread?: number;
   pagination: {
     total: number;
     page: number;

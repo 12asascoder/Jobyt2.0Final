@@ -17,6 +17,10 @@ import uploadRoutes from './upload.routes';
 import aiRoutes from './ai.routes';
 import codingRoutes from './coding.routes';
 import autoApplyRoutes from './autoApply.routes';
+import interviewInviteRoutes from './interviewInvite.routes';
+import notificationPreferenceRoutes from './notificationPreference.routes';
+import broadcastRoutes from './broadcast.routes';
+import pushRoutes from './push.routes';
 
 const router = Router();
 
@@ -40,8 +44,11 @@ router.use('/recruiter', recruiterRoutes);
 router.use('/roadmaps', roadmapRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/ai', aiRoutes);
-router.use('/coding', codingRoutes);
-router.use('/auto-apply', autoApplyRoutes);
+  router.use('/coding', codingRoutes);
+  router.use('/auto-apply', autoApplyRoutes);
+router.use('/', interviewInviteRoutes);
+router.use('/notification-preferences', notificationPreferenceRoutes);
+router.use('/', broadcastRoutes);
+router.use('/push', pushRoutes);
 
 export default router;
-
