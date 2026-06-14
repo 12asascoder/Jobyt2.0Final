@@ -25,6 +25,7 @@ export interface Interview {
   ai_interview_type?: string | null;
   ai_interview_rubric?: string | null;
   ai_interview_threshold?: number | null;
+  proctoring_violations?: any[] | null;
 }
 
 export const InterviewModel = {
@@ -95,6 +96,7 @@ export const InterviewModel = {
       'rating',
       'started_at',
       'ended_at',
+      'proctoring_violations',
     ];
 
     for (const key of fieldsToUpdate) {

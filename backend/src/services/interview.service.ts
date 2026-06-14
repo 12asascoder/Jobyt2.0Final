@@ -505,4 +505,30 @@ ${rubric}\n`;
     });
     return { jobId: job.id, count: applicationIds.length };
   },
+
+  async logProctoringViolation(
+    interviewId: string,
+    eventType: 'tab_switch' | 'window_blur',
+    timestamp: string,
+  ): Promise<any> {
+    const interview = await InterviewModel.getById(interviewId);
+    if (!interview) {
+      throw new NotFoundError('Interview not found', 'INTERVIEW_NOT_FOUND');
+    }
+
+    const existingViolations = Array.isArray(interview.proctoring_violations)
+      ? interview.proctoring_violations
+      : [];
+
+    const newViolation = { event: eventType, timestamp };
+    const updatedViolations = [...existingViolations, newViolation];
+
+    await InterviewModel.updateInterview(interviewId, {
+      proctoring_violations: JSON.stringify(updatedViolations) as any,
+    });
+
+    return newViolation;
+  },
 };
+
+
