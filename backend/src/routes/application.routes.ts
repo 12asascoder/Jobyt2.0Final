@@ -76,6 +76,14 @@ router.post(
 // Recruiter: view applications for a job
 router.get('/jobs/:jobId', authorize('recruiter'), employerGuard, ApplicationController.jobApplications);
 
+// Recruiter: generate shortlist report (ranked list + AI summary)
+router.get(
+  '/jobs/:jobId/shortlist-report',
+  authorize('recruiter'),
+  employerGuard,
+  ApplicationController.getShortlistReport,
+);
+
 // Any role (authorized via controller): get secure resume URL for this application
 router.get('/:id/resume-url', ApplicationController.getResumeUrl);
 

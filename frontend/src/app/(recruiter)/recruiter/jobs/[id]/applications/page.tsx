@@ -7,7 +7,7 @@ import { api, ApiError } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Application, ApplicationStatus } from '@/types';
 import { useApplications } from '@/hooks/useApplications';
-import { Button, Spinner, Badge, Avatar } from '@/components/ui';
+import { Button, Spinner, Badge, Avatar, Modal } from '@/components/ui';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, APPLICATION_STATUSES, ROUTES } from '@/constants';
 import { formatDate } from '@/lib/utils';
 import { createConversation } from '@/lib/messages';
@@ -37,6 +37,34 @@ export default function JobApplicationsPage() {
   const [timelineAppId, setTimelineAppId] = useState<string | null>(null);
   const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
   const [isDispatching, setIsDispatching] = useState(false);
+
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [reportData, setReportData] = useState<{
+    jobTitle: string;
+    candidates: Array<{
+      id: string;
+      name: string;
+      email: string;
+      matchScore: number | null;
+      skills: string[];
+    }>;
+    aiSummary: string;
+  } | null>(null);
+
+  const handleOpenReport = async () => {
+    setIsReportOpen(true);
+    setIsReportLoading(true);
+    try {
+      const res = await api.get<any>(`/applications/jobs/${jobId}/shortlist-report`);
+      setReportData(res.data || null);
+    } catch (err) {
+      toast.error('Failed to generate shortlist report');
+      setIsReportOpen(false);
+    } finally {
+      setIsReportLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchJobApplications(jobId);
@@ -115,9 +143,14 @@ export default function JobApplicationsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Application Pipeline</h1>
           <p className="text-sm text-gray-400">Drag and drop candidates to update their stage.</p>
         </div>
-        <Link href={`/recruiter/jobs/${jobId}`}>
-          <Button variant="outline" size="sm">← Back to Job</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleOpenReport}>
+            📊 Shortlist Report
+          </Button>
+          <Link href={`/recruiter/jobs/${jobId}`}>
+            <Button variant="outline" size="sm">← Back to Job</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Status filter tabs */}
@@ -271,6 +304,86 @@ export default function JobApplicationsPage() {
           </div>
         </div>
       )}
+      {/* Shortlist Report Modal */}
+      <Modal
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        title="Shortlist Report"
+        className="max-w-2xl bg-white"
+      >
+        {isReportLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Spinner size="lg" />
+            <p className="text-sm font-semibold text-gray-500 animate-pulse">Analyzing cohort & generating AI summary...</p>
+          </div>
+        ) : reportData ? (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 leading-tight">{reportData.jobTitle}</h3>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Shortlist Cohort Report</p>
+            </div>
+
+            {/* AI Summary Section */}
+            <div className="bg-slate-900 border-l-4 border-lime-400 rounded-2xl p-5 text-white shadow-inner">
+              <h4 className="text-xs font-black uppercase tracking-widest text-lime-400 mb-2">AI Executive Summary</h4>
+              <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
+                {reportData.aiSummary}
+              </div>
+            </div>
+
+            {/* Ranked Candidates Section */}
+            <div>
+              <h4 className="text-sm font-bold text-gray-900 mb-3">Ranked Shortlisted Candidates ({reportData.candidates.length})</h4>
+              {reportData.candidates.length === 0 ? (
+                <p className="text-sm text-gray-500 py-4 text-center">No candidates have been shortlisted yet.</p>
+              ) : (
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {reportData.candidates.map((candidate, idx) => (
+                    <div key={candidate.id} className="flex items-center justify-between border border-gray-100 rounded-xl p-3 bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center justify-center bg-gray-200 text-gray-700 text-xs font-bold w-6 h-6 rounded-full shrink-0">
+                          #{idx + 1}
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">{candidate.name}</p>
+                          <p className="text-xs text-gray-500 font-medium">{candidate.email}</p>
+                          {candidate.skills && candidate.skills.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {candidate.skills.slice(0, 3).map((s) => (
+                                <span key={s} className="bg-gray-200/60 text-gray-700 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                                  {s}
+                                </span>
+                              ))}
+                              {candidate.skills.length > 3 && (
+                                <span className="bg-gray-200/60 text-gray-700 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                                  +{candidate.skills.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        {candidate.matchScore !== null && (
+                          <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider shadow-sm ${candidate.matchScore >= 80 ? 'bg-green-100 text-green-700' : candidate.matchScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                            {candidate.matchScore}% Match
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-gray-100">
+              <Button variant="outline" onClick={() => setIsReportOpen(false)}>Close Report</Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-center py-6 text-gray-500">Failed to load report data.</p>
+        )}
+      </Modal>
     </div>
   );
 }

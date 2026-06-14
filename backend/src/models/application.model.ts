@@ -606,4 +606,18 @@ export const ApplicationModel = {
       rejected: Number.parseInt(rows[0].rejected || 0),
     };
   },
+
+  async findShortlistedByJob(jobId: string, client?: PoolClient): Promise<any[]> {
+    const db = client ?? pool;
+    const { rows } = await db.query(
+      `SELECT a.*, ap.name, u.email, ap.skills, ap.experience
+       FROM applications a
+       JOIN users u ON u.id = a.applicant_id
+       JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
+       WHERE a.job_id = $1 AND a.status = 'shortlisted'
+       ORDER BY a.ats_score DESC NULLS LAST`,
+      [jobId],
+    );
+    return rows;
+  },
 };
