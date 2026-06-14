@@ -27,6 +27,7 @@
     "expo-symbols": "~56.0.6",
     "expo-system-ui": "~56.0.5",
     "expo-web-browser": "~56.0.5",
+    "firebase-admin": "^14.0.0",
     "lucide-react-native": "^1.18.0",
     "punycode": "^2.3.1",
     "react": "19.2.3",
