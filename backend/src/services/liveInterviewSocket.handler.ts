@@ -195,7 +195,7 @@ export const registerLiveInterviewHandlers = (socket: AuthSocket, io: SocketServ
   });
 
   // Proctoring Violations Logs & Alert routing
-  socket.on('proctoring_violation', async (payload: { interviewId: string; eventType: 'tab_switch' | 'window_blur'; timestamp: string }) => {
+  socket.on('proctoring_violation', async (payload: { interviewId: string; eventType: 'tab_switch' | 'window_blur' | 'face_absent' | 'multiple_faces'; timestamp: string }) => {
     try {
       const { interviewId, eventType, timestamp } = payload;
       if (!interviewId || !eventType || !timestamp) return;

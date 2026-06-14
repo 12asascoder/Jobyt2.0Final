@@ -64,6 +64,21 @@ interface InterviewDetail {
   interviewer_name?: string;
 }
 
+const loadScript = (src: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (typeof window !== 'undefined' && document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load script ${src}`));
+    document.body.appendChild(script);
+  });
+};
+
 export default function UnifiedInterviewPage() {
   return (
     <AuthGuard allowedRoles={['applicant', 'recruiter', 'admin']}>
@@ -87,6 +102,17 @@ function InterviewRoomContainer() {
   const [notes, setNotes] = useState('');
   const [participants, setParticipants] = useState<string[]>([]);
   const [proctoringAlerts, setProctoringAlerts] = useState<Array<{ eventType: string; timestamp: string }>>([]);
+
+  // Face Tracking State
+  const [trackingScriptsLoaded, setTrackingScriptsLoaded] = useState(false);
+  const [cameraAccessDenied, setCameraAccessDenied] = useState(false);
+  const [faceState, setFaceState] = useState<'normal' | 'absent' | 'multiple'>('normal');
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const trackerTaskRef = useRef<any>(null);
+  const faceStateRef = useRef<'normal' | 'absent' | 'multiple'>('normal');
+  const detectedFacesRef = useRef<any[]>([]);
 
   // Active interaction modes
   const [activeTab, setActiveTab] = useState<'chat' | 'voice'>('chat');
@@ -243,7 +269,19 @@ function InterviewRoomContainer() {
 
     s.on('proctoring_alert', ({ eventType, timestamp }: { eventType: string; timestamp: string }) => {
       setProctoringAlerts((prev) => [...prev, { eventType, timestamp }]);
-      toast.error(`⚠️ Proctoring Alert: Candidate ${eventType === 'tab_switch' ? 'switched tabs/minimised' : 'lost focus'}!`, {
+      
+      let message = 'triggered a violation!';
+      if (eventType === 'tab_switch') {
+        message = 'switched tabs/minimised';
+      } else if (eventType === 'window_blur') {
+        message = 'lost window focus';
+      } else if (eventType === 'face_absent') {
+        message = 'left the camera frame (no face detected)';
+      } else if (eventType === 'multiple_faces') {
+        message = 'has multiple faces in the camera frame';
+      }
+      
+      toast.error(`⚠️ Proctoring Alert: Candidate ${message}!`, {
         duration: 5000,
         position: 'top-right',
       });
@@ -431,6 +469,163 @@ function InterviewRoomContainer() {
     }
   }, [id, socket]);
 
+  // Trigger local face warning for candidate & emit via socket
+  const triggerFaceViolation = useCallback((eventType: 'face_absent' | 'multiple_faces') => {
+    let alertMsg = '';
+    if (eventType === 'face_absent') {
+      alertMsg = '⚠️ Proctoring Alert: No face detected! Please remain in front of the camera.';
+    } else if (eventType === 'multiple_faces') {
+      alertMsg = '⚠️ Proctoring Alert: Multiple faces detected! Please ensure you are alone.';
+    }
+
+    toast.error(alertMsg, {
+      duration: 6000,
+      position: 'top-center',
+      style: {
+        background: '#ef4444',
+        color: '#fff',
+        fontWeight: 'bold',
+      }
+    });
+
+    const nowStr = new Date().toISOString();
+    setProctoringAlerts((prev) => [...prev, { eventType, timestamp: nowStr }]);
+    if (socket) {
+      socket.emit('proctoring_violation', {
+        interviewId: id,
+        eventType,
+        timestamp: nowStr,
+      });
+    }
+  }, [id, socket]);
+
+  // Load tracking scripts dynamically
+  useEffect(() => {
+    const isLive = interview?.status === 'live';
+    const isCandidate = interview && user && (interview.candidate_id === user.id || user.role === 'applicant');
+    if (loading || !interview || !isLive || isRecruiter || !isCandidate) return;
+
+    let active = true;
+    const initScripts = async () => {
+      try {
+        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/tracking.js/1.1.3/tracking-min.js');
+        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/tracking.js/1.1.3/data/face-min.js');
+        if (active) {
+          setTrackingScriptsLoaded(true);
+        }
+      } catch (err) {
+        console.error('Failed to load tracking scripts:', err);
+      }
+    };
+    initScripts();
+
+    return () => {
+      active = false;
+    };
+  }, [loading, interview, isRecruiter, user]);
+
+  // Request camera and run tracker
+  useEffect(() => {
+    const isLive = interview?.status === 'live';
+    const isCandidate = interview && user && (interview.candidate_id === user.id || user.role === 'applicant');
+    if (loading || !interview || !isLive || isRecruiter || !isCandidate || !trackingScriptsLoaded) return;
+
+    let mediaStream: MediaStream | null = null;
+    let trackerTask: any = null;
+    let trackerInterval: NodeJS.Timeout | null = null;
+
+    const startCameraAndTracking = async () => {
+      try {
+        // Request video stream
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 320, height: 240 }
+        });
+        streamRef.current = mediaStream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          // Wait for metadata to load so tracking.js can compute coordinates
+          await new Promise<void>((resolve) => {
+            if (videoRef.current) {
+              videoRef.current.onloadedmetadata = () => resolve();
+            } else {
+              resolve();
+            }
+          });
+        }
+
+        const trackingLib = (window as any).tracking;
+        if (!trackingLib) {
+          console.error('tracking.js library not found on window');
+          return;
+        }
+
+        // Initialize ObjectTracker
+        const tracker = new trackingLib.ObjectTracker('face');
+        tracker.setInitialScale(4);
+        tracker.setStepSize(2);
+        tracker.setEdgesDensity(0.1);
+
+        tracker.on('track', (event: any) => {
+          detectedFacesRef.current = event.data || [];
+        });
+
+        // Start tracking the video element
+        if (videoRef.current) {
+          trackerTask = trackingLib.track(videoRef.current, tracker);
+          trackerTaskRef.current = trackerTask;
+        }
+
+        // Start checking face state every 3 seconds to throttle violation emits
+        trackerInterval = setInterval(() => {
+          const faces = detectedFacesRef.current;
+          const faceCount = faces.length;
+
+          let nextState: 'normal' | 'absent' | 'multiple' = 'normal';
+          if (faceCount === 0) {
+            nextState = 'absent';
+          } else if (faceCount > 1) {
+            nextState = 'multiple';
+          }
+
+          if (nextState !== faceStateRef.current) {
+            faceStateRef.current = nextState;
+            setFaceState(nextState);
+
+            if (nextState === 'absent') {
+              triggerFaceViolation('face_absent');
+            } else if (nextState === 'multiple') {
+              triggerFaceViolation('multiple_faces');
+            }
+          }
+        }, 3000);
+
+      } catch (err) {
+        console.error('Camera access denied or tracking error:', err);
+        setCameraAccessDenied(true);
+      }
+    };
+
+    startCameraAndTracking();
+
+    return () => {
+      // Clean up interval
+      if (trackerInterval) clearInterval(trackerInterval);
+
+      // Clean up tracking task
+      if (trackerTask) {
+        trackerTask.stop();
+      }
+      trackerTaskRef.current = null;
+
+      // Clean up media stream
+      if (mediaStream) {
+        mediaStream.getTracks().forEach((track) => track.stop());
+      }
+      streamRef.current = null;
+    };
+  }, [loading, interview, isRecruiter, user, trackingScriptsLoaded, triggerFaceViolation]);
+
   // Hook up event listeners for candidates in live rooms
   useEffect(() => {
     const isLive = interview?.status === 'live';
@@ -594,6 +789,54 @@ function InterviewRoomContainer() {
         {/* Right Tabbed communication & recruiter panels (30% width) */}
         <div className="w-[380px] xl:w-[420px] bg-[#1a1a1a] flex flex-col overflow-hidden">
           
+          {/* Proctored Webcam Feed for Candidates */}
+          {!isRecruiter && interview?.status === 'live' && (
+            <div className="bg-[#242424] border-b border-white/5 p-4 flex flex-col shrink-0">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${cameraAccessDenied ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'}`}></span>
+                  <span>🛡️ Proctoring Camera</span>
+                </h3>
+                <span className="text-[10px] font-black uppercase text-slate-500">
+                  {cameraAccessDenied ? 'Blocked' : 'Active'}
+                </span>
+              </div>
+              <div className="relative w-full aspect-video rounded-xl bg-black overflow-hidden border border-white/5 flex items-center justify-center">
+                {cameraAccessDenied ? (
+                  <div className="p-4 text-center">
+                    <p className="text-xs text-rose-450 font-bold mb-1">⚠️ Camera Access Denied</p>
+                    <p className="text-[10px] text-slate-400 leading-normal">
+                      Proctoring requires an active camera. Please enable camera access in your browser settings to continue.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <video
+                      ref={videoRef}
+                      id="proctorVideo"
+                      autoPlay
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover transform -scale-x-100"
+                    />
+                    {faceState === 'absent' && (
+                      <div className="absolute inset-0 bg-rose-950/80 backdrop-blur-xs flex flex-col items-center justify-center p-3 text-center border border-rose-500 animate-pulse">
+                        <span className="text-xs font-black text-rose-200 uppercase tracking-wider mb-1">⚠️ No Face Detected</span>
+                        <span className="text-[9px] text-rose-300 font-medium">Please look directly at the camera</span>
+                      </div>
+                    )}
+                    {faceState === 'multiple' && (
+                      <div className="absolute inset-0 bg-rose-950/80 backdrop-blur-xs flex flex-col items-center justify-center p-3 text-center border border-rose-500 animate-pulse">
+                        <span className="text-xs font-black text-rose-200 uppercase tracking-wider mb-1">⚠️ Multiple Faces</span>
+                        <span className="text-[9px] text-rose-300 font-medium">Only one person is permitted in frame</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Recruiter Notes Auto-Save Block */}
           {isRecruiter && (
             <div className="bg-[#242424] border-b border-white/5 p-4 flex flex-col shrink-0">
@@ -632,16 +875,24 @@ function InterviewRoomContainer() {
               </div>
               {proctoringAlerts.length === 0 ? (
                 <p className="text-[11px] text-slate-500 italic p-1 bg-[#1a1a1a] rounded">
-                  No tab switches or focus loss events detected.
+                  No tab switches or camera violations detected.
                 </p>
               ) : (
                 <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
                   {proctoringAlerts.map((alert, idx) => (
                     <div
                       key={idx}
-                      className="text-[11px] text-rose-450 font-bold flex justify-between bg-rose-500/10 border border-rose-500/20 rounded-lg p-2 text-rose-400"
+                      className="text-[11px] font-bold flex justify-between bg-rose-500/10 border border-rose-500/20 rounded-lg p-2 text-rose-400"
                     >
-                      <span>⚠️ {alert.eventType === 'tab_switch' ? 'Switched Tab/Minimised' : 'Lost Window Focus'}</span>
+                      <span>
+                        ⚠️ {
+                          alert.eventType === 'tab_switch' ? 'Switched Tab/Minimised' :
+                          alert.eventType === 'window_blur' ? 'Lost Window Focus' :
+                          alert.eventType === 'face_absent' ? 'No Face Detected' :
+                          alert.eventType === 'multiple_faces' ? 'Multiple Faces Detected' :
+                          alert.eventType
+                        }
+                      </span>
                       <span className="text-slate-400 font-semibold">{new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                     </div>
                   ))}

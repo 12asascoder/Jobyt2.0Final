@@ -47,6 +47,19 @@ const getInitials = (name: string | null) => {
     .toUpperCase();
 };
 
+const getViolationsArray = (violations: any): any[] => {
+  if (!violations) return [];
+  if (Array.isArray(violations)) return violations;
+  if (typeof violations === 'string') {
+    try {
+      return JSON.parse(violations);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 export default function ApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -457,6 +470,43 @@ export default function ApplicationDetailPage() {
                         <div className="border-t border-slate-700 pt-2">
                           <span className="text-xs uppercase tracking-widest text-slate-400 font-bold block mb-1">Feedback</span>
                           <p className="text-xs text-slate-300 italic line-clamp-3">{interview.feedback || 'No feedback details.'}</p>
+                        </div>
+                        <div className="border-t border-slate-700 pt-2 space-y-2">
+                          <span className="text-xs uppercase tracking-widest text-slate-400 font-bold block">
+                            🛡️ Proctoring Violations Log
+                          </span>
+                          {(() => {
+                            const violations = getViolationsArray(interview.proctoring_violations);
+                            if (violations.length === 0) {
+                              return <p className="text-xs text-emerald-400 italic">No proctoring violations flagged.</p>;
+                            }
+                            return (
+                              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                                {violations.map((v: any, idx: number) => {
+                                  const eventType = v.event || v.eventType;
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="text-[11px] font-bold flex justify-between bg-rose-500/10 border border-rose-500/20 rounded-lg p-2 text-rose-450"
+                                    >
+                                      <span>
+                                        ⚠️ {
+                                          eventType === 'tab_switch' ? 'Switched Tab/Minimised' :
+                                          eventType === 'window_blur' ? 'Lost Window Focus' :
+                                          eventType === 'face_absent' ? 'No Face Detected' :
+                                          eventType === 'multiple_faces' ? 'Multiple Faces Detected' :
+                                          eventType
+                                        }
+                                      </span>
+                                      <span className="text-slate-400 font-semibold">
+                                        {new Date(v.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </>
                     )}
