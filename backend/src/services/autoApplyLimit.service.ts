@@ -3,7 +3,7 @@ import { CREDIT_COSTS } from '../config/creditCosts';
 import { CreditService } from './credit.service';
 import { AutoApplyLimits } from '../types/autoApply.types';
 
-const FREE_TIER_DAILY_LIMIT = 1;
+const FREE_TIER_DAILY_LIMIT = 10;
 
 export const AutoApplyLimitService = {
   async getUserTier(userId: string): Promise<{ tier: string; maxDaily: number }> {

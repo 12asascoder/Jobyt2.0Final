@@ -72,5 +72,6 @@ export const AutoApplyApi = {
   getQueueStats: () => api.get<Record<string, number>>('/auto-apply/queue/stats'),
   approve: (id: string) => api.post<QueueItem>(`/auto-apply/queue/${id}/approve`, {}),
   reject: (id: string) => api.post<QueueItem>(`/auto-apply/queue/${id}/reject`, {}),
+  retry: (id: string) => api.post<QueueItem>(`/auto-apply/queue/${id}/retry`, {}),
   getEvents: (jobId?: string) => api.get(`/auto-apply/events${jobId ? `/job/${jobId}` : ''}`),
 };

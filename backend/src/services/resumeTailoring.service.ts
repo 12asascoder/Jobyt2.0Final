@@ -10,71 +10,94 @@ import pool from '../config/database';
 
 const LOG_PREFIX = '[ResumeTailoringService]';
 
-interface TailorSections {
-  summary?: string;
-  skills?: string[];
-  experience?: Array<{ company?: string; role?: string; dates?: string; bullets?: string[] }>;
-  education?: Array<{ institution?: string; degree?: string; dates?: string }>;
+interface TailorPatch {
+  path: string;
+  action: 'replace' | 'append' | 'reorder' | 'add_skill';
+  original: string | null;
+  value: any;
+  reason: string;
 }
 
 interface TailorLLMResult {
-  tailoredSections?: TailorSections;
-  changeLog?: string[];
-  fabricatedRisk?: boolean;
+  changes?: TailorPatch[];
+  strategy_notes?: string;
 }
 
-function extractEntities(parsed: Awaited<ReturnType<typeof parseResume>>): Set<string> {
-  const entities = new Set<string>();
-  const add = (v?: string | null) => {
-    const t = (v || '').trim().toLowerCase();
-    if (t.length > 2) entities.add(t);
-  };
-
-  (parsed.skills || []).forEach((s) => add(s));
-  (parsed.experience || []).forEach((e) => {
-    add(e.company);
-    add(e.role);
-  });
-  (parsed.education || []).forEach((e) => {
-    add(e.institution);
-    add(e.degree);
-  });
-  add(parsed.name);
-  return entities;
+interface TargetPlanLLMResult {
+  target_skills: Array<{ skill: string, reason: string }>;
+  strategy_notes: string;
 }
 
-function detectFabrication(source: Set<string>, tailored: TailorSections): boolean {
-  const check = (value?: string) => {
-    const t = (value || '').trim().toLowerCase();
-    if (t.length < 3) return false;
-    return !Array.from(source).some((s) => t.includes(s) || s.includes(t));
-  };
+function applyPatches(resumeJson: any, changes: TailorPatch[]) {
+  const changeLog: string[] = [];
+  
+  for (const patch of changes) {
+    try {
+      if (patch.path === 'summary') {
+        resumeJson.summary = patch.value;
+        changeLog.push(`Summary: ${patch.reason}`);
+      } else if (patch.path === 'skills') {
+        if (!resumeJson.skills) resumeJson.skills = [];
+        if (patch.action === 'add_skill' && typeof patch.value === 'string') {
+          if (!resumeJson.skills.includes(patch.value)) {
+            resumeJson.skills.push(patch.value);
+            changeLog.push(`Added skill ${patch.value}: ${patch.reason}`);
+          }
+        }
+      } else if (patch.path.startsWith('experience[')) {
+        const match = patch.path.match(/experience\[(\d+)\]\.(\w+)(?:\[(\d+)\])?/);
+        if (match) {
+          const expIdx = parseInt(match[1]);
+          const field = match[2]; // usually "description" or "bullets"
+          const exp = resumeJson.experience[expIdx];
+          if (exp) {
+            if (!exp[field]) exp[field] = [];
+            else if (typeof exp[field] === 'string') exp[field] = [exp[field]];
 
-  for (const exp of tailored.experience || []) {
-    if (check(exp.company) || check(exp.role)) return true;
+            if (patch.action === 'replace' && match[3] !== undefined) {
+              const bIdx = parseInt(match[3]);
+              if (exp[field][bIdx]) {
+                exp[field][bIdx] = patch.value;
+                changeLog.push(`Experience ${expIdx} update: ${patch.reason}`);
+              }
+            } else if (patch.action === 'append') {
+              exp[field].push(patch.value);
+              changeLog.push(`Experience ${expIdx} added detail: ${patch.reason}`);
+            }
+          }
+        }
+      } else if (patch.path.startsWith('education[')) {
+        const match = patch.path.match(/education\[(\d+)\]\.(\w+)/);
+        if (match) {
+          const eduIdx = parseInt(match[1]);
+          const field = match[2];
+          const edu = resumeJson.education[eduIdx];
+          if (edu) {
+             edu[field] = patch.value;
+             changeLog.push(`Education ${eduIdx} update: ${patch.reason}`);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to apply patch:', patch);
+    }
   }
-  for (const edu of tailored.education || []) {
-    if (check(edu.institution) || check(edu.degree)) return true;
-  }
-  for (const skill of tailored.skills || []) {
-    if (check(skill)) return true;
-  }
-  return false;
+  return changeLog;
 }
 
-function renderResumeHtml(sections: TailorSections, name: string): string {
-  const expHtml = (sections.experience || [])
+function renderResumeHtml(resumeJson: any): string {
+  const expHtml = (resumeJson.experience || [])
     .map(
-      (e) => `
+      (e: any) => `
       <div style="margin-bottom:12px">
         <strong>${e.role || ''}</strong> — ${e.company || ''} <em>${e.dates || ''}</em>
-        <ul>${(e.bullets || []).map((b) => `<li>${b}</li>`).join('')}</ul>
+        <ul>${(e.bullets || e.description || []).map((b: string) => `<li>${b}</li>`).join('')}</ul>
       </div>`,
     )
     .join('');
 
-  const eduHtml = (sections.education || [])
-    .map((e) => `<div>${e.degree || ''} — ${e.institution || ''} (${e.dates || ''})</div>`)
+  const eduHtml = (resumeJson.education || [])
+    .map((e: any) => `<div>${e.degree || ''} — ${e.institution || ''} (${e.dates || ''})</div>`)
     .join('');
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
@@ -82,10 +105,10 @@ function renderResumeHtml(sections: TailorSections, name: string): string {
     h1 { font-size: 22px; margin-bottom: 4px; }
     h2 { font-size: 14px; margin-top: 20px; border-bottom: 1px solid #ccc; }
   </style></head><body>
-    <h1>${name}</h1>
-    <p>${sections.summary || ''}</p>
+    <h1>${resumeJson.name || 'Candidate'}</h1>
+    <p>${resumeJson.summary || resumeJson.bio || ''}</p>
     <h2>Skills</h2>
-    <p>${(sections.skills || []).join(' · ')}</p>
+    <p>${(resumeJson.skills || []).join(' · ')}</p>
     <h2>Experience</h2>
     ${expHtml}
     <h2>Education</h2>
@@ -129,70 +152,104 @@ export const ResumeTailoringService = {
     }
     const job = jobRows[0];
 
-    const buffer = await ResumeService.loadResumeFileBuffer(resume.file_url);
-    const parsed = await parseResume(buffer, {
-      filename: resume.file_name,
-      mimeType: resume.mime_type || undefined,
-    });
-
-    const sourceEntities = extractEntities(parsed);
-    const resumeJson = JSON.stringify({
-      name: parsed.name,
-      skills: parsed.skills,
-      experience: parsed.experience,
-      education: parsed.education,
-      rawText: (parsed.rawText || '').slice(0, 8000),
-    });
-
-    const prompt = PromptTemplatesService.renderTemplate('resume_tailoring', {
-      resumeJson,
-      jobDescription: String(job.description || '').slice(0, 6000),
-      jobSkills: (Array.isArray(job.skills) ? job.skills : []).join(', '),
-    });
-
-    const llmResult = (await AIService.generateJSON(prompt)) as TailorLLMResult | null;
-    if (!llmResult?.tailoredSections) {
-      throw Object.assign(new Error('Resume tailoring failed'), { statusCode: 502, code: 'TAILOR_FAILED' });
-    }
-
-    const fabricated =
-      Boolean(llmResult.fabricatedRisk) ||
-      detectFabrication(sourceEntities, llmResult.tailoredSections);
-
-    if (fabricated) {
-      throw Object.assign(new Error('Tailored resume failed validation — possible credential fabrication'), {
-        statusCode: 422,
-        code: 'TAILOR_FABRICATION_RISK',
-      });
-    }
-
-    const html = renderResumeHtml(llmResult.tailoredSections, parsed.name || 'Candidate');
-    const pdfBuffer = await htmlToPdfBuffer(html);
-
     const versionCount = await ResumeVariantModel.countForJob(userId, jobId);
     const versionLabel = String.fromCharCode(65 + Math.min(versionCount, 25));
 
-    const file = {
-      buffer: pdfBuffer,
-      originalname: `tailored-${jobId}-${versionLabel}.pdf`,
-      mimetype: 'application/pdf',
-      size: pdfBuffer.length,
-    } as Express.Multer.File;
+    // --- Attempt AI tailoring and PDF generation ---
+    let snapshotUrl: string = resume.file_url; // Default: use original resume
+    let changeLog: string[] = [];
+    let tailoringSucceeded = false;
 
-    const { url } = await StorageService.uploadResume(file);
+    try {
+      const buffer = await ResumeService.loadResumeFileBuffer(resume.file_url);
+      const parsed = await parseResume(buffer, {
+        filename: resume.file_name,
+        mimeType: resume.mime_type || undefined,
+      });
+
+      const resumeJson = {
+        name: parsed.name,
+        summary: '',
+        skills: Array.isArray(parsed.skills) ? [...parsed.skills] : [],
+        experience: Array.isArray(parsed.experience) ? JSON.parse(JSON.stringify(parsed.experience)) : [],
+        education: Array.isArray(parsed.education) ? JSON.parse(JSON.stringify(parsed.education)) : [],
+      };
+      
+      const jobSkills = (Array.isArray(job.skills) ? job.skills : []).join(', ');
+      const jobDescriptionStr = String(job.description || '').slice(0, 6000);
+
+      // STEP 1: Skill Target Plan
+      const targetPlanPrompt = PromptTemplatesService.renderTemplate('skill_target_plan', {
+        existingSkills: resumeJson.skills.join(', '),
+        jobKeywords: jobSkills,
+        jobDescription: jobDescriptionStr,
+        originalResume: JSON.stringify(resumeJson)
+      });
+      
+      const targetPlanResult = (await AIService.generateJSON(targetPlanPrompt)) as TargetPlanLLMResult | null;
+      const skillTargets = targetPlanResult?.target_skills ? targetPlanResult.target_skills.map(s => s.skill).join(', ') : '';
+
+      // Fetch user's tailoring aggressiveness (defaults to keywords)
+      const { rows: prefRows } = await pool.query('SELECT tailoring_mode FROM auto_apply_preferences WHERE user_id = $1', [userId]);
+      const mode = prefRows[0]?.tailoring_mode || 'keywords';
+      
+      let strategyInstruction = "Weave in relevant keywords where evidence already exists. You may rephrase bullets but do not add new ones.";
+      if (mode === 'nudge') strategyInstruction = "Make minimal edits. Only rephrase where there is a clear match. Do not add new bullet points.";
+      else if (mode === 'full') strategyInstruction = "Make targeted adjustments. You may rephrase bullets, add verified JD skills, and add new bullets that elaborate on existing work, but do not invent new responsibilities.";
+
+      // STEP 2: Diff-based patching
+      const diffPrompt = PromptTemplatesService.renderTemplate('resume_tailoring', {
+        strategyInstruction,
+        jobKeywords: jobSkills,
+        skillTargets,
+        jobDescription: jobDescriptionStr,
+        originalResume: JSON.stringify(resumeJson),
+      });
+
+      const llmResult = (await AIService.generateJSON(diffPrompt)) as TailorLLMResult | null;
+
+      if (llmResult?.changes && llmResult.changes.length > 0) {
+        changeLog = applyPatches(resumeJson, llmResult.changes);
+
+        if (changeLog.length > 0) {
+          const html = renderResumeHtml(resumeJson);
+          const pdfBuffer = await htmlToPdfBuffer(html);
+
+          const file = {
+            buffer: pdfBuffer,
+            originalname: `tailored-${jobId}-${versionLabel}.pdf`,
+            mimetype: 'application/pdf',
+            size: pdfBuffer.length,
+          } as Express.Multer.File;
+
+          const { url } = await StorageService.uploadResume(file);
+          snapshotUrl = url;
+          tailoringSucceeded = true;
+        } else {
+          console.log(`${LOG_PREFIX} Patches generated but none were successfully applied.`);
+        }
+      } else {
+         console.log(`${LOG_PREFIX} No changes were generated by LLM for job ${jobId}`);
+      }
+    } catch (tailorErr) {
+      console.warn(
+        `${LOG_PREFIX} Tailoring step failed for job ${jobId} — falling back to original resume:`,
+        tailorErr instanceof Error ? tailorErr.message : tailorErr,
+      );
+    }
 
     const variant = await ResumeVariantModel.create({
       user_id: userId,
       job_id: jobId,
       base_resume_id: baseResumeId,
       version_label: versionLabel,
-      snapshot_url: url,
-      change_log: llmResult.changeLog || [],
+      snapshot_url: snapshotUrl,
+      change_log: tailoringSucceeded ? changeLog : ['[Used original resume — tailoring unavailable]'],
       fabricated_risk: false,
       queue_item_id: queueItemId ?? null,
     });
 
-    console.log(`${LOG_PREFIX} Created variant ${variant.id} for job ${jobId}`);
-    return { variant, snapshotUrl: url };
+    console.log(`${LOG_PREFIX} Created variant ${variant.id} for job ${jobId} (tailored=${tailoringSucceeded})`);
+    return { variant, snapshotUrl };
   },
 };

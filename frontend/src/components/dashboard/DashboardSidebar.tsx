@@ -17,6 +17,7 @@ import {
     FaStar,
     FaCode,
     FaArrowRightFromBracket,
+    FaBolt,
 } from 'react-icons/fa6';
 import { IconType } from 'react-icons';
 
@@ -28,6 +29,7 @@ interface SidebarItem {
 
 const mainItems: SidebarItem[] = [
     { icon: FaHouse, href: ROUTES.dashboard, label: 'Home' },
+    { icon: FaBolt, href: ROUTES.autoApply, label: 'Auto Apply' },
     { icon: FaFileLines, href: ROUTES.applications, label: 'Applications' },
     { icon: FaBookmark, href: ROUTES.savedJobs, label: 'Saved Jobs' },
     { icon: FaCode, href: ROUTES.coding, label: 'Coding' },

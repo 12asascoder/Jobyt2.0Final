@@ -440,6 +440,7 @@ model auto_apply_preferences {
   base_resume_id       String?                  @db.Uuid
   include_cover_letter Boolean                  @default(false)
   digest_enabled       Boolean                  @default(true)
+  tailoring_mode       String                   @default("keywords")
   consented_at         DateTime?                @db.Timestamptz(6)
   preview_ack_at       DateTime?                @db.Timestamptz(6)
   last_matched_at      DateTime?                @db.Timestamptz(6)

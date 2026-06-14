@@ -14,12 +14,15 @@ function mapRow(row: Record<string, unknown>): AutoApplyPreferences {
     match_threshold: Number(row.match_threshold),
     target_roles: (row.target_roles as string[]) || [],
     target_locations: (row.target_locations as string[]) || [],
-    target_job_types: (row.target_job_types as string[]) || [],
+    target_job_types: typeof row.target_job_types === 'string'
+      ? (row.target_job_types === '{}' ? [] : row.target_job_types.replace(/^{|}$/g, '').split(','))
+      : ((row.target_job_types as string[]) || []),
     excluded_companies: (row.excluded_companies as string[]) || [],
     excluded_keywords: (row.excluded_keywords as string[]) || [],
     base_resume_id: row.base_resume_id ? String(row.base_resume_id) : null,
     include_cover_letter: Boolean(row.include_cover_letter),
     digest_enabled: Boolean(row.digest_enabled),
+    tailoring_mode: (row.tailoring_mode as 'nudge' | 'keywords' | 'full') || 'keywords',
     consented_at: row.consented_at ? new Date(String(row.consented_at)) : null,
     preview_ack_at: row.preview_ack_at ? new Date(String(row.preview_ack_at)) : null,
     last_matched_at: row.last_matched_at ? new Date(String(row.last_matched_at)) : null,
@@ -76,6 +79,7 @@ export const AutoApplyPreferenceModel = {
         base_resume_id = COALESCE($9, base_resume_id),
         include_cover_letter = COALESCE($10, include_cover_letter),
         digest_enabled = COALESCE($11, digest_enabled),
+        tailoring_mode = COALESCE($12, tailoring_mode),
         updated_at = NOW()
        WHERE user_id = $1
        RETURNING *`,
@@ -91,6 +95,7 @@ export const AutoApplyPreferenceModel = {
         input.base_resume_id ?? null,
         input.include_cover_letter ?? null,
         input.digest_enabled ?? null,
+        input.tailoring_mode ?? null,
       ],
     );
     return mapRow(rows[0]);

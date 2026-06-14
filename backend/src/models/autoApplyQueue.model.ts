@@ -84,9 +84,9 @@ export const AutoApplyQueueModel = {
 
   async findById(id: string, userId: string): Promise<AutoApplyQueueItem | null> {
     const { rows } = await pool.query(
-      `SELECT q.*, j.title AS job_title, j.company_name
+      `SELECT q.*, j.title AS job_title, COALESCE(j.company_name, '[Company]') AS company_name
        FROM auto_apply_queue_items q
-       JOIN jobs j ON j.id = q.job_id
+       LEFT JOIN jobs j ON j.id = q.job_id
        WHERE q.id = $1 AND q.user_id = $2`,
       [id, userId],
     );
@@ -116,9 +116,9 @@ export const AutoApplyQueueModel = {
 
     params.push(limit, offset);
     const { rows } = await pool.query(
-      `SELECT q.*, j.title AS job_title, j.company_name
+      `SELECT q.*, COALESCE(j.title, '[Job Removed]') AS job_title, COALESCE(j.company_name, '[Company]') AS company_name
        FROM auto_apply_queue_items q
-       JOIN jobs j ON j.id = q.job_id
+       LEFT JOIN jobs j ON j.id = q.job_id
        ${where}
        ORDER BY q.created_at DESC
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -152,33 +152,50 @@ export const AutoApplyQueueModel = {
       processed_at?: Date;
       resume_variant_id?: string;
       application_id?: string;
+      resetFields?: ('failure_reason' | 'failed_at' | 'processed_at')[];
     } = {},
     client?: PoolClient,
   ): Promise<AutoApplyQueueItem> {
     const db = client ?? pool;
-    const { rows } = await db.query(
-      `UPDATE auto_apply_queue_items SET
-        status = $2,
-        failure_reason = COALESCE($3, failure_reason),
-        failed_at = COALESCE($4, failed_at),
-        processed_at = COALESCE($5, processed_at),
-        resume_variant_id = COALESCE($6, resume_variant_id),
-        application_id = COALESCE($7, application_id),
-        updated_at = NOW()
-       WHERE id = $1
-       RETURNING *`,
-      [
-        id,
-        status,
-        extra.failure_reason ?? null,
-        extra.failed_at ?? null,
-        extra.processed_at ?? null,
-        extra.resume_variant_id ?? null,
-        extra.application_id ?? null,
-      ],
-    );
+    const reset = extra.resetFields || [];
+    
+    let sql = `UPDATE auto_apply_queue_items SET status = $2, updated_at = NOW()`;
+    const params: any[] = [id, status];
+
+    if (reset.includes('failure_reason')) sql += `, failure_reason = NULL`;
+    else if (extra.failure_reason !== undefined) {
+      params.push(extra.failure_reason);
+      sql += `, failure_reason = $${params.length}`;
+    }
+
+    if (reset.includes('failed_at')) sql += `, failed_at = NULL`;
+    else if (extra.failed_at !== undefined) {
+      params.push(extra.failed_at);
+      sql += `, failed_at = $${params.length}`;
+    }
+
+    if (reset.includes('processed_at')) sql += `, processed_at = NULL`;
+    else if (extra.processed_at !== undefined) {
+      params.push(extra.processed_at);
+      sql += `, processed_at = $${params.length}`;
+    }
+
+    if (extra.resume_variant_id !== undefined) {
+      params.push(extra.resume_variant_id);
+      sql += `, resume_variant_id = $${params.length}`;
+    }
+
+    if (extra.application_id !== undefined) {
+      params.push(extra.application_id);
+      sql += `, application_id = $${params.length}`;
+    }
+
+    sql += ` WHERE id = $1 RETURNING *`;
+
+    const { rows } = await db.query(sql, params);
     return mapRow(rows[0]);
   },
+
 
   async expirePendingApprovals(): Promise<number> {
     const { rowCount } = await pool.query(

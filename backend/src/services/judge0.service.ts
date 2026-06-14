@@ -40,8 +40,8 @@ export const Judge0Service = {
       cpu_time_limit: options.cpuTimeLimit ?? DEFAULT_CPU_TIME_LIMIT,
       memory_limit: options.memoryLimitKb ?? DEFAULT_MEMORY_LIMIT_KB,
       redirect_stderr_to_stdout: false,
-      enable_per_process_and_thread_time_limit: true,
-      enable_per_process_and_thread_memory_limit: true,
+      enable_per_process_and_thread_time_limit: false,
+      enable_per_process_and_thread_memory_limit: false,
     };
 
     const wait = options.wait !== false;

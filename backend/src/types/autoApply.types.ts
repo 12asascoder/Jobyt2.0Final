@@ -58,6 +58,7 @@ export interface AutoApplyPreferences {
   base_resume_id: string | null;
   include_cover_letter: boolean;
   digest_enabled: boolean;
+  tailoring_mode: 'nudge' | 'keywords' | 'full';
   consented_at: Date | null;
   preview_ack_at: Date | null;
   last_matched_at: Date | null;
@@ -76,6 +77,7 @@ export interface AutoApplyPreferencesInput {
   base_resume_id?: string | null;
   include_cover_letter?: boolean;
   digest_enabled?: boolean;
+  tailoring_mode?: 'nudge' | 'keywords' | 'full';
 }
 
 export interface RankedJob {

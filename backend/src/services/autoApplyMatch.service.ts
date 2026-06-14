@@ -92,7 +92,7 @@ function getExclusionReason(
   const targetRoles = normalizeList(prefs.target_roles);
   if (targetRoles.length > 0) {
     const title = job.title.toLowerCase();
-    if (!targetRoles.some((r) => title.includes(r) || r.includes(title.split(' ')[0]))) {
+    if (!targetRoles.some((r) => title.includes(r) || title.includes(r.split(' ')[0]))) {
       return 'role_mismatch';
     }
   }
@@ -175,31 +175,41 @@ export const AutoApplyMatchService = {
     const eligible: RankedJob[] = [];
     const excluded: Array<{ job_id: string; title: string; company: string; exclusion_reason: string }> = [];
 
-    for (const job of jobs) {
-      const hybrid = await UnifiedMatchService.scoreCandidateForJob(userId, job.id, resumeId);
-      const exclusion = getExclusionReason(job, prefs, hybrid.finalMatchScore);
+    // Score jobs in parallel batches of 10 to avoid sequential 50s+ bottleneck
+    const CONCURRENCY = 10;
+    for (let i = 0; i < jobs.length; i += CONCURRENCY) {
+      const chunk = jobs.slice(i, i + CONCURRENCY);
+      const scored = await Promise.all(
+        chunk.map((job) =>
+          UnifiedMatchService.scoreCandidateForJob(userId, job.id, resumeId).then((hybrid) => ({ job, hybrid })),
+        ),
+      );
 
-      if (exclusion) {
-        excluded.push({
+      for (const { job, hybrid } of scored) {
+        const exclusion = getExclusionReason(job, prefs, hybrid.finalMatchScore);
+
+        if (exclusion) {
+          excluded.push({
+            job_id: job.id,
+            title: job.title,
+            company: job.company_name,
+            exclusion_reason: exclusion,
+          });
+          continue;
+        }
+
+        const matchReason = buildMatchReason(hybrid, job, prefs);
+        eligible.push({
           job_id: job.id,
           title: job.title,
           company: job.company_name,
-          exclusion_reason: exclusion,
+          location: job.location,
+          type: job.type,
+          match_score: hybrid.finalMatchScore,
+          match_reason: matchReason,
+          match_breakdown: hybrid,
         });
-        continue;
       }
-
-      const matchReason = buildMatchReason(hybrid, job, prefs);
-      eligible.push({
-        job_id: job.id,
-        title: job.title,
-        company: job.company_name,
-        location: job.location,
-        type: job.type,
-        match_score: hybrid.finalMatchScore,
-        match_reason: matchReason,
-        match_breakdown: hybrid,
-      });
     }
 
     eligible.sort((a, b) => b.match_score - a.match_score);

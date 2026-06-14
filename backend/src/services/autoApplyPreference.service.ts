@@ -4,6 +4,7 @@ import { AutoApplyPreferenceModel } from '../models/autoApplyPreference.model';
 import { ResumeModel } from '../models/resume.model';
 import { ProfileRequirementsService } from './profileRequirements.service';
 import { CreditService } from './credit.service';
+import { autoApplyQueue } from '../config/queue';
 import {
   AutoApplyPreferencesInput,
   AutoApplyStatus,
@@ -88,7 +89,14 @@ export const AutoApplyPreferenceService = {
       }
     }
 
-    return AutoApplyPreferenceModel.updateStatus(userId, status);
+    const result = await AutoApplyPreferenceModel.updateStatus(userId, status);
+    
+    // Trigger an immediate match run when enabled
+    if (status === 'enabled') {
+      await autoApplyQueue.add('matchForUser', { userId, trigger: 'activation' });
+    }
+    
+    return result;
   },
 
   async acknowledgePreview(userId: string) {

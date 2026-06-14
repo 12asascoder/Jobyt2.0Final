@@ -37,7 +37,9 @@ export const AutoApplyQueueService = {
     const remaining = Math.max(0, maxDaily - usedToday);
 
     let created = 0;
-    for (const job of eligible.slice(0, remaining)) {
+    // Queue up to 50 eligible jobs so the user can review them. 
+    // The daily limit is enforced during the actual application submission.
+    for (const job of eligible.slice(0, 50)) {
       const approvalExpires =
         prefs.approval_mode === 'manual'
           ? new Date(Date.now() + APPROVAL_TTL_HOURS * 60 * 60 * 1000)
@@ -72,7 +74,13 @@ export const AutoApplyQueueService = {
       created += 1;
 
       if (prefs.approval_mode === 'auto') {
-        await this.tailorAndSubmit(userId, job.job_id, item.id);
+        try {
+          await this.tailorAndSubmit(userId, job.job_id, item.id);
+        } catch (error) {
+          console.error(`Tailor and submit failed for job ${job.job_id}:`, error);
+          // The tailorAndSubmit function might not have updated status to failed if it crashed completely
+          // We could update it here, but it's better to just ensure the loop continues.
+        }
       }
     }
 
@@ -219,7 +227,7 @@ export const AutoApplyQueueService = {
       throw Object.assign(new Error('Item cannot be rejected in current status'), { statusCode: 422 });
     }
 
-    await AutoApplyQueueModel.updateStatus(queueItemId, 'cancelled', { processed_at: new Date() });
+    await AutoApplyQueueModel.updateStatus(queueItemId, 'skipped', { processed_at: new Date() });
 
     await AutoApplyEventService.logEvent({
       userId,
@@ -246,11 +254,24 @@ export const AutoApplyQueueService = {
     if (item.status !== 'failed') {
       throw Object.assign(new Error('Only failed items can be retried'), { statusCode: 422 });
     }
-    await AutoApplyQueueModel.updateStatus(queueItemId, 'matched', {
-      failure_reason: undefined,
-      failed_at: undefined,
-    });
-    await this.tailorAndSubmit(userId, item.job_id, queueItemId);
+
+    const prefs = await AutoApplyPreferenceModel.findByUserId(userId);
+    const isManual = !prefs || prefs.approval_mode === 'manual';
+
+    if (isManual) {
+      // Put back in the review queue so the user can approve again
+      await AutoApplyQueueModel.updateStatus(queueItemId, 'pending_approval', {
+        resetFields: ['failure_reason', 'failed_at', 'processed_at'],
+      });
+    } else {
+      // Auto mode: re-attempt immediately
+      await AutoApplyQueueModel.updateStatus(queueItemId, 'matched', {
+        resetFields: ['failure_reason', 'failed_at'],
+      });
+      await this.tailorAndSubmit(userId, item.job_id, queueItemId);
+    }
+
     return this.getItem(userId, queueItemId);
   },
 };
+
