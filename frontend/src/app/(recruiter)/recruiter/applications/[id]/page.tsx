@@ -9,6 +9,7 @@ import { ROUTES } from '@/constants';
 import toast from 'react-hot-toast';
 import { resolveAssetUrl } from '@/lib/assetUrl';
 import { AiAnalysisPanel } from '@/components/applications/AiAnalysisPanel';
+import { APPLICATION_STATUS_LABELS, APPLICATION_STATUSES } from '@/constants';
 
 interface ApplicationDetail {
   id: string;
@@ -55,6 +56,12 @@ export default function ApplicationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
 
+  // Manual Override State Variables
+  const [overrideScore, setOverrideScore] = useState<number | null>(null);
+  const [overrideStatus, setOverrideStatus] = useState<string>('');
+  const [overrideReason, setOverrideReason] = useState<string>('');
+  const [isSavingOverride, setIsSavingOverride] = useState(false);
+
   useEffect(() => {
     const fetchApplication = async () => {
       try {
@@ -63,6 +70,9 @@ export default function ApplicationDetailPage() {
         );
         if (res.data) {
           setApplication(res.data);
+          setOverrideScore((res.data as any).override_score);
+          setOverrideStatus(res.data.status);
+          setOverrideReason((res.data as any).override_reason || '');
         }
       } catch (err) {
         toast.error('Failed to load application details');
@@ -89,6 +99,54 @@ export default function ApplicationDetailPage() {
       toast.error('Failed to move application to reviewed');
     } finally {
       setAccepting(false);
+    }
+  };
+
+  const handleApplyOverride = async () => {
+    setIsSavingOverride(true);
+    try {
+      await api.patch<any>(`/applications/${applicationId}/override`, {
+        override_score: overrideScore,
+        status: overrideStatus || undefined,
+        notes: overrideReason || undefined,
+      });
+      setApplication((prev) => prev ? { 
+        ...prev, 
+        status: overrideStatus || prev.status, 
+        skill_match: overrideScore !== null ? overrideScore : prev.skill_match,
+        override_score: overrideScore,
+        override_reason: overrideReason,
+      } as any : null);
+      toast.success('Manual override applied successfully!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to apply manual override');
+    } finally {
+      setIsSavingOverride(false);
+    }
+  };
+
+  const handleResetOverride = async () => {
+    setIsSavingOverride(true);
+    try {
+      await api.patch<any>(`/applications/${applicationId}/override`, {
+        override_score: null,
+        notes: null,
+      });
+      // Fetch application details again to restore AI calculated default values
+      const detailRes = await api.get<ApplicationDetail>(
+        `/applications/recruiter/applicants/${applicationId}`
+      );
+      if (detailRes.data) {
+        setApplication(detailRes.data);
+        setOverrideScore(null);
+        setOverrideReason('');
+        setOverrideStatus(detailRes.data.status);
+      }
+      toast.success('Manual override reset to AI default.');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reset override');
+    } finally {
+      setIsSavingOverride(false);
     }
   };
 
@@ -455,6 +513,91 @@ export default function ApplicationDetailPage() {
 
             {/* AI Analysis Panel */}
             <AiAnalysisPanel applicationId={applicationId} />
+
+            {/* Employer Override Panel */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 text-left">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                  </svg>
+                </span>
+                <h3 className="font-bold text-slate-900 text-md">Employer Override</h3>
+              </div>
+              <p className="text-xs text-slate-500 leading-normal">
+                Manually override the AI Match Score or force/override the candidate's shortlist status.
+              </p>
+
+              {/* Display current override details if active */}
+              {application && (application as any).override_score !== null && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 font-medium">
+                  <p className="font-bold mb-1">⚠️ Override Active</p>
+                  <p>Match Score forced to: <span className="font-black text-amber-950">{(application as any).override_score}%</span></p>
+                  {(application as any).override_reason && (
+                    <p className="mt-1 italic text-amber-900">Reason: "{(application as any).override_reason}"</p>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-3 pt-2">
+                <div>
+                  <label className="text-xs font-bold text-slate-600 block mb-1">Override Match Score (0-100)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="e.g. 95"
+                    value={overrideScore === null ? '' : overrideScore}
+                    onChange={(e) => setOverrideScore(e.target.value === '' ? null : parseInt(e.target.value))}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 text-slate-900"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-xs font-bold text-slate-600 block mb-1">Override Pipeline Stage</label>
+                  <select
+                    value={overrideStatus}
+                    onChange={(e) => setOverrideStatus(e.target.value)}
+                    className="w-full border border-slate-300 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 text-slate-900"
+                  >
+                    <option value="">-- Change Pipeline Stage --</option>
+                    {APPLICATION_STATUSES.map((s) => (
+                      <option key={s} value={s}>{APPLICATION_STATUS_LABELS[s]}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-600 block mb-1">Override Reason / Notes</label>
+                  <textarea
+                    placeholder="Provide rationale for manual override..."
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[60px] resize-none text-slate-900"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={handleApplyOverride}
+                    disabled={isSavingOverride}
+                    className="flex-1 px-4 py-2.5 bg-amber-450 hover:bg-amber-500 disabled:opacity-50 text-slate-950 font-bold rounded-lg text-xs transition-colors"
+                    style={{ backgroundColor: '#fbbf24' }}
+                  >
+                    {isSavingOverride ? 'Saving...' : 'Apply Override'}
+                  </button>
+                  {application && (application as any).override_score !== null && (
+                    <button
+                      onClick={handleResetOverride}
+                      disabled={isSavingOverride}
+                      className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-semibold rounded-lg text-xs transition-colors"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* View Resume */}
             <div className="bg-black rounded-2xl p-6 text-white text-center">

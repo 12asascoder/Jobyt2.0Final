@@ -25,6 +25,8 @@ export interface Application {
   resume_snapshot_url: string | null;
   ats_score: number | null;
   ats_breakdown: object | null;
+  override_score: number | null;
+  override_reason: string | null;
   // AI Insights fields (TRACK-U3/U4/U5)
   fit_insights: string | null;
   rejection_reason: string | null;
@@ -615,7 +617,7 @@ export const ApplicationModel = {
        JOIN users u ON u.id = a.applicant_id
        JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
        WHERE a.job_id = $1 AND a.status = 'shortlisted'
-       ORDER BY a.ats_score DESC NULLS LAST`,
+       ORDER BY COALESCE(a.override_score, a.ats_score) DESC NULLS LAST`,
       [jobId],
     );
     return rows;

@@ -254,5 +254,23 @@ export const ApplicationController = {
       next(err);
     }
   },
+
+  async overrideDecision(req: Request, res: Response, next: NextFunction) {
+    try {
+      const applicationId = req.params.id as string;
+      const recruiterId = req.user!.userId;
+      const { override_score, status, notes } = req.body;
+      const application = await ApplicationService.overrideDecision(recruiterId, applicationId, {
+        override_score,
+        status,
+        notes,
+      });
+      sendSuccess(res, application, 'Application override applied successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
 };
+
+
 

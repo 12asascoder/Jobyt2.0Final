@@ -112,6 +112,8 @@ CREATE TABLE applications (
   resume_snapshot_url VARCHAR(500),
   ats_score           INTEGER DEFAULT NULL,
   ats_breakdown       JSONB DEFAULT NULL,
+  override_score      INTEGER DEFAULT NULL,
+  override_reason     TEXT DEFAULT NULL,
   status              application_status DEFAULT 'APPLIED',
   status_updated_at   TIMESTAMPTZ DEFAULT NOW(),
   created_at          TIMESTAMPTZ DEFAULT NOW(),
