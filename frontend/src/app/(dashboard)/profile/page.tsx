@@ -82,6 +82,32 @@ export default function ProfilePage() {
     void loadProfile();
   }, [loadProfile]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const sync = params.get('sync');
+      if (sync === 'success') {
+        toast.success('LinkedIn profile imported successfully!');
+        window.history.replaceState({}, document.title, window.location.pathname);
+        void loadProfile();
+      } else if (sync === 'failed') {
+        const errorMsg = params.get('error') || 'Failed to sync with LinkedIn.';
+        toast.error(errorMsg);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [loadProfile]);
+
+  const handleLinkedInImport = async () => {
+    try {
+      const { beginOAuthRedirect, saveOAuthPurpose } = await import('@/lib/oauth');
+      saveOAuthPurpose('import_profile');
+      await beginOAuthRedirect('linkedin', undefined, undefined, '/profile');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to initialize LinkedIn sync');
+    }
+  };
+
   const onSubmit = async (data: ProfileData) => {
     try {
       const toNullable = (value: unknown) => {
@@ -165,17 +191,26 @@ export default function ProfilePage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <h1 className="text-[40px] leading-[54px] font-normal text-black tracking-tight">My Profile</h1>
         {user?.role === 'applicant' && (
-          <button
-            type="button"
-            onClick={() => {
-              const url = `${window.location.origin}/profile/${user.id}`;
-              navigator.clipboard.writeText(url);
-              toast.success('Public profile link copied to clipboard!');
-            }}
-            className="flex items-center gap-2 bg-black hover:bg-[#1a1a1a] text-lime-400 font-bold px-5 py-2.5 rounded-[12px] text-sm shadow-sm transition-all active:scale-95 shrink-0"
-          >
-            <span>🔗 Share Public Profile</span>
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleLinkedInImport}
+              className="flex items-center gap-2 bg-[#0a66c2] hover:bg-[#08549d] text-white font-bold px-5 py-2.5 rounded-[12px] text-sm shadow-sm transition-all active:scale-95 shrink-0"
+            >
+              <span>Import from LinkedIn</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const url = `${window.location.origin}/profile/${user.id}`;
+                navigator.clipboard.writeText(url);
+                toast.success('Public profile link copied to clipboard!');
+              }}
+              className="flex items-center gap-2 bg-black hover:bg-[#1a1a1a] text-lime-400 font-bold px-5 py-2.5 rounded-[12px] text-sm shadow-sm transition-all active:scale-95 shrink-0"
+            >
+              <span>🔗 Share Public Profile</span>
+            </button>
+          </div>
         )}
       </div>
 

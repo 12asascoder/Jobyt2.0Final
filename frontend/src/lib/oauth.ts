@@ -7,6 +7,7 @@ const OAUTH_STATE_KEY_PREFIX = 'oauth_state';
 const OAUTH_REFERRAL_KEY = 'oauth_referral_code';
 const OAUTH_ROLE_KEY = 'oauth_role';
 const OAUTH_REDIRECT_KEY = 'oauth_redirect_target';
+const OAUTH_PURPOSE_KEY = 'oauth_purpose';
 
 export interface OAuthResponseData {
   user?: AuthUser;
@@ -158,6 +159,25 @@ export const clearOAuthRedirectTarget = () => {
   localStorage.removeItem(OAUTH_REDIRECT_KEY);
 };
 
+export const saveOAuthPurpose = (purpose?: string | null) => {
+  if (typeof window === 'undefined') return;
+  if (purpose?.trim()) {
+    localStorage.setItem(OAUTH_PURPOSE_KEY, purpose.trim());
+    return;
+  }
+  localStorage.removeItem(OAUTH_PURPOSE_KEY);
+};
+
+export const getOAuthPurpose = () => {
+  if (typeof window === 'undefined') return undefined;
+  return localStorage.getItem(OAUTH_PURPOSE_KEY) || undefined;
+};
+
+export const clearOAuthPurpose = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(OAUTH_PURPOSE_KEY);
+};
+
 const buildState = () => {
   if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
@@ -195,7 +215,14 @@ export const beginOAuthRedirect = async (
   }
 
   const clientId = readPublicEnv('NEXT_PUBLIC_LINKEDIN_CLIENT_ID');
-  if (!clientId) throw new Error('LinkedIn OAuth is not configured. Missing NEXT_PUBLIC_LINKEDIN_CLIENT_ID.');
+  const isMock = !clientId || clientId === 'your_linkedin_client_id';
+
+  if (isMock) {
+    console.log('[beginOAuthRedirect] Using mock LinkedIn flow because client ID is not configured');
+    const mockUrl = `/oauth/mock-linkedin?state=${encodeURIComponent(state)}&redirect_uri=${redirectUri}`;
+    window.location.href = mockUrl;
+    return;
+  }
 
   const scope = encodeURIComponent('openid profile email');
   const url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${encodeURIComponent(clientId)}&state=${encodeURIComponent(state)}&redirect_uri=${redirectUri}&scope=${scope}`;
