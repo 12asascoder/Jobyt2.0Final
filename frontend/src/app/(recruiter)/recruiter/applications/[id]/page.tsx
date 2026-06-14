@@ -487,7 +487,7 @@ export default function ApplicationDetailPage() {
                                   return (
                                     <div
                                       key={idx}
-                                      className="text-[11px] font-bold flex justify-between bg-rose-500/10 border border-rose-500/20 rounded-lg p-2 text-rose-450"
+                                      className="text-[11px] font-bold flex justify-between bg-rose-500/10 border border-rose-500/20 rounded-lg p-2 text-rose-400"
                                     >
                                       <span>
                                         ⚠️ {
