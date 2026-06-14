@@ -20,6 +20,7 @@ import {
     FaUsers,
     FaCoins,
     FaMapLocationDot,
+    FaClockRotateLeft,
 } from 'react-icons/fa6';
 import { IconType } from 'react-icons';
 
@@ -57,6 +58,7 @@ const adminNav: NavItem[] = [
     { label: 'Messages', href: ROUTES.adminMessages, icon: FaComments },
     { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
     { label: 'Credits', href: ROUTES.adminCredits, icon: FaCoins },
+    { label: 'Activity', href: ROUTES.adminActivity, icon: FaClockRotateLeft },
 ];
 
 export const Sidebar = () => {

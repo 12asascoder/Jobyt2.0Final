@@ -70,6 +70,8 @@ export const ROUTES = {
   recruiterAnalytics: '/recruiter/analytics',
   recruiterCredits: '/recruiter/credits',
   recruiterProfile: '/recruiter/profile',
+  recruiterWebhooks: '/recruiter/settings/webhooks',
+  recruiterIntegrations: '/recruiter/settings/integrations',
   // Admin
   adminDashboard: '/admin/dashboard',
   adminUsers: '/admin/users',
@@ -81,4 +83,8 @@ export const ROUTES = {
   adminApplicationDetail: (id: string) => `/admin/applications/${id}`,
   adminMessages: '/admin/messages',
   adminCredits: '/admin/credits',
+  adminActivity: '/admin/activity',
+  // Developer / API
+  apiKeys: '/settings/api-keys',
+  apiDocs: '/docs',
 };

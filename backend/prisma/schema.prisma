@@ -190,10 +190,25 @@ model pipeline_events {
   new_status      application_status
   changed_by_id   String?             @db.Uuid
   notes           String?
+  calendar_event_id String?           @db.VarChar(255)
+  meet_link       String?             @db.VarChar(500)
+  scheduled_at    DateTime?           @db.Timestamptz(6)
+  duration_minutes Int?               @default(60)
   created_at      DateTime?           @default(now()) @db.Timestamptz(6)
   applications    applications        @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([application_id], map: "idx_pipeline_events_application")
+}
+
+model google_calendar_tokens {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String    @unique @db.Uuid
+  access_token  String
+  refresh_token String
+  token_expiry  DateTime  @db.Timestamptz(6)
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime? @default(now()) @db.Timestamptz(6)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model recruiter_profiles {
@@ -290,6 +305,9 @@ model users {
   created_at                                      DateTime?              @default(now()) @db.Timestamptz(6)
   updated_at                                      DateTime?              @default(now()) @db.Timestamptz(6)
   admin_audit_log                                 admin_audit_log[]
+  api_keys                                        api_keys[]
+  webhooks                                        webhooks[]
+  google_calendar_tokens                          google_calendar_tokens?
   applicant_profiles                              applicant_profiles?
   applications                                    applications[]
   conversations_conversations_applicant_idTousers conversations[]        @relation("conversations_applicant_idTousers")
@@ -367,6 +385,76 @@ enum user_role {
   applicant
   recruiter
   admin
+}
+
+model api_keys {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String    @db.Uuid
+  key_hash    String    @unique @db.VarChar(255)
+  key_prefix  String    @db.VarChar(8)
+  name        String    @db.VarChar(100)
+  scopes      String[]
+  permissions Json      @default("{}")
+  rate_limit  Int       @default(1000)
+  expires_at  DateTime? @db.Timestamptz(6)
+  last_used_at DateTime? @db.Timestamptz(6)
+  is_active   Boolean   @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  users       users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_api_keys_user")
+  @@index([key_hash], map: "idx_api_keys_hash")
+}
+
+model api_activity_logs {
+  id          BigInt    @id @default(autoincrement())
+  api_key_id  String?   @db.Uuid
+  user_id     String?   @db.Uuid
+  endpoint    String    @db.VarChar(255)
+  method      String    @db.VarChar(10)
+  status_code Int
+  latency_ms  Int
+  ip_address  String?   @db.VarChar(45)
+  user_agent  String?
+  request_id  String?   @db.VarChar(36)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  api_keys    api_keys? @relation(fields: [api_key_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([api_key_id, created_at(sort: Desc)], map: "idx_activity_api_key")
+  @@index([created_at(sort: Desc)], map: "idx_activity_created")
+  @@index([endpoint, created_at(sort: Desc)], map: "idx_activity_endpoint")
+}
+
+model webhooks {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String    @db.Uuid
+  url         String    @db.VarChar(500)
+  events      String[]
+  secret      String    @db.VarChar(64)
+  is_active   Boolean   @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  users       users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  deliveries  webhook_deliveries[]
+
+  @@index([user_id], map: "idx_webhooks_user")
+}
+
+model webhook_deliveries {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  webhook_id      String    @db.Uuid
+  event_type      String    @db.VarChar(100)
+  payload         Json
+  response_status Int?
+  response_body   String?
+  attempt         Int       @default(1)
+  delivered_at    DateTime? @db.Timestamptz(6)
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  webhooks        webhooks  @relation(fields: [webhook_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([webhook_id, created_at(sort: Desc)], map: "idx_deliveries_webhook")
+  @@index([created_at(sort: Desc)], map: "idx_deliveries_created")
 }
 
 model job_recommendations {

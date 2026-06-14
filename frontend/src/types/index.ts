@@ -252,3 +252,62 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
     totalPages: number;
   };
 }
+
+// ── API Keys ──────────────────────────────────────────────────────────────────
+export interface ApiKey {
+  id: string;
+  key_prefix: string;
+  name: string;
+  scopes: string[];
+  rate_limit: number;
+  expires_at: string | null;
+  last_used_at: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ApiKeyCreated extends ApiKey {
+  api_key: string;
+}
+
+// ── API Activity ──────────────────────────────────────────────────────────────
+export interface ApiActivityLog {
+  id: number;
+  api_key_id: string | null;
+  user_id: string | null;
+  endpoint: string;
+  method: string;
+  status_code: number;
+  latency_ms: number;
+  ip_address: string | null;
+  user_agent: string | null;
+  request_id: string | null;
+  key_prefix?: string | null;
+  api_key_name?: string | null;
+  created_at: string;
+}
+
+// ── Webhooks ──────────────────────────────────────────────────────────────────
+export interface Webhook {
+  id: string;
+  user_id: string;
+  url: string;
+  events: string[];
+  secret: string;
+  is_active: boolean;
+  delivery_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  webhook_id: string;
+  event_type: string;
+  payload: unknown;
+  response_status: number | null;
+  response_body: string | null;
+  attempt: number;
+  delivered_at: string | null;
+  created_at: string;
+}

@@ -16,6 +16,7 @@ import {
     FaUsers,
     FaStar,
     FaArrowRightFromBracket,
+    FaKey,
 } from 'react-icons/fa6';
 import { IconType } from 'react-icons';
 
@@ -119,8 +120,27 @@ export function DashboardSidebar() {
                     })}
                 </div>
 
-                {/* Bottom utility pill: star + logout + avatar */}
+                {/* Bottom utility pill: api keys + star + logout + avatar */}
                 <div className="bg-[#1a1a1a] rounded-[24px] py-3 px-2.5 flex flex-col gap-1 shadow-xl">
+                    <Link
+                        href={ROUTES.apiKeys}
+                        title={isHovered ? undefined : 'API Keys'}
+                        className={`h-11 rounded-full flex items-center transition-colors overflow-hidden ${
+                            isHovered ? 'px-4 justify-start' : 'w-11 justify-center'
+                        } ${isActive(ROUTES.apiKeys)
+                                ? 'bg-lime-400 text-black'
+                                : 'text-white/60 hover:text-white hover:bg-white/10'
+                            }`}
+                    >
+                        <FaKey className="text-base shrink-0" />
+                        <span 
+                            className={`text-[13px] font-semibold tracking-wide whitespace-nowrap transition-all duration-300 ${
+                                isHovered ? 'ml-3 w-auto opacity-100' : 'w-0 opacity-0 ml-0'
+                            }`}
+                        >
+                            API Keys
+                        </span>
+                    </Link>
                     <Link
                         href={ROUTES.credits}
                         title={isHovered ? undefined : 'Credits'}

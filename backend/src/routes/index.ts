@@ -15,6 +15,9 @@ import recruiterRoutes from './recruiter.routes';
 import roadmapRoutes from './roadmap.routes';
 import uploadRoutes from './upload.routes';
 import aiRoutes from './ai.routes';
+import apiKeyRoutes from './apiKey.routes';
+import webhookRoutes from './webhook.routes';
+import calendarRoutes from './calendar.routes';
 
 const router = Router();
 
@@ -38,6 +41,9 @@ router.use('/recruiter', recruiterRoutes);
 router.use('/roadmaps', roadmapRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/ai', aiRoutes);
+router.use('/api-keys', apiKeyRoutes);
+router.use('/webhooks', webhookRoutes);
+router.use('/calendar', calendarRoutes);
 
 export default router;
 
