@@ -197,8 +197,9 @@ export const ApplicationModel = {
     return rows[0];
   },
 
-  async updateStatus(id: string, status: ApplicationStatus): Promise<Application> {
-    const { rows } = await pool.query(
+  async updateStatus(id: string, status: ApplicationStatus, client?: PoolClient): Promise<Application> {
+    const db = client ?? pool;
+    const { rows } = await db.query(
       `UPDATE applications SET status = $1, status_updated_at = NOW() WHERE id = $2 RETURNING *`,
       [status, id],
     );
