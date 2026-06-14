@@ -7,7 +7,8 @@ import { authenticate, authorize } from '../middleware/auth';
 import { uploadResume, uploadImage } from '../middleware/upload';
 import { validate } from '../middleware/validate';
 
-const router = Router();
+// Public profile endpoint
+router.get('/public/:userId', UserController.getPublicProfile);
 
 router.use(authenticate);
 
@@ -124,6 +125,5 @@ router.get(
 
 // ── Public profile ─────────────────────────────────────────────────────────────
 router.get('/:userId/resumes/:id/secure-url', ResumeController.getSecureUrl);
-router.get('/:userId', UserController.getPublicProfile);
 
 export default router;
