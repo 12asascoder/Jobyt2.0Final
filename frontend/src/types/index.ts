@@ -29,6 +29,20 @@ export interface ApplicantProfile {
   bio: string | null;
 }
 
+export interface ApplicantProject {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  tech_stack: string[];
+  github_url: string | null;
+  demo_url: string | null;
+  media_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+
 export interface WorkExperience {
   company: string;
   title: string;

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body, query } from 'express-validator';
 import { UserController } from '../controllers/user.controller';
 import { ResumeController } from '../controllers/resume.controller';
+import { ProjectController } from '../controllers/project.controller';
 import * as RoadmapProgressController from '../controllers/roadmapProgress.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { uploadResume, uploadImage } from '../middleware/upload';
@@ -123,6 +124,34 @@ router.post(
 router.get('/me/saved-jobs', authorize('applicant'), UserController.getSavedJobs);
 router.post('/me/saved-jobs/:jobId', authorize('applicant'), UserController.saveJob);
 router.delete('/me/saved-jobs/:jobId', authorize('applicant'), UserController.unsaveJob);
+
+// ── Project Showcase (applicant only) ───────────────────────────────────────────
+router.get('/me/projects', authorize('applicant'), ProjectController.getProjects);
+router.post(
+  '/me/projects',
+  authorize('applicant'),
+  body('title').isString().trim().notEmpty().withMessage('Project title is required'),
+  body('description').optional({ nullable: true }).isString(),
+  body('tech_stack').optional().custom((val) => Array.isArray(val) || typeof val === 'string'),
+  body('github_url').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('GitHub Link must be a valid URL'),
+  body('demo_url').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('Demo Link must be a valid URL'),
+  body('media_url').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('Media Link must be a valid URL'),
+  validate,
+  ProjectController.addProject
+);
+router.put(
+  '/me/projects/:id',
+  authorize('applicant'),
+  body('title').optional().isString().trim().notEmpty().withMessage('Project title cannot be empty'),
+  body('description').optional({ nullable: true }).isString(),
+  body('tech_stack').optional().custom((val) => Array.isArray(val) || typeof val === 'string'),
+  body('github_url').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('GitHub Link must be a valid URL'),
+  body('demo_url').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('Demo Link must be a valid URL'),
+  body('media_url').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('Media Link must be a valid URL'),
+  validate,
+  ProjectController.updateProject
+);
+router.delete('/me/projects/:id', authorize('applicant'), ProjectController.deleteProject);
 
 // ── Roadmap Progress & Recommendations ────────────────────────────────────────
 router.get('/:userId/roadmaps/:roadmapId/progress', RoadmapProgressController.getUserProgress);

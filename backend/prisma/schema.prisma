@@ -316,6 +316,7 @@ model users {
   interviews_as_interviewer                       interviews[]           @relation("interviewer")
   interviews_as_candidate                         interviews[]           @relation("candidate")
   github_repos github_repos[]
+  applicant_projects applicant_projects[]
 }
 
 enum auth_provider {
@@ -390,6 +391,20 @@ model github_repos {
   created_at        DateTime @default(now()) @db.Timestamptz(6)
   users             users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   @@unique([user_id, repo_id], name: "user_id_repo_id")
+}
+
+model applicant_projects {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String   @db.Uuid
+  title        String   @db.VarChar(255)
+  description  String?
+  tech_stack   String[] @default([])
+  github_url   String?  @db.VarChar(500)
+  demo_url     String?  @db.VarChar(500)
+  media_url    String?  @db.VarChar(500)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @updatedAt @db.Timestamptz(6)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model job_recommendations {

@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { api, ApiError } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
-import { ApplicantProfile, RecruiterProfile } from '@/types';
+import { ApplicantProfile, RecruiterProfile, ApplicantProject } from '@/types';
 import { Spinner, Avatar } from '@/components/ui';
 import toast from 'react-hot-toast';
-import { FaPenToSquare, FaCheck } from 'react-icons/fa6';
+import { FaPenToSquare, FaCheck, FaGlobe, FaGithub } from 'react-icons/fa6';
 import { ResumeUploadCard } from '@/components/profile/ResumeUploadCard';
 import { ResumeListCard } from '@/components/profile/ResumeListCard';
 import { NotificationPreferences } from '@/components/profile/NotificationPreferences';
@@ -34,11 +34,122 @@ export default function ProfilePage() {
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [resumeRefreshKey, setResumeRefreshKey] = useState(0);
 
+  // Projects State
+  const [projects, setProjects] = useState<ApplicantProject[]>([]);
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<ApplicantProject | null>(null);
+  const [projectTitle, setProjectTitle] = useState('');
+  const [projectDescription, setProjectDescription] = useState('');
+  const [projectTechStack, setProjectTechStack] = useState('');
+  const [projectGithubUrl, setProjectGithubUrl] = useState('');
+  const [projectDemoUrl, setProjectDemoUrl] = useState('');
+  const [projectMediaUrl, setProjectMediaUrl] = useState('');
+  const [projectMediaFile, setProjectMediaFile] = useState<File | null>(null);
+  const [projectMediaPreview, setProjectMediaPreview] = useState<string | null>(null);
+  const [projectSubmitting, setProjectSubmitting] = useState(false);
+  const [projectUploadingMedia, setProjectUploadingMedia] = useState(false);
+
+  const handleOpenAddProjectModal = () => {
+    setSelectedProject(null);
+    setProjectTitle('');
+    setProjectDescription('');
+    setProjectTechStack('');
+    setProjectGithubUrl('');
+    setProjectDemoUrl('');
+    setProjectMediaUrl('');
+    setProjectMediaFile(null);
+    setProjectMediaPreview(null);
+    setShowProjectModal(true);
+  };
+
+  const handleOpenEditProjectModal = (project: ApplicantProject) => {
+    setSelectedProject(project);
+    setProjectTitle(project.title);
+    setProjectDescription(project.description || '');
+    setProjectTechStack(project.tech_stack ? project.tech_stack.join(', ') : '');
+    setProjectGithubUrl(project.github_url || '');
+    setProjectDemoUrl(project.demo_url || '');
+    setProjectMediaUrl(project.media_url || '');
+    setProjectMediaFile(null);
+    setProjectMediaPreview(project.media_url ? resolveAssetUrl(project.media_url) : null);
+    setShowProjectModal(true);
+  };
+
+  const handleProjectMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProjectMediaFile(file);
+    setProjectMediaPreview(URL.createObjectURL(file));
+  };
+
+  const handleSaveProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectTitle.trim()) {
+      toast.error('Project title is required');
+      return;
+    }
+
+    setProjectSubmitting(true);
+    try {
+      let finalMediaUrl = projectMediaUrl;
+
+      if (projectMediaFile) {
+        setProjectUploadingMedia(true);
+        const form = new FormData();
+        form.append('file', projectMediaFile);
+        const uploadRes = await api.post<{ url: string }>('/upload', form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        if (uploadRes.data?.url) {
+          finalMediaUrl = uploadRes.data.url;
+        }
+        setProjectUploadingMedia(false);
+      }
+
+      const payload = {
+        title: projectTitle,
+        description: projectDescription,
+        tech_stack: projectTechStack,
+        github_url: projectGithubUrl,
+        demo_url: projectDemoUrl,
+        media_url: finalMediaUrl,
+      };
+
+      if (selectedProject) {
+        await api.put(`/users/me/projects/${selectedProject.id}`, payload);
+        toast.success('Project updated successfully!');
+      } else {
+        await api.post('/users/me/projects', payload);
+        toast.success('Project added successfully!');
+      }
+
+      setShowProjectModal(false);
+      void loadProfile();
+    } catch (err: any) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to save project');
+    } finally {
+      setProjectSubmitting(false);
+      setProjectUploadingMedia(false);
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (!confirm('Are you sure you want to delete this project?')) return;
+    try {
+      await api.delete(`/users/me/projects/${projectId}`);
+      toast.success('Project deleted successfully!');
+      void loadProfile();
+    } catch (err: any) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to delete project');
+    }
+  };
+
   const loadProfile = useCallback(async () => {
     try {
       const r = await api.get<{ profile: ProfileData; completeness: number; email: string }>('/users/me');
       reset(r.data?.profile || {});
       setCompleteness(r.data?.completeness || 0);
+      setProjects((r.data as any)?.projects || []);
       if (r.data?.profile) {
         const p = r.data.profile as ApplicantProfile & RecruiterProfile;
         setPhotoUrl(resolveAssetUrl(p.photo_url || p.logo_url || null));
@@ -394,6 +505,79 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Showcase Projects Management */}
+            {user?.role === 'applicant' && (
+              <div className="bg-white rounded-[10px] p-6 shadow-sm border border-[#c3ff3d]/60 relative">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-normal text-black text-[18px] leading-6">Project Showcase</h3>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddProjectModal}
+                    className="flex items-center gap-1.5 bg-black hover:bg-gray-800 text-lime-400 font-bold px-4 py-2 rounded-[10px] text-xs shadow-sm transition-all active:scale-95"
+                  >
+                    <span>+ Add Project</span>
+                  </button>
+                </div>
+
+                {projects.length > 0 ? (
+                  <div className="space-y-4">
+                    {projects.map((project) => (
+                      <div
+                        key={project.id}
+                        className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100/50 transition-colors gap-4"
+                      >
+                        <div className="flex items-center gap-4">
+                          {project.media_url && (
+                            <div className="w-16 h-12 rounded-lg overflow-hidden bg-black/10 shrink-0">
+                              <img
+                                src={resolveAssetUrl(project.media_url) || undefined}
+                                alt={project.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <h4 className="font-bold text-gray-900 text-sm">{project.title}</h4>
+                            <p className="text-[11px] text-gray-500 line-clamp-1">{project.description || 'No description provided.'}</p>
+                            {project.tech_stack && project.tech_stack.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {project.tech_stack.map((t, idx) => (
+                                  <span key={idx} className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[9px] text-gray-600 font-medium">
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditProjectModal(project)}
+                            className="px-2.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors text-xs font-bold"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProject(project.id)}
+                            className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors text-xs font-bold"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[#525252] italic text-center py-6 border border-dashed border-gray-200 rounded-[10px]">
+                    No showcase projects added yet. Click "+ Add Project" to showcase your work!
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Save Container at the bottom */}
             <div className="flex justify-center pt-2">
               <button 
@@ -526,6 +710,112 @@ export default function ProfilePage() {
             >
               OK
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Project Creation/Editing Modal */}
+      {showProjectModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 font-brand">
+          <div className="bg-[#0b0b0b] border border-gray-800 rounded-2xl w-full max-w-lg p-8 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-2xl font-bold text-white mb-6 tracking-wide">
+              {selectedProject ? 'Edit Showcase Project' : 'Add Showcase Project'}
+            </h3>
+            
+            <form onSubmit={handleSaveProject} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-2">Project Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={projectTitle}
+                  onChange={(e) => setProjectTitle(e.target.value)}
+                  className="w-full bg-[#161616] text-white rounded-lg px-4 py-2.5 text-sm border border-gray-850 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400"
+                  placeholder="e.g. Portfolio Website"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-2">Description</label>
+                <textarea
+                  value={projectDescription}
+                  onChange={(e) => setProjectDescription(e.target.value)}
+                  rows={3}
+                  className="w-full bg-[#161616] text-white rounded-lg px-4 py-2.5 text-sm border border-gray-850 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400 resize-none"
+                  placeholder="Describe your project, your role, achievements, etc."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-2">Tech Stack (comma separated)</label>
+                <input
+                  type="text"
+                  value={projectTechStack}
+                  onChange={(e) => setProjectTechStack(e.target.value)}
+                  className="w-full bg-[#161616] text-white rounded-lg px-4 py-2.5 text-sm border border-gray-850 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400"
+                  placeholder="e.g. Next.js, TailwindCSS, PostgreSQL"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-2">GitHub Repository URL</label>
+                  <input
+                    type="url"
+                    value={projectGithubUrl}
+                    onChange={(e) => setProjectGithubUrl(e.target.value)}
+                    className="w-full bg-[#161616] text-white rounded-lg px-4 py-2.5 text-sm border border-gray-850 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400"
+                    placeholder="https://github.com/..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-2">Live Demo URL</label>
+                  <input
+                    type="url"
+                    value={projectDemoUrl}
+                    onChange={(e) => setProjectDemoUrl(e.target.value)}
+                    className="w-full bg-[#161616] text-white rounded-lg px-4 py-2.5 text-sm border border-gray-850 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-2">Project Media / Screenshot</label>
+                <div className="flex items-center gap-4">
+                  {projectMediaPreview && (
+                    <div className="w-24 h-16 rounded-lg overflow-hidden border border-gray-800 shrink-0 bg-black/40">
+                      <img src={projectMediaPreview} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <label className="cursor-pointer bg-white text-black px-4 py-2 rounded-[8px] text-xs font-semibold hover:bg-gray-100 transition-colors inline-block">
+                    Choose Screenshot
+                    <input type="file" accept="image/*" className="hidden" onChange={handleProjectMediaChange} />
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setShowProjectModal(false)}
+                  className="flex-1 py-3 rounded-lg bg-transparent hover:bg-gray-900 border border-gray-800 text-white font-semibold text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={projectSubmitting || projectUploadingMedia}
+                  className="flex-1 py-3 rounded-lg bg-[#c3ff3d] hover:bg-[#aee62d] text-black font-semibold text-sm transition-transform active:scale-95 disabled:opacity-50"
+                >
+                  {projectSubmitting
+                    ? projectUploadingMedia
+                      ? 'Uploading Screenshot...'
+                      : 'Saving Project...'
+                    : 'Save Project'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

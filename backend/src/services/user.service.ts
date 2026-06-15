@@ -3,6 +3,7 @@ import { RecruiterProfileModel, RecruiterProfile } from '../models/recruiterProf
 import { ResumeModel } from '../models/resume.model';
 import { UserModel } from '../models/user.model';
 import { JobModel } from '../models/job.model';
+import prisma from '../config/prisma';
 import { StorageService } from './storage.service';
 import { AppError } from '../utils/appError';
 import { UserRole } from '../types';
@@ -110,6 +111,14 @@ export const UserService = {
         ? { ...profile, resume_url: defaultResume?.file_url ?? null }
         : null;
       const completeness = profile ? computeApplicantCompleteness(profile, user.email) : 0;
+      const githubRepos = await prisma.github_repos.findMany({
+        where: { user_id: userId },
+        orderBy: { stargazers_count: 'desc' },
+      });
+      const projects = await prisma.applicant_projects.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
+      });
       return {
         email: user.email,
         role: user.role,
@@ -117,6 +126,8 @@ export const UserService = {
         referral_code: user.referral_code,
         profile: profileOut,
         completeness,
+        githubRepos,
+        projects,
       };
     }
 
@@ -288,7 +299,22 @@ export const UserService = {
       const profileOut = profile
         ? { ...profile, resume_url: defaultResume?.file_url ?? null }
         : null;
-      return { id: user.id, email: user.email, role: user.role, profile: profileOut };
+      const githubRepos = await prisma.github_repos.findMany({
+        where: { user_id: targetUserId },
+        orderBy: { stargazers_count: 'desc' },
+      });
+      const projects = await prisma.applicant_projects.findMany({
+        where: { user_id: targetUserId },
+        orderBy: { created_at: 'desc' },
+      });
+      return {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        profile: profileOut,
+        githubRepos,
+        projects,
+      };
     }
     if (user.role === 'recruiter') {
       const profile = await RecruiterProfileModel.findByUserId(targetUserId);
