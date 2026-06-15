@@ -60,6 +60,9 @@ export default function AuthApiPage() {
         params={[
           { name: 'refreshToken', type: 'string', required: true, description: 'Valid refresh token' },
         ]}
+        requestExample={`curl -X POST https://api.jobyt.in/api/v1/auth/refresh-token \\
+  -H "Content-Type: application/json" \\
+  -d '{"refreshToken":"eyJhbG..."}'`}
         responseExample={`{
   "success": true,
   "data": {

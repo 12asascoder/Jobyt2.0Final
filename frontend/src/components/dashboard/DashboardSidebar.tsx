@@ -17,6 +17,7 @@ import {
     FaStar,
     FaArrowRightFromBracket,
     FaKey,
+    FaBook,
 } from 'react-icons/fa6';
 import { IconType } from 'react-icons';
 
@@ -139,6 +140,25 @@ export function DashboardSidebar() {
                             }`}
                         >
                             API Keys
+                        </span>
+                    </Link>
+                    <Link
+                        href="/docs"
+                        title={isHovered ? undefined : 'API Docs'}
+                        className={`h-11 rounded-full flex items-center transition-colors overflow-hidden ${
+                            isHovered ? 'px-4 justify-start' : 'w-11 justify-center'
+                        } ${isActive('/docs')
+                                ? 'bg-lime-400 text-black'
+                                : 'text-white/60 hover:text-white hover:bg-white/10'
+                            }`}
+                    >
+                        <FaBook className="text-base shrink-0" />
+                        <span 
+                            className={`text-[13px] font-semibold tracking-wide whitespace-nowrap transition-all duration-300 ${
+                                isHovered ? 'ml-3 w-auto opacity-100' : 'w-0 opacity-0 ml-0'
+                            }`}
+                        >
+                            API Docs
                         </span>
                     </Link>
                     <Link

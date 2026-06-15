@@ -44,6 +44,20 @@ export default function ApplicationsApiPage() {
           { name: 'page', type: 'number', required: false, description: 'Page number (default 1)' },
           { name: 'limit', type: 'number', required: false, description: 'Results per page (default 20)' },
         ]}
+        requestExample={`curl -H "X-API-Key: jobyt_your_key" \\
+  "https://api.jobyt.in/api/v1/applications/my?limit=5"`}
+        responseExample={`{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "job_id": "job-uuid",
+      "status": "in_review",
+      "created_at": "2025-06-01T10:00:00Z"
+    }
+  ],
+  "pagination": { "total": 2, "page": 1, "limit": 5, "totalPages": 1 }
+}`}
       />
 
       <EndpointCard
@@ -55,6 +69,18 @@ export default function ApplicationsApiPage() {
           { name: 'id', type: 'UUID', required: true, description: 'Application ID' },
           { name: 'status', type: 'string', required: true, description: 'applied, in_review, shortlisted, interview, offer, hired, or rejected' },
         ]}
+        requestExample={`curl -X PATCH https://api.jobyt.in/api/v1/applications/550e8400.../status \\
+  -H "X-API-Key: jobyt_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"status":"interview"}'`}
+        responseExample={`{
+  "success": true,
+  "data": {
+    "id": "550e8400...",
+    "status": "interview",
+    "updated_at": "2025-06-02T10:00:00Z"
+  }
+}`}
       />
 
       <EndpointCard
@@ -65,6 +91,8 @@ export default function ApplicationsApiPage() {
         params={[
           { name: 'id', type: 'UUID', required: true, description: 'Application ID' },
         ]}
+        requestExample={`curl -H "X-API-Key: jobyt_your_key" \\
+  https://api.jobyt.in/api/v1/applications/550e8400.../events`}
         responseExample={`{
   "success": true,
   "data": [

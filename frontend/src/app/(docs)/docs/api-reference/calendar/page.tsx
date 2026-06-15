@@ -12,6 +12,8 @@ export default function CalendarApiPage() {
         method="GET"
         path="/api/v1/calendar/auth-url"
         description="Get the Google OAuth authorization URL to initiate calendar connection."
+        requestExample={`curl -H "X-API-Key: jobyt_your_key" \\
+  https://api.jobyt.in/api/v1/calendar/auth-url`}
         responseExample={`{
   "success": true,
   "data": {
@@ -29,12 +31,22 @@ export default function CalendarApiPage() {
           { name: 'code', type: 'string', required: true, description: 'OAuth authorization code from Google' },
           { name: 'state', type: 'string', required: true, description: 'State parameter from auth URL' },
         ]}
+        requestExample={`curl -X POST https://api.jobyt.in/api/v1/calendar/callback \\
+  -H "X-API-Key: jobyt_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"code":"4/0AeaY...", "state":"base64..."}'`}
+        responseExample={`{
+  "success": true,
+  "message": "Google Calendar connected successfully"
+}`}
       />
 
       <EndpointCard
         method="GET"
         path="/api/v1/calendar/status"
         description="Check if Google Calendar is currently connected."
+        requestExample={`curl -H "X-API-Key: jobyt_your_key" \\
+  https://api.jobyt.in/api/v1/calendar/status`}
         responseExample={`{
   "success": true,
   "data": { "connected": true }
@@ -45,6 +57,12 @@ export default function CalendarApiPage() {
         method="DELETE"
         path="/api/v1/calendar/disconnect"
         description="Disconnect Google Calendar integration. Existing events are not affected."
+        requestExample={`curl -X DELETE https://api.jobyt.in/api/v1/calendar/disconnect \\
+  -H "X-API-Key: jobyt_your_key"`}
+        responseExample={`{
+  "success": true,
+  "message": "Google Calendar disconnected"
+}`}
       />
 
       <EndpointCard
@@ -57,6 +75,10 @@ export default function CalendarApiPage() {
           { name: 'durationMinutes', type: 'number', required: false, description: 'Interview duration (default 60)' },
           { name: 'notes', type: 'string', required: false, description: 'Additional notes' },
         ]}
+        requestExample={`curl -X POST https://api.jobyt.in/api/v1/calendar/schedule-interview \\
+  -H "X-API-Key: jobyt_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"applicationId":"550e...","scheduledAt":"2025-06-15T10:00:00Z"}'`}
         responseExample={`{
   "success": true,
   "data": {

@@ -6,7 +6,7 @@ const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const REDIRECT_URI = process.env.GOOGLE_CALENDAR_REDIRECT_URI || `${process.env.FRONTEND_URL}/recruiter/settings/integrations/callback`;
 
 export function createOAuthClient(): OAuth2Client {
-  return new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+  return new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI) as unknown as OAuth2Client;
 }
 
 export function getAuthUrl(state: string): string {
@@ -51,7 +51,7 @@ export function createCalendarClient(
   });
 
   if (onTokenRefresh) {
-    oauth.on('tokens', (tokens) => {
+    oauth.on('tokens', (tokens: any) => {
       if (tokens.access_token && tokens.expiry_date) {
         onTokenRefresh(tokens.access_token, new Date(tokens.expiry_date));
       }
@@ -59,5 +59,5 @@ export function createCalendarClient(
   }
 
   const calendar = google.calendar({ version: 'v3', auth: oauth });
-  return { calendar, oauth };
+  return { calendar, oauth: oauth as unknown as OAuth2Client };
 }

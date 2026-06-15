@@ -52,6 +52,18 @@ export default function JobsApiPage() {
         ]}
         requestExample={`curl -H "X-API-Key: jobyt_your_key" \\
   "https://api.jobyt.in/api/v1/jobs/550e8400-e29b-41d4-a716-446655440000"`}
+        responseExample={`{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "title": "Senior React Developer",
+    "company_name": "Spazorlabs",
+    "description": "Full job description goes here...",
+    "type": "full-time",
+    "location": "Remote",
+    "skills": ["React", "TypeScript", "Node.js"]
+  }
+}`}
       />
 
       <EndpointCard
@@ -68,6 +80,19 @@ export default function JobsApiPage() {
           { name: 'salary_max', type: 'number', required: false, description: 'Maximum salary' },
           { name: 'location', type: 'string', required: false, description: 'Job location' },
         ]}
+        requestExample={`curl -X POST https://api.jobyt.in/api/v1/jobs \\
+  -H "X-API-Key: jobyt_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"title":"Backend Engineer","description":"...","type":"full-time"}'`}
+        responseExample={`{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "title": "Backend Engineer",
+    "type": "full-time",
+    "created_at": "2025-06-01T10:00:00Z"
+  }
+}`}
       />
     </div>
   );

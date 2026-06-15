@@ -5,7 +5,7 @@ import { WebhookDeliveryModel } from '../models/webhook.model';
 
 const LOG_PREFIX = '[WebhookWorker]';
 
-interface WebhookJob {
+export interface WebhookJob {
   deliveryId: string;
   webhookId: string;
   url: string;

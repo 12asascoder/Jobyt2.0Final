@@ -29,7 +29,7 @@ export const WebhookController = {
     try {
       const { id } = req.params;
       const { url, events, is_active } = req.body;
-      const updated = await WebhookService.update(id, req.user!.userId, { url, events, is_active });
+      const updated = await WebhookService.update(String(id), req.user!.userId as string, { url, events, is_active });
       sendSuccess(res, updated, 'Webhook updated');
     } catch (err) {
       next(err);
@@ -39,7 +39,7 @@ export const WebhookController = {
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      await WebhookService.delete(id, req.user!.userId);
+      await WebhookService.delete(String(id), req.user!.userId as string);
       sendSuccess(res, null, 'Webhook deleted');
     } catch (err) {
       next(err);
@@ -49,7 +49,7 @@ export const WebhookController = {
   async getDeliveries(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const deliveries = await WebhookService.getDeliveries(id, req.user!.userId);
+      const deliveries = await WebhookService.getDeliveries(String(id), req.user!.userId as string);
       sendSuccess(res, deliveries);
     } catch (err) {
       next(err);

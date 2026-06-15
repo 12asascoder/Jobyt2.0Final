@@ -16,9 +16,9 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
       </header>
-      <div className="max-w-7xl mx-auto px-6 py-8 flex gap-8">
+      <div className="max-w-[90rem] mx-auto px-6 py-8 flex gap-8">
         <DocsSidebar />
-        <main className="flex-1 min-w-0 max-w-3xl">
+        <main className="flex-1 min-w-0 max-w-5xl">
           {children}
         </main>
       </div>

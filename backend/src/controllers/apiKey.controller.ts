@@ -63,7 +63,7 @@ export const ApiKeyController = {
     try {
       const { id } = req.params;
       const { name, scopes, permissions } = req.body;
-      const updated = await ApiKeyService.updateKey(id, req.user!.userId, { name, scopes, permissions });
+      const updated = await ApiKeyService.updateKey(String(id), req.user!.userId as string, { name, scopes, permissions });
       const sanitized = {
         id: updated.id,
         key_prefix: updated.key_prefix,
@@ -84,7 +84,7 @@ export const ApiKeyController = {
   async revokeKey(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      await ApiKeyService.revokeKey(id, req.user!.userId);
+      await ApiKeyService.revokeKey(String(id), req.user!.userId as string);
       sendSuccess(res, null, 'API key revoked');
     } catch (err) {
       next(err);
