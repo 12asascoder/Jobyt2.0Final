@@ -49,6 +49,7 @@ export const ROUTES = {
   applications: '/applications',
   interviewsHistory: '/interviews-history',
   savedJobs: '/saved-jobs',
+  autoApply: '/auto-apply',
   credits: '/credits',
   notifications: '/notifications',
   referral: '/referral',

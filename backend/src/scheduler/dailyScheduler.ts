@@ -1,6 +1,7 @@
 import { Queue } from 'bullmq';
 import { redisConnection, recommendationQueue } from '../config/queue';
 import pool from '../config/database';
+import { AutoApplyService } from '../services/autoApply.service';
 
 const LOG_PREFIX = '[DailyScheduler]';
 
@@ -27,7 +28,18 @@ export const setupDailyScheduler = async () => {
     }
   );
 
-  console.log(`${LOG_PREFIX} Daily recommendation scheduler setup complete.`);
+  // Schedule the daily auto-apply processing at 8:00 AM UTC
+  await schedulerQueue.add(
+    'runDailyAutoApply',
+    {},
+    {
+      repeat: {
+        pattern: '0 8 * * *', // Every day at 8:00 AM
+      },
+    }
+  );
+
+  console.log(`${LOG_PREFIX} Daily recommendation and auto-apply scheduler setup complete.`);
 };
 
 import { Worker, Job } from 'bullmq';
@@ -76,6 +88,31 @@ export const schedulerWorker = new Worker('schedulerQueue', async (job: Job) => 
         `UPDATE scheduler_logs SET status = 'failed', error_message = $1, updated_at = NOW() WHERE id = $2`,
         [error.message || 'Unknown error', logId]
       );
+    }
+  } else if (job.name === 'runDailyAutoApply') {
+    console.log(`${LOG_PREFIX} Starting daily auto-apply processing...`);
+    try {
+      // Find all active auto-apply users
+      const { rows: activeUsers } = await pool.query(
+        `SELECT user_id FROM auto_apply_preferences WHERE is_active = true`
+      );
+
+      console.log(`${LOG_PREFIX} Found ${activeUsers.length} active auto-apply users.`);
+
+      let totalApplied = 0;
+      for (const u of activeUsers) {
+        try {
+          // Pre-scan matching jobs so the queue is fresh
+          await AutoApplyService.matchJobsForUser(u.user_id);
+          const count = await AutoApplyService.processPendingApplies(u.user_id);
+          totalApplied += count;
+        } catch (err) {
+          console.error(`${LOG_PREFIX} Failed auto-apply for user ${u.user_id}:`, err);
+        }
+      }
+      console.log(`${LOG_PREFIX} Daily auto-apply run completed. Total applications submitted: ${totalApplied}`);
+    } catch (error: any) {
+      console.error(`${LOG_PREFIX} Daily auto-apply run failed:`, error);
     }
   }
 }, { connection: redisConnection });

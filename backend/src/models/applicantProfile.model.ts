@@ -13,6 +13,7 @@ export interface ApplicantProfile {
   linkedin_url: string | null;
   bio: string | null;
   visibility?: string;
+  share_token?: string | null;
   created_at: Date;
   updated_at: Date;
 }
