@@ -36,6 +36,29 @@ interface ApplicationDetail {
   missing_skills?: string[];
   responses?: Record<string, string>;
   resume_url?: string | null;
+  projects?: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    tech_stack: string[];
+    github_url: string | null;
+    demo_url: string | null;
+  }>;
+  github_repos?: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    html_url: string;
+    language: string | null;
+    stargazers_count: number;
+  }>;
+  certifications?: Array<{
+    id: string;
+    name: string;
+    issuer: string;
+    issue_date: string | null;
+    credential_url: string | null;
+  }>;
 }
 
 const getInitials = (name: string | null) => {
@@ -345,6 +368,100 @@ export default function ApplicationDetailPage() {
                 </div>
               ))}
             </div>
+
+            {/* Candidate Projects / Portfolio */}
+            {application.projects && application.projects.length > 0 && (
+              <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+                <h3 className="font-bold text-slate-900 text-lg">Portfolio & Projects</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {application.projects.map((project) => (
+                    <div key={project.id} className="bg-slate-50 rounded-lg p-4 text-sm border border-slate-100 flex flex-col justify-between">
+                      <div>
+                        <h4 className="font-bold text-slate-900 mb-1">{project.title}</h4>
+                        {project.description && <p className="text-slate-600 mb-3 text-xs line-clamp-3">{project.description}</p>}
+                        {project.tech_stack && project.tech_stack.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {project.tech_stack.map((tech, i) => (
+                              <span key={i} className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-[10px] font-medium">
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-3 text-xs font-semibold mt-auto pt-2 border-t border-slate-200/60">
+                        {project.github_url && (
+                          <a href={project.github_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                            GitHub <span className="text-[10px]">↗</span>
+                          </a>
+                        )}
+                        {project.demo_url && (
+                          <a href={project.demo_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                            Live Demo <span className="text-[10px]">↗</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Candidate GitHub Repositories */}
+            {application.github_repos && application.github_repos.length > 0 && (
+              <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+                <h3 className="font-bold text-slate-900 text-lg">GitHub Repositories</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {application.github_repos.map((repo) => (
+                    <div key={repo.id} className="bg-slate-50 rounded-lg p-4 text-sm border border-slate-100">
+                      <div className="flex justify-between items-start mb-2">
+                        <a href={repo.html_url} target="_blank" rel="noopener noreferrer" className="font-bold text-blue-600 hover:underline">
+                          {repo.name}
+                        </a>
+                        <span className="text-slate-500 text-xs flex items-center gap-1">
+                          ⭐ {repo.stargazers_count}
+                        </span>
+                      </div>
+                      {repo.description && <p className="text-slate-600 text-xs mb-2 line-clamp-2">{repo.description}</p>}
+                      {repo.language && (
+                        <span className="text-xs font-medium text-slate-700 bg-slate-200 px-2 py-0.5 rounded">
+                          {repo.language}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Candidate Certifications */}
+            {application.certifications && application.certifications.length > 0 && (
+              <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+                <h3 className="font-bold text-slate-900 text-lg">Certifications</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {application.certifications.map((cert) => (
+                    <div key={cert.id} className="bg-slate-50 rounded-lg p-4 text-sm border border-slate-100 flex flex-col justify-between">
+                      <div>
+                        <h4 className="font-bold text-slate-900">{cert.name}</h4>
+                        <p className="text-slate-600 text-xs">{cert.issuer}</p>
+                        {cert.issue_date && (
+                          <p className="text-slate-500 text-[11px] mt-1">
+                            Issued: {new Date(cert.issue_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}
+                          </p>
+                        )}
+                      </div>
+                      {cert.credential_url && (
+                        <div className="mt-3 pt-2 border-t border-slate-200/60">
+                          <a href={cert.credential_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-xs font-semibold flex items-center gap-1">
+                            View Credential <span className="text-[10px]">↗</span>
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Accept Button */}
             <button
