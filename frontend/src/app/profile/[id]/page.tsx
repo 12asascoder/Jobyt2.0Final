@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Spinner, Avatar } from '@/components/ui';
 import { resolveAssetUrl } from '@/lib/assetUrl';
-import { FaGithub, FaLinkedin, FaGlobe, FaEnvelope, FaPhone, FaArrowLeft, FaFileArrowDown } from 'react-icons/fa6';
+import { FaGithub, FaLinkedin, FaGlobe, FaEnvelope, FaPhone, FaArrowLeft, FaFileArrowDown, FaStar } from 'react-icons/fa6';
 
 interface PublicProfile {
   id: string;
@@ -229,6 +229,41 @@ export default function PublicStudentProfilePage() {
               )}
             </div>
 
+            {/* GitHub Projects Card */}
+            <div className="bg-[#1a1a1a]/90 backdrop-blur-md border border-white/5 rounded-3xl p-8 shadow-xl">
+              <h3 className="text-sm font-black uppercase tracking-widest text-lime-400 mb-5 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-lime-300"></span>
+                <span>GitHub Projects</span>
+              </h3>
+              {githubRepos && githubRepos.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {githubRepos.map((repo) => (
+                    <a
+                      key={repo.id}
+                      href={repo.html_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-[#2d2d2d] hover:bg-[#3d3d3d] text-slate-200 rounded-xl p-4 transition-colors border border-white/5"
+                    >
+                      <h4 className="font-bold text-white text-sm mb-1">{repo.name}</h4>
+                      {repo.description && (
+                        <p className="text-xs text-slate-400 mb-2 truncate">{repo.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-slate-300">
+                        {repo.language && (
+                          <span className="px-2 py-0.5 bg-[#242424] rounded">{repo.language}</span>
+                        )}
+                        <span className="flex items-center">
+                          <FaStar className="mr-1" /> {repo.stargazers_count}
+                        </span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 italic">No public repositories available.</p>
+              )}
+            </div>
             {/* Experience Card */}
             <div className="bg-[#1a1a1a]/90 backdrop-blur-md border border-white/5 rounded-3xl p-8 shadow-xl">
               <h3 className="text-sm font-black uppercase tracking-widest text-lime-400 mb-6 flex items-center gap-2">
