@@ -58,4 +58,40 @@ export const careerCoachService = {
     });
     return response.data;
   },
+
+  async listCoachSessions(): Promise<APIResponse<any[]>> {
+    const response = await api.get<APIResponse<any[]>>('/coach/sessions');
+    return response.data;
+  },
+
+  async startCoachSession(payload: any): Promise<APIResponse<any>> {
+    if (payload instanceof FormData) {
+      const response = await api.post<APIResponse<any>>('/coach/sessions', payload, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    }
+    const response = await api.post<APIResponse<any>>('/coach/sessions', payload);
+    return response.data;
+  },
+
+  async getCoachSession(id: string): Promise<APIResponse<any>> {
+    const response = await api.get<APIResponse<any>>(`/coach/sessions/${id}`);
+    return response.data;
+  },
+
+  async sendCoachMessage(id: string, message: string): Promise<APIResponse<any>> {
+    const response = await api.post<APIResponse<any>>(`/coach/sessions/${id}/messages`, { message });
+    return response.data;
+  },
+
+  async submitMessageFeedback(messageId: string, feedback: 'up' | 'down', comment?: string): Promise<APIResponse<any>> {
+    const response = await api.post<APIResponse<any>>(`/coach/messages/${messageId}/feedback`, {
+      feedback,
+      comment,
+    });
+    return response.data;
+  },
 };

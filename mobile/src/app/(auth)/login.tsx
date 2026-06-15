@@ -6,6 +6,8 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 
+import { useAuthStore } from '../../store/auth.store';
+
 export default function LoginScreen() {
   const router = useRouter();
   const { login, googleLogin } = useAuth();
@@ -33,7 +35,12 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login({ email, password });
-      router.replace('/(tabs)/home');
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.role === 'recruiter') {
+        router.replace('/(recruiter-tabs)/dashboard' as any);
+      } else {
+        router.replace('/(tabs)/home');
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Login failed';
       Alert.alert('Error', msg);

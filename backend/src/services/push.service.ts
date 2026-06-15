@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { getApps } from 'firebase-admin/app';
+import { getMessaging, MulticastMessage, SendResponse } from 'firebase-admin/messaging';
 import { DeviceTokenModel } from '../models/deviceToken.model';
 
 export const PushNotificationService = {
@@ -62,15 +64,60 @@ export const PushNotificationService = {
   },
 
   async sendFCM(tokens: string[], title: string, body: string, actionUrl?: string) {
-    // Extensible for future native FCM:
-    // When Firebase credentials are provided, we can load firebase-admin and send via multicast.
-    // For now, we simulate and log to verify native tokens flow correctly.
-    console.log(`[PushNotificationService FCM Mock] Sending push to ${tokens.length} native devices:`, {
-      title,
-      body,
-      actionUrl,
-      tokens,
-    });
+    const firebaseEnabled = process.env.FIREBASE_ENABLED === 'true';
+    const apps = getApps();
+    if (!firebaseEnabled || apps.length === 0) {
+      console.log(`[PushNotificationService FCM Mock] Sending push to ${tokens.length} native devices:`, {
+        title,
+        body,
+        actionUrl,
+        tokens,
+      });
+      return;
+    }
+
+    try {
+      const message: MulticastMessage = {
+        tokens,
+        notification: {
+          title,
+          body,
+        },
+        data: actionUrl ? { actionUrl } : {},
+        android: {
+          notification: {
+            channelId: 'default',
+            priority: 'high',
+          },
+        },
+      };
+
+      const response = await getMessaging().sendEachForMulticast(message);
+      console.log(`[PushNotificationService FCM] Multicast sent. Success: ${response.successCount}, Failure: ${response.failureCount}`);
+
+      if (response.failureCount > 0) {
+        const tokensToRemove: string[] = [];
+        response.responses.forEach((resp: SendResponse, idx: number) => {
+          if (!resp.success && resp.error) {
+            const code = resp.error.code;
+            if (
+              code === 'messaging/invalid-argument' ||
+              code === 'messaging/invalid-registration-token' ||
+              code === 'messaging/registration-token-not-registered'
+            ) {
+              tokensToRemove.push(tokens[idx]);
+            }
+          }
+        });
+
+        if (tokensToRemove.length > 0) {
+          console.log(`[PushNotificationService FCM] Removing ${tokensToRemove.length} invalid/unregistered device tokens`);
+          await DeviceTokenModel.deleteTokens(tokensToRemove);
+        }
+      }
+    } catch (err) {
+      console.error('[PushNotificationService FCM] Failed to send multicast message:', err);
+    }
   }
 };
 export default PushNotificationService;

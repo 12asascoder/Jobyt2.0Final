@@ -30,6 +30,8 @@ export default function DashboardPage() {
     const [balance, setBalance] = useState(0);
     const [stats, setStats] = useState({ applications: 0, saved: 0 });
     const [loading, setLoading] = useState(true);
+    const [nudges, setNudges] = useState<any[]>([]);
+    const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
 
     const [jobs, setJobs] = useState<BackendJob[]>([]);
     const [jobsLoading, setJobsLoading] = useState(true);
@@ -71,9 +73,17 @@ export default function DashboardPage() {
         } catch { /* silent */ }
     }, []);
 
+    const fetchNudges = useCallback(async () => {
+        try {
+            const res = await api.get<any[]>('/coach/nudges');
+            setNudges(res.data ?? []);
+        } catch { /* silent */ }
+    }, []);
+
     useEffect(() => {
         fetchStats().finally(() => setLoading(false));
-    }, [fetchStats]);
+        fetchNudges();
+    }, [fetchStats, fetchNudges]);
 
     const fetchJobsPage = useCallback(async (page: number, append: boolean) => {
         if (append) {
@@ -156,6 +166,39 @@ export default function DashboardPage() {
 
     return (
         <div className="max-w-[1360px] w-full ml-4 sm:ml-6 lg:ml-8 pr-4">
+            {/* Proactive Career Coach Nudges Banner */}
+            {nudges.filter(n => !dismissedNudges.includes(n.id)).slice(0, 1).map((nudge) => (
+                <div
+                    key={nudge.id}
+                    className="mb-6 mr-4 bg-gradient-to-r from-slate-900 via-slate-800 to-black text-white p-5 rounded-2xl border border-white/10 flex items-center justify-between gap-4 shadow-xl transition-all"
+                >
+                    <div className="flex items-center gap-4">
+                        <span className="text-2xl select-none">💡</span>
+                        <div>
+                            <h4 className="text-[12px] font-bold text-lime-400 uppercase tracking-widest mb-0.5">AI Career Coach Advice</h4>
+                            <p className="text-[14px] text-slate-200 font-medium leading-relaxed">{nudge.text}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                        {nudge.actionUrl && (
+                            <button
+                                onClick={() => router.push(nudge.actionUrl)}
+                                className="bg-[#C3FF3D] hover:bg-[#aee62d] text-black text-xs font-bold px-4 py-2 rounded-xl transition-colors whitespace-nowrap"
+                            >
+                                {nudge.actionLabel || 'Take Action'}
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setDismissedNudges(prev => [...prev, nudge.id])}
+                            className="text-slate-400 hover:text-white text-xs font-semibold px-2 py-2 hover:bg-white/5 rounded-lg transition-all"
+                            title="Dismiss advice"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            ))}
+
             {!isSearchMode ? (
                 <>
                     {/* Welcome */}
