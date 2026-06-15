@@ -47,6 +47,7 @@ export const ROUTES = {
   internships: '/internships',
   jobDetail: (id: string) => `/jobs/${id}`,
   applications: '/applications',
+  interviewsHistory: '/interviews-history',
   savedJobs: '/saved-jobs',
   credits: '/credits',
   notifications: '/notifications',
