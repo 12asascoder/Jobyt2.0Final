@@ -42,6 +42,18 @@ export interface ApplicantProject {
   updated_at: string;
 }
 
+export interface ApplicantCertification {
+  id: string;
+  user_id: string;
+  name: string;
+  issuer: string;
+  issue_date: string | null;
+  credential_url: string | null;
+  file_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 
 export interface WorkExperience {
   company: string;

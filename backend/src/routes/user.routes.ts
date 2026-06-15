@@ -3,6 +3,7 @@ import { body, query } from 'express-validator';
 import { UserController } from '../controllers/user.controller';
 import { ResumeController } from '../controllers/resume.controller';
 import { ProjectController } from '../controllers/project.controller';
+import { CertificationController } from '../controllers/certification.controller';
 import * as RoadmapProgressController from '../controllers/roadmapProgress.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { uploadResume, uploadImage } from '../middleware/upload';
@@ -152,6 +153,32 @@ router.put(
   ProjectController.updateProject
 );
 router.delete('/me/projects/:id', authorize('applicant'), ProjectController.deleteProject);
+
+// ── Certification Showcase (applicant only) ───────────────────────────────────
+router.get('/me/certifications', authorize('applicant'), CertificationController.getCertifications);
+router.post(
+  '/me/certifications',
+  authorize('applicant'),
+  body('name').isString().trim().notEmpty().withMessage('Certification name is required'),
+  body('issuer').isString().trim().notEmpty().withMessage('Issuer is required'),
+  body('issue_date').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Issue date must be a valid date'),
+  body('credential_url').optional({ nullable: true, checkFalsy: true }).isURL({ require_protocol: false }).withMessage('Credential URL must be a valid URL'),
+  body('file_url').optional({ nullable: true, checkFalsy: true }).isURL({ require_protocol: false }).withMessage('File URL must be a valid URL'),
+  validate,
+  CertificationController.addCertification
+);
+router.put(
+  '/me/certifications/:id',
+  authorize('applicant'),
+  body('name').optional().isString().trim().notEmpty().withMessage('Certification name cannot be empty'),
+  body('issuer').optional().isString().trim().notEmpty().withMessage('Issuer cannot be empty'),
+  body('issue_date').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Issue date must be a valid date'),
+  body('credential_url').optional({ nullable: true, checkFalsy: true }).isURL({ require_protocol: false }).withMessage('Credential URL must be a valid URL'),
+  body('file_url').optional({ nullable: true, checkFalsy: true }).isURL({ require_protocol: false }).withMessage('File URL must be a valid URL'),
+  validate,
+  CertificationController.updateCertification
+);
+router.delete('/me/certifications/:id', authorize('applicant'), CertificationController.deleteCertification);
 
 // ── Roadmap Progress & Recommendations ────────────────────────────────────────
 router.get('/:userId/roadmaps/:roadmapId/progress', RoadmapProgressController.getUserProgress);

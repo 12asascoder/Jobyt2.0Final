@@ -119,6 +119,10 @@ export const UserService = {
         where: { user_id: userId },
         orderBy: { created_at: 'desc' },
       });
+      const certifications = await prisma.applicant_certifications.findMany({
+        where: { user_id: userId },
+        orderBy: { issue_date: 'desc' },
+      });
       return {
         email: user.email,
         role: user.role,
@@ -128,6 +132,7 @@ export const UserService = {
         completeness,
         githubRepos,
         projects,
+        certifications,
       };
     }
 
@@ -307,6 +312,10 @@ export const UserService = {
         where: { user_id: targetUserId },
         orderBy: { created_at: 'desc' },
       });
+      const certifications = await prisma.applicant_certifications.findMany({
+        where: { user_id: targetUserId },
+        orderBy: { issue_date: 'desc' },
+      });
       return {
         id: user.id,
         email: user.email,
@@ -314,6 +323,7 @@ export const UserService = {
         profile: profileOut,
         githubRepos,
         projects,
+        certifications,
       };
     }
     if (user.role === 'recruiter') {
