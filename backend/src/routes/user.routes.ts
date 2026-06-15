@@ -5,14 +5,14 @@ import { ResumeController } from '../controllers/resume.controller';
 import { ProjectController } from '../controllers/project.controller';
 import { CertificationController } from '../controllers/certification.controller';
 import * as RoadmapProgressController from '../controllers/roadmapProgress.controller';
-import { authenticate, authorize } from '../middleware/auth';
+import { authenticate, optionalAuth, authorize } from '../middleware/auth';
 import { uploadResume, uploadImage } from '../middleware/upload';
 import { validate } from '../middleware/validate';
 
 const router = Router();
 
 // Public profile endpoint
-router.get('/public/:userId', UserController.getPublicProfile);
+router.get('/public/:userId', optionalAuth, UserController.getPublicProfile);
 
 router.use(authenticate);
 
@@ -27,6 +27,7 @@ router.put(
   body('skills').optional().isArray(),
   body('experience').optional().isArray(),
   body('education').optional().isArray(),
+  body('visibility').optional().isIn(['public', 'private', 'hidden']).withMessage('Invalid visibility status'),
   body('companyName').optional({ nullable: true, checkFalsy: true }).isString().trim(),
   body('industry').optional({ nullable: true, checkFalsy: true }).isString(),
   body('website').optional({ nullable: true, checkFalsy: true }).isURL(),

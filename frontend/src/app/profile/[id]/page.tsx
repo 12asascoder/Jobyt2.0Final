@@ -58,14 +58,18 @@ export default function PublicStudentProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PublicProfile | null>(null);
+  const [error, setError] = useState<{ status: number; message: string } | null>(null);
 
   useEffect(() => {
     const fetchPublicProfile = async () => {
       try {
         const res = await api.get<PublicProfile>(`/users/public/${userId}`);
         setData(res.data || null);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to load public profile:', err);
+        const status = err.response?.status || err.status || 500;
+        const message = err.response?.data?.message || err.message || 'An error occurred';
+        setError({ status, message });
       } finally {
         setLoading(false);
       }
@@ -87,19 +91,50 @@ export default function PublicStudentProfilePage() {
     );
   }
 
-  if (!data || !data.profile || data.role !== 'applicant') {
+  if (error?.status === 403) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-[#121212] text-white p-6 text-center">
-        <h2 className="text-2xl font-black text-rose-500 mb-2">Profile Not Found</h2>
-        <p className="text-slate-400 text-sm max-w-sm mb-6 leading-relaxed">
-          The public student profile you are looking for does not exist or may have been deleted.
+        <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-6 text-rose-500 text-2xl animate-pulse">
+          🔒
+        </div>
+        <h2 className="text-2xl font-black text-rose-500 mb-2">Private Profile</h2>
+        <p className="text-slate-400 text-sm max-w-md mb-8 leading-relaxed">
+          This candidate's profile is configured as private. You must be authenticated as a recruiter or administrator to view these credentials.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={() => router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)}
+            className="flex items-center justify-center gap-2 bg-[#c3ff3d] hover:bg-[#aee62d] text-black font-black px-6 py-3 rounded-[12px] text-sm transition-all shadow-md active:scale-95"
+          >
+            <span>Log In as Recruiter</span>
+          </button>
+          <button
+            onClick={() => router.push('/')}
+            className="flex items-center justify-center gap-2 bg-[#1e1e1e] hover:bg-[#2e2e2e] text-slate-300 font-bold px-6 py-3 rounded-[12px] text-sm transition-all border border-white/5 active:scale-95"
+          >
+            <span>Return Home</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data || !data.profile || data.role !== 'applicant') {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-[#121212] text-white p-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6 text-slate-400 text-2xl">
+          🔍
+        </div>
+        <h2 className="text-2xl font-black text-slate-300 mb-2">Profile Not Available</h2>
+        <p className="text-slate-400 text-sm max-w-sm mb-8 leading-relaxed">
+          This profile is hidden by the candidate or does not exist.
         </p>
         <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 bg-[#2d2d2d] hover:bg-[#3d3d3d] text-white font-bold px-5 py-2.5 rounded-[12px] text-sm transition-all"
+          onClick={() => router.push('/')}
+          className="flex items-center gap-2 bg-[#1e1e1e] hover:bg-[#2e2e2e] text-white font-bold px-6 py-3 rounded-[12px] text-sm transition-all border border-white/5 active:scale-95"
         >
           <FaArrowLeft />
-          <span>Go Back</span>
+          <span>Go Home</span>
         </button>
       </div>
     );

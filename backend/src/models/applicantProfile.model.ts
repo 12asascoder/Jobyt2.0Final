@@ -12,6 +12,7 @@ export interface ApplicantProfile {
   github_url: string | null;
   linkedin_url: string | null;
   bio: string | null;
+  visibility?: string;
   created_at: Date;
   updated_at: Date;
 }

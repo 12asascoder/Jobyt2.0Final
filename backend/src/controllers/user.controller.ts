@@ -111,7 +111,7 @@ export const UserController = {
 
   async getPublicProfile(req: Request, res: Response, next: NextFunction) {
     try {
-      const data = await UserService.getPublicProfile(req.params.userId as string);
+      const data = await UserService.getPublicProfile(req.params.userId as string, req.user);
       sendSuccess(res, data);
     } catch (err) {
       next(err);

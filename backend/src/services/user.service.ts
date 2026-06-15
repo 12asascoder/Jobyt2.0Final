@@ -22,6 +22,7 @@ const APPLICANT_PROFILE_FIELDS = new Set([
   'github_url',
   'linkedin_url',
   'bio',
+  'visibility',
 ]);
 
 const RECRUITER_PROFILE_FIELDS = new Set([
@@ -294,16 +295,35 @@ export const UserService = {
     await JobModel.unsaveJob(userId, jobId);
   },
 
-  async getPublicProfile(targetUserId: string) {
+  async getPublicProfile(targetUserId: string, requestingUser?: { userId: string; role: string }) {
     const user = await UserModel.findById(targetUserId);
     if (!user) throw new AppError('User not found', 404);
 
     if (user.role === 'applicant') {
       const profile = await ApplicantProfileModel.findByUserId(targetUserId);
-      const defaultResume = profile ? await ResumeModel.findDefaultByUserId(targetUserId) : null;
-      const profileOut = profile
-        ? { ...profile, resume_url: defaultResume?.file_url ?? null }
-        : null;
+      if (!profile) throw new AppError('Profile not found', 404);
+
+      // Check visibility constraints
+      const visibility = (profile as any).visibility || 'public';
+      const isOwner = requestingUser?.userId === targetUserId;
+      const isAdmin = requestingUser?.role === 'admin';
+      const isRecruiter = requestingUser?.role === 'recruiter';
+
+      if (visibility === 'hidden') {
+        if (!isOwner && !isAdmin) {
+          throw new AppError('Profile not found', 404);
+        }
+      } else if (visibility === 'private') {
+        if (!requestingUser) {
+          throw new AppError('This profile is private. Please log in as a recruiter or authorized user to view.', 403);
+        }
+        if (!isOwner && !isAdmin && !isRecruiter) {
+          throw new AppError('This profile is private. You do not have permission to view it.', 403);
+        }
+      }
+
+      const defaultResume = await ResumeModel.findDefaultByUserId(targetUserId);
+      const profileOut = { ...profile, resume_url: defaultResume?.file_url ?? null };
       const githubRepos = await prisma.github_repos.findMany({
         where: { user_id: targetUserId },
         orderBy: { stargazers_count: 'desc' },
