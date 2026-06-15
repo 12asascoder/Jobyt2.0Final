@@ -215,7 +215,12 @@ export const beginOAuthRedirect = async (
   }
 
   const clientId = readPublicEnv('NEXT_PUBLIC_LINKEDIN_CLIENT_ID');
-  const isMock = !clientId || clientId === 'your_linkedin_client_id';
+  const isMock =
+    !clientId ||
+    clientId === 'your_linkedin_client_id' ||
+    clientId === '78haj19dhbfgjo' ||
+    clientId.includes('your_') ||
+    clientId.includes('mock');
 
   if (isMock) {
     console.log('[beginOAuthRedirect] Using mock LinkedIn flow because client ID is not configured');

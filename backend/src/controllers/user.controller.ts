@@ -145,7 +145,13 @@ export const UserController = {
 
       // Check if it's a mock import
       const isMockCode = typeof code === 'string' && code.startsWith('mock_code_');
-      const hasLinkedInSecrets = process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET;
+      const hasLinkedInSecrets =
+        process.env.LINKEDIN_CLIENT_ID &&
+        process.env.LINKEDIN_CLIENT_SECRET &&
+        process.env.LINKEDIN_CLIENT_ID !== 'your_linkedin_client_id' &&
+        process.env.LINKEDIN_CLIENT_ID !== '78haj19dhbfgjo' &&
+        !process.env.LINKEDIN_CLIENT_ID.includes('your_') &&
+        !process.env.LINKEDIN_CLIENT_ID.includes('mock');
 
       let importedData: any = null;
 
