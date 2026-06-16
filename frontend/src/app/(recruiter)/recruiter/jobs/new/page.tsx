@@ -1,9 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/lib/api';
+import { CodingApi } from '@/lib/api/coding.api';
 import { Job, JobType, ApplicationQuestion } from '@/types';
+import { CodingAssessment } from '@/types/coding';
 import { ROUTES } from '@/constants';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTrash, FaChevronLeft } from 'react-icons/fa6';
@@ -47,6 +50,14 @@ export default function PostInternshipPage() {
   const [showQuestionInput, setShowQuestionInput] = useState(false);
   const [newQuestionLabel, setNewQuestionLabel] = useState('');
   const [loading, setLoading] = useState(false);
+  const [assessments, setAssessments] = useState<CodingAssessment[]>([]);
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
+
+  useEffect(() => {
+    CodingApi.listAssessments()
+      .then((res) => setAssessments(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setAssessments([]));
+  }, []);
 
   const filteredSkills = SUGGESTED_SKILLS.filter(s => 
     s.name.toLowerCase().includes(skillInput.toLowerCase()) && 
@@ -107,9 +118,22 @@ ${form.description}
         application_questions: questions,
       };
 
-      await api.post<Job>('/jobs', payload);
+      const res = await api.post<Job>('/jobs', payload);
+      const created = res.data;
+
+      if (selectedAssessmentId && created?.id) {
+        try {
+          await CodingApi.attachJob(selectedAssessmentId, created.id);
+          toast.success('Job submitted and coding assessment attached!');
+          router.push(ROUTES.recruiterJobDetail(created.id));
+          return;
+        } catch {
+          toast('Job created, but coding assessment could not be attached. Attach it from the job page.');
+        }
+      }
+
       toast.success('Job submitted for review!');
-      router.push(ROUTES.recruiterDashboard);
+      router.push(created?.id ? ROUTES.recruiterJobDetail(created.id) : ROUTES.recruiterDashboard);
     } catch (err: any) {
       toast.error(err?.message || 'Failed to post job');
     } finally {
@@ -424,6 +448,35 @@ ${form.description}
                   ))
                 )}
               </div>
+            </div>
+
+            <div className="flex flex-col gap-3 pt-4 border-t border-slate-200">
+              <h3 className="text-[18px] text-black font-display" style={{ fontFamily: 'Myanmar Khyay, sans-serif' }}>
+                Coding Assessment (optional)
+              </h3>
+              <p className="text-[13px] text-slate-500" style={{ fontFamily: 'Myanmar Sans Pro, sans-serif' }}>
+                Attach a published assessment. Timing (during apply vs post apply) is configured on the assessment.
+              </p>
+              <select
+                value={selectedAssessmentId}
+                onChange={(e) => setSelectedAssessmentId(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-xl p-3 text-[14px] font-semibold text-black outline-none focus:ring-2 focus:ring-[#C3FF3D]"
+              >
+                <option value="">No coding assessment</option>
+                {assessments.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title} ({a.assessment_timing === 'during_apply' ? 'During apply' : 'Post apply'})
+                  </option>
+                ))}
+              </select>
+              {assessments.length === 0 && (
+                <p className="text-[12px] text-slate-400">
+                  No assessments yet.{' '}
+                  <Link href={ROUTES.recruiterAssessmentNew} className="underline font-bold text-black">
+                    Create one
+                  </Link>
+                </p>
+              )}
             </div>
 
             {/* Submission Footer - Premium Redesign */}

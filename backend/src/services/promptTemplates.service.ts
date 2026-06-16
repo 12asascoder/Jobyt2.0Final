@@ -174,6 +174,109 @@ Focus on practical, actionable recommendations for skill development.`,
     variables: ['userSkills', 'requiredSkills'],
     description: 'Analyze skill gaps and provide learning recommendations',
   } as PromptTemplate,
+ 
+  /**
+   * Configurable and structured interview question generation
+   */
+  INTERVIEW_SESSION_QUESTIONS: {
+    name: 'interview_session_questions',
+    template: `You are an elite technical interviewer. Generate exactly {{questionCount}} diverse interview questions for a candidate applying for the role: "{{roleTitle}}".
+
+Job Description context (if any):
+"{{jobDescription}}"
+
+Guidelines:
+1. Generate exactly {{questionCount}} questions.
+2. For each question, map it to a specific category. The category MUST be exactly one of: 'behavioral', 'situational', or 'technical'. Do not output any other category value.
+3. Keep the questions focused on assessing the candidate's fit for the role.
+4. Include a list of expected topics that a strong response should cover.
+5. Return output STRICTLY as a valid JSON object matching the required schema. Do not wrap in markdown code blocks.
+
+JSON Schema Required:
+{
+  "questions": [
+    {
+      "questionText": "Question string",
+      "category": "technical" | "behavioral" | "situational",
+      "expectedTopics": ["topic1", "topic2"]
+    }
+  ]
+}`,
+    variables: ['roleTitle', 'jobDescription', 'questionCount'],
+    description: 'Generate configurable, structured interview questions categorized into behavioral, situational, or technical categories',
+  } as PromptTemplate,
+
+  /**
+   * Evaluate a candidate response against 5 rubric criteria
+   */
+  INTERVIEW_RESPONSE_EVALUATION: {
+    name: 'interview_response_evaluation',
+    template: `You are an expert technical recruiter and AI interviewer evaluator. Evaluate the candidate's response to the interview question below.
+
+Question Text:
+"{{questionText}}"
+
+Candidate Response:
+"{{candidateResponse}}"
+
+Evaluation Rubric Guidelines:
+Rate the response from 0 to 100 on exactly these five criteria:
+1. communicationClarity: clarity, structured presentation, vocabulary, and articulation.
+2. contentRelevance: correctness, address of requested constraints, logic, and precision.
+3. responseStructure: formatting, outline flow, logical progressions, and conclusions.
+4. depthOfKnowledge: technical depth, familiarity with frameworks, trade-offs, and edge-cases.
+5. confidenceIndicators: assertive tone, professional posture in phrasing, and conviction.
+
+Additionally, provide a descriptive qualitative feedback (feedbackText) and specific suggestions for improvement (suggestedImprovements).
+Return the result strictly as a valid JSON object matching the required schema. Do not wrap in markdown code blocks.
+
+JSON Schema Required:
+{
+  "scores": {
+    "communicationClarity": number (0-100),
+    "contentRelevance": number (0-100),
+    "responseStructure": number (0-100),
+    "depthOfKnowledge": number (0-100),
+    "confidenceIndicators": number (0-100)
+  },
+  "feedbackText": "String feedback...",
+  "suggestedImprovements": "String improvements..."
+}`,
+    variables: ['questionText', 'candidateResponse'],
+    description: 'Evaluate a candidate response against 5 rubric criteria, providing scores and constructive feedback',
+  } as PromptTemplate,
+
+  /**
+   * AI Career Coach Prompt Template
+   * Used for professional conversational career guidance
+   */
+  COACH_CHAT: {
+    name: 'coach_chat',
+    template: `You are an elite AI Career Coach assisting a student on their professional journey.
+Your goals are to provide actionable, insightful, and motivating career advice.
+
+Here is the student's current profile and professional context:
+{{studentContext}}
+
+Conversation Mode: {{mode}}
+Instruction for this mode:
+{{modeInstruction}}
+
+Conversation History:
+{{chatHistory}}
+
+User Message: "{{userMessage}}"
+
+Guidelines:
+1. Address the student directly and professionally.
+2. Keep suggestions highly realistic, structured, and customized to their skills, experience, and background.
+3. Be constructive and specific. Avoid generic corporate platitudes.
+4. Output your response in beautiful, clean Markdown format.
+
+Provide your response now:`,
+    variables: ['studentContext', 'mode', 'modeInstruction', 'chatHistory', 'userMessage'],
+    description: 'AI Career Coach conversation prompt',
+  } as PromptTemplate,
 
   /**
    * Get a prompt template by name
@@ -193,7 +296,17 @@ Focus on practical, actionable recommendations for skill development.`,
       this.RESUME_GENERATION,
       this.INTERVIEW_QUESTIONS,
       this.SKILL_GAP_ANALYSIS,
+      this.INTERVIEW_SESSION_QUESTIONS,
+      this.INTERVIEW_RESPONSE_EVALUATION,
+      this.COACH_CHAT,
     ];
+  },
+
+  /**
+   * Get names of all available templates
+   */
+  getAvailableTemplates(): string[] {
+    return this.getAllTemplates().map((t) => t.name);
   },
 
   /**

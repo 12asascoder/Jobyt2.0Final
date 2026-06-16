@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AdminService } from '../services/admin.service';
+import { ApiActivityLogModel } from '../models/apiActivityLog.model';
 import { sendSuccess, sendPaginated } from '../utils/response';
 
 export const AdminController = {
@@ -252,6 +253,29 @@ export const AdminController = {
         status
       );
       sendSuccess(res, updated, 'Application status updated');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // ── API Activity ─────────────────────────────────────────────────────────
+  async getApiActivity(req: Request, res: Response, next: NextFunction) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const { logs, total } = await ApiActivityLogModel.findAll(
+        {
+          api_key_id: req.query.api_key_id as string,
+          endpoint: req.query.endpoint as string,
+          method: req.query.method as string,
+          status_code: req.query.status_code ? parseInt(req.query.status_code as string) : undefined,
+          from: req.query.from as string,
+          to: req.query.to as string,
+        },
+        page,
+        limit,
+      );
+      sendPaginated(res, logs, total, page, limit);
     } catch (err) {
       next(err);
     }
