@@ -13,7 +13,7 @@ const connectionOptions = {
 export const redisConnection = new IORedis(connectionOptions);
 
 const defaultQueueOptions: QueueOptions = {
-  connection: redisConnection,
+  connection: redisConnection as any,
   defaultJobOptions: {
     removeOnComplete: true,
     removeOnFail: false,
