@@ -130,9 +130,10 @@ router.patch('/jobs/:id/reject-job',
 );
 router.get('/jobs/:id', AdminController.getJobById);
 
-// ── Metrics & Audit ────────────────────────────────────────────────────────────────
+// ── Metrics, Audit & Activity ────────────────────────────────────────────────
 router.get('/metrics', AdminController.getMetrics);
 router.get('/audit-log', AdminController.getAuditLog);
+router.get('/activity', AdminController.getApiActivity);
 
 // ── Applications ───────────────────────────────────────────────────────────────
 router.get('/applications', AdminController.listApplications);
