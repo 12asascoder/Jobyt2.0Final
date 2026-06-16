@@ -51,6 +51,7 @@ export interface AIConfig {
   embeddingProvider: string;
   /** Text generation model name (Groq model) */
   textModel: string;
+
   /** Embedding model name */
   embeddingModel: string;
   /** Embedding model version tag for cache isolation */

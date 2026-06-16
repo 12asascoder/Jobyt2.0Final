@@ -15,6 +15,7 @@ import {
     FaComments,
     FaUsers,
     FaStar,
+    FaCode,
     FaArrowRightFromBracket,
     FaLaptop,
 } from 'react-icons/fa6';
@@ -31,6 +32,7 @@ const mainItems: SidebarItem[] = [
     { icon: FaFileLines, href: ROUTES.applications, label: 'Applications' },
     { icon: FaLaptop, href: ROUTES.interviews, label: 'Mock Interviews' },
     { icon: FaBookmark, href: ROUTES.savedJobs, label: 'Saved Jobs' },
+    { icon: FaCode, href: ROUTES.coding, label: 'Coding' },
     { icon: FaComments, href: ROUTES.messages, label: 'Messages' },
     { icon: FaUsers, href: ROUTES.community, label: 'Community' },
 ];
