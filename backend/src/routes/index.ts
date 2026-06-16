@@ -15,6 +15,7 @@ import recruiterRoutes from './recruiter.routes';
 import roadmapRoutes from './roadmap.routes';
 import uploadRoutes from './upload.routes';
 import aiRoutes from './ai.routes';
+import interviewRoutes from './interview.routes';
 
 const router = Router();
 
@@ -38,6 +39,7 @@ router.use('/recruiter', recruiterRoutes);
 router.use('/roadmaps', roadmapRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/ai', aiRoutes);
+router.use('/interviews', interviewRoutes);
 
 export default router;
 
