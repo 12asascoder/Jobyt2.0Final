@@ -53,6 +53,8 @@ model applications {
   users                     users               @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   jobs                      jobs                @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   pipeline_events           pipeline_events[]
+  assessment_sessions       assessment_sessions[]
+  coding_submissions        coding_submissions[]
 
   @@unique([job_id, applicant_id])
   @@index([applicant_id, created_at(sort: Desc)], map: "idx_applications_applicant")
@@ -121,20 +123,12 @@ model jobs {
   approved_by           String?                  @db.Uuid
   approved_at           DateTime?                @db.Timestamptz(6)
   description_embedding Json?
-  ai_interview_sessions ai_interview_sessions[]
-  applications          applications[]
-  conversations         conversations[]
-  interview_reports     interview_reports[]
-  users                 users                    @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  saved_jobs            saved_jobs[]
-  approved_at                  DateTime?                @db.Timestamptz(6)
   coding_assessment_id         String?                  @db.Uuid
   active_assessment_version_id String?                  @db.Uuid
   applications                 applications[]
   conversations                conversations[]
   users                        users                    @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   saved_jobs                   saved_jobs[]
-  job_recommendations          job_recommendations[]
   linked_coding_assessment     coding_assessments?      @relation("JobLinkedAssessment", fields: [coding_assessment_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   active_assessment_version    assessment_versions?       @relation("JobActiveAssessmentVersion", fields: [active_assessment_version_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   coding_assessments_on_job    coding_assessments[]     @relation("AssessmentJob")
@@ -300,40 +294,10 @@ model resumes {
 }
 
 model users {
-  id                                              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                                           String?                 @unique @db.VarChar(255)
-  phone                                           String?                 @unique @db.VarChar(30)
-  phone_verified                                  Boolean                 @default(false)
-  password_hash                                   String?                 @db.VarChar(255)
-  auth_provider                                   auth_provider           @default(local)
-  google_id                                       String?                 @unique @db.VarChar(255)
-  github_id                                       String?                 @unique @db.VarChar(255)
-  linkedin_id                                     String?                 @unique @db.VarChar(255)
-  role                                            user_role
-  is_verified                                     Boolean?                @default(false)
-  is_email_dummy                                  Boolean                 @default(false)
-  email_verified                                  Boolean                 @default(false)
-  email_verification_token                        String?                 @db.VarChar(255)
-  email_verification_expires                      DateTime?               @db.Timestamptz(6)
-  verify_token                                    String?                 @db.VarChar(255)
-  reset_token                                     String?                 @db.VarChar(255)
-  reset_token_expires_at                          DateTime?               @db.Timestamptz(6)
-  referral_code                                   String                  @unique @db.VarChar(20)
-  credit_balance                                  Int                     @default(0)
-  email_alerts_enabled                            Boolean                 @default(true)
-  whatsapp_alerts_enabled                         Boolean                 @default(true)
-  created_at                                      DateTime?               @default(now()) @db.Timestamptz(6)
-  updated_at                                      DateTime?               @default(now()) @db.Timestamptz(6)
-  admin_audit_log                                 admin_audit_log[]
-  api_keys                                        api_keys[]
-  webhooks                                        webhooks[]
-  google_calendar_tokens                          google_calendar_tokens?
-  applicant_profiles                              applicant_profiles?
-  applications                                    applications[]
-  conversations_conversations_applicant_idTousers conversations[]         @relation("conversations_applicant_idTousers")
-  conversations_conversations_recruiter_idTousers conversations[]         @relation("conversations_recruiter_idTousers")
   id                                              String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                                           String?                   @unique @db.VarChar(255)
+  phone                                           String?                   @unique @db.VarChar(30)
+  phone_verified                                  Boolean                   @default(false)
   password_hash                                   String?                   @db.VarChar(255)
   auth_provider                                   auth_provider             @default(local)
   google_id                                       String?                   @unique @db.VarChar(255)
@@ -356,21 +320,17 @@ model users {
   created_at                                      DateTime?                 @default(now()) @db.Timestamptz(6)
   updated_at                                      DateTime?                 @default(now()) @db.Timestamptz(6)
   admin_audit_log                                 admin_audit_log[]
-  ai_interview_sessions                           ai_interview_sessions[]
+  google_calendar_tokens                          google_calendar_tokens?
   applicant_profiles                              applicant_profiles?
   applications                                    applications[]
-  coach_sessions                                  coach_sessions[]
   conversations_conversations_applicant_idTousers conversations[]           @relation("conversations_applicant_idTousers")
   conversations_conversations_recruiter_idTousers conversations[]           @relation("conversations_recruiter_idTousers")
   credit_transactions                             credit_transactions[]
   device_tokens                                   device_tokens[]
-  interview_reports                               interview_reports[]
-  interview_responses                             interview_responses[]
   jobs                                            jobs[]
   messages                                        messages[]
   notifications                                   notifications[]
   payments                                        payments[]
-  readiness_score_history                         readiness_score_history[]
   recruiter_profiles                              recruiter_profiles?
   referral_redemptions_referrer_idTousers         referral_redemptions[]    @relation("referral_redemptions_referrer_idTousers")
   referral_redemptions_user_idTousers             referral_redemptions?     @relation("referral_redemptions_user_idTousers")
@@ -378,7 +338,6 @@ model users {
   referrals_referrals_referrer_idTousers          referrals[]               @relation("referrals_referrer_idTousers")
   resumes                                         resumes[]
   saved_jobs                                      saved_jobs[]
-  job_recommendations                             job_recommendations[]
   coding_problems_created                         coding_problems[]           @relation("CodingProblemCreator")
   problem_versions_published                      problem_versions[]          @relation("ProblemVersionPublisher")
   problem_collections                             problem_collections[]
