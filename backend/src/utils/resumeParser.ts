@@ -2,6 +2,7 @@ import { PDFParse } from 'pdf-parse';
 import axios from 'axios';
 import FormData from 'form-data';
 import { extractSkillsFromText } from '../config/skillTaxonomy';
+import { AIService } from '../services/ai.service';
 
 type ParsedExperienceItem = {
   company?: string;
@@ -108,11 +109,31 @@ async function parseResumeWithFallback(buffer: Buffer, options: ParseResumeOptio
           : error instanceof Error
             ? error.message
             : 'Unknown parser error';
-      console.warn('Python resume parser failed, falling back to local parser:', message);
+      console.warn('Python resume parser failed, falling back to AI/local parser:', message);
     }
   }
 
-  return parseResumeLocal(buffer);
+  // Fallback path: extract raw text first
+  let rawText = '';
+  try {
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
+    const data = await parser.getText();
+    await parser.destroy().catch(() => undefined);
+    rawText = data.text || '';
+  } catch (err) {
+    console.warn('Local PDF extraction failed:', err);
+  }
+
+  if (rawText.trim()) {
+    // Try AI parsing fallback: Grok -> Groq -> Ollama
+    const parsed = await parseResumeWithLLM(rawText);
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  // Ultimate fallback to local regex-based parsing
+  return parseResumeLocalFromText(rawText);
 }
 
 async function parseResumeWithPython(
@@ -231,11 +252,74 @@ async function parseResumeWithPython(
   };
 }
 
-async function parseResumeLocal(buffer: Buffer): Promise<ParsedResume> {
-  const parser = new PDFParse({ data: new Uint8Array(buffer) });
-  const data = await parser.getText();
-  await parser.destroy().catch(() => undefined);
-  const text = data.text;
+async function parseResumeWithLLM(rawText: string): Promise<ParsedResume | null> {
+  const prompt = `You are an expert HR data extraction AI. You will be provided with the raw text of a candidate's resume.
+Extract the relevant candidate details and output them STRICTLY as a JSON object matching this schema:
+{
+  "name": "Candidate Full Name (string or null)",
+  "emails": ["Array", "Of", "Emails"],
+  "phones": ["Array", "Of", "Phone", "Numbers"],
+  "skills": ["Array", "Of", "Skills"],
+  "experience": [
+    {
+      "role": "Role Title (string or null)",
+      "company": "Company Name (string or null)"
+    }
+  ],
+  "education": [
+    {
+      "degree": "Degree or program (string or null)",
+      "institution": "Institution name (string or null)"
+    }
+  ]
+}
+
+Rules:
+1. ONLY return the JSON object, absolutely no markdown formatting blocks (do not wrap in \`\`\`json).
+2. If a field is missing, use null or an empty array.
+3. Clean up and normalize company/institution names and skills.
+4. Keep the list of skills concise and relevant.
+
+Raw Resume Text:
+${rawText}`;
+
+  // Grok (XAI) -> Groq -> Ollama
+  const providers = ['grok', 'groq', 'ollama'] as const;
+  for (const provider of providers) {
+    try {
+      console.log(`[ResumeParser] Attempting AI parsing with provider: ${provider}`);
+      const parsed = await AIService.generateJSON<any>(prompt, { provider });
+      if (parsed && (parsed.skills || parsed.experience || parsed.education || parsed.name)) {
+        console.log(`[ResumeParser] AI parsing succeeded with provider: ${provider}`);
+        return {
+          rawText,
+          skills: Array.isArray(parsed.skills) ? parsed.skills.map((s: any) => String(s).trim()).filter(Boolean) : [],
+          emails: Array.isArray(parsed.emails) ? parsed.emails.map((e: any) => String(e).trim()).filter(Boolean) : [],
+          phones: Array.isArray(parsed.phones) ? parsed.phones.map((p: any) => String(p).trim()).filter(Boolean) : [],
+          name: typeof parsed.name === 'string' ? parsed.name.trim() : null,
+          experience: Array.isArray(parsed.experience)
+            ? parsed.experience.map((exp: any) => ({
+                role: typeof exp?.role === 'string' ? exp.role.trim() : undefined,
+                company: typeof exp?.company === 'string' ? exp.company.trim() : undefined,
+              }))
+            : [],
+          education: Array.isArray(parsed.education)
+            ? parsed.education.map((edu: any) => ({
+                degree: typeof edu?.degree === 'string' ? edu.degree.trim() : undefined,
+                institution: typeof edu?.institution === 'string' ? edu.institution.trim() : undefined,
+              }))
+            : [],
+        };
+      }
+    } catch (err) {
+      console.warn(`[ResumeParser] AI parsing failed for provider ${provider}:`, err);
+    }
+  }
+
+  return null;
+}
+
+export function parseResumeLocalFromText(text: string): ParsedResume {
   const lines = normalizeLines(text);
 
   // Extract emails

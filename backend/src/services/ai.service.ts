@@ -119,7 +119,6 @@ function isCircuitOpen(key: string): boolean {
   const cb = getCircuitBreaker(key);
   if (!cb.isOpen) return false;
 
-  // Check if cooldown has elapsed
   const elapsed = Date.now() - cb.lastFailureAt;
   if (elapsed >= aiConfig.circuitBreakerCooldownMs) {
     console.log(`${LOG_PREFIX} Circuit breaker HALF-OPEN for "${key}" — allowing retry`);
@@ -154,7 +153,6 @@ function isPermanentError(message: string): boolean {
     return true;
   }
   return (
-    // 429 Quota exhausted — retrying will only make it worse
     message.includes('429') ||
     message.includes('RESOURCE_EXHAUSTED') ||
     message.includes('Quota exceeded') ||
@@ -199,7 +197,6 @@ async function withRetry<T>(
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
 
-      // Fast-fail on permanent errors — no retry storm
       if (isPermanentError(lastError.message)) {
         const isAuth = isAuthError(lastError.message);
         const reason = isAuth ? 'AUTHENTICATION_FAILED'
@@ -355,6 +352,16 @@ export const AIService = {
     }
 
     try {
+      const payload: any = {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: options?.temperature ?? aiConfig.defaultTemperature,
+      };
+
+      if (options?.responseMimeType === 'application/json') {
+        payload.response_format = { type: 'json_object' };
+      }
+
       const result = await withRetry(
         () =>
           withTimeout(
@@ -380,7 +387,7 @@ export const AIService = {
       recordSuccess(circuitKey);
       console.log(`${LOG_PREFIX} Text OK model=${model} len=${text.length} ${elapsed}ms`);
       return text;
-    } catch (err) {
+    } catch (err: any) {
       const elapsed = Date.now() - startMs;
       const message = err instanceof Error ? err.message : String(err);
       
@@ -490,12 +497,8 @@ export const AIService = {
     }
 
     const trimmed = text.trim();
-    if (!trimmed) {
-      console.warn(`${EMBED_PREFIX} Empty text provided — skipping`);
-      return null;
-    }
+    if (!trimmed) return null;
 
-    // Truncate to safe limits
     const input = trimmed.length > aiConfig.maxEmbeddingInputChars
       ? trimmed.slice(0, aiConfig.maxEmbeddingInputChars)
       : trimmed;
@@ -524,7 +527,7 @@ export const AIService = {
       recordSuccess(circuitKey);
       console.log(`${EMBED_PREFIX} SUCCESS provider=${providerName} model=${model} dims=${embedding.length} ${elapsed}ms`);
       return embedding;
-    } catch (err) {
+    } catch (err: any) {
       const elapsed = Date.now() - startMs;
       const message = err instanceof Error ? err.message : String(err);
       
@@ -561,11 +564,6 @@ export const AIService = {
     }
   },
 
-  /**
-   * Validate configured models on startup.
-   * Logs active model configuration and warns about potential issues.
-   * Does NOT block startup — failures are logged, not thrown.
-   */
   async healthCheck(): Promise<{ text: boolean; embedding: boolean }> {
     const result = { text: false, embedding: false };
 
@@ -590,7 +588,6 @@ export const AIService = {
     }
 
     if (process.env.SKIP_AI_HEALTH_CHECK === 'true') {
-      console.warn(`${LOG_PREFIX} Health check bypassed via SKIP_AI_HEALTH_CHECK=true`);
       result.text = true;
       result.embedding = aiConfig.embeddingsConfigured && aiConfig.enableSemanticScoring;
       return result;
@@ -628,9 +625,6 @@ export const AIService = {
     return result;
   },
 
-  /**
-   * Get current circuit breaker status for monitoring.
-   */
   getCircuitStatus(): Record<string, { failures: number; isOpen: boolean }> {
     const status: Record<string, { failures: number; isOpen: boolean }> = {};
     for (const [key, state] of Object.entries(circuitBreakers)) {
