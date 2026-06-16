@@ -36,27 +36,28 @@ model applicant_profiles {
 }
 
 model applications {
-  id                          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  job_id                      String              @db.Uuid
-  applicant_id                String              @db.Uuid
-  cover_letter                String?
-  resume_snapshot_url         String?             @db.VarChar(500)
-  status                      application_status? @default(applied)
-  status_updated_at           DateTime?           @default(now()) @db.Timestamptz(6)
-  created_at                  DateTime?           @default(now()) @db.Timestamptz(6)
-  resume_id                   String?             @db.Uuid
-  application_answers         Json                @default("[]")
-  ai_strengths                Json?
-  ai_weaknesses               Json?
-  ai_summary                  String?
-  ai_reasoning_generated_at   DateTime?           @db.Timestamptz(6)
-  users                       users               @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  jobs                        jobs                @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  pipeline_events             pipeline_events[]
+  id                        String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_id                    String              @db.Uuid
+  applicant_id              String              @db.Uuid
+  cover_letter              String?
+  resume_snapshot_url       String?             @db.VarChar(500)
+  status                    application_status? @default(applied)
+  status_updated_at         DateTime?           @default(now()) @db.Timestamptz(6)
+  created_at                DateTime?           @default(now()) @db.Timestamptz(6)
+  resume_id                 String?             @db.Uuid
+  application_answers       Json                @default("[]")
+  ai_strengths              Json?
+  ai_weaknesses             Json?
+  ai_summary                String?
+  ai_reasoning_generated_at DateTime?           @db.Timestamptz(6)
+  users                     users               @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobs                      jobs                @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pipeline_events           pipeline_events[]
 
   @@unique([job_id, applicant_id])
   @@index([applicant_id, created_at(sort: Desc)], map: "idx_applications_applicant")
   @@index([job_id, status], map: "idx_applications_job_status")
+  @@index([job_id, applicant_id], map: "idx_applications_job_applicant")
 }
 
 model conversations {
@@ -114,11 +115,18 @@ model jobs {
   deleted_at            DateTime?                @db.Timestamptz(6)
   created_at            DateTime?                @default(now()) @db.Timestamptz(6)
   updated_at            DateTime?                @default(now()) @db.Timestamptz(6)
-  external_url          String?                  @db.VarChar(2048)
   search_vector         Unsupported("tsvector")?
   application_questions Json                     @default("[]")
   job_approval_status   String?                  @default("approved") @db.VarChar(30)
   approved_by           String?                  @db.Uuid
+  approved_at           DateTime?                @db.Timestamptz(6)
+  description_embedding Json?
+  ai_interview_sessions ai_interview_sessions[]
+  applications          applications[]
+  conversations         conversations[]
+  interview_reports     interview_reports[]
+  users                 users                    @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  saved_jobs            saved_jobs[]
   approved_at                  DateTime?                @db.Timestamptz(6)
   coding_assessment_id         String?                  @db.Uuid
   active_assessment_version_id String?                  @db.Uuid
@@ -136,6 +144,12 @@ model jobs {
   @@index([job_approval_status], map: "idx_jobs_approval_status")
   @@index([search_vector], map: "idx_jobs_search", type: Gin)
   @@index([skills], map: "idx_jobs_skills", type: Gin)
+  @@index([deleted_at, status], map: "idx_jobs_deleted_status")
+  @@index([job_approval_status, status, deleted_at, type], map: "idx_jobs_discovery")
+  @@index([location], map: "idx_jobs_location")
+  @@index([salary_min, salary_max], map: "idx_jobs_salary_range")
+  @@index([status], map: "idx_jobs_status")
+  @@index([type], map: "idx_jobs_type")
 }
 
 model messages {
@@ -271,45 +285,50 @@ model resumes {
 }
 
 model users {
-  id                                              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                                           String?                @unique @db.VarChar(255)
-  phone                                           String?                @unique @db.VarChar(30)
-  phone_verified                                  Boolean                @default(false)
-  password_hash                                   String?                @db.VarChar(255)
-  auth_provider                                   auth_provider          @default(local)
-  google_id                                       String?                @unique @db.VarChar(255)
-  github_id                                       String?                @unique @db.VarChar(255)
-  linkedin_id                                     String?                @unique @db.VarChar(255)
+  id                                              String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                           String?                   @unique @db.VarChar(255)
+  password_hash                                   String?                   @db.VarChar(255)
+  auth_provider                                   auth_provider             @default(local)
+  google_id                                       String?                   @unique @db.VarChar(255)
+  github_id                                       String?                   @unique @db.VarChar(255)
+  linkedin_id                                     String?                   @unique @db.VarChar(255)
   role                                            user_role
-  is_verified                                     Boolean?               @default(false)
-  is_email_dummy                                  Boolean                @default(false)
-  email_verified                                  Boolean                @default(false)
-  email_verification_token                        String?                @db.VarChar(255)
-  email_verification_expires                      DateTime?              @db.Timestamptz(6)
-  verify_token                                    String?                @db.VarChar(255)
-  reset_token                                     String?                @db.VarChar(255)
-  reset_token_expires_at                          DateTime?              @db.Timestamptz(6)
-  referral_code                                   String                 @unique @db.VarChar(20)
-  credit_balance                                  Int                    @default(0)
-  email_alerts_enabled                            Boolean                @default(true)
-  whatsapp_alerts_enabled                         Boolean                @default(true)
-  created_at                                      DateTime?              @default(now()) @db.Timestamptz(6)
-  updated_at                                      DateTime?              @default(now()) @db.Timestamptz(6)
+  is_verified                                     Boolean?                  @default(false)
+  is_email_dummy                                  Boolean                   @default(false)
+  email_verified                                  Boolean                   @default(false)
+  email_verification_token                        String?                   @db.VarChar(255)
+  email_verification_expires                      DateTime?                 @db.Timestamptz(6)
+  verify_token                                    String?                   @db.VarChar(255)
+  reset_token                                     String?                   @db.VarChar(255)
+  reset_token_expires_at                          DateTime?                 @db.Timestamptz(6)
+  referral_code                                   String                    @unique @db.VarChar(20)
+  credit_balance                                  Int                       @default(0)
+  email_alerts_enabled                            Boolean                   @default(true)
+  whatsapp_alerts_enabled                         Boolean                   @default(true)
+  push_alerts_enabled                             Boolean                   @default(false)
+  created_at                                      DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at                                      DateTime?                 @default(now()) @db.Timestamptz(6)
   admin_audit_log                                 admin_audit_log[]
+  ai_interview_sessions                           ai_interview_sessions[]
   applicant_profiles                              applicant_profiles?
   applications                                    applications[]
-  conversations_conversations_applicant_idTousers conversations[]        @relation("conversations_applicant_idTousers")
-  conversations_conversations_recruiter_idTousers conversations[]        @relation("conversations_recruiter_idTousers")
+  coach_sessions                                  coach_sessions[]
+  conversations_conversations_applicant_idTousers conversations[]           @relation("conversations_applicant_idTousers")
+  conversations_conversations_recruiter_idTousers conversations[]           @relation("conversations_recruiter_idTousers")
   credit_transactions                             credit_transactions[]
+  device_tokens                                   device_tokens[]
+  interview_reports                               interview_reports[]
+  interview_responses                             interview_responses[]
   jobs                                            jobs[]
   messages                                        messages[]
   notifications                                   notifications[]
   payments                                        payments[]
+  readiness_score_history                         readiness_score_history[]
   recruiter_profiles                              recruiter_profiles?
-  referral_redemptions_referrer_idTousers         referral_redemptions[] @relation("referral_redemptions_referrer_idTousers")
-  referral_redemptions_user_idTousers             referral_redemptions?  @relation("referral_redemptions_user_idTousers")
-  referrals_referrals_referred_idTousers          referrals?             @relation("referrals_referred_idTousers")
-  referrals_referrals_referrer_idTousers          referrals[]            @relation("referrals_referrer_idTousers")
+  referral_redemptions_referrer_idTousers         referral_redemptions[]    @relation("referral_redemptions_referrer_idTousers")
+  referral_redemptions_user_idTousers             referral_redemptions?     @relation("referral_redemptions_user_idTousers")
+  referrals_referrals_referred_idTousers          referrals?                @relation("referrals_referred_idTousers")
+  referrals_referrals_referrer_idTousers          referrals[]               @relation("referrals_referrer_idTousers")
   resumes                                         resumes[]
   saved_jobs                                      saved_jobs[]
   job_recommendations                             job_recommendations[]
@@ -384,18 +403,16 @@ enum user_role {
   admin
 }
 
-model job_recommendations {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id    String    @db.Uuid
-  job_id     String    @db.Uuid
-  score      Int
-  status     String    @default("pending") @db.VarChar(30)
-  created_at DateTime? @default(now()) @db.Timestamptz(6)
-  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  jobs       jobs      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+model device_tokens {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String   @db.Uuid
+  token        String   @unique
+  platform     String   @db.VarChar(20) // 'ios' or 'android'
+  last_used_at DateTime @default(now()) @db.Timestamptz(6)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@unique([user_id, job_id], map: "idx_job_recommendations_unique")
-  @@index([user_id, status], map: "idx_job_recommendations_user_status")
+  @@index([user_id])
 }
 
 model scheduler_logs {
