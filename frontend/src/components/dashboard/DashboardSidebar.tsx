@@ -15,6 +15,7 @@ import {
     FaComments,
     FaUsers,
     FaStar,
+    FaCode,
     FaArrowRightFromBracket,
     FaLaptop,
     FaBrain,
@@ -33,6 +34,7 @@ const mainItems: SidebarItem[] = [
     { icon: FaLaptop, href: ROUTES.interviews, label: 'Mock Interviews' },
     { icon: FaBrain, href: ROUTES.coach, label: 'AI Coach' },
     { icon: FaBookmark, href: ROUTES.savedJobs, label: 'Saved Jobs' },
+    { icon: FaCode, href: ROUTES.coding, label: 'Coding' },
     { icon: FaComments, href: ROUTES.messages, label: 'Messages' },
     { icon: FaUsers, href: ROUTES.community, label: 'Community' },
 ];

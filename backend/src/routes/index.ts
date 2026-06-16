@@ -15,9 +15,9 @@ import recruiterRoutes from './recruiter.routes';
 import roadmapRoutes from './roadmap.routes';
 import uploadRoutes from './upload.routes';
 import aiRoutes from './ai.routes';
+import codingRoutes from './coding.routes';
 import interviewRoutes from './interview.routes';
 import coachRoutes from './coach.routes';
-
 
 const router = Router();
 
@@ -41,9 +41,9 @@ router.use('/recruiter', recruiterRoutes);
 router.use('/roadmaps', roadmapRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/ai', aiRoutes);
+router.use('/coding', codingRoutes);
 router.use('/interviews', interviewRoutes);
 router.use('/coach', coachRoutes);
-
 
 export default router;
 

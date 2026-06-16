@@ -8,6 +8,8 @@ import { ApplicationQuestion, Job, JobType } from '@/types';
 import { Button, Input, Card, CardBody, Spinner, Badge } from '@/components/ui';
 import toast from 'react-hot-toast';
 import { ROUTES, JOB_TYPES } from '@/constants';
+import { CodingApi } from '@/lib/api/coding.api';
+import { CodingAssessment } from '@/types/coding';
 import { InsufficientCreditsCard } from '@/components/credits/InsufficientCreditsCard';
 import { FaChevronLeft, FaTrash, FaPlus } from 'react-icons/fa6';
 
@@ -55,6 +57,9 @@ export default function RecruiterJobDetailPage() {
     description: '',
     skills: '',
   });
+  const [assessments, setAssessments] = useState<CodingAssessment[]>([]);
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
+  const [attachingAssessment, setAttachingAssessment] = useState(false);
 
   useEffect(() => {
     api.get<Job>(`/jobs/${jobId}`)
@@ -74,7 +79,29 @@ export default function RecruiterJobDetailPage() {
         setQuestions(Array.isArray(payload.application_questions) ? payload.application_questions : []);
       })
       .finally(() => setLoading(false));
+
+    CodingApi.listAssessments()
+      .then((res) => setAssessments(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setAssessments([]));
   }, [jobId]);
+
+  const handleAttachAssessment = async () => {
+    if (!selectedAssessmentId) {
+      toast.error('Select an assessment to attach');
+      return;
+    }
+    setAttachingAssessment(true);
+    try {
+      await CodingApi.attachJob(selectedAssessmentId, jobId);
+      const refreshed = await api.get<Job>(`/jobs/${jobId}`);
+      if (refreshed.data) setJob(refreshed.data);
+      toast.success('Coding assessment attached to job');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to attach assessment');
+    } finally {
+      setAttachingAssessment(false);
+    }
+  };
 
   const set = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -321,6 +348,65 @@ export default function RecruiterJobDetailPage() {
                         className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[16px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all resize-none"
                     />
                 </div>
+            </div>
+
+            <hr className="border-black/5" />
+
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-display text-black">Coding Assessment</h2>
+                <p className="text-sm font-bold text-black/40 mt-1 uppercase tracking-tight">
+                  Attach a published assessment to gate or follow up applications
+                </p>
+              </div>
+
+              {job.active_assessment_version_id ? (
+                <div className="rounded-2xl border border-lime-300/50 bg-lime-50 p-5">
+                  <p className="text-sm font-bold text-black">
+                    Active: {job.assessment_title || 'Coding assessment'}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-black/60 uppercase tracking-wide">
+                    Timing: {job.assessment_timing === 'during_apply' ? 'During apply' : 'Post apply'}
+                  </p>
+                  <Link
+                    href={ROUTES.recruiterAssessmentDetail(job.coding_assessment_id || '')}
+                    className="mt-3 inline-block text-xs font-black text-black underline"
+                  >
+                    Manage assessment
+                  </Link>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-black/5 bg-white p-5 space-y-4">
+                  <select
+                    value={selectedAssessmentId}
+                    onChange={(e) => setSelectedAssessmentId(e.target.value)}
+                    className="w-full bg-slate-50 border-none rounded-xl p-3 text-[14px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300"
+                  >
+                    <option value="">Select assessment...</option>
+                    {assessments.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.title} ({a.assessment_timing === 'during_apply' ? 'During apply' : 'Post apply'})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => { void handleAttachAssessment(); }}
+                    disabled={attachingAssessment || !selectedAssessmentId}
+                    className="px-5 py-2.5 bg-black text-lime-300 text-xs font-black rounded-xl hover:bg-slate-900 transition-all disabled:opacity-50"
+                  >
+                    {attachingAssessment ? 'Attaching...' : 'Attach Assessment'}
+                  </button>
+                  {assessments.length === 0 && (
+                    <p className="text-xs text-black/40">
+                      No assessments yet.{' '}
+                      <Link href={ROUTES.recruiterAssessmentNew} className="underline font-bold">
+                        Create one
+                      </Link>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <hr className="border-black/5" />
