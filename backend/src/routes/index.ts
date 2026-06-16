@@ -16,6 +16,7 @@ import roadmapRoutes from './roadmap.routes';
 import uploadRoutes from './upload.routes';
 import aiRoutes from './ai.routes';
 import codingRoutes from './coding.routes';
+import interviewRoutes from './interview.routes';
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.use('/roadmaps', roadmapRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/ai', aiRoutes);
 router.use('/coding', codingRoutes);
+router.use('/interviews', interviewRoutes);
 
 export default router;
 
