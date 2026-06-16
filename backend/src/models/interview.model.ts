@@ -25,18 +25,6 @@ export interface Interview {
   interviewer_name?: string;
 }
 
-export const InterviewModel = {
-  async createInterview(data: {
-    application_id: string;
-    interviewer_id: string;
-    candidate_id: string;
-    scheduled_at: Date;
-  }): Promise<Interview> {
-    const { rows } = await pool.query(
-      `INSERT INTO interviews (application_id, interviewer_id, candidate_id, scheduled_at, status)
-       VALUES ($1, $2, $3, $4, 'scheduled')
-       RETURNING *`,
-      [data.application_id, data.interviewer_id, data.candidate_id, data.scheduled_at],
 export const INTERVIEW_SESSION_STATUSES = [
   'created',
   'questions_generated',
@@ -139,7 +127,7 @@ export interface ReadinessScoreHistory {
 export const INTERVIEW_SESSION_TRANSITIONS: Record<
   InterviewSessionStatus,
   readonly InterviewSessionStatus[]
-> = {
+ > = {
   created: ['questions_generated'],
   questions_generated: ['in_progress'],
   in_progress: ['completed'],
@@ -156,26 +144,18 @@ export function canTransitionInterviewSession(
 }
 
 export const InterviewModel = {
-  // Sessions
-  async createSession(data: {
-    job_id: string | null;
-    student_id: string;
-    session_type?: 'text_async';
-    mode?: 'mock';
-    role_title: string;
-    job_description?: string | null;
-  }): Promise<AiInterviewSession> {
+  // Live Interviews
+  async createInterview(data: {
+    application_id: string;
+    interviewer_id: string;
+    candidate_id: string;
+    scheduled_at: Date;
+  }): Promise<Interview> {
     const { rows } = await pool.query(
-      `INSERT INTO ai_interview_sessions (job_id, student_id, session_type, mode, role_title, job_description)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [
-        data.job_id || null,
-        data.student_id,
-        data.session_type || 'text_async',
-        data.mode || 'mock',
-        data.role_title,
-        data.job_description || null,
-      ],
+      `INSERT INTO interviews (application_id, interviewer_id, candidate_id, scheduled_at, status)
+       VALUES ($1, $2, $3, $4, 'scheduled')
+       RETURNING *`,
+      [data.application_id, data.interviewer_id, data.candidate_id, data.scheduled_at],
     );
     return rows[0];
   },
@@ -210,15 +190,6 @@ export const InterviewModel = {
        WHERE i.application_id = $1
        ORDER BY i.created_at DESC`,
       [applicationId],
-  async findSessionById(id: string): Promise<AiInterviewSession | null> {
-    const { rows } = await pool.query('SELECT * FROM ai_interview_sessions WHERE id = $1', [id]);
-    return rows[0] || null;
-  },
-
-  async findSessionsByStudent(studentId: string): Promise<AiInterviewSession[]> {
-    const { rows } = await pool.query(
-      'SELECT * FROM ai_interview_sessions WHERE student_id = $1 ORDER BY created_at DESC',
-      [studentId]
     );
     return rows;
   },
@@ -325,6 +296,45 @@ export const InterviewModel = {
       [interviewId, userId, userId],
     );
     return rows.length > 0;
+  },
+
+  // Sessions
+  async createSession(data: {
+    job_id: string | null;
+    student_id: string;
+    session_type?: 'text_async';
+    mode?: 'mock';
+    role_title: string;
+    job_description?: string | null;
+  }): Promise<AiInterviewSession> {
+    const { rows } = await pool.query(
+      `INSERT INTO ai_interview_sessions (job_id, student_id, session_type, mode, role_title, job_description)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [
+        data.job_id || null,
+        data.student_id,
+        data.session_type || 'text_async',
+        data.mode || 'mock',
+        data.role_title,
+        data.job_description || null,
+      ],
+    );
+    return rows[0];
+  },
+
+  async findSessionById(id: string): Promise<AiInterviewSession | null> {
+    const { rows } = await pool.query('SELECT * FROM ai_interview_sessions WHERE id = $1', [id]);
+    return rows[0] || null;
+  },
+
+  async findSessionsByStudent(studentId: string): Promise<AiInterviewSession[]> {
+    const { rows } = await pool.query(
+      'SELECT * FROM ai_interview_sessions WHERE student_id = $1 ORDER BY created_at DESC',
+      [studentId]
+    );
+    return rows;
+  },
+
   async updateSession(
     id: string,
     data: Partial<Pick<AiInterviewSession, 'status' | 'overall_score' | 'rubric_scores' | 'completed_at' | 'report_url'>>,

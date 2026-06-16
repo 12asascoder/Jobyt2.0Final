@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { InterviewService } from '../services/interview.service';
+import { InterviewModel } from '../models/interview.model';
 import { sendSuccess } from '../utils/response';
 import { BadRequestError } from '../utils/errors';
+import { badRequest } from '../utils/appError';
 
 export const InterviewController = {
   async scheduleInterview(req: Request, res: Response, next: NextFunction) {
@@ -133,11 +135,9 @@ export const InterviewController = {
       sendSuccess(res, interview, 'Interview completed and saved successfully');
     } catch (err) {
       next(err);
-import { InterviewModel } from '../models/interview.model';
-import { sendSuccess } from '../utils/response';
-import { badRequest } from '../utils/appError';
+    }
+  },
 
-export const InterviewController = {
   /**
    * Start a new mock interview session and generate questions
    */

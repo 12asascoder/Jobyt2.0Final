@@ -1,12 +1,9 @@
 import { Router } from 'express';
-import { body } from 'express-validator';
+import { body, param } from 'express-validator';
 import { InterviewController } from '../controllers/interview.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { requireEmail } from '../middleware/requireEmail';
 import { employerGuard } from '../middleware/employerGuard';
-import { body, param } from 'express-validator';
-import { InterviewController } from '../controllers/interview.controller';
-import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
 const router = Router();
@@ -60,8 +57,11 @@ router.post(
   body('language').optional().isString().withMessage('language must be a string'),
   validate,
   InterviewController.endInterview,
+);
+
 // Protect all mock interview routes under JWT authentication
-router.use(authenticate);
+// Note: router.use(authenticate) is not strictly needed because we already have router.use(authenticate, requireEmail) above.
+// However, we'll keep the mock interview routes distinct.
 
 // Start a new mock interview session
 router.post(
