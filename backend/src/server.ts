@@ -4,6 +4,7 @@ import app from './app';
 import { connectDB } from './config/database';
 import redis from './config/redis';
 import { initSocket } from './config/socket';
+import { initFirebase } from './config/firebase';
 import { InsightsCronService } from './services/insightsCron.service';
 import { startWorkers } from './workers';
 import { setupDailyScheduler } from './scheduler/dailyScheduler';
@@ -13,6 +14,7 @@ const PORT = parseInt(process.env.PORT || '5001', 10);
 async function startServer() {
   try {
     await connectDB();
+    initFirebase();
 
     // Test Redis (non-blocking for local Docker runs)
     try {

@@ -13,7 +13,7 @@ const connectionOptions = {
 export const redisConnection = new IORedis(connectionOptions);
 
 const defaultQueueOptions: QueueOptions = {
-  connection: redisConnection,
+  connection: redisConnection as any,
   defaultJobOptions: {
     removeOnComplete: true,
     removeOnFail: false,
@@ -26,6 +26,8 @@ export const recommendationQueue = new Queue('recommendationQueue', defaultQueue
 // Queue for sending email/whatsapp notifications
 export const notificationQueue = new Queue('notificationQueue', defaultQueueOptions);
 
+// Queue for outbound webhook deliveries
+export const webhookQueue = new Queue('webhookQueue', defaultQueueOptions);
 // Queue for coding submission evaluation
 export const codingEvaluationQueue = new Queue('codingEvaluationQueue', defaultQueueOptions);
 
@@ -42,6 +44,7 @@ export const autoApplyQueue = new Queue('autoApplyQueue', {
 export const closeQueues = async () => {
   await recommendationQueue.close();
   await notificationQueue.close();
+  await webhookQueue.close();
   await codingEvaluationQueue.close();
   await autoApplyQueue.close();
 };

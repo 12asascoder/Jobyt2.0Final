@@ -55,6 +55,7 @@ export const ROUTES = {
   applications: '/applications',
   savedJobs: '/saved-jobs',
   credits: '/credits',
+  interviews: '/interviews',
   notifications: '/notifications',
   referral: '/referral',
     community: '/community',
@@ -67,6 +68,7 @@ export const ROUTES = {
   autoApply: '/auto-apply',
   autoApplySettings: '/auto-apply/settings',
   autoApplyQueueItem: (id: string) => `/auto-apply/queue/${id}`,
+  coach: '/coach',
   // Recruiter
   recruiterDashboard: '/recruiter/dashboard',
   recruiterJobs: '/recruiter/jobs',
@@ -79,6 +81,8 @@ export const ROUTES = {
   recruiterAnalytics: '/recruiter/analytics',
   recruiterCredits: '/recruiter/credits',
   recruiterProfile: '/recruiter/profile',
+  recruiterWebhooks: '/recruiter/settings/webhooks',
+  recruiterIntegrations: '/recruiter/settings/integrations',
   recruiterAssessments: '/recruiter/assessments',
   recruiterAssessmentNew: '/recruiter/assessments/new',
   recruiterAssessmentDetail: (id: string) => `/recruiter/assessments/${id}`,
@@ -100,4 +104,8 @@ export const ROUTES = {
   adminApplicationDetail: (id: string) => `/admin/applications/${id}`,
   adminMessages: '/admin/messages',
   adminCredits: '/admin/credits',
+  adminActivity: '/admin/activity',
+  // Developer / API
+  apiKeys: '/settings/api-keys',
+  apiDocs: '/docs',
 };

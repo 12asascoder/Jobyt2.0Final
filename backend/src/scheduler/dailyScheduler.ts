@@ -7,7 +7,7 @@ const LOG_PREFIX = '[DailyScheduler]';
 
 // A generic scheduler queue to manage cron jobs
 export const schedulerQueue = new Queue('schedulerQueue', {
-  connection: redisConnection,
+  connection: redisConnection as any,
 });
 
 export const setupDailyScheduler = async () => {
@@ -99,7 +99,6 @@ export const schedulerWorker = new Worker('schedulerQueue', async (job: Job) => 
       );
     }
   }
-
   if (job.name === 'runDailyAutoApply') {
     console.log(`${LOG_PREFIX} Starting daily Auto-Apply run...`);
     try {
@@ -131,7 +130,7 @@ export const schedulerWorker = new Worker('schedulerQueue', async (job: Job) => 
   if (job.name === 'expireAutoApplyApprovals') {
     await autoApplyQueue.add('expirePendingApprovals', {});
   }
-}, { connection: redisConnection });
+}, { connection: redisConnection as any });
 
 schedulerWorker.on('failed', (job, err) => {
   console.error(`${LOG_PREFIX} Scheduler job ${job?.id} failed:`, err);

@@ -51,7 +51,7 @@ export class HuggingFaceEmbeddingProvider implements EmbeddingProvider {
     } catch (err: any) {
       const message = err.response?.data?.error || err.message;
       const status = err.response?.status ? `(${err.response.status})` : '';
-      throw new Error(`${LOG_PREFIX} API Failure ${status}: ${message}`);
+      throw new Error(`${LOG_PREFIX} API Failure ${status}: ${message}`, { cause: err });
     }
   }
 }

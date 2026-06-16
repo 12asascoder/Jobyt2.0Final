@@ -29,6 +29,12 @@ export interface AIConfig {
   xaiModel: string;
   /** Whether xAI / Grok is configured */
   xaiConfigured: boolean;
+  /** Anthropic API key — powers Claude text generation */
+  anthropicApiKey: string | null;
+  /** Anthropic model name (default: claude-3-5-sonnet-20241022) */
+  anthropicModel: string;
+  /** Whether Anthropic / Claude is configured */
+  anthropicConfigured: boolean;
   /** HuggingFace API Key/Token */
   huggingfaceApiKey: string | null;
   /**
@@ -66,6 +72,14 @@ export interface AIConfig {
   maxEmbeddingInputChars: number;
   /** Temperature for text generation */
   defaultTemperature: number;
+  /** Default question count for mock interviews */
+  defaultQuestionCount: number;
+  /** Ollama base URL (default: http://localhost:11434) */
+  ollamaBaseUrl: string;
+  /** Ollama model name (default: llama3.1:8b) */
+  ollamaModel: string;
+  /** Whether Ollama is configured */
+  ollamaConfigured: boolean;
 }
 
 function loadAIConfig(): AIConfig {
@@ -75,6 +89,16 @@ function loadAIConfig(): AIConfig {
   // ── xAI / Grok (optional) ───────────────────────────────────────────────
   const xaiApiKey = process.env.XAI_API_KEY || null;
   const xaiModel = process.env.XAI_MODEL || process.env.GROQ_MODEL || 'grok-1';
+
+  // ── Anthropic / Claude (optional) ──────────────────────────────────────────
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || null;
+  const anthropicModel = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
+  const anthropicConfigured = Boolean(anthropicApiKey && anthropicApiKey !== 'your_anthropic_api_key_here');
+
+  // ── Ollama Configuration (Local development fallback) ─────────────────────
+  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  const ollamaModel = process.env.OLLAMA_MODEL || 'llama3.1:8b';
+  const ollamaConfigured = Boolean(ollamaBaseUrl);
 
   // ── Embedding Provider Selection ──────────────────────────────────────────
   const huggingfaceApiKey = process.env.HF_API_KEY || process.env.HUGGINGFACE_API_KEY || null;
@@ -103,6 +127,9 @@ function loadAIConfig(): AIConfig {
     xaiApiKey: xaiConfigured ? xaiApiKey : null,
     xaiModel,
     xaiConfigured,
+    anthropicApiKey: anthropicConfigured ? anthropicApiKey : null,
+    anthropicModel,
+    anthropicConfigured,
     huggingfaceApiKey: huggingfaceApiKey && huggingfaceApiKey !== 'your_huggingface_api_key_here' ? huggingfaceApiKey : null,
     isConfigured,
     embeddingsConfigured,
@@ -118,6 +145,10 @@ function loadAIConfig(): AIConfig {
     circuitBreakerCooldownMs: parseInt(process.env.AI_CIRCUIT_BREAKER_COOLDOWN_MS || '60000', 10),
     maxEmbeddingInputChars: 8000,
     defaultTemperature: 0.1,
+    defaultQuestionCount: parseInt(process.env.INTERVIEW_QUESTION_COUNT || '5', 10),
+    ollamaBaseUrl,
+    ollamaModel,
+    ollamaConfigured,
   };
 
   if (!isConfigured) {
@@ -125,6 +156,14 @@ function loadAIConfig(): AIConfig {
   }
   if (!xaiApiKey) {
     console.log(`${LOG_PREFIX} XAI_API_KEY not provided — Grok provider will be disabled until configured`);
+  }
+  if (!anthropicApiKey) {
+    console.log(`${LOG_PREFIX} ANTHROPIC_API_KEY not provided — Claude provider will be disabled until configured`);
+  } else {
+    console.log(`${LOG_PREFIX} Claude provider configured using model: "${anthropicModel}"`);
+  }
+  if (ollamaConfigured) {
+    console.log(`${LOG_PREFIX} Ollama local fallback configured using model: "${ollamaModel}" at "${ollamaBaseUrl}"`);
   }
   if (!embeddingsConfigured) {
     console.warn(

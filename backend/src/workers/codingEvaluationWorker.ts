@@ -20,7 +20,7 @@ export const codingEvaluationWorker = new Worker(
     }
   },
   {
-    connection: redisConnection,
+    connection: redisConnection as any,
     concurrency: 3,
   },
 );

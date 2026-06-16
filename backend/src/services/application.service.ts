@@ -14,6 +14,8 @@ import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import { EmbeddingCacheService } from './embeddingCache.service';
 import { cosineSimilarity, similarityToScore } from '../utils/embedding';
 import { SkillMatchingService } from './matching/skillMatching.service';
+import { WebhookService } from './webhook.service';
+import { WEBHOOK_EVENTS } from './webhook/eventCatalog';
 import redis from '../config/redis';
 
 const LOG_PREFIX = '[ApplicationService]';
@@ -224,6 +226,22 @@ export const ApplicationService = {
           console.error('[ApplicationService] AI insights generation failed silently:', err);
         }
       });
+
+      // Fire webhook: application.submitted
+      setImmediate(async () => {
+        try {
+          await WebhookService.fireEvent(WEBHOOK_EVENTS.APPLICATION_SUBMITTED, {
+            event: WEBHOOK_EVENTS.APPLICATION_SUBMITTED,
+            application_id: appId,
+            job_id: result.job_id,
+            job_title: jobCtx.title,
+            applicant: { id: apId, name: null, email: null },
+            timestamp: new Date().toISOString(),
+          });
+        } catch (err) {
+          console.error('[ApplicationService] Webhook fire failed silently:', err);
+        }
+      });
       return cleanResult;
     });
   },
@@ -258,6 +276,34 @@ export const ApplicationService = {
       title: 'Application status updated',
       body: `Your application for "${job.title}" is now: ${status.replace('_', ' ')}`,
       action_url: `/applications`,
+    });
+
+    // Fire webhook: application.status_changed
+    setImmediate(async () => {
+      try {
+        await WebhookService.fireEvent(WEBHOOK_EVENTS.APPLICATION_STATUS_CHANGED, {
+          event: WEBHOOK_EVENTS.APPLICATION_STATUS_CHANGED,
+          application_id: applicationId,
+          job_id: application.job_id,
+          job_title: job.title,
+          old_status: application.status || '',
+          new_status: status,
+          changed_by: user.userId,
+          timestamp: new Date().toISOString(),
+        });
+
+        if (status === 'offer') {
+          await WebhookService.fireEvent(WEBHOOK_EVENTS.APPLICATION_OFFER_EXTENDED, {
+            event: WEBHOOK_EVENTS.APPLICATION_OFFER_EXTENDED,
+            application_id: applicationId,
+            job_id: application.job_id,
+            job_title: job.title,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        console.error('[ApplicationService] Webhook fire failed silently:', err);
+      }
     });
 
     return updated;

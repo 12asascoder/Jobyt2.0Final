@@ -22,7 +22,7 @@ export function NotificationPreferences() {
   const [loading, setLoading] = useState(true);
   const [preferences, setPreferences] = useState<UserPreferences>({ email_alerts_enabled: true, whatsapp_alerts_enabled: true });
   const [userContext, setUserContext] = useState<UserMeResponse>({});
-  
+
   // OTP Modal State
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [verifyingChannel, setVerifyingChannel] = useState<'email' | 'whatsapp' | null>(null);
@@ -38,10 +38,10 @@ export function NotificationPreferences() {
         api.get<{ profile: any; email: string }>('/users/me')
       ]);
       setPreferences(prefRes.data || { email_alerts_enabled: false, whatsapp_alerts_enabled: false });
-      
-      const { rows } = await api.get<any>('/auth/me').catch(() => ({ data: {} }));
-      const userFull = rows || meRes.data?.profile || {};
-      
+
+      const res = await api.get<any>('/auth/me').catch(() => ({ data: {} }));
+      const userFull = res.data || meRes.data?.profile || {};
+
       setUserContext({
         email_verified: userFull.email_verified,
         phone_verified: userFull.phone_verified,
@@ -61,10 +61,10 @@ export function NotificationPreferences() {
 
   const updatePreference = async (channel: 'email' | 'whatsapp', enabled: boolean) => {
     try {
-      const payload = channel === 'email' 
-        ? { email_alerts_enabled: enabled } 
+      const payload = channel === 'email'
+        ? { email_alerts_enabled: enabled }
         : { whatsapp_alerts_enabled: enabled };
-      
+
       await api.put('/users/me/preferences', payload);
       setPreferences(prev => ({ ...prev, ...payload }));
       toast.success(`${channel === 'email' ? 'Email' : 'WhatsApp'} alerts ${enabled ? 'enabled' : 'disabled'}`);
@@ -77,7 +77,7 @@ export function NotificationPreferences() {
     const isCurrentlyEnabled = channel === 'email' ? preferences.email_alerts_enabled : preferences.whatsapp_alerts_enabled;
     const isVerified = channel === 'email' ? userContext.email_verified : userContext.phone_verified;
     const identifier = channel === 'email' ? userContext.email : userContext.phone;
-    
+
     // Disabling doesn't require verification
     if (isCurrentlyEnabled) {
       return updatePreference(channel, false);
@@ -123,13 +123,13 @@ export function NotificationPreferences() {
     try {
       await api.post('/auth/otp/verify', { channel: verifyingChannel, code: otpCode });
       toast.success(`${verifyingChannel === 'email' ? 'Email' : 'WhatsApp'} verified successfully!`);
-      
+
       // Update local context
       setUserContext(prev => ({
         ...prev,
         ...(verifyingChannel === 'email' ? { email_verified: true } : { phone_verified: true })
       }));
-      
+
       // Automatically enable the alert
       await updatePreference(verifyingChannel, true);
       setShowOtpModal(false);
@@ -149,7 +149,7 @@ export function NotificationPreferences() {
       <div className="bg-white rounded-[20px] p-6 shadow-sm border border-[#e8e4db] w-full">
         <h3 className="font-normal text-black mb-1 text-[18px] leading-6">Notification Preferences</h3>
         <p className="text-sm text-gray-500 mb-6">Manage how you receive personalized job updates and alerts.</p>
-        
+
         <div className="space-y-4">
           {/* Email Alerts Toggle */}
           <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50/50">
@@ -197,26 +197,26 @@ export function NotificationPreferences() {
       {showOtpModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-brand">
           <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
-            <button 
+            <button
               onClick={() => setShowOtpModal(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 transition-colors"
             >
               <FaXmark className="text-lg" />
             </button>
-            
+
             <div className="w-12 h-12 rounded-full bg-lime-400/20 mx-auto flex items-center justify-center mb-4 mt-2">
               {verifyingChannel === 'email' ? <FaEnvelope className="text-xl text-lime-600" /> : <FaWhatsapp className="text-xl text-green-600" />}
             </div>
-            
+
             <h3 className="text-xl font-bold text-gray-900 mb-2">Verify {verifyingChannel === 'email' ? 'Email' : 'WhatsApp'}</h3>
             <p className="text-gray-500 text-sm mb-6 px-2 leading-relaxed">
               We need to verify your {verifyingChannel === 'email' ? 'email address' : 'phone number'} before enabling alerts.
             </p>
 
             {!otpSent ? (
-              <Button 
-                onClick={sendOtp} 
-                isLoading={otpSending} 
+              <Button
+                onClick={sendOtp}
+                isLoading={otpSending}
                 className="w-full bg-[#c3ff3d] text-black hover:bg-[#aee62d]"
               >
                 Send Verification Code
@@ -231,16 +231,16 @@ export function NotificationPreferences() {
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                   className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-lime-400"
                 />
-                <Button 
-                  onClick={verifyOtp} 
+                <Button
+                  onClick={verifyOtp}
                   isLoading={otpVerifying}
                   disabled={otpCode.length !== 6}
                   className="w-full bg-[#c3ff3d] text-black hover:bg-[#aee62d]"
                 >
                   Verify & Enable
                 </Button>
-                <button 
-                  onClick={sendOtp} 
+                <button
+                  onClick={sendOtp}
                   disabled={otpSending}
                   className="text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors underline underline-offset-2"
                 >

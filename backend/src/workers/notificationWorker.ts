@@ -3,6 +3,7 @@ import { redisConnection } from '../config/queue';
 import { sendEmail, dailyRecommendationEmailHtml, autoApplyDigestEmailHtml } from '../utils/email';
 import { WhatsAppService } from '../services/whatsapp.service';
 import pool from '../config/database';
+import { PushNotificationService } from '../services/push.service';
 
 const LOG_PREFIX = '[NotificationWorker]';
 
@@ -13,7 +14,7 @@ export const notificationWorker = new Worker('notificationQueue', async (job: Jo
     try {
       // 1. Fetch user to check preferences and get contact info
       const { rows } = await pool.query(
-        'SELECT email, phone, name, email_alerts_enabled, whatsapp_alerts_enabled FROM users u LEFT JOIN applicant_profiles ap ON u.id = ap.user_id WHERE u.id = $1',
+        'SELECT email, phone, name, email_alerts_enabled, whatsapp_alerts_enabled, push_alerts_enabled FROM users u LEFT JOIN applicant_profiles ap ON u.id = ap.user_id WHERE u.id = $1',
         [userId]
       );
       
@@ -49,8 +50,25 @@ export const notificationWorker = new Worker('notificationQueue', async (job: Jo
         }
       }
 
-      // 4. Update status in job_recommendations
-      if (!emailFailed && !whatsappFailed) {
+      let pushFailed = false;
+
+      // 4. Send Push Notification if enabled
+      if (user.push_alerts_enabled) {
+        try {
+          await PushNotificationService.sendPushNotification(
+            userId,
+            'Your Daily Job Recommendations',
+            `Check out the ${jobs.length} new job recommendations tailored for you!`,
+            '/(tabs)/home'
+          );
+        } catch (error) {
+          console.error(`${LOG_PREFIX} Failed to send push to user ${userId}`, error);
+          pushFailed = true;
+        }
+      }
+
+      // 5. Update status in job_recommendations
+      if (!emailFailed && !whatsappFailed && !pushFailed) {
         const jobIds = jobs.map((j: any) => j.id);
         if (jobIds.length > 0) {
           await pool.query(
@@ -64,12 +82,12 @@ export const notificationWorker = new Worker('notificationQueue', async (job: Jo
         throw new Error('Failed to send one or more notifications');
       }
 
+
     } catch (error) {
       console.error(`${LOG_PREFIX} Error processing job ${job.id}`, error);
       throw error;
     }
   }
-
   if (job.name === 'sendAutoApplyDigest') {
     const { userId, date, summary } = job.data as {
       userId: string;
@@ -97,7 +115,7 @@ export const notificationWorker = new Worker('notificationQueue', async (job: Jo
       html,
     });
   }
-}, { connection: redisConnection });
+}, { connection: redisConnection as any });
 
 notificationWorker.on('completed', job => {
   console.log(`${LOG_PREFIX} Job ${job.id} has completed!`);
