@@ -28,9 +28,12 @@ export const notificationQueue = new Queue('notificationQueue', defaultQueueOpti
 
 // Queue for outbound webhook deliveries
 export const webhookQueue = new Queue('webhookQueue', defaultQueueOptions);
+// Queue for coding submission evaluation
+export const codingEvaluationQueue = new Queue('codingEvaluationQueue', defaultQueueOptions);
 
 export const closeQueues = async () => {
   await recommendationQueue.close();
   await notificationQueue.close();
   await webhookQueue.close();
+  await codingEvaluationQueue.close();
 };

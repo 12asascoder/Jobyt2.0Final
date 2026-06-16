@@ -402,13 +402,13 @@ export const JobService = {
     };
   },
 
-  async analyzeSkillGap(userSkills: string[], requiredSkills: string[]): Promise<{ missingSkills: string[], suggestions: Record<string, string> }> {
-      const { missingSkills } = await JobService.calculateMatchScore(userSkills, requiredSkills);
+  async analyzeSkillGap(userSkills: string[], requiredSkills: string[]): Promise<{ matchingSkills: string[], missingSkills: string[], suggestions: Record<string, string> }> {
+      const { matchedSkills, missingSkills } = await JobService.calculateMatchScore(userSkills, requiredSkills);
       const suggestions: Record<string, string> = {};
       for (const skill of missingSkills) {
           suggestions[skill] = `Consider taking an online course or practicing projects related to ${skill}.`;
       }
-      return { missingSkills, suggestions };
+      return { matchingSkills: matchedSkills, missingSkills, suggestions };
   },
 
   async generateInterviewQuestions(role: string, skills: string[]): Promise<{ questions: string[] }> {
