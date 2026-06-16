@@ -57,7 +57,7 @@ export const webhookWorker = new Worker(
     }
   },
   {
-    connection: redisConnection,
+    connection: redisConnection as any,
     concurrency: 5,
     limiter: { max: 10, duration: 1000 },
   },

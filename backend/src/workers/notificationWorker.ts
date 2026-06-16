@@ -88,7 +88,7 @@ export const notificationWorker = new Worker('notificationQueue', async (job: Jo
       throw error;
     }
   }
-}, { connection: redisConnection });
+}, { connection: redisConnection as any });
 
 notificationWorker.on('completed', job => {
   console.log(`${LOG_PREFIX} Job ${job.id} has completed!`);
