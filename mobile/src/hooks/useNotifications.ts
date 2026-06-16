@@ -60,6 +60,19 @@ export const useNotifications = () => {
 async function registerForPushNotificationsAsync() {
   if (Platform.OS === 'web') return null;
 
+  if (Platform.OS === 'android' && Notifications && typeof Notifications.setNotificationChannelAsync === 'function') {
+    try {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance?.MAX || 4,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    } catch (err) {
+      console.error('[useNotifications] Failed to set Android notification channel:', err);
+    }
+  }
+
   if (!Device.isDevice || !Notifications) {
     console.warn('[useNotifications] Must use physical device for Push Notifications or Notifications module is missing. Falling back to mock ExponentPushToken for local testing.');
     return 'ExponentPushToken[MockTokenForLocalTesting]';

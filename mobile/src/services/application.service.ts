@@ -38,4 +38,30 @@ export const applicationService = {
     const response = await api.get<APIResponse<any[]>>(`/applications/${applicationId}/events`);
     return response.data;
   },
+
+  // Recruiter methods
+  async getJobApplications(jobId: string): Promise<APIResponse<Application[]>> {
+    const response = await api.get<APIResponse<Application[]>>(`/applications/jobs/${jobId}`);
+    return response.data;
+  },
+
+  async updateApplicationStatus(applicationId: string, status: string): Promise<APIResponse<any>> {
+    const response = await api.patch(`/applications/${applicationId}/status`, { status });
+    return response.data;
+  },
+
+  async getRecruiterApplicants(params?: { limit?: number; page?: number }): Promise<APIResponse<any[]>> {
+    const response = await api.get('/applications/recruiter/applicants', { params });
+    return response.data;
+  },
+
+  async getRecruiterApplicantsStats(): Promise<APIResponse<any>> {
+    const response = await api.get('/applications/recruiter/applicants/stats');
+    return response.data;
+  },
+
+  async getResumeUrl(applicationId: string): Promise<APIResponse<{ url: string }>> {
+    const response = await api.get<APIResponse<{ url: string }>>(`/applications/${applicationId}/resume-url`);
+    return response.data;
+  },
 };

@@ -158,7 +158,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
       set({ isLoading: true, error: null });
       try {
         const res = await authService.googleLogin(idToken);
-        await authStorage.setTokens(res.accessToken, res.refreshToken);
+        const accessToken = res.accessToken || (res as any).tokens?.accessToken;
+        const refreshToken = res.refreshToken || (res as any).tokens?.refreshToken;
+        
+        await authStorage.setTokens(accessToken, refreshToken);
         const prefRes = await authService.getPreferences();
 
         await AsyncStorage.setItem('jobyt_cached_user', JSON.stringify(res.user));

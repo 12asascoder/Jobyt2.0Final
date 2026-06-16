@@ -14,7 +14,7 @@ import { OfflineBanner } from '../components/common/OfflineBanner';
 import '../global.css';
 
 export default function RootLayout() {
-  const { isAuthenticated, isLoading, initialize, biometricsEnabled } = useAuthStore();
+  const { isAuthenticated, isLoading, initialize, biometricsEnabled, user } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
@@ -73,16 +73,32 @@ export default function RootLayout() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const segs = segments as string[];
+    const firstSegment = segs[0];
+    const inAuthGroup = firstSegment === '(auth)';
+    const inRecruiterGroup = firstSegment === '(recruiter-tabs)' || firstSegment === 'recruiter';
+    const inApplicantGroup = firstSegment === '(tabs)' || firstSegment === 'coach' || firstSegment === 'applications' || firstSegment === 'interviews';
 
     if (!isAuthenticated && !inAuthGroup) {
       // Redirect to login if not authenticated and not in auth group
       router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to tabs/home if authenticated and in auth group
-      router.replace('/(tabs)/home');
+    } else if (isAuthenticated) {
+      if (inAuthGroup || segs.length === 0 || firstSegment === 'index') {
+        // Redirect based on role if authenticated and in auth group or index page
+        if (user?.role === 'recruiter') {
+          router.replace('/(recruiter-tabs)/dashboard' as any);
+        } else {
+          router.replace('/(tabs)/home');
+        }
+      } else if (user?.role === 'recruiter' && inApplicantGroup) {
+        // Prevent recruiter from accessing applicant screens
+        router.replace('/(recruiter-tabs)/dashboard' as any);
+      } else if (user?.role !== 'recruiter' && inRecruiterGroup) {
+        // Prevent applicant from accessing recruiter screens
+        router.replace('/(tabs)/home');
+      }
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, user]);
 
   if (isLoading) {
     return (
@@ -109,6 +125,11 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(recruiter-tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="recruiter/jobs/[id]" options={{ headerShown: true, title: 'Candidates', headerTintColor: '#0b1120', headerBackTitle: 'Back' }} />
+        <Stack.Screen name="recruiter/jobs/create" options={{ headerShown: true, title: 'Post a Job', headerTintColor: '#0b1120', headerBackTitle: 'Back' }} />
+        <Stack.Screen name="recruiter/jobs/edit/[id]" options={{ headerShown: true, title: 'Edit Job', headerTintColor: '#0b1120', headerBackTitle: 'Back' }} />
+        <Stack.Screen name="coach/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="index" options={{ headerShown: false }} />
       </Stack>
     </>

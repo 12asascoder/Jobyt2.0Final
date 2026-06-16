@@ -32,5 +32,10 @@ export const DeviceTokenModel = {
 
   async deleteToken(token: string): Promise<void> {
     await pool.query(`DELETE FROM device_tokens WHERE token = $1`, [token]);
+  },
+
+  async deleteTokens(tokens: string[]): Promise<void> {
+    if (tokens.length === 0) return;
+    await pool.query(`DELETE FROM device_tokens WHERE token = ANY($1)`, [tokens]);
   }
 };

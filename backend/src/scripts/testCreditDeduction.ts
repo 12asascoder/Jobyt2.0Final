@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import pool from '../config/database';
 import { ApplicationService } from '../services/application.service';
+import { CREDIT_COSTS } from '../config/creditCosts';
 
 async function runTests() {
   console.log('--- Starting Credit Deduction Integration Tests ---');
@@ -18,12 +19,13 @@ async function runTests() {
     await client.query("INSERT INTO recruiter_profiles (user_id, company_name, created_at, updated_at) VALUES ($1, 'Cred Test Inc', NOW(), NOW())", [recruiterId]);
     
     // Create applicant
-    const appRes = await client.query("INSERT INTO users (email, password_hash, role, referral_code, credit_balance) VALUES ('cred_app@test.com', 'pwd', 'applicant', 'APP123', 1) RETURNING id");
+    const appRes = await client.query("INSERT INTO users (email, password_hash, role, referral_code, credit_balance) VALUES ('cred_app@test.com', 'pwd', 'applicant', 'APP123', $1) RETURNING id", [CREDIT_COSTS.APPLY_JOB]);
     applicantId = appRes.rows[0].id;
+    await client.query("INSERT INTO applicant_profiles (user_id, name, phone, created_at, updated_at) VALUES ($1, 'Cred App', '1234567890', NOW(), NOW())", [applicantId]);
 
     // Create applicant resume required for apply endpoint
     const resumeRes = await client.query(
-      "INSERT INTO resumes (user_id, file_url, file_name, is_default) VALUES ($1, $2, $3, true) RETURNING id",
+      "INSERT INTO resumes (user_id, file_url, file_name, is_default, created_at, updated_at) VALUES ($1, $2, $3, true, NOW(), NOW()) RETURNING id",
       [applicantId, 'https://example.com/mock-resume.pdf', 'mock-resume.pdf']
     );
     resumeId = resumeRes.rows[0].id;
@@ -35,7 +37,7 @@ async function runTests() {
     );
     jobId = jobRes.rows[0].id;
 
-    console.log('2. Test 1: Successful Job Application (1 credit applied).');
+    console.log(`2. Test 1: Successful Job Application (${CREDIT_COSTS.APPLY_JOB} credit applied).`);
     const applyRes1 = await ApplicationService.apply(applicantId, jobId, {
       cover_letter: 'Hello',
       resume_id: resumeId,
@@ -43,7 +45,7 @@ async function runTests() {
     
     // Check ledger
     const ledger1 = await client.query("SELECT * FROM credit_transactions WHERE user_id = $1", [applicantId]);
-    if (ledger1.rows.length !== 1 || ledger1.rows[0].amount !== -1 || ledger1.rows[0].reference_id !== jobId) {
+    if (ledger1.rows.length !== 1 || ledger1.rows[0].amount !== CREDIT_COSTS.APPLY_JOB || ledger1.rows[0].reference_id !== jobId) {
        throw new Error('Ledger transaction 1 generated incorrectly.');
     }
     console.log('✅ Application 1 Successfully inserted ledger and returned creditsRemaining:', applyRes1.creditsRemaining);
@@ -67,14 +69,14 @@ async function runTests() {
          hit402 = true;
          // Ensure available credits exposes cleanly
          // eslint-disable-next-line preserve-caught-error
-         if (err.availableCredits !== 0) throw new Error('Available credits should be 0');
+         if (err.available !== 0) throw new Error('Available credits should be 0');
       }
     }
     if (!hit402) throw new Error('Failed to block user with 402 when credits hit 0');
     console.log('✅ Correctly blocked application throwing PaymentRequired payload without locking db.');
 
-    // Give applicant 10 credits to test concurrent race condition double spend limits
-    await client.query("UPDATE users SET credit_balance = 10 WHERE id = $1", [applicantId]);
+    // Give applicant CREDIT_COSTS.APPLY_JOB credits to test concurrent race condition double spend limits
+    await client.query("UPDATE users SET credit_balance = $1 WHERE id = $2", [CREDIT_COSTS.APPLY_JOB, applicantId]);
     
     // Attempt 5 concurrent applies to the exact SAME job (which violates Job duplication guard)
     const jobRes3 = await client.query(
@@ -104,7 +106,7 @@ async function runTests() {
     if (successfulApps !== 1 || duplicateErrors !== 4) {
       throw new Error('Race condition guard failed. More than 1 app successful or invalid duplicates counts.');
     }
-    if (userCreditsAfterConcurrent.rows[0].credit_balance !== 9) {
+    if (userCreditsAfterConcurrent.rows[0].credit_balance !== 0) {
       throw new Error('Race condition allowed double spending / over deducting!');
     }
     console.log('✅ Safely defended against multiple rapid concurrent double-click attempts globally.');

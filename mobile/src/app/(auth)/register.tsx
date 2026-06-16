@@ -7,6 +7,8 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Role } from '../../constants';
 
+import { useAuthStore } from '../../store/auth.store';
+
 export default function RegisterScreen() {
   const router = useRouter();
   const { register } = useAuth();
@@ -39,7 +41,12 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await register({ name, email, password, role });
-      router.replace('/(tabs)/home');
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.role === 'recruiter') {
+        router.replace('/(recruiter-tabs)/dashboard' as any);
+      } else {
+        router.replace('/(tabs)/home');
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Registration failed';
       Alert.alert('Error', msg);
