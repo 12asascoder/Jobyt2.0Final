@@ -1,138 +1,149 @@
 import { Request, Response, NextFunction } from 'express';
 import { InterviewService } from '../services/interview.service';
+import { InterviewModel } from '../models/interview.model';
 import { sendSuccess } from '../utils/response';
-import { BadRequestError } from '../utils/errors';
+import { badRequest } from '../utils/appError';
 
 export const InterviewController = {
-  async scheduleInterview(req: Request, res: Response, next: NextFunction) {
+  /**
+   * Start a new mock interview session and generate questions
+   */
+  async startSession(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { applicationId, scheduledAt } = req.body as {
-        applicationId?: string;
-        scheduledAt?: string;
-      };
+      const studentId = req.user!.userId;
+      const { roleTitle, jobDescription, questionCount } = req.body;
 
-      if (!applicationId) {
-        throw new BadRequestError('applicationId is required', 'APPLICATION_REQUIRED');
-      }
-      if (!scheduledAt) {
-        throw new BadRequestError('scheduledAt is required', 'SCHEDULED_AT_REQUIRED');
+      if (!roleTitle || typeof roleTitle !== 'string' || !roleTitle.trim()) {
+        throw badRequest('Role title is required');
       }
 
-      const parsedDate = new Date(scheduledAt);
-      if (isNaN(parsedDate.getTime())) {
-        throw new BadRequestError('Invalid scheduledAt date format', 'INVALID_DATE');
+      let parsedCount: number | undefined;
+      if (questionCount !== undefined) {
+        parsedCount = parseInt(questionCount, 10);
+        if (isNaN(parsedCount) || parsedCount <= 0) {
+          throw badRequest('Question count must be a positive integer');
+        }
       }
 
-      const interview = await InterviewService.scheduleInterview(
-        applicationId,
-        parsedDate,
-        req.user!,
+      const session = await InterviewService.createSession(
+        studentId,
+        roleTitle.trim(),
+        jobDescription,
+        undefined, // jobId
+        parsedCount
       );
 
-      sendSuccess(res, interview, 'Interview scheduled successfully', 201);
-    } catch (err) {
-      next(err);
+      sendSuccess(res, session, 'Interview session started and questions generated successfully', 201);
+    } catch (error) {
+      next(error);
     }
   },
 
-  async getInterviewDetails(req: Request, res: Response, next: NextFunction) {
+  /**
+   * List all mock interview sessions for the student
+   */
+  async listSessions(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.params.id as string;
-      if (!id) {
-        throw new BadRequestError('Interview ID is required', 'ID_REQUIRED');
-      }
-
-      const interview = await InterviewService.getInterviewDetails(id, req.user!);
-      
-      // Load current live playground state in-memory if it is live
-      const liveState = InterviewService.getLiveSession(id);
-      const responseData = {
-        ...interview,
-        liveState: liveState
-          ? {
-              code: liveState.code,
-              language: liveState.language,
-              notes: (req.user!.role === 'recruiter' || req.user!.role === 'admin') ? liveState.notes : undefined,
-              participants: Array.from(liveState.participants),
-            }
-          : null,
-      };
-
-      sendSuccess(res, responseData, 'Interview details retrieved');
-    } catch (err) {
-      next(err);
+      const studentId = req.user!.userId;
+      const sessions = await InterviewService.listSessions(studentId);
+      sendSuccess(res, sessions, 'Sessions retrieved successfully');
+    } catch (error) {
+      next(error);
     }
   },
 
-  async listInterviews(req: Request, res: Response, next: NextFunction) {
+  /**
+   * Retrieve session details, questions, and any responses submitted so far
+   */
+  async getSession(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const interviews = await InterviewService.listUserInterviews(req.user!);
-      sendSuccess(res, interviews, 'Interviews list retrieved');
-    } catch (err) {
-      next(err);
+      const studentId = req.user!.userId;
+      const sessionId = req.params.id as string;
+
+      const session = await InterviewService.getSession(studentId, sessionId);
+      const questions = await InterviewModel.findQuestionsBySessionId(sessionId);
+      const responses = await InterviewModel.findResponsesBySessionId(sessionId);
+
+      sendSuccess(res, { session, questions, responses }, 'Session details retrieved successfully');
+    } catch (error) {
+      next(error);
     }
   },
 
-  async updateNotes(req: Request, res: Response, next: NextFunction) {
+  /**
+   * Submit student's text response to a question
+   */
+  async submitResponse(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.params.id as string;
-      const { notes } = req.body as { notes?: string };
+      const studentId = req.user!.userId;
+      const sessionId = req.params.id as string;
+      const { questionId, responseText } = req.body;
 
-      if (!id) {
-        throw new BadRequestError('Interview ID is required', 'ID_REQUIRED');
+      if (!questionId || typeof questionId !== 'string') {
+        throw badRequest('Question ID is required');
       }
-      if (notes === undefined) {
-        throw new BadRequestError('Notes content is required', 'NOTES_REQUIRED');
-      }
-
-      const interview = await InterviewService.updateNotes(id, notes, req.user!);
-      sendSuccess(res, interview, 'Notes updated successfully');
-    } catch (err) {
-      next(err);
-    }
-  },
-
-  async startInterview(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = req.params.id as string;
-      if (!id) {
-        throw new BadRequestError('Interview ID is required', 'ID_REQUIRED');
+      if (!responseText || typeof responseText !== 'string' || !responseText.trim()) {
+        throw badRequest('Response text is required');
       }
 
-      const interview = await InterviewService.startInterview(id, req.user!);
-      sendSuccess(res, interview, 'Interview started and live session initialized');
-    } catch (err) {
-      next(err);
-    }
-  },
-
-  async endInterview(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = req.params.id as string;
-      const { feedback, rating, codeContent, language } = req.body as {
-        feedback?: string;
-        rating?: number;
-        codeContent?: string;
-        language?: string;
-      };
-
-      if (!id) {
-        throw new BadRequestError('Interview ID is required', 'ID_REQUIRED');
-      }
-
-      if (rating !== undefined && (rating < 1 || rating > 5)) {
-        throw new BadRequestError('Rating must be an integer between 1 and 5', 'INVALID_RATING');
-      }
-
-      const interview = await InterviewService.endInterview(
-        id,
-        { feedback, rating, codeContent, language },
-        req.user!,
+      const response = await InterviewService.submitResponse(
+        studentId,
+        sessionId,
+        questionId,
+        responseText.trim()
       );
 
-      sendSuccess(res, interview, 'Interview completed and saved successfully');
-    } catch (err) {
-      next(err);
+      sendSuccess(res, response, 'Response submitted and evaluated successfully');
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * Complete interview session, triggering score aggregation, readiness update, and report generation
+   */
+  async completeSession(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const studentId = req.user!.userId;
+      const sessionId = req.params.id as string;
+
+      const session = await InterviewService.completeSession(studentId, sessionId);
+
+      sendSuccess(res, session, 'Interview session completed and evaluated successfully');
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * Retrieve performance report details for a session
+   */
+  async getReport(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const studentId = req.user!.userId;
+      const sessionId = req.params.id as string;
+
+      const report = await InterviewService.getReport(studentId, sessionId);
+
+      sendSuccess(res, report, 'Performance report retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * Retrieve student's current interview readiness score and progression history
+   */
+  async getReadiness(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const studentId = req.user!.userId;
+
+      const readiness = await InterviewService.getReadinessScore(studentId);
+      const history = await InterviewModel.findReadinessHistory(studentId);
+
+      sendSuccess(res, { readiness, history }, 'Readiness metrics retrieved successfully');
+    } catch (error) {
+      next(error);
     }
   },
 };
