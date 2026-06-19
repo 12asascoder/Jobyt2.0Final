@@ -1,6 +1,7 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketServer, Socket } from 'socket.io';
 import { verifyToken } from '../utils/jwt';
+import { registerLiveInterviewHandlers } from '../services/liveInterviewSocket.handler';
 
 let io: SocketServer;
 
@@ -64,6 +65,9 @@ export const initSocket = (httpServer: HttpServer): SocketServer => {
     socket.on('leave_conversation', (conversationId: string) => {
       socket.leave(`conversation:${conversationId}`);
     });
+
+    // Register live technical interview room synchronization handlers
+    registerLiveInterviewHandlers(socket, io);
 
     socket.on('disconnect', () => {
       console.log(`[Socket] Disconnected: ${user.userId}`);
