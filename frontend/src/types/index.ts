@@ -94,6 +94,11 @@ export interface Job {
   is_external_company?: boolean;
   source?: 'admin_external' | 'recruiter' | 'admin_company';
   created_at: string;
+  disallow_auto_apply?: boolean;
+  coding_assessment_id?: string | null;
+  active_assessment_version_id?: string | null;
+  assessment_title?: string | null;
+  assessment_timing?: 'during_apply' | 'post_apply';
   /** Selection Probability: 0–100 score derived from SkillMatchingService (candidate-facing only) */
   selectionProbability?: number;
 }
@@ -129,6 +134,7 @@ export interface Application {
   application_answers?: Array<{ question_id: string; answer: string }>;
   cover_letter: string | null;
   resume_snapshot_url: string | null;
+  submission_source?: 'manual' | 'auto_apply';
   ats_score?: number | null;
   ats_breakdown?: ATSBreakdown | null;
   // AI Insights fields (TRACK-U3/U4/U5)

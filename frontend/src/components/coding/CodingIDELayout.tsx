@@ -80,11 +80,18 @@ export function CodingIDELayout({
 }: CodingIDELayoutProps) {
   const [activeTab, setActiveTab] = useState<RightTab>('output');
 
+  // Switch to AI tab only when evaluation *finishes* — track the previous state
+  const [wasEvaluating, setWasEvaluating] = useState(false);
+
   useEffect(() => {
-    if (isSubmitting || isEvaluating) {
+    if (isEvaluating) {
+      setWasEvaluating(true);
+    } else if (wasEvaluating) {
+      // Evaluation just completed — now switch to AI tab
       setActiveTab('ai');
+      setWasEvaluating(false);
     }
-  }, [isSubmitting, isEvaluating]);
+  }, [isEvaluating, wasEvaluating]);
 
   const tabs: { id: RightTab; label: string }[] = [
     { id: 'output', label: 'Output' },

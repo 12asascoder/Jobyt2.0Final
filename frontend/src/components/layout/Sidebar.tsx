@@ -20,6 +20,7 @@ import {
     FaUsers,
     FaCoins,
     FaMapLocationDot,
+    FaBolt,
     FaClockRotateLeft,
     FaBook,
 } from 'react-icons/fa6';
@@ -31,6 +32,7 @@ const applicantNav: NavItem[] = [
     { label: 'Dashboard', href: ROUTES.dashboard, icon: FaHouse },
     { label: 'Find Jobs', href: ROUTES.jobs, icon: FaMagnifyingGlass },
     { label: 'Applications', href: ROUTES.applications, icon: FaFileLines },
+    { label: 'Auto-Apply', href: ROUTES.autoApply, icon: FaBolt },
     { label: 'Saved Jobs', href: ROUTES.savedJobs, icon: FaBookmark },
     { label: 'Messages', href: ROUTES.messages, icon: FaComments },
     { label: 'Referrals', href: ROUTES.referral, icon: FaGift },

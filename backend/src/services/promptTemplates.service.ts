@@ -154,6 +154,120 @@ Generate exactly 5 questions that would help evaluate a candidate's fit for this
    * Skill Gap Analysis Template
    * Used for analyzing skill gaps between user and job requirements
    */
+  /**
+   * Skill Target Plan Template
+   * Used for determining what skills to emphasize before tailoring
+   */
+  SKILL_TARGET_PLAN: {
+    name: 'skill_target_plan',
+    template: `Build a concise skill target plan for tailoring this resume to the job.
+Return ONLY a JSON object. Do not rewrite the resume.
+
+Rules:
+1. Prefer required and preferred JD skills.
+2. Include existing resume skills that are highly relevant to the JD.
+3. You may include JD skills that are missing from the resume skills list.
+4. Do not include skills unrelated to the JD.
+5. Do not include certifications.
+
+Existing resume skills:
+{{existingSkills}}
+
+JD keywords and skills:
+{{jobKeywords}}
+
+Job Description:
+{{jobDescription}}
+
+Resume JSON:
+{{originalResume}}
+
+Output this exact JSON format:
+{
+  "target_skills": [
+    {
+      "skill": "skill name",
+      "reason": "why this skill should be emphasized"
+    }
+  ],
+  "strategy_notes": "brief notes for the next editing pass"
+}`,
+    variables: ['existingSkills', 'jobKeywords', 'jobDescription', 'originalResume'],
+    description: 'Determine what skills to emphasize for a specific job',
+  } as PromptTemplate,
+
+  /**
+   * Diff-Based Resume Tailoring Template
+   * Applies targeted changes to an existing resume
+   */
+  RESUME_TAILORING: {
+    name: 'resume_tailoring',
+    template: `Given this resume and job description, output a JSON object with targeted changes to better align the resume with the job.
+
+CRITICAL TRUTHFULNESS RULES - NEVER VIOLATE:
+1. DO NOT add any skill, tool, technology, or certification that is not explicitly mentioned in the original resume (unless it's in the verified skill targets)
+2. DO NOT invent numeric achievements (e.g., "increased by 30%") unless they exist in original
+3. DO NOT add company names, product names, or technical terms not in the original
+4. DO NOT upgrade experience level (e.g., "Junior" -> "Senior")
+5. DO NOT add languages, frameworks, or platforms the candidate hasn't used
+6. DO NOT extend employment dates or change timelines. Copy date ranges exactly as they appear.
+7. Preserve factual accuracy - only use information provided by the candidate
+8. NEVER remove existing skills, certifications, languages, or awards. You may reorder by relevance, but every original item must remain.
+
+RULES:
+1. Only modify content; never change names, companies, dates, institutions, or degrees
+2. Do not invent metrics or achievements not supported by the original resume text
+3. Do not add new work entries, education entries, or project entries
+4. {{strategyInstruction}}
+5. Each change MUST include the original text (copied exactly) so it can be verified
+6. For each change, explain WHY it helps match the job description
+7. Do not use em dash characters
+8. Keep changes minimal and targeted; do not rewrite content that already aligns well
+9. Preserve original capitalization, especially for proper nouns, technical terms (e.g., REST, API, AWS), and acronyms.
+
+PATHS you can target:
+- "summary" — the resume summary text
+- "experience[i].description[j]" — a specific bullet (i = entry index, j = bullet index)
+- "experience[i].description" — append a new bullet (action: "append")
+- "education[i].description" — the education entry's description text (replace only)
+- "skills" — reorder the skills list (action: "reorder") or add one verified skill (action: "add_skill")
+
+Keywords to emphasize:
+{{jobKeywords}}
+
+Verified skill targets:
+{{skillTargets}}
+
+Job Description:
+{{jobDescription}}
+
+Original Resume:
+{{originalResume}}
+
+Output this exact JSON format, nothing else:
+{
+  "changes": [
+    {
+      "path": "experience[0].description[1]",
+      "action": "replace",
+      "original": "the exact original text at this path",
+      "value": "the improved text",
+      "reason": "why this change helps"
+    },
+    {
+      "path": "skills",
+      "action": "add_skill",
+      "original": null,
+      "value": "verified skill target missing from the skills list",
+      "reason": "added verified JD skill for review"
+    }
+  ],
+  "strategy_notes": "brief summary of the tailoring approach"
+}`,
+    variables: ['strategyInstruction', 'jobKeywords', 'skillTargets', 'jobDescription', 'originalResume'],
+    description: 'Tailor resume content via targeted diffs without credential fabrication',
+  } as PromptTemplate,
+
   SKILL_GAP_ANALYSIS: {
     name: 'skill_gap_analysis',
     template: `Analyze the skill gap between a candidate's current skills and job requirements.
@@ -294,8 +408,10 @@ Provide your response now:`,
       this.ATS_SCORING,
       this.JOB_PARSING,
       this.RESUME_GENERATION,
+      this.RESUME_TAILORING,
       this.INTERVIEW_QUESTIONS,
       this.SKILL_GAP_ANALYSIS,
+      this.SKILL_TARGET_PLAN,
       this.INTERVIEW_SESSION_QUESTIONS,
       this.INTERVIEW_RESPONSE_EVALUATION,
       this.COACH_CHAT,

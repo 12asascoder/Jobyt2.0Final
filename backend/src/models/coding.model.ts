@@ -944,4 +944,56 @@ export const CodingModel = {
       byDifficulty,
     };
   },
+
+  async listSubmissionsBySession(sessionId: string): Promise<CodingSubmission[]> {
+    const { rows } = await pool.query(
+      `SELECT id, user_id, problem_version_id, assessment_session_id, practice_session_id,
+              assessment_version_id, application_id, attempt_number, language,
+              status, test_pass_count, test_total_count, score, passed,
+              execution_time_ms, memory_kb, assessment_snapshot, problem_snapshot,
+              job_snapshot, judge0_tokens, created_at
+       FROM coding_submissions
+       WHERE assessment_session_id = $1
+       ORDER BY created_at`,
+      [sessionId],
+    );
+    return rows.map(mapSubmission);
+  },
+
+  async listSessionsForVersionWithUser(versionId: string): Promise<{
+    id: string;
+    user_id: string;
+    assessment_version_id: string;
+    status: string;
+    score: number | null;
+    attempt_number: number;
+    started_at: Date;
+    completed_at: Date | null;
+    email: string;
+    name: string | null;
+  }[]> {
+    const { rows } = await pool.query(
+      `SELECT s.id, s.user_id, s.assessment_version_id, s.status, s.score,
+              s.attempt_number, s.started_at, s.completed_at,
+              u.email, ap.name
+       FROM assessment_sessions s
+       INNER JOIN users u ON u.id = s.user_id
+       LEFT JOIN applicant_profiles ap ON ap.user_id = s.user_id
+       WHERE s.assessment_version_id = $1
+       ORDER BY s.started_at DESC`,
+      [versionId],
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      user_id: String(r.user_id),
+      assessment_version_id: String(r.assessment_version_id),
+      status: String(r.status),
+      score: r.score !== null ? Number(r.score) : null,
+      attempt_number: Number(r.attempt_number),
+      started_at: new Date(r.started_at),
+      completed_at: r.completed_at ? new Date(r.completed_at) : null,
+      email: String(r.email),
+      name: r.name ? String(r.name) : null,
+    }));
+  },
 };
