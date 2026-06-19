@@ -276,7 +276,7 @@ export const CodingSubmissionService = {
         await CodingModel.updatePracticeSession(submission.practice_session_id, {
           solved: true,
           best_score: Math.max(ps.best_score ?? 0, score),
-          completed_at: new Date() as unknown as import('../types/coding.types').PracticeSession['completed_at'],
+          completed_at: new Date(),
         });
       }
     }

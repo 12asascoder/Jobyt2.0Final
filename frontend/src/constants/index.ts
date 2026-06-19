@@ -65,6 +65,9 @@ export const ROUTES = {
   resumeDetail: (id: string) => `/resumes/${id}`,
   messageThread: (id: string) => `/messages/${id}`,
   resumeBuilder: '/resume-builder',
+  autoApply: '/auto-apply',
+  autoApplySettings: '/auto-apply/settings',
+  autoApplyQueueItem: (id: string) => `/auto-apply/queue/${id}`,
   coach: '/coach',
   // Recruiter
   recruiterDashboard: '/recruiter/dashboard',

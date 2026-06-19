@@ -31,9 +31,20 @@ export const webhookQueue = new Queue('webhookQueue', defaultQueueOptions);
 // Queue for coding submission evaluation
 export const codingEvaluationQueue = new Queue('codingEvaluationQueue', defaultQueueOptions);
 
+// Queue for Auto-Apply matching and submission
+export const autoApplyQueue = new Queue('autoApplyQueue', {
+  ...defaultQueueOptions,
+  defaultJobOptions: {
+    ...defaultQueueOptions.defaultJobOptions,
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
+  },
+});
+
 export const closeQueues = async () => {
   await recommendationQueue.close();
   await notificationQueue.close();
   await webhookQueue.close();
   await codingEvaluationQueue.close();
+  await autoApplyQueue.close();
 };

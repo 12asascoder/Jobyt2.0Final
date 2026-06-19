@@ -107,10 +107,11 @@ function loadAIConfig(): AIConfig {
 
   // Validate active provider key configuration
   let embeddingsConfigured = false;
-  if (embeddingProvider === 'huggingface') {
-    // HuggingFace is always configured as it supports unauthenticated usage
+  if (embeddingProvider === 'huggingface' && process.env.ENABLE_SEMANTIC_SCORING === 'true') {
     embeddingsConfigured = true;
   }
+  // Hard disable for now since it times out on user's local network without API key
+  embeddingsConfigured = false;
 
   // Resolve default models per provider if not explicitly defined in env
   const defaultEmbeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';

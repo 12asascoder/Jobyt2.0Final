@@ -55,6 +55,7 @@ export interface Job {
   active_assessment_version_id?: string | null;
   assessment_timing?: 'during_apply' | 'post_apply' | null;
   assessment_title?: string | null;
+  disallow_auto_apply?: boolean;
 }
 
 export interface JobFilters {

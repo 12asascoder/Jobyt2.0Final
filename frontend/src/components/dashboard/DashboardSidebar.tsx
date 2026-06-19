@@ -17,6 +17,7 @@ import {
     FaStar,
     FaCode,
     FaArrowRightFromBracket,
+    FaBolt,
     FaKey,
     FaBook,
     FaLaptop,
@@ -32,6 +33,7 @@ interface SidebarItem {
 
 const mainItems: SidebarItem[] = [
     { icon: FaHouse, href: ROUTES.dashboard, label: 'Home' },
+    { icon: FaBolt, href: ROUTES.autoApply, label: 'Auto Apply' },
     { icon: FaFileLines, href: ROUTES.applications, label: 'Applications' },
     { icon: FaLaptop, href: ROUTES.interviews, label: 'Mock Interviews' },
     { icon: FaBrain, href: ROUTES.coach, label: 'AI Coach' },

@@ -6,10 +6,26 @@ import { CodeEvaluation } from '../types/coding.types';
 export const CodeEvaluationService = {
   async evaluate(submissionId: string): Promise<CodeEvaluation | null> {
     const submission = await CodingModel.findSubmissionById(submissionId);
-    if (!submission || !aiConfig.isConfigured) return null;
+    if (!submission) return null;
 
     const existing = await CodingModel.findEvaluationBySubmission(submissionId);
     if (existing) return existing;
+
+    if (!aiConfig.isConfigured) {
+      return CodingModel.createCodeEvaluation({
+        submission_id: submissionId,
+        readability_score: 0,
+        maintainability_score: 0,
+        efficiency_score: 0,
+        best_practices_score: 0,
+        optimization_score: 0,
+        overall_quality_score: 0,
+        strengths: [],
+        weaknesses: [],
+        suggestions: ["AI API keys are not configured on the server. AI feedback is currently unavailable."],
+        raw_response: { disabled: true, message: "No AI key configured" },
+      });
+    }
 
     const problemSnapshot = submission.problem_snapshot as Record<string, unknown> | null;
     const testResults = await CodingModel.listTestResults(submissionId);
@@ -72,7 +88,19 @@ Respond with JSON only:
       });
     } catch (err) {
       console.warn('[CodeEvaluationService] AI evaluation failed:', err);
-      return null;
+      return CodingModel.createCodeEvaluation({
+        submission_id: submissionId,
+        readability_score: null as unknown as number,
+        maintainability_score: null as unknown as number,
+        efficiency_score: null as unknown as number,
+        best_practices_score: null as unknown as number,
+        optimization_score: null as unknown as number,
+        overall_quality_score: null as unknown as number,
+        strengths: [],
+        weaknesses: [],
+        suggestions: ["AI evaluation failed or timed out. Please try again later."],
+        raw_response: { error: err instanceof Error ? err.message : String(err) },
+      });
     }
   },
 };

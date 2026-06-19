@@ -40,8 +40,8 @@ export const Judge0Service = {
       cpu_time_limit: options.cpuTimeLimit ?? DEFAULT_CPU_TIME_LIMIT,
       memory_limit: options.memoryLimitKb ?? DEFAULT_MEMORY_LIMIT_KB,
       redirect_stderr_to_stdout: false,
-      enable_per_process_and_thread_time_limit: true,
-      enable_per_process_and_thread_memory_limit: true,
+      enable_per_process_and_thread_time_limit: false,
+      enable_per_process_and_thread_memory_limit: false,
     };
 
     const wait = options.wait !== false;
@@ -67,13 +67,22 @@ export const Judge0Service = {
 
   async pollSubmission(token: string, maxAttempts = 30): Promise<Judge0SubmissionResult> {
     for (let i = 0; i < maxAttempts; i++) {
-      const { data } = await axios.get<Judge0SubmissionResult>(
-        `${JUDGE0_API_URL}/submissions/${token}`,
-        { headers, timeout: 10000 },
-      );
+      try {
+        const { data } = await axios.get<Judge0SubmissionResult>(
+          `${JUDGE0_API_URL}/submissions/${token}`,
+          { headers, timeout: 10000 },
+        );
 
-      if (data.status && data.status.id >= 3) {
-        return data;
+        if (data.status && data.status.id >= 3) {
+          return data;
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[Judge0Service] Poll attempt ${i + 1}/${maxAttempts} failed for token ${token}: ${message}`);
+        // On the last attempt, propagate
+        if (i === maxAttempts - 1) {
+          throw new AppError(`Code execution polling failed after ${maxAttempts} attempts: ${message}`, 503);
+        }
       }
 
       await new Promise((resolve) => setTimeout(resolve, 500));

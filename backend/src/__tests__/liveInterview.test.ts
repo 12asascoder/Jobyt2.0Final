@@ -3,6 +3,9 @@ import { InterviewModel } from '../models/interview.model';
 import { ApplicationModel } from '../models/application.model';
 import pool from '../config/database';
 import { JwtPayload } from '../types';
+import axios from 'axios';
+
+jest.mock('axios');
 
 jest.mock('../config/database', () => ({
   query: jest.fn(),
@@ -185,6 +188,77 @@ describe('InterviewService', () => {
       // Live session should be garbage collected/cleaned up
       const liveSession = InterviewService.getLiveSession('interview-1');
       expect(liveSession).toBeNull();
+    });
+  });
+
+  describe('generateFollowupQuestion', () => {
+    const originalEnv = { ...process.env };
+
+    afterEach(() => {
+      process.env = { ...originalEnv };
+      jest.clearAllMocks();
+    });
+
+    it('should fallback to Groq when Claude is not configured', async () => {
+      process.env.CLAUDE_API_KEY = '';
+      process.env.GROQ_API_KEY = 'gsk_mock_key';
+
+      (axios.post as jest.Mock).mockResolvedValue({
+        data: {
+          choices: [
+            {
+              message: {
+                content: 'Mocked Groq response question?',
+              },
+            },
+          ],
+        },
+      });
+
+      const question = await InterviewService.generateFollowupQuestion(
+        'interview-1',
+        'const a = 1;',
+        'javascript',
+      );
+
+      expect(axios.post).toHaveBeenCalledWith(
+        'https://api.groq.com/openai/v1/chat/completions',
+        expect.objectContaining({
+          model: 'llama-3.3-70b-versatile',
+        }),
+        expect.any(Object),
+      );
+      expect(question).toBe('Mocked Groq response question?');
+    });
+
+    it('should call Claude API directly when configured', async () => {
+      process.env.CLAUDE_API_KEY = 'claude_mock_key';
+      process.env.GROQ_API_KEY = '';
+
+      (axios.post as jest.Mock).mockResolvedValue({
+        data: {
+          content: [
+            {
+              text: 'Mocked Claude response question?',
+            },
+          ],
+        },
+      });
+
+      const question = await InterviewService.generateFollowupQuestion(
+        'interview-1',
+        'const a = 1;',
+        'javascript',
+      );
+
+      expect(axios.post).toHaveBeenCalledWith(
+        'https://api.anthropic.com/v1/messages',
+        expect.objectContaining({
+          model: 'claude-3-5-sonnet-20241022',
+        }),
+        expect.any(Object),
+      );
+      expect(question).toBe('Mocked Claude response question?');
     });
   });
 });

@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
 import { redisConnection } from '../config/queue';
-import { sendEmail, dailyRecommendationEmailHtml } from '../utils/email';
+import { sendEmail, dailyRecommendationEmailHtml, autoApplyDigestEmailHtml } from '../utils/email';
 import { WhatsAppService } from '../services/whatsapp.service';
 import pool from '../config/database';
 import { PushNotificationService } from '../services/push.service';
@@ -87,6 +87,33 @@ export const notificationWorker = new Worker('notificationQueue', async (job: Jo
       console.error(`${LOG_PREFIX} Error processing job ${job.id}`, error);
       throw error;
     }
+  }
+  if (job.name === 'sendAutoApplyDigest') {
+    const { userId, date, summary } = job.data as {
+      userId: string;
+      date: string;
+      summary: Record<string, number>;
+    };
+
+    const { rows } = await pool.query(
+      `SELECT u.email, u.email_alerts_enabled, ap.name, aa.digest_enabled
+       FROM users u
+       LEFT JOIN applicant_profiles ap ON ap.user_id = u.id
+       LEFT JOIN auto_apply_preferences aa ON aa.user_id = u.id
+       WHERE u.id = $1`,
+      [userId],
+    );
+
+    if (!rows.length) return;
+    const user = rows[0];
+    if (!user.digest_enabled || !user.email_alerts_enabled || !user.email) return;
+
+    const html = autoApplyDigestEmailHtml(user.name || 'Candidate', summary, date);
+    await sendEmail({
+      to: user.email,
+      subject: 'Your Auto-Apply Daily Summary',
+      html,
+    });
   }
 }, { connection: redisConnection as any });
 
