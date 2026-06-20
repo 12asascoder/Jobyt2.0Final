@@ -1,22 +1,71 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { JwtPayload, UserRole } from '../types';
+import { ApiKeyService } from '../services/apiKey.service';
+import { RateLimitService } from '../services/rateLimit.service';
 
-export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
+export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    res.status(401).json({ success: false, message: 'No token provided' });
-    return;
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+      req.user = decoded;
+      next();
+      return;
+    } catch {
+      res.status(401).json({ success: false, message: 'Invalid or expired token' });
+      return;
+    }
   }
 
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
-    req.user = decoded;
-    next();
-  } catch {
-    res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  const apiKeyHeader = req.headers['x-api-key'] as string | undefined;
+  if (apiKeyHeader?.trim()) {
+    try {
+      const result = await ApiKeyService.validateApiKey(apiKeyHeader);
+      req.user = {
+        userId: result.user.id,
+        email: result.user.email,
+        role: result.user.role as JwtPayload['role'],
+      };
+      req.apiKey = result.api_key;
+      ApiKeyService.touchLastUsed(result.api_key.id).catch(() => {});
+
+      const limit = result.api_key.rate_limit || 1000;
+      const rateResult = await RateLimitService.checkApiKeyLimit(result.api_key.id, limit);
+
+      res.setHeader('X-RateLimit-Limit', rateResult.limit);
+      res.setHeader('X-RateLimit-Remaining', rateResult.remaining);
+      res.setHeader('X-RateLimit-Reset', rateResult.resetAt);
+
+      if (!rateResult.allowed) {
+        const retryAfter = rateResult.resetAt - Math.floor(Date.now() / 1000);
+        res.setHeader('Retry-After', retryAfter);
+        res.status(429).json({
+          success: false,
+          error: 'RATE_LIMIT_EXCEEDED',
+          message: `Rate limit exceeded. Try again in ${retryAfter} seconds.`,
+          limit: rateResult.limit,
+          remaining: 0,
+          resetAt: rateResult.resetAt,
+        });
+        return;
+      }
+
+      next();
+      return;
+    } catch (err) {
+      const error = err as { statusCode?: number; code?: string; message?: string };
+      res.status(error.statusCode || 401).json({
+        success: false,
+        error: error.code || 'UNAUTHORIZED',
+        message: error.message || 'Invalid API key',
+      });
+      return;
+    }
   }
+
+  res.status(401).json({ success: false, message: 'No token provided' });
 };
 
 export const optionalAuth = (req: Request, _res: Response, next: NextFunction): void => {

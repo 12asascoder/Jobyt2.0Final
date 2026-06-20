@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import routes from './routes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import { requestLogger } from './middleware/logger.middleware';
+import { apiActivityLogger } from './middleware/apiActivity';
 
 const app = express();
 
@@ -95,6 +96,7 @@ app.use((req, res, next) => {
 
 // Structured request logging
 app.use(requestLogger);
+app.use(apiActivityLogger);
 
 // Root welcome route
 app.get('/', (_req, res) => {

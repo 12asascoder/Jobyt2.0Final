@@ -5,6 +5,8 @@ import { UserModel } from '../models/user.model';
 import { ReferralModel } from '../models/referral.model';
 import { CreditService } from './credit.service';
 import { ProfileBootstrapService } from './profileBootstrap.service';
+import { WebhookService } from './webhook.service';
+import { WEBHOOK_EVENTS } from './webhook/eventCatalog';
 import { hashPassword, comparePassword } from '../utils/password';
 import { signAccessToken, signRefreshToken, verifyToken } from '../utils/jwt';
 import {
@@ -124,6 +126,20 @@ export const AuthService = {
         await ReferralModel.markReferredCredited(referral.id);
       }
 
+      // Fire webhook: user.registered (fire-and-forget)
+      setImmediate(() => {
+        WebhookService.fireEvent(WEBHOOK_EVENTS.USER_REGISTERED, {
+          event: WEBHOOK_EVENTS.USER_REGISTERED,
+          user_id: user.id,
+          email: user.email,
+          role: user.role,
+          auth_provider: 'local',
+          timestamp: new Date().toISOString(),
+        }).catch((err) => {
+          console.error('[AuthService] Webhook fire failed silently:', err);
+        });
+      });
+
       return {
         id: user.id,
         email: user.email,
@@ -143,6 +159,20 @@ export const AuthService = {
       logger.error('Failed to send registration verification email', {
         email,
         error: err,
+      });
+    });
+
+    // Fire webhook: user.registered (fire-and-forget)
+    setImmediate(() => {
+      WebhookService.fireEvent(WEBHOOK_EVENTS.USER_REGISTERED, {
+        event: WEBHOOK_EVENTS.USER_REGISTERED,
+        user_id: user.id,
+        email: user.email,
+        role: user.role,
+        auth_provider: 'local',
+        timestamp: new Date().toISOString(),
+      }).catch((err) => {
+        console.error('[AuthService] Webhook fire failed silently:', err);
       });
     });
 
