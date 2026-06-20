@@ -24,6 +24,7 @@ type ApplicationView = {
     improvement_suggestions?: string | null;
     insights_approved?: boolean;
     insights_generated_at?: string | null;
+    interview_status?: 'scheduled' | 'live' | 'completed' | 'cancelled';
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -160,10 +161,21 @@ export default function ApplicationsPage() {
                                                     {view.job_title || 'Position'}
                                                 </span>
                                             </div>
-                                            <div className="col-span-1 -ml-8">
+                                            <div className="col-span-1 -ml-8 flex flex-col items-start gap-1">
                                                 <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
                                                     {APPLICATION_STATUS_LABELS[app.status] || app.status}
                                                 </span>
+                                                {view.interview_status && (
+                                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                                        view.interview_status === 'completed' ? 'bg-purple-100 text-purple-700' :
+                                                        view.interview_status === 'scheduled' ? 'bg-amber-100 text-amber-700' :
+                                                        view.interview_status === 'live' ? 'bg-rose-100 text-rose-700 animate-pulse' :
+                                                        'bg-slate-100 text-slate-500'
+                                                    }`}>
+                                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></svg>
+                                                        AI {view.interview_status === 'scheduled' ? 'Pending' : view.interview_status}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="col-span-2 -ml-4">
                                                 {(() => {
@@ -293,6 +305,17 @@ export default function ApplicationsPage() {
                                             <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
                                                 {APPLICATION_STATUS_LABELS[app.status] || app.status}
                                             </span>
+                                            {view.interview_status && (
+                                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                                    view.interview_status === 'completed' ? 'bg-purple-100 text-purple-700' :
+                                                    view.interview_status === 'scheduled' ? 'bg-amber-100 text-amber-700' :
+                                                    view.interview_status === 'live' ? 'bg-rose-100 text-rose-700 animate-pulse' :
+                                                    'bg-slate-100 text-slate-500'
+                                                }`}>
+                                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></svg>
+                                                    AI {view.interview_status === 'scheduled' ? 'Pending' : view.interview_status}
+                                                </span>
+                                            )}
                                             {view.ats_score != null && (
                                                 <button 
                                                     onClick={() => setExpandedAppId(expandedAppId === app.id ? null : app.id)}
