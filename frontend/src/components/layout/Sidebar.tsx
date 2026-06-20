@@ -20,6 +20,9 @@ import {
     FaUsers,
     FaCoins,
     FaMapLocationDot,
+    FaBolt,
+    FaClockRotateLeft,
+    FaBook,
 } from 'react-icons/fa6';
 import { IconType } from 'react-icons';
 
@@ -29,6 +32,7 @@ const applicantNav: NavItem[] = [
     { label: 'Dashboard', href: ROUTES.dashboard, icon: FaHouse },
     { label: 'Find Jobs', href: ROUTES.jobs, icon: FaMagnifyingGlass },
     { label: 'Applications', href: ROUTES.applications, icon: FaFileLines },
+    { label: 'Auto-Apply', href: ROUTES.autoApply, icon: FaBolt },
     { label: 'Saved Jobs', href: ROUTES.savedJobs, icon: FaBookmark },
     { label: 'Messages', href: ROUTES.messages, icon: FaComments },
     { label: 'Referrals', href: ROUTES.referral, icon: FaGift },
@@ -45,6 +49,7 @@ const recruiterNav: NavItem[] = [
     { label: 'Messages', href: ROUTES.recruiterMessages, icon: FaComments },
     { label: 'Analytics', href: ROUTES.recruiterAnalytics, icon: FaChartLine },
     { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
+    { label: 'API Docs', href: '/docs', icon: FaBook },
 ];
 
 const adminNav: NavItem[] = [
@@ -57,6 +62,8 @@ const adminNav: NavItem[] = [
     { label: 'Messages', href: ROUTES.adminMessages, icon: FaComments },
     { label: 'Roadmaps', href: ROUTES.roadmaps, icon: FaMapLocationDot },
     { label: 'Credits', href: ROUTES.adminCredits, icon: FaCoins },
+    { label: 'Activity', href: ROUTES.adminActivity, icon: FaClockRotateLeft },
+    { label: 'API Docs', href: '/docs', icon: FaBook },
 ];
 
 export const Sidebar = () => {

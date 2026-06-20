@@ -51,6 +51,11 @@ export interface Job {
   deleted_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  coding_assessment_id?: string | null;
+  active_assessment_version_id?: string | null;
+  assessment_timing?: 'during_apply' | 'post_apply' | null;
+  assessment_title?: string | null;
+  disallow_auto_apply?: boolean;
 }
 
 export interface JobFilters {
@@ -160,9 +165,12 @@ export const JobModel = {
         COALESCE(NULLIF(jobs.company_name, ''), recruiter_profiles.company_name) AS "companyName",
         COALESCE(jobs.company_logo, recruiter_profiles.logo_url) AS company_logo,
         COALESCE(jobs.company_website, recruiter_profiles.website) AS company_website,
-        COALESCE(jobs.company_location, jobs.location, recruiter_profiles.location) AS company_location
+        COALESCE(jobs.company_location, jobs.location, recruiter_profiles.location) AS company_location,
+        av.assessment_timing,
+        av.title AS assessment_title
        FROM jobs
        LEFT JOIN recruiter_profiles ON recruiter_profiles.user_id = jobs.recruiter_id
+       LEFT JOIN assessment_versions av ON av.id = jobs.active_assessment_version_id
        WHERE jobs.id = $1
          AND jobs.deleted_at IS NULL
        LIMIT 1`,

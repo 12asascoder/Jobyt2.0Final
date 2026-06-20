@@ -98,8 +98,9 @@ export default function CreditsPage() {
       setBalance(bal.data?.balance ?? 0);
       setTransactions(txns.data ?? []);
       setPlans(plansRes.data ?? []);
-    }).catch(() => {
-      // fail silently for ui demonstration
+    }).catch((err) => {
+      const message = err instanceof ApiError ? err.message : 'Failed to load credits and plans';
+      toast.error(message);
     }).finally(() => setLoading(false));
   }, []);
 

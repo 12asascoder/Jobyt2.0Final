@@ -117,21 +117,57 @@ function scoreJobTextOverlap(resumeText: string, jobDescription: string): number
   return Math.round(Math.min(100, saturated * 100));
 }
 
+function emptyHybridScoreResult(): HybridScoreResult {
+  return {
+    finalMatchScore: 0,
+    semanticScore: 0,
+    skillsScore: 0,
+    experienceScore: 0,
+    keywordScore: 0,
+    educationScore: 0,
+    matchedSkills: [],
+    missingSkills: [],
+    fuzzyMatchedSkills: [],
+    keywordOverlap: [],
+    recommendations: ['Analysis is processing or failed due to missing details.'],
+    scoringVersion: 'v1.0',
+    embeddingAvailable: false,
+  };
+}
+
 export const UnifiedMatchService = {
 
   /**
-   * Run the unified hybrid scoring pipeline for a given application.
+   * Score a candidate against a job without persisting to applications (Auto-Apply, preview).
    */
-  async scoreApplication(
-    applicationId: string,
+  async scoreCandidateForJob(
+    applicantId: string,
     jobId: string,
     resumeId: string | null,
-    applicantId: string,
   ): Promise<HybridScoreResult> {
     const startMs = Date.now();
-    console.log(`${LOG_PREFIX} Scoring application ${applicationId} for job ${jobId}...`);
+    console.log(`${LOG_PREFIX} Scoring candidate ${applicantId} for job ${jobId}...`);
 
     try {
+      const result = await UnifiedMatchService.computeHybridScoreForCandidate(
+        applicantId,
+        jobId,
+        resumeId,
+      );
+      const elapsed = Date.now() - startMs;
+      console.log(`${LOG_PREFIX} Scored candidate for job ${jobId}: ${result.finalMatchScore}/100 in ${elapsed}ms`);
+      return result;
+    } catch (err) {
+      console.error(`${LOG_PREFIX} Error scoring candidate for job ${jobId}:`, err);
+      return emptyHybridScoreResult();
+    }
+  },
+
+  async computeHybridScoreForCandidate(
+    applicantId: string,
+    jobId: string,
+    resumeId: string | null,
+  ): Promise<HybridScoreResult> {
       // 1. Fetch job details
       const { rows: jobRows } = await pool.query(
         'SELECT title, description, skills FROM jobs WHERE id = $1',
@@ -299,7 +335,7 @@ export const UnifiedMatchService = {
         recommendations.push('Highlight any degrees or coursework related to Computer Science, Engineering, or technical fields.');
       }
 
-      const result: HybridScoreResult = {
+      return {
         finalMatchScore,
         semanticScore,
         skillsScore: baseline.sectionScores.skillsScore,
@@ -314,8 +350,27 @@ export const UnifiedMatchService = {
         scoringVersion: 'v1.0',
         embeddingAvailable,
       };
+  },
 
-      // 9. Persist the score to the applications table
+  /**
+   * Run the unified hybrid scoring pipeline for a given application.
+   */
+  async scoreApplication(
+    applicationId: string,
+    jobId: string,
+    resumeId: string | null,
+    applicantId: string,
+  ): Promise<HybridScoreResult> {
+    const startMs = Date.now();
+    console.log(`${LOG_PREFIX} Scoring application ${applicationId} for job ${jobId}...`);
+
+    try {
+      const result = await UnifiedMatchService.computeHybridScoreForCandidate(
+        applicantId,
+        jobId,
+        resumeId,
+      );
+
       await pool.query(
         `UPDATE applications 
          SET final_match_score = $1,
@@ -335,31 +390,16 @@ export const UnifiedMatchService = {
           result.keywordScore,
           result.educationScore,
           result.scoringVersion,
-          applicationId
-        ]
+          applicationId,
+        ],
       );
 
       const elapsed = Date.now() - startMs;
-      console.log(`${LOG_PREFIX} Scored application ${applicationId}: ${finalMatchScore}/100 in ${elapsed}ms`);
+      console.log(`${LOG_PREFIX} Scored application ${applicationId}: ${result.finalMatchScore}/100 in ${elapsed}ms`);
       return result;
     } catch (err) {
       console.error(`${LOG_PREFIX} Error scoring application ${applicationId}:`, err);
-      // Return a basic fallback so the caller doesn't break
-      return {
-        finalMatchScore: 0,
-        semanticScore: 0,
-        skillsScore: 0,
-        experienceScore: 0,
-        keywordScore: 0,
-        educationScore: 0,
-        matchedSkills: [],
-        missingSkills: [],
-        fuzzyMatchedSkills: [],
-        keywordOverlap: [],
-        recommendations: ['Analysis is processing or failed due to missing details.'],
-        scoringVersion: 'v1.0',
-        embeddingAvailable: false,
-      };
+      return emptyHybridScoreResult();
     }
   },
 
