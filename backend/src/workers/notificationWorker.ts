@@ -15,7 +15,7 @@ export const notificationWorker = new Worker('notificationQueue', async (job: Jo
     try {
       // 1. Fetch user to check preferences and get contact info
       const { rows } = await pool.query(
-        'SELECT email, phone, name, email_alerts_enabled, whatsapp_alerts_enabled, push_alerts_enabled FROM users u LEFT JOIN applicant_profiles ap ON u.id = ap.user_id WHERE u.id = $1',
+        'SELECT u.email, u.phone, ap.name, u.email_alerts_enabled, u.whatsapp_alerts_enabled FROM users u LEFT JOIN applicant_profiles ap ON u.id = ap.user_id WHERE u.id = $1',
         [userId]
       );
       
@@ -51,24 +51,9 @@ export const notificationWorker = new Worker('notificationQueue', async (job: Jo
         }
       }
 
-      let pushFailed = false;
+      let pushFailed = false; // Push handled by Orchestrator path; kept for failure gate
 
-      // 4. Send Push Notification if enabled
-      if (user.push_alerts_enabled) {
-        try {
-          await PushNotificationService.sendPushNotification(
-            userId,
-            'Your Daily Job Recommendations',
-            `Check out the ${jobs.length} new job recommendations tailored for you!`,
-            '/(tabs)/home'
-          );
-        } catch (error) {
-          console.error(`${LOG_PREFIX} Failed to send push to user ${userId}`, error);
-          pushFailed = true;
-        }
-      }
-
-      // 5. Update status in job_recommendations
+      // 4. Update status in job_recommendations
       if (!emailFailed && !whatsappFailed && !pushFailed) {
         const jobIds = jobs.map((j: any) => j.id);
         if (jobIds.length > 0) {

@@ -110,7 +110,7 @@ export function setupNotificationScheduler() {
 
       for (const user of rows) {
         const days = Math.floor(user.days_left);
-        const eventType = `subscription_expiry_${days}d` as any;
+        const eventType = `subscription_expiry_${days}d` as 'subscription_expiry_7d' | 'subscription_expiry_3d' | 'subscription_expiry_1d';
         await NotificationOrchestrator.dispatch(
           user.id,
           eventType,

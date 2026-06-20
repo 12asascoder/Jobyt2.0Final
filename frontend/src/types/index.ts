@@ -209,7 +209,10 @@ export type NotificationType =
   | 'job_match' | 'application_status' | 'new_message'
   | 'referral_joined' | 'low_credit' | 'payment_success' | 'payment_failed'
   | 'application_submitted' | 'employer_broadcast' | 'interview_invited'
-  | 'deadline_alert' | 'auto_apply_digest';
+  | 'interview_cancelled' | 'interview_reminder_24h' | 'interview_reminder_2h'
+  | 'deadline_alert' | 'auto_apply_digest' | 'daily_recommendation'
+  | 'credits_exhausted'
+  | 'subscription_expiry_7d' | 'subscription_expiry_3d' | 'subscription_expiry_1d';
 
 export interface Notification {
   id: string;

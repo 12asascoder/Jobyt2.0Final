@@ -7,10 +7,10 @@ export const InterviewInviteService = {
   async createInvite(recruiterId: string, applicationId: string, data: Omit<CreateInterviewInviteData, 'applicationId' | 'createdBy'>) {
     // 1. Validate recruiter owns the job for this application
     const { rows: appRows } = await pool.query(
-      `SELECT a.applicant_id, j.title as job_title, j.recruiter_id, u.first_name as applicant_name
+      `SELECT a.applicant_id, j.title as job_title, j.recruiter_id, ap.name as applicant_name
        FROM applications a 
        JOIN jobs j ON a.job_id = j.id
-       JOIN users u ON a.applicant_id = u.id
+       LEFT JOIN applicant_profiles ap ON a.applicant_id = ap.user_id
        WHERE a.id = $1`,
       [applicationId]
     );
@@ -86,11 +86,11 @@ export const InterviewInviteService = {
   async cancelInvite(recruiterId: string, inviteId: string) {
     // Basic auth check
     const { rows: inviteRows } = await pool.query(
-      `SELECT i.*, a.applicant_id, j.recruiter_id, j.title as job_title, u.first_name as applicant_name
+      `SELECT i.*, a.applicant_id, j.recruiter_id, j.title as job_title, ap.name as applicant_name
        FROM interview_invites i
        JOIN applications a ON i.application_id = a.id
        JOIN jobs j ON a.job_id = j.id
-       JOIN users u ON a.applicant_id = u.id
+       LEFT JOIN applicant_profiles ap ON a.applicant_id = ap.user_id
        WHERE i.id = $1`,
       [inviteId]
     );

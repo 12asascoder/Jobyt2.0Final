@@ -1,12 +1,13 @@
 import { Router } from 'express';
+import { authenticate, authorize } from '../middleware/auth';
 import { InterviewInviteService } from '../services/interviewInvite.service';
 
 const router = Router();
 
 // Create invite
-router.post('/jobs/:jobId/applications/:applicationId/interview-invite', async (req, res) => {
+router.post('/jobs/:jobId/applications/:applicationId/interview-invite', authenticate, authorize('recruiter', 'admin'), async (req, res) => {
   try {
-    const recruiterId = (req as any).user.userId;
+    const recruiterId = req.user!.userId;
     const { applicationId } = req.params;
     const { scheduledAt, locationOrLink, notes } = req.body;
 
@@ -23,7 +24,7 @@ router.post('/jobs/:jobId/applications/:applicationId/interview-invite', async (
 });
 
 // List invites
-router.get('/jobs/:jobId/applications/:applicationId/interview-invite', async (req, res) => {
+router.get('/jobs/:jobId/applications/:applicationId/interview-invite', authenticate, async (req, res) => {
   try {
     // Ideally check if recruiter owns the job, but for simplicity:
     const { applicationId } = req.params;
@@ -35,9 +36,9 @@ router.get('/jobs/:jobId/applications/:applicationId/interview-invite', async (r
 });
 
 // Cancel invite
-router.patch('/interview-invite/:inviteId/cancel', async (req, res) => {
+router.patch('/interview-invite/:inviteId/cancel', authenticate, authorize('recruiter', 'admin'), async (req, res) => {
   try {
-    const recruiterId = (req as any).user.userId;
+    const recruiterId = req.user!.userId;
     const { inviteId } = req.params;
 
     const invite = await InterviewInviteService.cancelInvite(recruiterId, inviteId);
