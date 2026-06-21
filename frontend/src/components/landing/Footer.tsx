@@ -26,6 +26,7 @@ const employerLinks: FooterLink[] = [
     { label: 'Post a Job', href: '/employer-login' },
     { label: 'Pricing', href: '/#pricing' },
     { label: 'Hire Talent', href: '/employer-login' },
+    { label: 'API Documentation', href: '/docs' },
 ];
 
 const socials: SocialLink[] = [
