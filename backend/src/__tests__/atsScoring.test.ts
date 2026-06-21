@@ -26,6 +26,24 @@ jest.mock('pdf-parse', () => {
   };
 });
 
+jest.mock('../services/ai.service', () => {
+  return {
+    AIService: {
+      generateJSON: jest.fn().mockResolvedValue(null),
+      generateText: jest.fn().mockResolvedValue(null),
+      generateEmbedding: jest.fn().mockResolvedValue(null),
+    },
+    AIErrorCode: {
+      AI_MODEL_UNAVAILABLE: 'AI_MODEL_UNAVAILABLE',
+      EMBEDDING_FAILED: 'EMBEDDING_FAILED',
+      AI_TIMEOUT: 'AI_TIMEOUT',
+      INVALID_AI_RESPONSE: 'INVALID_AI_RESPONSE',
+      AI_CIRCUIT_OPEN: 'AI_CIRCUIT_OPEN',
+      AI_NOT_CONFIGURED: 'AI_NOT_CONFIGURED',
+    },
+  };
+});
+
 describe('ATS Scoring Engine & Utilities', () => {
   describe('Skill Normalization & Alias Matching', () => {
     it('should correctly normalize exact matches', () => {

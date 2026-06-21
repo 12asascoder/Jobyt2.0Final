@@ -61,9 +61,10 @@ export const ResumeController = {
       const resume_id = req.body.resume_id as string | undefined;
       
       if (req.file && req.file.mimetype === 'application/pdf') {
-        const pdfParseModule = await import('pdf-parse');
-        const pdfParse = (pdfParseModule.default || pdfParseModule) as any;
-        const data = await pdfParse(req.file.buffer);
+        const { PDFParse } = await import('pdf-parse');
+        const parser = new PDFParse({ data: new Uint8Array(req.file.buffer) });
+        const data = await parser.getText();
+        await parser.destroy().catch(() => undefined);
         resumeText = data.text;
       }
 
