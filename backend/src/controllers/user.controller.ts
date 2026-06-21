@@ -3,6 +3,7 @@ import { UserService } from '../services/user.service';
 import { sendSuccess } from '../utils/response';
 import pool from '../config/database';
 import { DeviceTokenModel } from '../models/deviceToken.model';
+import { OAuthService } from '../services/oauth.service';
 
 export const UserController = {
   async getMyProfile(req: Request, res: Response, next: NextFunction) {

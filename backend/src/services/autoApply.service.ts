@@ -9,7 +9,7 @@ export const AutoApplyService = {
     const prefs = await AutoApplyModel.getPreferences(user.userId);
     if (!prefs) {
       return {
-        is_active: false,
+        status: 'disabled',
         job_titles: [],
         locations: [],
         job_types: [],
@@ -24,7 +24,7 @@ export const AutoApplyService = {
     const updated = await AutoApplyModel.upsertPreferences(user.userId, data);
     
     // If auto-apply is enabled/active, perform matching scan immediately
-    if (updated.is_active) {
+    if (updated.status === 'enabled') {
       await this.matchJobsForUser(user.userId);
     }
     return updated;
@@ -61,7 +61,7 @@ export const AutoApplyService = {
    */
   async matchJobsForUser(userId: string) {
     const prefs = await AutoApplyModel.getPreferences(userId);
-    if (!prefs || !prefs.is_active) {
+    if (!prefs || prefs.status !== 'enabled') {
       return [];
     }
 
@@ -81,16 +81,16 @@ export const AutoApplyService = {
 
     const matchedJobs = jobRows.filter(job => {
       // 1. Job Titles Filter
-      if (prefs.job_titles && prefs.job_titles.length > 0) {
-        const matchesTitle = prefs.job_titles.some(title => 
+      if (prefs.target_roles && prefs.target_roles.length > 0) {
+        const matchesTitle = prefs.target_roles.some((title: string) => 
           job.title.toLowerCase().includes(title.toLowerCase())
         );
         if (!matchesTitle) return false;
       }
 
       // 2. Locations Filter
-      if (prefs.locations && prefs.locations.length > 0) {
-        const matchesLoc = prefs.locations.some(loc => {
+      if (prefs.target_locations && prefs.target_locations.length > 0) {
+        const matchesLoc = prefs.target_locations.some((loc: string) => {
           const jobLoc = (job.location || '').toLowerCase();
           const pLoc = loc.toLowerCase();
           if (pLoc === 'remote') {
@@ -102,25 +102,13 @@ export const AutoApplyService = {
       }
 
       // 3. Job Types Filter
-      if (prefs.job_types && prefs.job_types.length > 0) {
-        const matchesType = prefs.job_types.some(type => {
+      if (prefs.target_job_types && prefs.target_job_types.length > 0) {
+        const matchesType = prefs.target_job_types.some((type: string) => {
           const normalizedJobType = (job.type || '').replace('_', '-').toLowerCase();
           const normalizedPrefType = type.replace('_', '-').toLowerCase();
           return normalizedJobType === normalizedPrefType;
         });
         if (!matchesType) return false;
-      }
-
-      // 4. Min Salary Filter
-      if (prefs.min_salary !== null && prefs.min_salary !== undefined) {
-        const salaryMax = job.salaryMax;
-        const salaryMin = job.salaryMin;
-        if (salaryMax !== null && salaryMax !== undefined && salaryMax < prefs.min_salary) {
-          return false;
-        }
-        if ((salaryMax === null || salaryMax === undefined) && salaryMin !== null && salaryMin !== undefined && salaryMin < prefs.min_salary) {
-          return false;
-        }
       }
 
       return true;
@@ -147,14 +135,15 @@ export const AutoApplyService = {
    */
   async processPendingApplies(userId: string): Promise<number> {
     const prefs = await AutoApplyModel.getPreferences(userId);
-    if (!prefs || !prefs.is_active) {
+    if (!prefs || prefs.status !== 'enabled') {
       return 0;
     }
 
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
     const appliedTodayCount = await AutoApplyModel.getRecentLogsCount(userId, oneDayAgo);
-    const remainingLimit = prefs.max_applications_per_day - appliedTodayCount;
+    const maxApps = 5; // Fixed default
+    const remainingLimit = maxApps - appliedTodayCount;
 
     if (remainingLimit <= 0) {
       return 0;

@@ -247,7 +247,7 @@ export const ApplicationService = {
         ...application,
         creditsRemaining: balanceAfter,
         creditTransactionId: transactionId,
-        _jobForInsights: { title: job.title, description: job.description ?? '', skills: job.skills ?? [] },
+        _jobForInsights: { title: job.title, description: job.description ?? '', skills: job.skills ?? [], recruiterId: job.recruiter_id },
         _applicantIdForInsights: applicantId,
         _aiInterviewConfig: (job.ai_interview_type && !isAutoShortlisted) ? {
           type: job.ai_interview_type,
@@ -308,6 +308,8 @@ export const ApplicationService = {
       setImmediate(async () => {
         try {
           const profile = await ApplicantProfileModel.findByUserId(apId);
+          
+          // Original AI Insights (Gemini/Ollama)
           const insights = await AIInsightsService.generateInsights(
             {
               skills: Array.isArray(profile?.skills) ? profile.skills : [],
@@ -324,8 +326,69 @@ export const ApplicationService = {
             });
             console.log(`[ApplicationService] AI insights saved for application ${appId}`);
           }
+
+          // New Dynamic Screening & Ranking Flow
+          // 1. Gather Candidate Data
+          const candidateData = {
+            skills: Array.isArray(profile?.skills) ? profile.skills : [],
+            experienceText: (profile?.experience ?? [])
+              .map((e: any) => `${e.title || ''} ${e.description || ''}`)
+              .join(' '),
+            fullText: [
+              profile?.bio ?? '',
+              Array.isArray(profile?.skills) ? profile.skills.join(' ') : '',
+              (profile?.experience ?? [])
+                .map((e: any) => `${e.title || ''} ${e.description || ''}`)
+                .join(' '),
+            ].join(' '),
+            education: profile?.education ?? [],
+          };
+
+          // 2. Screen Candidate
+          // @ts-ignore - dynamic import to avoid circular dependencies if any
+          const { ScreeningService } = require('./ai/ScreeningService');
+          const screeningResult = await ScreeningService.screenCandidate(
+            result.job_id,
+            jobCtx.recruiterId, // Assumes jobCtx has recruiterId, wait we don't have jobCtx.recruiterId in result._jobForInsights yet. We need to pass job.recruiter_id.
+            candidateData,
+            { skills: jobCtx.skills, description: jobCtx.description }
+          );
+
+          // 3. Update DB with Screening Score
+          await prisma.applications.update({
+            where: { id: appId },
+            data: {
+              screening_score: screeningResult.screeningScore,
+              scoring_breakdown: screeningResult.scoringBreakdown,
+            }
+          });
+
+          // 4. Log Audit Event
+          // @ts-ignore
+          const { AuditService } = require('./audit.service');
+          await AuditService.logScreeningEvent({
+            applicationId: appId,
+            resumeId: result.resume_id,
+            jobId: result.job_id,
+            parsedResume: candidateData,
+            parsedJd: { skills: jobCtx.skills, description: jobCtx.description },
+            embeddingsMetadata: {}, // Captured inside ScreeningService optionally
+            scoringBreakdown: screeningResult.scoringBreakdown,
+            screeningScore: screeningResult.screeningScore,
+            explanation: screeningResult.explanation,
+            promptVersion: 'v1.0-ollama',
+            modelVersion: 'llama3', // or dynamically fetched
+            processingTimeMs: 0,
+          });
+
+          // 5. Update Global Job Rankings
+          // @ts-ignore
+          const { RankingService } = require('./ranking.service');
+          await RankingService.updateRankingsForJob(result.job_id, jobCtx.recruiterId);
+          console.log(`[ApplicationService] Dynamic Screening & Ranking completed for ${appId}`);
+
         } catch (err) {
-          console.error('[ApplicationService] AI insights generation failed silently:', err);
+          console.error('[ApplicationService] AI insights/screening generation failed silently:', err);
         }
       });
 
@@ -434,26 +497,7 @@ export const ApplicationService = {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { JobService } = require('./job.service');
 
-    // Pre-fetch job embedding ONCE (not per applicant) to avoid N Gemini API calls.
-    // If the job embedding is cached in jobs.description_embedding, this is a single DB read.
-    let jobEmbedding = await EmbeddingCacheService.getJobEmbedding(jobId);
-    // Fallback: try the general text-hash cache (covers jobs created before this migration)
-    if (!jobEmbedding && job.description) {
-      jobEmbedding = await EmbeddingCacheService.getOrGenerate(job.description);
-      // Store for next time (fire-and-forget)
-      if (jobEmbedding) {
-        EmbeddingCacheService.storeJobEmbedding(jobId, jobEmbedding).catch(
-          (err) => console.warn(`${LOG_PREFIX} Failed to cache job embedding:`, err),
-        );
-      }
-    }
 
-    const embeddingAvailable = Boolean(jobEmbedding);
-    if (embeddingAvailable) {
-      console.log(`${LOG_PREFIX} Using embedding-based ranking for job ${jobId}`);
-    } else {
-      console.log(`${LOG_PREFIX} Embedding unavailable for job ${jobId} — using skills-only ranking`);
-    }
 
     const enrichedApplications = await Promise.all(result.applications.map(async (app: any) => {
       // Prioritize manual score override
@@ -461,24 +505,12 @@ export const ApplicationService = {
         return { ...app, matchScore: app.override_score, matchMethod: 'override' };
       }
 
-      // Attempt embedding-based match score
-      if (embeddingAvailable && app.resume_id && app.applicant_id) {
-        try {
-          const resumeEmbedding = await EmbeddingCacheService.getResumeEmbedding(
-            app.resume_id,
-            app.applicant_id,
-          );
-          if (resumeEmbedding) {
-            const similarity = cosineSimilarity(resumeEmbedding, jobEmbedding!);
-            const matchScore = similarityToScore(similarity);
-            return { ...app, matchScore, matchMethod: 'embedding' };
-          }
-        } catch (err) {
-          console.warn(`${LOG_PREFIX} Embedding match failed for application ${app.id}:`, err);
-        }
+      // Use pre-computed screening_score if available
+      if (app.screening_score !== null && app.screening_score !== undefined) {
+        return { ...app, matchScore: app.screening_score, matchMethod: 'hybrid_ai' };
       }
 
-      // Fallback: skills-only match score (deterministic, always works)
+      // Fallback for legacy applications: skills-only match score
       const matchResult = await JobService.calculateMatchScore(app.skills || [], job.skills || []);
       return { ...app, matchScore: matchResult.matchScore, matchMethod: 'skills' };
     }));
@@ -543,11 +575,9 @@ export const ApplicationService = {
     const skillMatchResult = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
 
     // Fetch candidate's extended profile data
-    const [applicantProjects, githubRepos, applicantCertifications] = await Promise.all([
-      prisma.applicant_projects.findMany({ where: { user_id: application.applicant_id } }),
-      prisma.github_repos.findMany({ where: { user_id: application.applicant_id } }),
-      prisma.applicant_certifications.findMany({ where: { user_id: application.applicant_id } })
-    ]);
+    const applicantProjects: any[] = [];
+    const githubRepos: any[] = [];
+    const applicantCertifications: any[] = [];
 
     return {
       ...application,

@@ -6,6 +6,7 @@ import { sendSuccess } from '../utils/response';
 import { BadRequestError, UnauthorizedError } from '../utils/errors';
 import logger from '../config/logger';
 import { UserModel } from '../models/user.model';
+import { GithubService } from '../services/github.service';
 
 export const AuthController = {
   async register(req: Request, res: Response, next: NextFunction) {

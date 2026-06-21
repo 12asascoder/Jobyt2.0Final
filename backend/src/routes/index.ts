@@ -21,7 +21,6 @@ import webhookRoutes from './webhook.routes';
 import calendarRoutes from './calendar.routes';
 import codingRoutes from './coding.routes';
 import autoApplyRoutes from './autoApply.routes';
-import interviewRoutes from './interview.routes';
 import coachRoutes from './coach.routes';
 
 const router = Router();

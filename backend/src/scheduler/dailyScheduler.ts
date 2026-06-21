@@ -59,7 +59,17 @@ export const setupDailyScheduler = async () => {
     },
   );
 
-  console.log(`${LOG_PREFIX} Daily recommendation and Auto-Apply schedulers setup complete.`);
+  await schedulerQueue.add(
+    'sendDailyDigests',
+    {},
+    {
+      repeat: {
+        pattern: '0 8 * * *', // Every day at 8:00 AM (same as recommendations)
+      },
+    },
+  );
+
+  console.log(`${LOG_PREFIX} Daily recommendation, Auto-Apply, and Digest schedulers setup complete.`);
 };
 
 import { Worker, Job } from 'bullmq';
@@ -165,6 +175,17 @@ export const schedulerWorker = new Worker('schedulerQueue', async (job: Job) => 
 
   if (job.name === 'expireAutoApplyApprovals') {
     await autoApplyQueue.add('expirePendingApprovals', {});
+  }
+
+  if (job.name === 'sendDailyDigests') {
+    console.log(`${LOG_PREFIX} Starting daily digests run...`);
+    try {
+      const { DigestService } = await import('../services/digest.service');
+      await DigestService.sendDailyDigests();
+      console.log(`${LOG_PREFIX} Daily digests run completed successfully.`);
+    } catch (err) {
+      console.error(`${LOG_PREFIX} Daily digests run failed:`, err);
+    }
   }
 
   if (job.name === 'cleanupExpiredVideos') {
