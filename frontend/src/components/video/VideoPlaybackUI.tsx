@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
 import { BrainCircuit, MessageSquare, Code, Users } from 'lucide-react';
 
 interface TranscriptSegment {
@@ -56,18 +55,18 @@ export const VideoPlaybackUI: React.FC<VideoPlaybackUIProps> = ({ videoUrl, tran
     <Card className="shadow-sm border-gray-100">
       <CardHeader className="py-3 px-4 bg-gray-50/50 border-b border-gray-50 flex flex-row items-center gap-2">
         {icon}
-        <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+        <h3 className="text-sm font-semibold m-0">{title}</h3>
       </CardHeader>
-      <CardContent className="p-4 space-y-3">
+      <CardBody className="p-4 space-y-3">
         {Object.entries(scores).map(([key, value]) => (
           <div key={key} className="flex items-center justify-between">
             <span className="text-sm text-gray-600 capitalize">{key.replace('_', ' ')}</span>
-            <Badge variant="secondary" className={`font-mono ${getScoreColor(value)}`}>
+            <Badge className={`font-mono ${getScoreColor(value)}`}>
               {value}/100
             </Badge>
           </div>
         ))}
-      </CardContent>
+      </CardBody>
     </Card>
   );
 
@@ -90,12 +89,12 @@ export const VideoPlaybackUI: React.FC<VideoPlaybackUIProps> = ({ videoUrl, tran
           <CardHeader className="py-4">
             <div className="flex items-center gap-2">
               <BrainCircuit className="h-5 w-5 text-purple-600" />
-              <CardTitle className="text-lg">AI Evaluation Summary</CardTitle>
+              <h3 className="text-lg font-bold m-0">AI Evaluation Summary</h3>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardBody>
             <p className="text-gray-700 leading-relaxed">{evaluationScores.summary}</p>
-          </CardContent>
+          </CardBody>
         </Card>
       </div>
 
@@ -103,12 +102,12 @@ export const VideoPlaybackUI: React.FC<VideoPlaybackUIProps> = ({ videoUrl, tran
         {/* Transcript Panel */}
         <Card className="shadow-sm border-gray-100 h-[400px] flex flex-col">
           <CardHeader className="py-3 px-4 bg-gray-50/50 border-b border-gray-50 flex-shrink-0">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2 m-0">
               <MessageSquare className="h-4 w-4" /> Transcript
-            </CardTitle>
+            </h3>
           </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-hidden">
-            <ScrollArea className="h-full">
+          <CardBody className="p-0 flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto">
               <div className="p-4 space-y-4">
                 {transcriptSegments?.map((segment, idx) => {
                   const isActive = currentTime >= segment.start && currentTime <= segment.end;
@@ -130,8 +129,8 @@ export const VideoPlaybackUI: React.FC<VideoPlaybackUIProps> = ({ videoUrl, tran
                   );
                 })}
               </div>
-            </ScrollArea>
-          </CardContent>
+            </div>
+          </CardBody>
         </Card>
 
         {/* Score Cards */}

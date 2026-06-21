@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/Button';
+import { Card, CardBody } from '@/components/ui/Card';
 import { Play, Square, Pause, RotateCcw, UploadCloud } from 'lucide-react';
 import axios from 'axios';
 
@@ -134,7 +134,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({ applicationId, onUpl
 
   return (
     <Card className="w-full max-w-3xl mx-auto overflow-hidden bg-gray-900 border-gray-800">
-      <CardContent className="p-0">
+      <CardBody className="p-0">
         <div className="relative aspect-video bg-black flex items-center justify-center">
           <video
             ref={videoRef}
@@ -160,32 +160,32 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({ applicationId, onUpl
             )}
             
             {recordingState === 'recording' && (
-              <Button onClick={handlePauseRecording} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">
+              <Button onClick={handlePauseRecording} className="bg-gray-800 text-white hover:bg-gray-700">
                 <Pause className="w-4 h-4 mr-2" /> Pause
               </Button>
             )}
             
             {recordingState === 'paused' && (
-              <Button onClick={handleResumeRecording} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">
+              <Button onClick={handleResumeRecording} className="bg-gray-800 text-white hover:bg-gray-700">
                 <Play className="w-4 h-4 mr-2" /> Resume
               </Button>
             )}
             
             {(recordingState === 'recording' || recordingState === 'paused') && (
-              <Button onClick={handleStopRecording} variant="destructive">
+              <Button onClick={handleStopRecording} className="bg-red-600 hover:bg-red-700 text-white">
                 <Square className="w-4 h-4 mr-2" /> Stop
               </Button>
             )}
 
             {recordingState === 'finished' && (
-              <Button onClick={handleRetake} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700" disabled={uploading}>
+              <Button onClick={handleRetake} className="bg-gray-800 text-white hover:bg-gray-700" disabled={uploading}>
                 <RotateCcw className="w-4 h-4 mr-2" /> Retake
               </Button>
             )}
           </div>
 
           <div className="flex gap-3">
-            <Button variant="ghost" onClick={onCancel} disabled={uploading} className="text-gray-400 hover:text-white hover:bg-gray-800">
+            <Button onClick={onCancel} disabled={uploading} className="bg-transparent text-gray-400 hover:text-white hover:bg-gray-800 border border-gray-700">
               Cancel
             </Button>
             {recordingState === 'finished' && (
@@ -204,7 +204,7 @@ export const VideoCapture: React.FC<VideoCaptureProps> = ({ applicationId, onUpl
             )}
           </div>
         </div>
-      </CardContent>
+      </CardBody>
     </Card>
   );
 };

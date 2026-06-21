@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/Button';
+import { Card, CardBody, CardFooter, CardHeader } from '@/components/ui/Card';
 import { InfoIcon, ShieldCheck } from 'lucide-react';
 
 interface ConsentScreenProps {
@@ -21,19 +19,19 @@ export const ConsentScreen: React.FC<ConsentScreenProps> = ({ onConsent, onCance
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
             <ShieldCheck className="h-8 w-8 text-blue-600" />
-            <CardTitle className="text-2xl">Video Interview Consent</CardTitle>
+            <h3 className="text-2xl font-bold">Video Interview Consent</h3>
           </div>
-          <CardDescription>
+          <p className="text-gray-500">
             Before we begin the video interview, please review our recording and AI evaluation policies.
-          </CardDescription>
+          </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert className="bg-blue-50 border-blue-200">
+        <CardBody className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded-md flex items-center gap-3">
             <InfoIcon className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800">
+            <p className="text-blue-800 text-sm">
               This interview will be recorded, transcribed, and evaluated using AI.
-            </AlertDescription>
-          </Alert>
+            </p>
+          </div>
           
           <div className="space-y-3 text-sm text-gray-700">
             <p>By proceeding, you consent to the following:</p>
@@ -47,10 +45,12 @@ export const ConsentScreen: React.FC<ConsentScreenProps> = ({ onConsent, onCance
           </div>
 
           <div className="flex items-start space-x-3 mt-6 pt-4 border-t">
-            <Checkbox 
+            <input 
+              type="checkbox"
               id="consent" 
               checked={agreed} 
-              onCheckedChange={(checked) => setAgreed(checked === true)} 
+              onChange={(e) => setAgreed(e.target.checked)} 
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <label 
               htmlFor="consent" 
@@ -59,9 +59,9 @@ export const ConsentScreen: React.FC<ConsentScreenProps> = ({ onConsent, onCance
               I have read and agree to the recording, AI evaluation, and data retention policies.
             </label>
           </div>
-        </CardContent>
+        </CardBody>
         <CardFooter className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onCancel}>
+          <Button onClick={onCancel} className="bg-gray-200 text-gray-800 hover:bg-gray-300">
             Cancel
           </Button>
           <Button disabled={!agreed} onClick={() => onConsent(true)}>
