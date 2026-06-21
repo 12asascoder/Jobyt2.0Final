@@ -282,7 +282,8 @@ export const ApplicationModel = {
       pool.query('SELECT COUNT(*) FROM applications WHERE applicant_id = $1', [applicantId]),
       pool.query(
         `SELECT a.*, j.title as job_title, j.location, j.skills as job_skills,
-                COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS "companyName"
+                COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS "companyName",
+                (SELECT status FROM interviews i WHERE i.application_id = a.id ORDER BY created_at DESC LIMIT 1) as interview_status
          FROM applications a
          JOIN jobs j ON j.id = a.job_id
          LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
@@ -352,7 +353,8 @@ export const ApplicationModel = {
     let query = `
       SELECT a.*, j.title as job_title, j.location, j.type, j.salary_min, j.salary_max, j.skills as job_skills,
              COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS "companyName",
-             rp.industry
+             rp.industry,
+             (SELECT status FROM interviews i WHERE i.application_id = a.id ORDER BY created_at DESC LIMIT 1) as interview_status
       FROM applications a
       JOIN jobs j ON j.id = a.job_id
       LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
