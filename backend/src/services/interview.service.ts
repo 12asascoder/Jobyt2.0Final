@@ -841,4 +841,99 @@ export const InterviewService = {
 
     return text.trim();
   },
+
+  async generateTTS(interviewId: string, text: string, user: JwtPayload): Promise<Buffer> {
+    const interview = await InterviewModel.getById(interviewId);
+    if (!interview) {
+      throw new NotFoundError('Interview not found', 'INTERVIEW_NOT_FOUND');
+    }
+
+    const isCandidate = interview.candidate_id === user.userId;
+    const isInterviewer = interview.interviewer_id === user.userId;
+    const isAdmin = user.role === 'admin';
+
+    if (!isCandidate && !isInterviewer && !isAdmin) {
+      throw new ForbiddenError(
+        'You are not authorized to participate in this interview',
+        'NOT_INTERVIEW_PARTICIPANT',
+      );
+    }
+
+    const trimmedText = (text || '').trim();
+    if (!trimmedText) {
+      throw new BadRequestError('Text prompt is required for TTS synthesis', 'TEXT_REQUIRED');
+    }
+
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    const elevenlabsApiKey = process.env.ELEVENLABS_API_KEY;
+
+    // 1. OpenAI TTS
+    if (openaiApiKey && openaiApiKey.trim()) {
+      try {
+        console.log('[OpenAI TTS] Generating speech...');
+        const response = await axios.post(
+          'https://api.openai.com/v1/audio/speech',
+          {
+            model: 'tts-1',
+            input: trimmedText,
+            voice: 'alloy',
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${openaiApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            responseType: 'arraybuffer',
+            timeout: 10000,
+          },
+        );
+        return Buffer.from(response.data);
+      } catch (err: any) {
+        console.error('[OpenAI TTS] Failed:', err.message);
+      }
+    }
+
+    // 2. ElevenLabs TTS
+    if (elevenlabsApiKey && elevenlabsApiKey.trim()) {
+      try {
+        console.log('[ElevenLabs TTS] Generating speech...');
+        const voiceId = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+        const response = await axios.post(
+          `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+          {
+            text: trimmedText,
+            model_id: 'eleven_monolingual_v1',
+          },
+          {
+            headers: {
+              'xi-api-key': elevenlabsApiKey,
+              'Content-Type': 'application/json',
+            },
+            responseType: 'arraybuffer',
+            timeout: 10000,
+          },
+        );
+        return Buffer.from(response.data);
+      } catch (err: any) {
+        console.error('[ElevenLabs TTS] Failed:', err.message);
+      }
+    }
+
+    // 3. Free Public Fallback: Google Translate TTS
+    try {
+      console.log('[Google Translate TTS] Generating fallback speech...');
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${encodeURIComponent(trimmedText)}`;
+      const response = await axios.get(url, {
+        responseType: 'arraybuffer',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        },
+        timeout: 10000,
+      });
+      return Buffer.from(response.data);
+    } catch (err: any) {
+      console.error('[Google Translate TTS] Failed:', err.message);
+      throw new BadRequestError('Failed to generate Text-to-Speech audio', 'TTS_FAILED');
+    }
+  },
 };

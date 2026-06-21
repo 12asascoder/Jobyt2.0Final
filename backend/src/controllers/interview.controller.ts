@@ -279,4 +279,25 @@ export const InterviewController = {
       next(error);
     }
   },
+
+  async generateTTS(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const { text } = req.body as { text?: string };
+
+      if (!id) {
+        throw new BadRequestError('Interview ID is required', 'ID_REQUIRED');
+      }
+      if (!text) {
+        throw new BadRequestError('Text prompt is required', 'TEXT_REQUIRED');
+      }
+
+      const audioBuffer = await InterviewService.generateTTS(id, text, req.user!);
+      
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.send(audioBuffer);
+    } catch (err) {
+      next(err);
+    }
+  },
 };
