@@ -15,6 +15,8 @@ import { ApplicantProfileModel } from '../models/applicantProfile.model';
 import { EmbeddingCacheService } from './embeddingCache.service';
 import { cosineSimilarity, similarityToScore } from '../utils/embedding';
 import { SkillMatchingService } from './matching/skillMatching.service';
+import { WebhookService } from './webhook.service';
+import { WEBHOOK_EVENTS } from './webhook/eventCatalog';
 import redis from '../config/redis';
 
 const LOG_PREFIX = '[ApplicationService]';
@@ -29,6 +31,7 @@ export const ApplicationService = {
       resume_id: string;
       answers?: Array<{ question_id: string; answer: string }>;
     },
+    options?: { submissionSource?: 'manual' | 'auto_apply' },
   ) {
     await ProfileRequirementsService.assertApplicantCanApply(applicantId);
 
@@ -89,10 +92,12 @@ export const ApplicationService = {
         .filter((answer): answer is { question_id: string; answer: string } => Boolean(answer));
 
       // 3) Credit deduction (atomic under the same DB transaction)
+      const creditDescription =
+        options?.submissionSource === 'auto_apply' ? 'Auto-Apply job application' : 'Job application';
       const { transactionId, balanceAfter } = await CreditService.deductCredits(
         applicantId,
         CREDIT_COSTS.APPLY_JOB,
-        'Job application',
+        creditDescription,
         jobId,
         client,
       );
@@ -136,6 +141,7 @@ export const ApplicationService = {
             application_answers: filteredAnswers,
             ats_score: atsScore,
             ats_breakdown: atsBreakdown,
+            submission_source: options?.submissionSource || 'manual',
           },
           client,
         );
@@ -321,6 +327,22 @@ export const ApplicationService = {
           console.error('[ApplicationService] AI insights generation failed silently:', err);
         }
       });
+
+      // Fire webhook: application.submitted
+      setImmediate(async () => {
+        try {
+          await WebhookService.fireEvent(WEBHOOK_EVENTS.APPLICATION_SUBMITTED, {
+            event: WEBHOOK_EVENTS.APPLICATION_SUBMITTED,
+            application_id: appId,
+            job_id: result.job_id,
+            job_title: jobCtx.title,
+            applicant: { id: apId, name: null, email: null },
+            timestamp: new Date().toISOString(),
+          });
+        } catch (err) {
+          console.error('[ApplicationService] Webhook fire failed silently:', err);
+        }
+      });
       return cleanResult;
     });
   },
@@ -355,6 +377,34 @@ export const ApplicationService = {
       title: 'Application status updated',
       body: `Your application for "${job.title}" is now: ${status.replace('_', ' ')}`,
       action_url: `/applications`,
+    });
+
+    // Fire webhook: application.status_changed
+    setImmediate(async () => {
+      try {
+        await WebhookService.fireEvent(WEBHOOK_EVENTS.APPLICATION_STATUS_CHANGED, {
+          event: WEBHOOK_EVENTS.APPLICATION_STATUS_CHANGED,
+          application_id: applicationId,
+          job_id: application.job_id,
+          job_title: job.title,
+          old_status: application.status || '',
+          new_status: status,
+          changed_by: user.userId,
+          timestamp: new Date().toISOString(),
+        });
+
+        if (status === 'offer') {
+          await WebhookService.fireEvent(WEBHOOK_EVENTS.APPLICATION_OFFER_EXTENDED, {
+            event: WEBHOOK_EVENTS.APPLICATION_OFFER_EXTENDED,
+            application_id: applicationId,
+            job_id: application.job_id,
+            job_title: job.title,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        console.error('[ApplicationService] Webhook fire failed silently:', err);
+      }
     });
 
     return updated;

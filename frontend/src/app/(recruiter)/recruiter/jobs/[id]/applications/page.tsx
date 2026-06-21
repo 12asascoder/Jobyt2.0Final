@@ -257,6 +257,11 @@ export default function JobApplicationsPage() {
                         )}
                       </div>
                     )}
+                    {app.submission_source === 'auto_apply' && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-[#c3ff3d]/20 text-[#0b1120] border border-[#c3ff3d]/30">
+                        Auto-Applied via Jobyt
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs font-semibold text-gray-500 mt-0.5">Applied {formatDate(app.created_at)}</p>
                 </div>

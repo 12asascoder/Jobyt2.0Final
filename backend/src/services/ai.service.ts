@@ -24,6 +24,8 @@ import { aiConfig } from '../config/ai.config';
 import { AIProvider } from './ai/interfaces/aiProvider.interface';
 import { GroqProvider } from './ai/providers/groq.provider';
 import { GrokProvider } from './ai/providers/grok.provider';
+import { ClaudeProvider } from './ai/providers/claude.provider';
+import { OllamaProvider } from './ai/providers/ollama.provider';
 import { EmbeddingProviderResolver } from './ai/providers/embedding.provider';
 
 const LOG_PREFIX = '[AI]';
@@ -117,7 +119,6 @@ function isCircuitOpen(key: string): boolean {
   const cb = getCircuitBreaker(key);
   if (!cb.isOpen) return false;
 
-  // Check if cooldown has elapsed
   const elapsed = Date.now() - cb.lastFailureAt;
   if (elapsed >= aiConfig.circuitBreakerCooldownMs) {
     console.log(`${LOG_PREFIX} Circuit breaker HALF-OPEN for "${key}" — allowing retry`);
@@ -152,7 +153,6 @@ function isPermanentError(message: string): boolean {
     return true;
   }
   return (
-    // 429 Quota exhausted — retrying will only make it worse
     message.includes('429') ||
     message.includes('RESOURCE_EXHAUSTED') ||
     message.includes('Quota exceeded') ||
@@ -197,7 +197,6 @@ async function withRetry<T>(
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
 
-      // Fast-fail on permanent errors — no retry storm
       if (isPermanentError(lastError.message)) {
         const isAuth = isAuthError(lastError.message);
         const reason = isAuth ? 'AUTHENTICATION_FAILED'
@@ -252,7 +251,60 @@ function getGrokProvider(): AIProvider | null {
   return grokProvider;
 }
 
+let claudeProvider: AIProvider | null = null;
+function getClaudeProvider(): AIProvider | null {
+  if (!aiConfig.anthropicApiKey) return null;
+  if (!claudeProvider) {
+    claudeProvider = new ClaudeProvider(
+      aiConfig.anthropicApiKey,
+      aiConfig.anthropicModel,
+      aiConfig.defaultTemperature,
+    );
+  }
+  return claudeProvider;
+}
 
+let ollamaProvider: AIProvider | null = null;
+function getOllamaProvider(): AIProvider | null {
+  if (!aiConfig.ollamaConfigured || !aiConfig.ollamaBaseUrl) return null;
+  if (!ollamaProvider) {
+    ollamaProvider = new OllamaProvider(
+      aiConfig.ollamaBaseUrl,
+      aiConfig.ollamaModel,
+      aiConfig.defaultTemperature,
+    );
+  }
+  return ollamaProvider;
+}
+
+export function resolveProvider(
+  requestedProvider?: 'grok' | 'groq' | 'claude' | 'ollama',
+): 'grok' | 'groq' | 'claude' | 'ollama' {
+  const env = process.env.NODE_ENV;
+
+  if (env === 'production') {
+    if (requestedProvider) {
+      return requestedProvider;
+    }
+    return 'claude';
+  }
+
+  if (env === 'test') {
+    if (requestedProvider) {
+      return requestedProvider;
+    }
+    return 'groq'; // preserve compatibility for existing mock tests
+  }
+
+  // development / other local environment
+  if (aiConfig.isConfigured) {
+    return 'groq';
+  } else if (aiConfig.ollamaConfigured) {
+    return 'ollama';
+  } else {
+    return 'claude';
+  }
+}
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
@@ -263,35 +315,57 @@ export const AIService = {
    */
   async generateText(
     prompt: string,
-    options?: { temperature?: number; responseMimeType?: string; provider?: 'grok' | 'groq' },
+    options?: { temperature?: number; responseMimeType?: string; provider?: 'grok' | 'groq' | 'claude' | 'ollama' },
   ): Promise<string | null> {
     const providerChoice = options?.provider;
-    const model = providerChoice === 'grok' ? aiConfig.xaiModel : aiConfig.textModel;
-    const circuitKey = `text:${providerChoice ?? 'groq'}:${model}`;
+    const resolvedProvider = resolveProvider(providerChoice);
+    const model =
+      resolvedProvider === 'grok'
+        ? aiConfig.xaiModel
+        : resolvedProvider === 'claude'
+        ? aiConfig.anthropicModel
+        : resolvedProvider === 'ollama'
+        ? aiConfig.ollamaModel
+        : aiConfig.textModel;
+    const circuitKey = `text:${resolvedProvider}:${model}`;
     const startMs = Date.now();
-
-    // Allow provider-specific availability: Groq remains the default configured provider.
+ 
+    // Allow provider-specific availability
     if (isCircuitOpen(circuitKey)) {
       console.warn(`${LOG_PREFIX} Circuit OPEN for ${model} — skipping text generation`);
       return null;
     }
-
+ 
     let provider: AIProvider | null = null;
-    if (providerChoice === 'grok') {
+    if (resolvedProvider === 'grok') {
       provider = getGrokProvider();
+    } else if (resolvedProvider === 'claude') {
+      provider = getClaudeProvider();
+    } else if (resolvedProvider === 'ollama') {
+      provider = getOllamaProvider();
     } else {
       provider = getGroqProvider();
     }
     if (!provider) {
-      console.warn(`${LOG_PREFIX} No provider configured for choice=${providerChoice ?? 'groq'}`);
+      console.warn(`${LOG_PREFIX} No provider configured for choice=${resolvedProvider}`);
       return null;
     }
 
     try {
+      const payload: any = {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: options?.temperature ?? aiConfig.defaultTemperature,
+      };
+
+      if (options?.responseMimeType === 'application/json') {
+        payload.response_format = { type: 'json_object' };
+      }
+
       const result = await withRetry(
         () =>
           withTimeout(
-            provider.generateText({
+            provider!.generateText({
               prompt,
               temperature: options?.temperature ?? aiConfig.defaultTemperature,
               responseMimeType: options?.responseMimeType,
@@ -313,15 +387,32 @@ export const AIService = {
       recordSuccess(circuitKey);
       console.log(`${LOG_PREFIX} Text OK model=${model} len=${text.length} ${elapsed}ms`);
       return text;
-    } catch (err) {
+    } catch (err: any) {
       const elapsed = Date.now() - startMs;
       const message = err instanceof Error ? err.message : String(err);
       
       const isAuth = isAuthError(message);
       if (isAuth) {
         isAuthFailed = true;
-        const authProvider = providerChoice === 'grok' ? 'Grok' : 'Groq';
-        console.warn(`${LOG_PREFIX} ${authProvider} Authentication Failed: Invalid API Key. Please verify ${providerChoice === 'grok' ? 'XAI_API_KEY' : 'GROQ_API_KEY'} in .env.`);
+        const authProvider =
+          resolvedProvider === 'grok'
+            ? 'Grok'
+            : resolvedProvider === 'claude'
+            ? 'Claude'
+            : resolvedProvider === 'ollama'
+            ? 'Ollama'
+            : 'Groq';
+        console.warn(
+          `${LOG_PREFIX} ${authProvider} Authentication Failed: Invalid API Key. Please verify ${
+            resolvedProvider === 'grok'
+              ? 'XAI_API_KEY'
+              : resolvedProvider === 'claude'
+              ? 'ANTHROPIC_API_KEY'
+              : resolvedProvider === 'ollama'
+              ? 'OLLAMA_BASE_URL'
+              : 'GROQ_API_KEY'
+          } in .env.`,
+        );
         tripCircuit(circuitKey);
       } else {
         recordFailure(circuitKey);
@@ -350,7 +441,10 @@ export const AIService = {
    * Uses response_format: { type: 'json_object' } for structured output.
    * Returns null on failure or parse error.
    */
-  async generateJSON<T = unknown>(prompt: string, options?: { provider?: 'grok' | 'groq' }): Promise<T | null> {
+  async generateJSON<T = unknown>(
+    prompt: string,
+    options?: { provider?: 'grok' | 'groq' | 'claude' | 'ollama' }
+  ): Promise<T | null> {
     // Backwards-compatible: default to configured text provider (Groq).
     const raw = await this.generateText(prompt, {
       responseMimeType: 'application/json',
@@ -403,12 +497,8 @@ export const AIService = {
     }
 
     const trimmed = text.trim();
-    if (!trimmed) {
-      console.warn(`${EMBED_PREFIX} Empty text provided — skipping`);
-      return null;
-    }
+    if (!trimmed) return null;
 
-    // Truncate to safe limits
     const input = trimmed.length > aiConfig.maxEmbeddingInputChars
       ? trimmed.slice(0, aiConfig.maxEmbeddingInputChars)
       : trimmed;
@@ -437,7 +527,7 @@ export const AIService = {
       recordSuccess(circuitKey);
       console.log(`${EMBED_PREFIX} SUCCESS provider=${providerName} model=${model} dims=${embedding.length} ${elapsed}ms`);
       return embedding;
-    } catch (err) {
+    } catch (err: any) {
       const elapsed = Date.now() - startMs;
       const message = err instanceof Error ? err.message : String(err);
       
@@ -474,11 +564,6 @@ export const AIService = {
     }
   },
 
-  /**
-   * Validate configured models on startup.
-   * Logs active model configuration and warns about potential issues.
-   * Does NOT block startup — failures are logged, not thrown.
-   */
   async healthCheck(): Promise<{ text: boolean; embedding: boolean }> {
     const result = { text: false, embedding: false };
 
@@ -486,6 +571,8 @@ export const AIService = {
     console.log(`${LOG_PREFIX} Text provider:         Groq`);
     console.log(`${LOG_PREFIX} Text model:            ${aiConfig.textModel}`);
     console.log(`${LOG_PREFIX} Text configured:       ${aiConfig.isConfigured}`);
+    console.log(`${LOG_PREFIX} Claude model:          ${aiConfig.anthropicModel}`);
+    console.log(`${LOG_PREFIX} Claude configured:     ${aiConfig.anthropicConfigured}`);
     console.log(`${LOG_PREFIX} Embedding provider:    ${aiConfig.embeddingProvider}`);
     console.log(`${LOG_PREFIX} Embedding model:       ${aiConfig.embeddingModel}`);
     console.log(`${LOG_PREFIX} Embeddings configured: ${aiConfig.embeddingsConfigured}`);
@@ -501,7 +588,6 @@ export const AIService = {
     }
 
     if (process.env.SKIP_AI_HEALTH_CHECK === 'true') {
-      console.warn(`${LOG_PREFIX} Health check bypassed via SKIP_AI_HEALTH_CHECK=true`);
       result.text = true;
       result.embedding = aiConfig.embeddingsConfigured && aiConfig.enableSemanticScoring;
       return result;
@@ -539,9 +625,6 @@ export const AIService = {
     return result;
   },
 
-  /**
-   * Get current circuit breaker status for monitoring.
-   */
   getCircuitStatus(): Record<string, { failures: number; isOpen: boolean }> {
     const status: Record<string, { failures: number; isOpen: boolean }> = {};
     for (const [key, state] of Object.entries(circuitBreakers)) {

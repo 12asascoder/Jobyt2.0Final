@@ -42,12 +42,18 @@ export interface Application {
 let resumeIdColumnExists: boolean | null = null;
 let applicationAnswersColumnExists: boolean | null = null;
 let atsScoreColumnExists: boolean | null = null;
+let submissionSourceColumnExists: boolean | null = null;
 
 
-async function hasColumn(columnName: 'resume_id' | 'application_answers' | 'ats_score', client?: PoolClient): Promise<boolean> {
-  const cached = columnName === 'resume_id' ? resumeIdColumnExists : 
-                 columnName === 'application_answers' ? applicationAnswersColumnExists :
-                 atsScoreColumnExists;
+async function hasColumn(
+  columnName: 'resume_id' | 'application_answers' | 'ats_score' | 'submission_source',
+  client?: PoolClient,
+): Promise<boolean> {
+  const cached =
+    columnName === 'resume_id' ? resumeIdColumnExists :
+    columnName === 'application_answers' ? applicationAnswersColumnExists :
+    columnName === 'ats_score' ? atsScoreColumnExists :
+    submissionSourceColumnExists;
   if (cached !== null) return cached;
 
   const db = client ?? pool;
@@ -65,6 +71,7 @@ async function hasColumn(columnName: 'resume_id' | 'application_answers' | 'ats_
   if (columnName === 'resume_id') resumeIdColumnExists = exists;
   if (columnName === 'application_answers') applicationAnswersColumnExists = exists;
   if (columnName === 'ats_score') atsScoreColumnExists = exists;
+  if (columnName === 'submission_source') submissionSourceColumnExists = exists;
   return exists;
 }
 
@@ -156,6 +163,7 @@ export const ApplicationModel = {
       resume_snapshot_url?: string;
       ats_score?: number | null;
       ats_breakdown?: object | null;
+      submission_source?: 'manual' | 'auto_apply';
     },
     client?: PoolClient,
   ): Promise<Application> {
@@ -163,6 +171,7 @@ export const ApplicationModel = {
     const hasResumeId = await hasColumn('resume_id', client);
     const hasAnswers = await hasColumn('application_answers', client);
     const hasAtsScore = await hasColumn('ats_score', client);
+    const hasSubmissionSource = await hasColumn('submission_source', client);
     const answers = normalizeAnswers(data.application_answers);
 
     const columns = ['job_id', 'applicant_id', 'cover_letter', 'resume_snapshot_url'];
@@ -188,6 +197,11 @@ export const ApplicationModel = {
       values.push(data.ats_score ?? null);
       columns.push('ats_breakdown');
       values.push(data.ats_breakdown ? JSON.stringify(data.ats_breakdown) : null);
+    }
+
+    if (hasSubmissionSource) {
+      columns.push('submission_source');
+      values.push(data.submission_source || 'manual');
     }
 
     const placeholders = columns.map((_, index) => `$${index + 1}`).join(',');
@@ -388,13 +402,13 @@ export const ApplicationModel = {
     const { rows } = await pool.query(
       `SELECT 
          COUNT(*) as total,
-       SUM(CASE WHEN status = 'APPLIED' THEN 1 ELSE 0 END) as applied,
-         SUM(CASE WHEN status = 'SCREENING' THEN 1 ELSE 0 END) as in_review,
-         SUM(CASE WHEN status = 'SHORTLISTED' THEN 1 ELSE 0 END) as shortlisted,
-         SUM(CASE WHEN status = 'INTERVIEW' THEN 1 ELSE 0 END) as interview,
-         SUM(CASE WHEN status = 'SELECTED' THEN 1 ELSE 0 END) as offer,
-         SUM(CASE WHEN status = 'HIRED' THEN 1 ELSE 0 END) as hired,
-         SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END) as rejected
+         SUM(CASE WHEN status = 'applied' THEN 1 ELSE 0 END) as applied,
+         SUM(CASE WHEN status = 'in_review' THEN 1 ELSE 0 END) as in_review,
+         SUM(CASE WHEN status = 'shortlisted' THEN 1 ELSE 0 END) as shortlisted,
+         SUM(CASE WHEN status = 'interview' THEN 1 ELSE 0 END) as interview,
+         SUM(CASE WHEN status = 'offer' THEN 1 ELSE 0 END) as offer,
+         SUM(CASE WHEN status = 'hired' THEN 1 ELSE 0 END) as hired,
+         SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
        FROM applications
        WHERE applicant_id = $1`,
       [applicantId],

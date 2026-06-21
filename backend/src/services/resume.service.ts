@@ -388,8 +388,10 @@ export const ResumeService = {
 
     if (mime.includes('pdf') || lowerName.endsWith('.pdf')) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const pdfParse = require('pdf-parse');
-      const parsedPdf = await pdfParse(buffer);
+      const { PDFParse } = require('pdf-parse');
+      const parser = new PDFParse({ data: new Uint8Array(buffer) });
+      const parsedPdf = await parser.getText();
+      await parser.destroy().catch(() => undefined);
       const text = String(parsedPdf?.text || '').trim();
       if (text) return text;
     }
