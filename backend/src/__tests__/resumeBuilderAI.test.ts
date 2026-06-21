@@ -152,9 +152,9 @@ describe('Resume Builder AI - Resume Draft & LaTeX Export', () => {
       expect(latex).toBeTruthy();
       // Should not contain unescaped special characters
       expect(latex).not.toMatch(/\$(?![0-9])/);
-      expect(latex).not.toContain('&');
-      expect(latex).not.toContain('_');
-      expect(latex).not.toContain('%');
+      expect(latex).not.toMatch(/(?<!\\)&/);
+      expect(latex).not.toMatch(/(?<!\\)_/);
+      expect(latex).not.toMatch(/(?<!\\)%/);
     });
 
     it('should handle empty sections gracefully', () => {
@@ -211,9 +211,9 @@ describe('Resume Builder AI - Resume Draft & LaTeX Export', () => {
       expect(payload).toBeDefined();
       expect(payload.name).toBe('Test User');
       expect(payload.bio).toBe('Software Developer');
-      expect(payload.skills).toEqual(['JavaScript', 'React']);
-      expect(payload.experience).toEqual(expect.any(Array));
-      expect(payload.education).toEqual(expect.any(Array));
+      expect(payload.skills).toBe('JavaScript, React');
+      expect(payload.experience).toBe('Developer | Company A | 2020-2025 | Built features');
+      expect(payload.education).toBe('B.S. CS | University | 2016-2020');
     });
   });
 

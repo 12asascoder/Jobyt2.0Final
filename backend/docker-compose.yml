@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   backend:
     build: .
@@ -19,12 +21,15 @@ services:
       PYTHON_RESUME_PARSER_URL: http://resume-parser:8000/parse
       PYTHON_RESUME_PARSER_TIMEOUT_MS: "8000"
       PYTHON_RESUME_PARSER_API_KEY: ${PYTHON_RESUME_PARSER_API_KEY:-}
+      JUDGE0_API_URL: http://judge0-server:2358
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       resume-parser:
+        condition: service_started
+      judge0-server:
         condition: service_started
     restart: unless-stopped
 
@@ -69,5 +74,72 @@ services:
       timeout: 5s
       retries: 5
 
+  judge0-db:
+    image: postgres:15
+    container_name: internship-judge0-db
+    environment:
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0pass
+      POSTGRES_DB: judge0
+    volumes:
+      - judge0_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U judge0 -d judge0"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  judge0-redis:
+    image: redis:7-alpine
+    container_name: internship-judge0-redis
+    command: redis-server --appendonly yes
+
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    container_name: internship-judge0-server
+    privileged: true
+    ports:
+      - "2358:2358"
+    environment:
+      REDIS_HOST: judge0-redis
+      REDIS_PORT: 6379
+      POSTGRES_HOST: judge0-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0pass
+      RAILS_ENV: production
+      ENABLE_WAIT_RESULT: "true"
+      MAX_MEMORY_LIMIT: "10240000"
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
+        condition: service_started
+    restart: unless-stopped
+
+  judge0-workers:
+    image: judge0/judge0:1.13.1
+    container_name: internship-judge0-workers
+    privileged: true
+    command: ["./scripts/workers"]
+    environment:
+      REDIS_HOST: judge0-redis
+      REDIS_PORT: 6379
+      POSTGRES_HOST: judge0-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0pass
+      RAILS_ENV: production
+      MAX_MEMORY_LIMIT: "10240000"
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  judge0_postgres_data:
