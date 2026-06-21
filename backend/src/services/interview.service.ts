@@ -14,6 +14,11 @@ import { ApplicationModel } from '../models/application.model';
 import { UserModel } from '../models/user.model';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { forbidden, notFound, badRequest, AppError } from '../utils/appError';
+import axios from 'axios';
+import { Queue } from 'bullmq';
+
+// We just typecast to avoid importing the actual queue if it's missing in this file
+const bulkInterviewQueue = new Queue('bulkInterviewQueue');
 import { AIService } from './ai.service';
 import { PromptTemplatesService } from './promptTemplates.service';
 import { ReportGeneratorService } from './reportGenerator.service';

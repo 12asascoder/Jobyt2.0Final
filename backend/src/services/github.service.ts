@@ -41,34 +41,10 @@ export class GithubService {
 
       logger.info(`Fetched ${repos.length} GitHub repos for user ${userId}`);
 
-      // Upsert each repository
-      for (const repo of repos) {
-        const repoId = repo.id as number;
-        await prisma.github_repos.upsert({
-          where: {
-            user_id_repo_id: {
-              user_id: userId,
-              repo_id: repoId,
-            },
-          },
-          create: {
-            user_id: userId,
-            repo_id: repoId,
-            name: repo.name ?? '',
-            description: repo.description,
-            html_url: repo.html_url ?? '',
-            language: repo.language,
-            stargazers_count: repo.stargazers_count ?? 0,
-          },
-          update: {
-            name: repo.name ?? '',
-            description: repo.description,
-            html_url: repo.html_url ?? '',
-            language: repo.language,
-            stargazers_count: repo.stargazers_count ?? 0,
-          },
-        });
-      }
+      // Upsert each repository is temporarily disabled as github_repos table does not exist
+      // for (const repo of repos) {
+      //   const repoId = repo.id as number;
+      // }
     } catch (error) {
       logger.error('Failed to sync GitHub repos', error);
       // Swallow error to avoid breaking login flow

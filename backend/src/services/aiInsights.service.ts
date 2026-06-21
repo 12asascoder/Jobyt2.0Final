@@ -1,15 +1,4 @@
-/**
- * AI Insights Service
- *
- * Generates three AI-written insights for a job application using OpenAI GPT-4o-mini:
- *   1. fit_insights       — paragraph explaining fit/not-fit
- *   2. improvement_suggestions — newline-separated bullet list of things to improve
- *   3. rejection_reason   — single honest sentence (draft; only shown if applicant is rejected)
- *
- * Never throws. Returns null on any failure so the apply flow is never blocked.
- *
- * Profile incomplete threshold: fewer than 3 skills AND no bio text.
- */
+import { OllamaProvider } from './ai/OllamaProvider';
 
 const LOG_PREFIX = '[AIInsights]';
 
@@ -67,14 +56,14 @@ APPLICANT BIO: ${profile.bio?.trim() || 'Not provided'}
 Based on the above, respond ONLY with a valid JSON object (no markdown, no code fences):
 {
   "fit_insights": "A 2-3 sentence paragraph explaining how well this applicant fits the role. Be specific about which skills match and which are missing. Be honest but constructive.",
-  "improvement_suggestions": "- First suggestion\n- Second suggestion\n- Third suggestion",
+  "improvement_suggestions": "- First suggestion\\n- Second suggestion\\n- Third suggestion",
   "rejection_reason": "A single direct sentence explaining why this applicant may not be selected for this specific role."
 }
 
 Rules:
 1. fit_insights: 2-3 sentences, specific, professional.
 2. improvement_suggestions: 3-5 bullet points, each starting with "- ", separated by newlines.
-3. rejection_reason: One sentence only. Write it as a draft for the recruiter; it will only be shown to the applicant if they are rejected.
+3. rejection_reason: One sentence only. Write it as a draft for the recruiter.
 4. Return raw JSON only. No extra text.`;
 }
 
@@ -83,55 +72,13 @@ export const AIInsightsService = {
     profile: ApplicantContext,
     job: JobContext,
   ): Promise<AIInsightsResult | null> {
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-      console.warn(`${LOG_PREFIX} GEMINI_API_KEY not configured — skipping AI insights generation.`);
-      return null;
-    }
-
     const profileIncomplete = isProfileIncomplete(profile);
 
     try {
-      const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: buildPrompt(profile, job),
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 2000,
-          },
-        }),
-      });
+      const prompt = buildPrompt(profile, job);
+      const response = await OllamaProvider.generate(prompt, 'json');
 
-      if (!response.ok) {
-        const err = await response.text();
-        console.error(`${LOG_PREFIX} Gemini error (${response.status}):`, err);
-        return null;
-      }
-
-      const data = (await response.json()) as any;
-      let content: string = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? '';
-
-      if (!content) {
-        console.error(`${LOG_PREFIX} Empty response from Gemini`);
-        return null;
-      }
-
-      // Gemini sometimes wraps JSON in markdown blocks even with responseMimeType
+      let content = response.trim();
       if (content.startsWith('```json')) {
         content = content.replace(/^```json/, '').replace(/```$/, '').trim();
       } else if (content.startsWith('```')) {
@@ -161,3 +108,4 @@ export const AIInsightsService = {
     }
   },
 };
+

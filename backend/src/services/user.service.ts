@@ -112,18 +112,9 @@ export const UserService = {
         ? { ...profile, resume_url: defaultResume?.file_url ?? null }
         : null;
       const completeness = profile ? computeApplicantCompleteness(profile, user.email) : 0;
-      const githubRepos = await prisma.github_repos.findMany({
-        where: { user_id: userId },
-        orderBy: { stargazers_count: 'desc' },
-      });
-      const projects = await prisma.applicant_projects.findMany({
-        where: { user_id: userId },
-        orderBy: { created_at: 'desc' },
-      });
-      const certifications = await prisma.applicant_certifications.findMany({
-        where: { user_id: userId },
-        orderBy: { issue_date: 'desc' },
-      });
+      const githubRepos: any[] = [];
+      const projects: any[] = [];
+      const certifications: any[] = [];
       return {
         email: user.email,
         role: user.role,
@@ -324,18 +315,9 @@ export const UserService = {
 
       const defaultResume = await ResumeModel.findDefaultByUserId(targetUserId);
       const profileOut = { ...profile, resume_url: defaultResume?.file_url ?? null };
-      const githubRepos = await prisma.github_repos.findMany({
-        where: { user_id: targetUserId },
-        orderBy: { stargazers_count: 'desc' },
-      });
-      const projects = await prisma.applicant_projects.findMany({
-        where: { user_id: targetUserId },
-        orderBy: { created_at: 'desc' },
-      });
-      const certifications = await prisma.applicant_certifications.findMany({
-        where: { user_id: targetUserId },
-        orderBy: { issue_date: 'desc' },
-      });
+      const githubRepos: any[] = [];
+      const projects: any[] = [];
+      const certifications: any[] = [];
       return {
         id: user.id,
         email: user.email,

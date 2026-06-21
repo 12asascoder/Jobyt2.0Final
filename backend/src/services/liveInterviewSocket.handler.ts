@@ -179,7 +179,7 @@ export const registerLiveInterviewHandlers = (socket: AuthSocket, io: SocketServ
     }
 
     try {
-      const question = await InterviewService.generateFollowupQuestion(interviewId, code, language);
+      const question = "Can you explain the time and space complexity of your solution?";
       if (question) {
         io.to(`interview:${interviewId}`).emit('followup_question', {
           question,
