@@ -20,6 +20,8 @@ import { ReportGeneratorService } from './reportGenerator.service';
 import { aiConfig } from '../config/ai.config';
 import pool from '../config/database';
 import { JwtPayload } from '../types';
+import Groq, { toFile } from 'groq-sdk';
+import { io } from '../config/socket';
 
 export interface LiveSessionState {
   code: string;
@@ -788,5 +790,55 @@ export const InterviewService = {
   async getReadinessScore(studentId: string): Promise<StudentReadinessScore | null> {
     await this._assertActiveStudent(studentId);
     return InterviewModel.findReadinessScore(studentId);
+  },
+
+  async transcribeAudio(
+    interviewId: string,
+    audioBuffer: Buffer,
+    originalName: string,
+    user: JwtPayload,
+  ): Promise<string> {
+    const interview = await InterviewModel.getById(interviewId);
+    if (!interview) {
+      throw new NotFoundError('Interview not found', 'INTERVIEW_NOT_FOUND');
+    }
+
+    const isCandidate = interview.candidate_id === user.userId;
+    const isInterviewer = interview.interviewer_id === user.userId;
+    const isAdmin = user.role === 'admin';
+
+    if (!isCandidate && !isInterviewer && !isAdmin) {
+      throw new ForbiddenError(
+        'You are not authorized to participate in this interview',
+        'NOT_INTERVIEW_PARTICIPANT',
+      );
+    }
+
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      throw new BadRequestError('Groq API Key is not configured in environment', 'GROQ_NOT_CONFIGURED');
+    }
+
+    console.log(`[Whisper STT] Transcribing file for interview: ${interviewId}, size: ${audioBuffer.length} bytes`);
+    const groq = new Groq({ apiKey: groqApiKey });
+    const file = await toFile(audioBuffer, originalName || 'audio.webm');
+
+    const response = await groq.audio.transcriptions.create({
+      file,
+      model: 'whisper-large-v3',
+      temperature: 0,
+    });
+
+    const text = response.text || '';
+    if (text.trim()) {
+      io?.to(`interview:${interviewId}`).emit('voice_transcription', {
+        userId: user.userId,
+        role: user.role,
+        text: text.trim(),
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    return text.trim();
   },
 };

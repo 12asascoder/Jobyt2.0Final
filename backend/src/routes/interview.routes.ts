@@ -5,6 +5,7 @@ import { authenticate, authorize } from '../middleware/auth';
 import { requireEmail } from '../middleware/requireEmail';
 import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
+import { uploadAudio } from '../middleware/upload';
 
 const router = Router();
 

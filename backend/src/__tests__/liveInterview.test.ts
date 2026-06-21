@@ -7,6 +7,24 @@ import axios from 'axios';
 
 jest.mock('axios');
 
+const mockCreateTranscription = jest.fn();
+jest.mock('groq-sdk', () => {
+  return {
+    __esModule: true,
+    default: jest.fn().mockImplementation(() => {
+      return {
+        audio: {
+          transcriptions: {
+            create: mockCreateTranscription,
+          },
+        },
+      };
+    }),
+    toFile: jest.fn().mockResolvedValue({}),
+  };
+});
+
+
 jest.mock('../config/database', () => ({
   query: jest.fn(),
   on: jest.fn(),
@@ -259,6 +277,58 @@ describe('InterviewService', () => {
         expect.any(Object),
       );
       expect(question).toBe('Mocked Claude response question?');
+    });
+  });
+
+  describe('transcribeAudio', () => {
+    const originalEnv = { ...process.env };
+
+    beforeEach(() => {
+      (InterviewModel.getById as jest.Mock).mockResolvedValue({
+        id: 'interview-1',
+        candidate_id: 'candidate-1',
+        interviewer_id: 'recruiter-1',
+        status: 'live',
+      });
+    });
+
+    afterEach(() => {
+      process.env = { ...originalEnv };
+      jest.clearAllMocks();
+    });
+
+    it('should throw ForbiddenError if requester is not participant', async () => {
+      const wrongRequester = { userId: 'intruder-1', role: 'applicant' } as JwtPayload;
+      await expect(
+        InterviewService.transcribeAudio('interview-1', Buffer.from([]), 'test.webm', wrongRequester)
+      ).rejects.toThrow('You are not authorized to participate');
+    });
+
+    it('should throw BadRequestError if GROQ_API_KEY is missing', async () => {
+      process.env.GROQ_API_KEY = '';
+      await expect(
+        InterviewService.transcribeAudio('interview-1', Buffer.from([]), 'test.webm', mockRequester)
+      ).rejects.toThrow('Groq API Key is not configured');
+    });
+
+    it('should call groq-sdk and return transcribed text', async () => {
+      process.env.GROQ_API_KEY = 'gsk_mock_key';
+      mockCreateTranscription.mockResolvedValue({ text: 'Hello, this is a test' });
+
+      const text = await InterviewService.transcribeAudio(
+        'interview-1',
+        Buffer.from([1, 2, 3]),
+        'test.webm',
+        mockRequester,
+      );
+
+      expect(mockCreateTranscription).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'whisper-large-v3',
+          temperature: 0,
+        }),
+      );
+      expect(text).toBe('Hello, this is a test');
     });
   });
 });
