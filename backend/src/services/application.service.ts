@@ -455,6 +455,11 @@ export const ApplicationService = {
     }
 
     const enrichedApplications = await Promise.all(result.applications.map(async (app: any) => {
+      // Prioritize manual score override
+      if (app.override_score !== null && app.override_score !== undefined) {
+        return { ...app, matchScore: app.override_score, matchMethod: 'override' };
+      }
+
       // Attempt embedding-based match score
       if (embeddingAvailable && app.resume_id && app.applicant_id) {
         try {
@@ -538,7 +543,7 @@ export const ApplicationService = {
 
     return {
       ...application,
-      skill_match: skillMatchResult.matchPercentage,
+      skill_match: application.override_score !== null && application.override_score !== undefined ? application.override_score : skillMatchResult.matchPercentage,
       matched_skills: skillMatchResult.matchedSkills,
       missing_skills: skillMatchResult.missingSkills,
       fuzzy_matched_skills: skillMatchResult.fuzzyMatchedSkills,
@@ -637,5 +642,77 @@ export const ApplicationService = {
       rejection_reason: fields.status === 'rejected' ? fields.rejection_reason : null,
     };
   },
+
+  async overrideDecision(
+    recruiterId: string,
+    applicationId: string,
+    data: {
+      override_score?: number | null;
+      status?: ApplicationStatus;
+      notes?: string | null;
+    },
+  ) {
+    const application = await ApplicationModel.findById(applicationId);
+    if (!application) throw Object.assign(new Error('Application not found'), { statusCode: 404 });
+
+    const job = await JobModel.findById(application.job_id);
+    if (!job || job.recruiter_id !== recruiterId)
+      throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+
+    const previousStatus = application.status;
+    const newStatus = data.status || previousStatus;
+    const notes = data.notes || null;
+
+    return withTransaction(async (client) => {
+      // 1. Update application status, override score, and override reason
+      const query = `
+        UPDATE applications
+        SET override_score = $1,
+            override_reason = $2,
+            status = $3,
+            status_updated_at = NOW()
+        WHERE id = $4
+        RETURNING *
+      `;
+      
+      const values = [
+        data.override_score === undefined ? application.override_score : data.override_score,
+        data.notes === undefined ? application.override_reason : notes,
+        newStatus,
+        applicationId,
+      ];
+      
+      const { rows } = await client.query(query, values);
+      const updated = rows[0];
+
+      // 2. Log pipeline event
+      const scoreStr = data.override_score !== undefined
+        ? (data.override_score === null ? 'Default AI' : `${data.override_score}%`)
+        : 'Unchanged';
+      
+      await PipelineEventModel.create({
+        application_id: applicationId,
+        previous_status: previousStatus,
+        new_status: newStatus,
+        changed_by_id: recruiterId,
+        notes: `Manual Override: Score overridden to ${scoreStr}. Notes: ${notes || 'No reason provided'}`,
+      }, client);
+
+      // 3. Notify applicant if status changed
+      if (newStatus !== previousStatus) {
+        await NotificationModel.create({
+          user_id: application.applicant_id,
+          type: 'application_status',
+          title: 'Application status updated',
+          body: `Your application status for "${job.title}" has been updated to: ${newStatus.replace('_', ' ')}`,
+          action_url: `/applications`,
+        }, client);
+      }
+
+      return updated;
+    });
+  },
 };
+
+
 

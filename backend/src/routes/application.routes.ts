@@ -122,6 +122,26 @@ router.patch(
   ApplicationController.updateStatus,
 );
 
+// Recruiter: override AI score / shortlist decision
+router.patch(
+  '/:id/override',
+  authorize('recruiter'),
+  employerGuard,
+  body('override_score').optional({ nullable: true }).isInt({ min: 0, max: 100 }).withMessage('override_score must be an integer between 0 and 100'),
+  body('status').optional().isIn([
+    'applied',
+    'in_review',
+    'shortlisted',
+    'interview',
+    'offer',
+    'hired',
+    'rejected',
+  ]).withMessage('Invalid status stage'),
+  body('notes').optional({ nullable: true }).isString().withMessage('notes must be a string'),
+  validate,
+  ApplicationController.overrideDecision,
+);
+
 // Any role: get pipeline events for an application
 router.get(
   '/:id/events',

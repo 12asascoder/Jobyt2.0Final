@@ -34,7 +34,9 @@ export const ShortlistReportService = {
     const candidatesDetails = candidates
       .map((c, i) => {
         const skillsList = Array.isArray(c.skills) && c.skills.length > 0 ? c.skills.join(', ') : 'None listed';
-        return `${i + 1}. Name: ${c.name || 'Applicant'} | Match Score: ${c.ats_score || 0}% | Key Skills: ${skillsList}`;
+        const displayScore = c.override_score !== null && c.override_score !== undefined ? c.override_score : (c.ats_score || 0);
+        const overrideText = c.override_score !== null && c.override_score !== undefined ? ' (Employer Override)' : '';
+        return `${i + 1}. Name: ${c.name || 'Applicant'} | Match Score: ${displayScore}%${overrideText} | Key Skills: ${skillsList}`;//
       })
       .join('\n');
 
@@ -152,7 +154,8 @@ Please write an executive report summary (2-3 short, professional paragraphs) an
         id: c.id,
         name: c.name || 'Applicant',
         email: c.email,
-        matchScore: c.ats_score,
+        matchScore: c.override_score !== null && c.override_score !== undefined ? c.override_score : c.ats_score,
+        override_score: c.override_score,
         skills: c.skills,
       })),
       aiSummary,

@@ -47,6 +47,7 @@ export default function JobApplicationsPage() {
       name: string;
       email: string;
       matchScore: number | null;
+      override_score?: number | null;
       skills: string[];
     }>;
     aiSummary: string;
@@ -245,9 +246,16 @@ export default function JobApplicationsPage() {
                   <div className="flex items-center gap-2">
                     <p className="font-bold text-gray-900 text-lg">{appView.name ?? 'Applicant'}</p>
                     {appView.matchScore !== undefined && (
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${appView.matchScore >= 80 ? 'bg-green-100 text-green-700' : appView.matchScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                        {appView.matchScore}% Match
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${appView.matchScore >= 80 ? 'bg-green-100 text-green-700' : appView.matchScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                          {appView.matchScore}% Match
+                        </span>
+                        {(appView as any).override_score !== null && (appView as any).override_score !== undefined && (
+                          <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-tight" title={`Original AI Score: ${(appView as any).ats_score || 0}%`}>
+                            ✏️ Override
+                          </span>
+                        )}
+                      </div>
                     )}
                     {app.submission_source === 'auto_apply' && (
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-[#c3ff3d]/20 text-[#0b1120] border border-[#c3ff3d]/30">
@@ -368,10 +376,15 @@ export default function JobApplicationsPage() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex flex-col items-end gap-1 shrink-0">
                         {candidate.matchScore !== null && (
                           <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider shadow-sm ${candidate.matchScore >= 80 ? 'bg-green-100 text-green-700' : candidate.matchScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                             {candidate.matchScore}% Match
+                          </span>
+                        )}
+                        {candidate.override_score !== null && candidate.override_score !== undefined && (
+                          <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider">
+                            Overridden
                           </span>
                         )}
                       </div>
