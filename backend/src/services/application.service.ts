@@ -153,6 +153,11 @@ export const ApplicationService = {
         throw err;
       }
 
+      let isAutoShortlisted = false;
+      if (atsScore !== null && job.ai_interview_threshold !== null && atsScore >= job.ai_interview_threshold) {
+        isAutoShortlisted = true;
+      }
+
       // 5) Initial pipeline event
       await PipelineEventModel.create(
         {
@@ -162,17 +167,65 @@ export const ApplicationService = {
         },
         client,
       );
-      // 6) Notify recruiter (transaction-scoped for consistent state)
-      await NotificationModel.create(
-        {
-          user_id: job.recruiter_id,
-          type: 'application_submitted',
-          title: 'New application received',
-          body: `A new applicant has applied to "${job.title}"`,
-          action_url: `/recruiter/jobs/${jobId}/applications`,
-        },
-        client,
-      );
+
+      if (isAutoShortlisted) {
+        // Update status to shortlisted transactionally
+        application = await ApplicationModel.updateStatus(application.id, 'shortlisted', client);
+
+        // Shortlisted pipeline event
+        await PipelineEventModel.create(
+          {
+            application_id: application.id,
+            previous_status: 'applied',
+            new_status: 'shortlisted',
+            changed_by_id: applicantId,
+            notes: `Auto-shortlisted by Match Engine (Score ${atsScore}% ≥ Passing Threshold ${job.ai_interview_threshold}%)`,
+          },
+          client,
+        );
+
+        // Notify applicant of auto-shortlist
+        await NotificationModel.create(
+          {
+            user_id: applicantId,
+            type: 'application_status',
+            title: 'Application Shortlisted!',
+            body: `Congratulations! Your application for "${job.title}" has been automatically shortlisted.`,
+            action_url: `/applications`,
+          },
+          client,
+        );
+
+        // Notify recruiter of auto-shortlist
+        let applicantName = 'A candidate';
+        try {
+          const profile = await ApplicantProfileModel.findByUserId(applicantId);
+          if (profile?.name) applicantName = profile.name;
+        } catch {}
+
+        await NotificationModel.create(
+          {
+            user_id: job.recruiter_id,
+            type: 'application_submitted',
+            title: 'Candidate Auto-Shortlisted',
+            body: `${applicantName} met the match threshold (${atsScore}% ≥ ${job.ai_interview_threshold}%) and was auto-shortlisted for "${job.title}".`,
+            action_url: `/recruiter/jobs/${jobId}/applications`,
+          },
+          client,
+        );
+      } else {
+        // 6) Notify recruiter of normal application (transaction-scoped for consistent state)
+        await NotificationModel.create(
+          {
+            user_id: job.recruiter_id,
+            type: 'application_submitted',
+            title: 'New application received',
+            body: `A new applicant has applied to "${job.title}"`,
+            action_url: `/recruiter/jobs/${jobId}/applications`,
+          },
+          client,
+        );
+      }
 
       // 7) Milestone notification for recruiter on every 10 applications
       const totalApplications = await ApplicationModel.countByJob(jobId, client);
@@ -195,7 +248,7 @@ export const ApplicationService = {
         creditTransactionId: transactionId,
         _jobForInsights: { title: job.title, description: job.description ?? '', skills: job.skills ?? [] },
         _applicantIdForInsights: applicantId,
-        _aiInterviewConfig: job.ai_interview_type ? {
+        _aiInterviewConfig: (job.ai_interview_type && !isAutoShortlisted) ? {
           type: job.ai_interview_type,
           recruiterId: job.recruiter_id,
           title: job.title,
