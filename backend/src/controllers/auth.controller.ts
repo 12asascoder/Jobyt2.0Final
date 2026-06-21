@@ -5,7 +5,7 @@ import { OAuthStateService } from '../services/oauthState.service';
 import { sendSuccess } from '../utils/response';
 import { BadRequestError, UnauthorizedError } from '../utils/errors';
 import logger from '../config/logger';
-import { GithubService } from '../services/github.service';
+import { UserModel } from '../models/user.model';
 
 export const AuthController = {
   async register(req: Request, res: Response, next: NextFunction) {
@@ -273,7 +273,13 @@ export const AuthController = {
 
   async me(req: Request, res: Response, next: NextFunction) {
     try {
-      sendSuccess(res, req.user);
+      const user = await UserModel.findById(req.user!.userId);
+      if (!user) {
+        res.status(401).json({ success: false, message: 'User not found' });
+        return;
+      }
+      const { password_hash, ...safeUser } = user;
+      sendSuccess(res, safeUser);
     } catch (err) {
       next(err);
     }

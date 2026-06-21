@@ -66,8 +66,24 @@ router.put(
   '/me/preferences',
   body('email_alerts_enabled').optional().isBoolean(),
   body('whatsapp_alerts_enabled').optional().isBoolean(),
+  body('push_alerts_enabled').optional().isBoolean(),
   validate,
   UserController.updatePreferences
+);
+
+router.post(
+  '/me/device-tokens',
+  body('token').isString().trim().notEmpty().withMessage('Token is required'),
+  body('platform').isString().trim().notEmpty().withMessage('Platform is required'),
+  validate,
+  UserController.registerDeviceToken
+);
+
+router.delete(
+  '/me/device-tokens',
+  body('token').isString().trim().notEmpty().withMessage('Token is required'),
+  validate,
+  UserController.removeDeviceToken
 );
 
 // ── File uploads ───────────────────────────────────────────────────────────────

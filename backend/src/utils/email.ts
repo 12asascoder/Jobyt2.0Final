@@ -100,6 +100,32 @@ export const otpEmailHtml = (code: string, expiryMins: number = 5): string => `
   </div>
 `;
 
+export const autoApplyDigestEmailHtml = (
+  name: string,
+  summary: Record<string, number>,
+  date: string,
+): string => {
+  const submitted = summary.submitted || 0;
+  const pending = summary.pending_approval || 0;
+  const failed = summary.failed || 0;
+  const skipped = summary.skipped || 0;
+
+  return `
+  <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+    <h2 style="color: #0b1120;">Your Auto-Apply Daily Summary</h2>
+    <p>Hi ${name},</p>
+    <p>Here's what Jobyt Auto-Apply did on ${date}:</p>
+    <ul>
+      <li><strong>${submitted}</strong> applications submitted</li>
+      <li><strong>${pending}</strong> awaiting your approval</li>
+      <li><strong>${skipped}</strong> skipped</li>
+      <li><strong>${failed}</strong> failed</li>
+    </ul>
+    <a href="${process.env.FRONTEND_URL || 'https://jobyt.in'}/auto-apply" style="display: inline-block; background-color: #c3ff3d; color: #0b1120; text-decoration: none; padding: 10px 16px; border-radius: 6px; font-weight: bold;">View Auto-Apply Dashboard</a>
+    <p style="color: #666; font-size: 12px; margin-top: 20px;">Manage preferences in Auto-Apply settings.</p>
+  </div>`;
+};
+
 export const dailyRecommendationEmailHtml = (name: string, jobs: any[]): string => `
   <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
     <h2 style="color: #333;">Daily Job Recommendations</h2>

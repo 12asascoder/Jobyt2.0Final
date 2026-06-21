@@ -22,8 +22,8 @@ async function seed() {
     console.log('Seeding admin...');
     await client.query(
       `
-      INSERT INTO users (email, password_hash, role, is_verified, referral_code, credit_balance)
-      VALUES ($1, $2, 'admin', TRUE, $3, 0)
+      INSERT INTO users (email, password_hash, role, is_verified, email_verified, referral_code, credit_balance)
+      VALUES ($1, $2, 'admin', TRUE, TRUE, $3, 0)
       ON CONFLICT (email) DO NOTHING
     `,
       ['admin@hiringplatform.com', adminHash, generateReferralCode()],
@@ -62,8 +62,8 @@ async function seed() {
     for (const r of recruiters) {
       const res = await client.query(
         `
-        INSERT INTO users (email, password_hash, role, is_verified, referral_code, credit_balance)
-        VALUES ($1, $2, 'recruiter', TRUE, $3, 50)
+        INSERT INTO users (email, password_hash, role, is_verified, email_verified, referral_code, credit_balance)
+        VALUES ($1, $2, 'recruiter', TRUE, TRUE, $3, 50)
         ON CONFLICT (email) DO NOTHING
         RETURNING id
       `,
@@ -125,8 +125,8 @@ async function seed() {
     for (const a of applicants) {
       const res = await client.query(
         `
-        INSERT INTO users (email, password_hash, role, is_verified, referral_code, credit_balance)
-        VALUES ($1, $2, 'applicant', TRUE, $3, 50)
+        INSERT INTO users (email, password_hash, role, is_verified, email_verified, referral_code, credit_balance)
+        VALUES ($1, $2, 'applicant', TRUE, TRUE, $3, 50)
         ON CONFLICT (email) DO NOTHING
         RETURNING id
       `,
