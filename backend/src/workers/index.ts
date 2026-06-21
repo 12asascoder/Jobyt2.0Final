@@ -3,6 +3,8 @@ import { recommendationWorker } from './recommendationWorker';
 import { webhookWorker } from './webhookWorker';
 import { codingEvaluationWorker } from './codingEvaluationWorker';
 import { autoApplyWorker } from './autoApplyWorker';
+import { videoTranscriptionWorker } from './videoTranscriptionWorker';
+import { videoEvaluationWorker } from './videoEvaluationWorker';
 
 export const startWorkers = () => {
   console.log('[Workers] BullMQ Workers started');
@@ -12,6 +14,8 @@ export const startWorkers = () => {
     webhookWorker,
     codingEvaluationWorker,
     autoApplyWorker,
+    videoTranscriptionWorker,
+    videoEvaluationWorker,
   };
 };
 
@@ -21,5 +25,7 @@ export const stopWorkers = async () => {
   await webhookWorker.close();
   await codingEvaluationWorker.close();
   await autoApplyWorker.close();
+  await videoTranscriptionWorker.close();
+  await videoEvaluationWorker.close();
 };
 

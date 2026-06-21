@@ -8,5 +8,6 @@ const router = Router();
 router.use(authenticate);
 
 router.post('/', uploadFile.single('file'), UploadController.upload);
+router.post('/video-session', UploadController.generateVideoUploadSession);
 
 export default router;

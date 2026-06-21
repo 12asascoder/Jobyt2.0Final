@@ -41,11 +41,31 @@ export const autoApplyQueue = new Queue('autoApplyQueue', {
   },
 });
 
+export const videoTranscriptionQueue = new Queue('videoTranscriptionQueue', {
+  ...defaultQueueOptions,
+  defaultJobOptions: {
+    ...defaultQueueOptions.defaultJobOptions,
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 10000 },
+  },
+});
+
+export const videoEvaluationQueue = new Queue('videoEvaluationQueue', {
+  ...defaultQueueOptions,
+  defaultJobOptions: {
+    ...defaultQueueOptions.defaultJobOptions,
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 10000 },
+  },
+});
+
 export const closeQueues = async () => {
   await recommendationQueue.close();
   await notificationQueue.close();
   await webhookQueue.close();
   await codingEvaluationQueue.close();
   await autoApplyQueue.close();
+  await videoTranscriptionQueue.close();
+  await videoEvaluationQueue.close();
 };
 

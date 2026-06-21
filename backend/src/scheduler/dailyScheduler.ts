@@ -2,6 +2,7 @@ import { Queue } from 'bullmq';
 import { redisConnection, recommendationQueue, autoApplyQueue } from '../config/queue';
 import pool from '../config/database';
 import { AutoApplyPreferenceModel } from '../models/autoApplyPreference.model';
+import { AutoApplyService } from '../services/autoApply.service';
 
 const LOG_PREFIX = '[DailyScheduler]';
 
@@ -44,6 +45,16 @@ export const setupDailyScheduler = async () => {
     {
       repeat: {
         pattern: '0 * * * *',
+      },
+    },
+  );
+
+  await schedulerQueue.add(
+    'cleanupExpiredVideos',
+    {},
+    {
+      repeat: {
+        pattern: '0 2 * * *', // Every day at 2:00 AM
       },
     },
   );
@@ -154,6 +165,34 @@ export const schedulerWorker = new Worker('schedulerQueue', async (job: Job) => 
 
   if (job.name === 'expireAutoApplyApprovals') {
     await autoApplyQueue.add('expirePendingApprovals', {});
+  }
+
+  if (job.name === 'cleanupExpiredVideos') {
+    console.log(`${LOG_PREFIX} Starting expired video cleanup...`);
+    try {
+      const { minioStorage } = await import('../services/storage/MinIOProvider');
+      const { rows: expiredConsents } = await pool.query(
+        `SELECT candidate_id, video_expiry FROM video_consents WHERE video_expiry < NOW()`
+      );
+      
+      let deletedCount = 0;
+      for (const consent of expiredConsents) {
+        const { rows: videos } = await pool.query(
+          `SELECT id, video_url FROM video_interviews WHERE candidate_id = $1`, [consent.candidate_id]
+        );
+        for (const video of videos) {
+          if (video.video_url) {
+            await minioStorage.deleteFile(video.video_url).catch(console.error);
+          }
+          await pool.query(`DELETE FROM video_interviews WHERE id = $1`, [video.id]);
+          deletedCount++;
+        }
+        await pool.query(`DELETE FROM video_consents WHERE candidate_id = $1`, [consent.candidate_id]);
+      }
+      console.log(`${LOG_PREFIX} Cleanup completed. Deleted ${deletedCount} expired videos.`);
+    } catch (err) {
+      console.error(`${LOG_PREFIX} Expired video cleanup failed:`, err);
+    }
   }
 }, { connection: redisConnection as any });
 
