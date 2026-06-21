@@ -38,10 +38,8 @@ export function NotificationPreferences() {
         api.get<{ profile: any; email: string }>('/users/me')
       ]);
       setPreferences(prefRes.data || { email_alerts_enabled: false, whatsapp_alerts_enabled: false });
-
-      const res = await api.get<any>('/auth/me').catch(() => ({ data: {} }));
-      const userFull = res.data || meRes.data?.profile || {};
-
+      const authMeRes = await api.get<any>('/auth/me').catch(() => ({ data: null }));
+      const userFull = authMeRes.data || meRes.data?.profile || {};
       setUserContext({
         email_verified: userFull.email_verified,
         phone_verified: userFull.phone_verified,

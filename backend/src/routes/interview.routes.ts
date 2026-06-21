@@ -60,6 +60,22 @@ router.post(
   InterviewController.endInterview,
 );
 
+// Transcribe voice audio channel snippets (applicant, recruiter, admin)
+router.post(
+  '/:id/transcribe',
+  authorize('applicant', 'recruiter', 'admin'),
+  uploadAudio.single('file'),
+  InterviewController.transcribeAudio,
+);
+
+// Synthesize text to speech audio output (applicant, recruiter, admin)
+router.post(
+  '/:id/tts',
+  authorize('applicant', 'recruiter', 'admin'),
+  body('text').isString().trim().notEmpty().withMessage('text must be a non-empty string'),
+  validate,
+  InterviewController.generateTTS,
+);
 // Protect all mock interview routes under JWT authentication
 // Note: router.use(authenticate) is not strictly needed because we already have router.use(authenticate, requireEmail) above.
 // However, we'll keep the mock interview routes distinct.

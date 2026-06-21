@@ -259,6 +259,227 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   };
 }
 
+// ── Interviews ───────────────────────────────────────────────────────────────
+export type InterviewStatus = 'scheduled' | 'live' | 'completed' | 'cancelled';
+
+export interface Interview {
+  id: string;
+  application_id: string;
+  interviewer_id: string;
+  candidate_id: string;
+  status: InterviewStatus;
+  code_content: string | null;
+  code_language: string | null;
+  notes: string | null;
+  feedback: string | null;
+  rating: number | null;
+  scheduled_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined fields
+  company_name?: string;
+  job_title?: string;
+  candidate_name?: string;
+  interviewer_name?: string;
+}
+
+// ── API Keys ──────────────────────────────────────────────────────────────────
+export interface ApiKey {
+  id: string;
+  key_prefix: string;
+  name: string;
+  scopes: string[];
+  rate_limit: number;
+  expires_at: string | null;
+  last_used_at: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ApiKeyCreated extends ApiKey {
+  api_key: string;
+}
+
+// ── API Activity ──────────────────────────────────────────────────────────────
+export interface ApiActivityLog {
+  id: number;
+  api_key_id: string | null;
+  user_id: string | null;
+  endpoint: string;
+  method: string;
+  status_code: number;
+  latency_ms: number;
+  ip_address: string | null;
+  user_agent: string | null;
+  request_id: string | null;
+  key_prefix?: string | null;
+  api_key_name?: string | null;
+  created_at: string;
+}
+
+// ── Webhooks ──────────────────────────────────────────────────────────────────
+export interface Webhook {
+  id: string;
+  user_id: string;
+  url: string;
+  events: string[];
+  secret: string;
+  is_active: boolean;
+  delivery_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  webhook_id: string;
+  event_type: string;
+  payload: unknown;
+  insights_generated_at?: string | null;
+  status: ApplicationStatus;
+  status_updated_at: string;
+  created_at: string;
+  // joined fields
+  job_title?: string;
+  location?: string;
+  companyName?: string | null;
+  latest_comment?: string | null;
+  /** Selection Probability: 0–100 score derived from SkillMatchingService (candidate-facing only) */
+  selectionProbability?: number;
+}
+
+export interface PipelineEvent {
+  id: string;
+  application_id: string;
+  previous_status: ApplicationStatus | null;
+  new_status: ApplicationStatus;
+  notes: string | null;
+  created_at: string;
+  changed_by: {
+    id: string;
+    role: string;
+    name: string | null;
+  } | null;
+}
+
+// ── Credits ───────────────────────────────────────────────────────────────────
+export type CreditType = 'credit' | 'debit';
+export type CreditTransactionStatus = 'success' | 'failed';
+
+export interface CreditTransaction {
+  id: string;
+  user_id: string;
+  type: CreditType;
+  amount: number;
+  status?: CreditTransactionStatus;
+  balance_after: number;
+  description: string;
+  reference_id: string | null;
+  created_at: string;
+}
+
+// ── Messages ────────────────────────────────────────────────────────────────
+export interface Conversation {
+  id: string;
+  recruiter_id: string;
+  applicant_id: string;
+  job_id: string | null;
+  last_message_at: string;
+  last_message?: string;
+}
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  body: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+export type NotificationType =
+  | 'job_match' | 'application_status' | 'new_message'
+  | 'referral_joined' | 'low_credit' | 'payment_success' | 'payment_failed' | 'application_submitted';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  read: boolean;
+  action_url: string | null;
+  created_at: string;
+}
+
+// ── Payments ──────────────────────────────────────────────────────────────────
+export interface Plan {
+  id: string;
+  name: string;
+  credits: number;
+  price: number;
+  currency: string;
+}
+
+export interface Payment {
+  id: string;
+  user_id: string;
+  plan_id: string | null;
+  plan_name?: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'success' | 'failed' | 'refunded';
+  created_at: string;
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  message: string;
+  error?: string;
+  errors?: Array<Record<string, unknown>>;
+  details?: unknown;
+  data?: T;
+}
+
+export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+// ── Interviews ───────────────────────────────────────────────────────────────
+export type InterviewStatus = 'scheduled' | 'live' | 'completed' | 'cancelled';
+
+export interface Interview {
+  id: string;
+  application_id: string;
+  interviewer_id: string;
+  candidate_id: string;
+  status: InterviewStatus;
+  code_content: string | null;
+  code_language: string | null;
+  notes: string | null;
+  feedback: string | null;
+  rating: number | null;
+  scheduled_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined fields
+  company_name?: string;
+  job_title?: string;
+  candidate_name?: string;
+  interviewer_name?: string;
+}
+
 // ── API Keys ──────────────────────────────────────────────────────────────────
 export interface ApiKey {
   id: string;
