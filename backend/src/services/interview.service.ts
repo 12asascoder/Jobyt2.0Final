@@ -952,7 +952,7 @@ export const InterviewService = {
 
   async logProctoringViolation(
     interviewId: string,
-    eventType: 'tab_switch' | 'window_blur',
+    eventType: 'tab_switch' | 'window_blur' | 'face_absent' | 'multiple_faces',
     timestamp: string,
   ): Promise<any> {
     const interview = await InterviewModel.getById(interviewId);
