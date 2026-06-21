@@ -3,6 +3,7 @@ import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import routes from './routes';
+import learningRoutes from './routes/learning.routes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import { requestLogger } from './middleware/logger.middleware';
 import { apiActivityLogger } from './middleware/apiActivity';
@@ -111,6 +112,7 @@ app.get('/', (_req, res) => {
 });
 
 // API routes
+app.use('/api/learning', learningRoutes);
 app.use('/api/v1', routes);
 app.use('/', routes);
 

@@ -334,7 +334,7 @@ export const InterviewService = {
       questionCount,
     };
 
-    const prompt = PromptTemplatesService.renderTemplate(templateName, variables);
+    const prompt = await PromptTemplatesService.renderTemplate(templateName, variables);
 
     const validateSchema = (parsed: any): boolean => {
       if (!parsed || typeof parsed !== 'object') return false;
@@ -358,7 +358,7 @@ export const InterviewService = {
     while (attempts < maxAttempts) {
       attempts++;
       try {
-        const responseText = await AIService.generateText(prompt, { provider: 'claude' });
+        const responseText = await AIService.generateText(prompt, { provider: 'claude', module: 'interview' });
         if (!responseText) {
           throw new Error('AI Service returned empty response');
         }
@@ -493,7 +493,7 @@ export const InterviewService = {
       responseText,
     };
 
-    const prompt = PromptTemplatesService.renderTemplate(templateName, variables);
+    const prompt = await PromptTemplatesService.renderTemplate(templateName, variables);
 
     const validateEvaluationSchema = (parsed: any): boolean => {
       if (!parsed || typeof parsed !== 'object') return false;
@@ -510,7 +510,7 @@ export const InterviewService = {
     while (attempts < maxAttempts) {
       attempts++;
       try {
-        const evalText = await AIService.generateText(prompt, { provider: 'claude' });
+        const evalText = await AIService.generateText(prompt, { provider: 'claude', module: 'interview' });
         if (!evalText) {
           throw new Error('AI Service returned empty response');
         }
@@ -665,7 +665,7 @@ export const InterviewService = {
       ),
     };
 
-    const prompt = PromptTemplatesService.renderTemplate(templateName, variables);
+    const prompt = await PromptTemplatesService.renderTemplate(templateName, variables);
 
     const validateReportTextSchema = (parsed: any): boolean => {
       if (!parsed || typeof parsed !== 'object') return false;
@@ -683,7 +683,7 @@ export const InterviewService = {
     while (evalAttempts < maxEvalAttempts) {
       evalAttempts++;
       try {
-        const responseText = await AIService.generateText(prompt, { provider: 'claude' });
+        const responseText = await AIService.generateText(prompt, { provider: 'claude', module: 'interview' });
         if (!responseText) {
           throw new Error('AI Service returned empty response');
         }

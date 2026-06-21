@@ -430,7 +430,7 @@ export const JobService = {
           return { questions: staticFallback };
       }
 
-      const prompt = PromptTemplatesService.renderTemplate('interview_questions', {
+      const prompt = await PromptTemplatesService.renderTemplate('interview_questions', {
         role,
         skills: skills.join(', '),
       });

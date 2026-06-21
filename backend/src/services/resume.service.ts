@@ -200,7 +200,7 @@ export const ResumeService = {
     const promptPayload = ResumeService.buildResumePromptPayload(profile);
     if (aiConfig.xaiConfigured) {
       try {
-        const prompt = PromptTemplatesService.renderTemplate('resume_generation', promptPayload);
+        const prompt = await PromptTemplatesService.renderTemplate('resume_generation', promptPayload);
         const aiDraft = await AIService.generateJSON<ResumeDraft>(prompt, { provider: 'grok' });
         if (aiDraft && typeof aiDraft.summary === 'string' && Array.isArray(aiDraft.skills)) {
           return {
@@ -555,7 +555,7 @@ export const ResumeService = {
       let usedFallback = false;
       if (aiConfig.isConfigured) {
         try {
-          const prompt = PromptTemplatesService.renderTemplate('ats_scoring', {
+          const prompt = await PromptTemplatesService.renderTemplate('ats_scoring', {
             resumeText: resumeText.substring(0, 3000),
             jobDescription: jobDescription.substring(0, 1500),
           });
@@ -581,7 +581,7 @@ export const ResumeService = {
         const apiKey = process.env.OPENAI_API_KEY;
         if (apiKey) {
           try {
-            const prompt = PromptTemplatesService.renderTemplate('ats_scoring', {
+            const prompt = await PromptTemplatesService.renderTemplate('ats_scoring', {
               resumeText: resumeText.substring(0, 3000),
               jobDescription: jobDescription.substring(0, 1500),
             });

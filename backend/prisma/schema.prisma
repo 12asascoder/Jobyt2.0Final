@@ -90,16 +90,18 @@ model conversations {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model credit_transactions {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id       String      @db.Uuid
-  type          credit_type
-  amount        Int
-  balance_after Int
-  description   String      @db.VarChar(255)
-  reference_id  String?     @db.Uuid
-  created_at    DateTime?   @default(now()) @db.Timestamptz(6)
-  status        String      @default("success") @db.VarChar(20)
-  users         users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String      @db.Uuid
+  type            credit_type
+  amount          Int
+  balance_after   Int
+  description     String      @db.VarChar(255)
+  reference_id    String?     @db.Uuid
+  created_at      DateTime?   @default(now()) @db.Timestamptz(6)
+  status          String      @default("success") @db.VarChar(20)
+  credit_category String      @default("EARNED") @db.VarChar(20)
+  expiry_date     DateTime?   @db.Timestamptz(6)
+  users           users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id, created_at(sort: Desc)], map: "idx_credit_tx_user")
 }
@@ -387,6 +389,10 @@ model users {
   skill_credits                                   skill_credits[]
   learning_roadmaps                               learning_roadmaps[]
   learning_audit_logs                             learning_audit_logs[]
+  subscriptions                                   subscriptions?
+  aiUsageLogs                                     ai_usage_logs[]
+  dpdpaConsentLogs                                dpdpa_consent_logs[]
+  dataDeletionRequests                            data_deletion_requests[]
 }
 
 enum auth_provider {
@@ -1258,4 +1264,112 @@ model learning_audit_logs {
   users users @relation(fields: [candidate_id], references: [id], onDelete: Cascade)
 
   @@index([candidate_id, action_type])
+}
+
+model subscription_tiers {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String          @unique @db.VarChar(100)
+  target_audience String          @db.VarChar(20)
+  price_monthly   Decimal         @default(0) @db.Decimal(10, 2)
+  price_annual    Decimal         @default(0) @db.Decimal(10, 2)
+  currency        String          @default("USD") @db.VarChar(10)
+  features        Json            @default("{}")
+  is_active       Boolean         @default(true)
+  created_at      DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?       @default(now()) @db.Timestamptz(6)
+  subscriptions   subscriptions[]
+}
+
+model subscriptions {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String             @unique @db.Uuid
+  tier_id              String             @db.Uuid
+  billing_cycle        String             @default("monthly") @db.VarChar(20)
+  status               String             @default("active") @db.VarChar(20)
+  current_period_start DateTime           @db.Timestamptz(6)
+  current_period_end   DateTime           @db.Timestamptz(6)
+  cancel_at_period_end Boolean            @default(false)
+  created_at           DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?          @default(now()) @db.Timestamptz(6)
+  users                users              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tier                 subscription_tiers @relation(fields: [tier_id], references: [id])
+
+  @@index([user_id, status])
+}
+
+model prompt_templates {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @unique @db.VarChar(100)
+  description String?
+  template    String    @db.Text
+  variables   String[]  @default([])
+  version     Int       @default(1)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model ai_response_cache {
+  cache_key  String    @id @db.VarChar(255)
+  response   Json
+  model_used String    @db.VarChar(50)
+  expires_at DateTime  @db.Timestamptz(6)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([expires_at])
+}
+
+model ai_usage_logs {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String?   @db.Uuid
+  module            String    @db.VarChar(50)
+  model_name        String    @db.VarChar(50)
+  prompt_tokens     Int       @default(0)
+  completion_tokens Int       @default(0)
+  latency_ms        Int       @default(0)
+  is_cache_hit      Boolean   @default(false)
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  users             users?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id, created_at])
+}
+
+model ai_bias_audits {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  application_id    String?   @db.Uuid
+  module            String    @db.VarChar(50)
+  original_decision Json
+  is_overridden     Boolean   @default(false)
+  override_decision Json?
+  override_reason   String?   @db.Text
+  reviewer_id       String?   @db.Uuid
+  bias_flags        String[]  @default([])
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([application_id])
+}
+
+model dpdpa_consent_logs {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String    @db.Uuid
+  consent_type String    @db.VarChar(100)
+  is_granted   Boolean   @default(true)
+  ip_address   String?   @db.VarChar(50)
+  user_agent   String?   @db.Text
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model data_deletion_requests {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String    @db.Uuid
+  status        String    @default("pending") @db.VarChar(20)
+  scheduled_for DateTime  @db.Timestamptz(6)
+  completed_at  DateTime? @db.Timestamptz(6)
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduled_for])
 }

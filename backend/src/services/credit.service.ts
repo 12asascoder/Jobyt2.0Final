@@ -27,6 +27,8 @@ async function addCreditsTx(
   description: string,
   referenceId?: string,
   status: CreditStatus = 'success',
+  category: string = 'EARNED',
+  expiryDate?: Date
 ): Promise<void> {
   if (amount <= 0) throw new Error('Amount must be greater than 0');
   if (!description || description.trim() === '') throw new Error('Ledger description required');
@@ -45,6 +47,8 @@ async function addCreditsTx(
     balance_after: rows[0].credit_balance,
     description,
     reference_id: referenceId,
+    credit_category: category,
+    expiry_date: expiryDate
   });
   // Invalidate cache after credit change
   creditBalanceCache.delete(userId);
@@ -102,6 +106,8 @@ export const CreditService = {
     referenceId?: string,
     client?: PoolClient,
     status: CreditStatus = 'success',
+    category: string = 'EARNED',
+    expiryDate?: Date
   ): Promise<void> {
     console.log(`[CREDIT] credit ${amount} for user ${userId}`);
     const db = client ?? (await pool.connect());
@@ -109,7 +115,7 @@ export const CreditService = {
     try {
       if (shouldManageTx) await db.query('BEGIN');
 
-      await addCreditsTx(db, userId, amount, description, referenceId, status);
+      await addCreditsTx(db, userId, amount, description, referenceId, status, category, expiryDate);
 
       if (shouldManageTx) await db.query('COMMIT');
     } catch (err) {
@@ -280,7 +286,7 @@ export const CreditService = {
   },
 
   async grantPlanCredits(userId: string, credits: number, paymentId: string): Promise<void> {
-    await CreditService.addCredits(userId, credits, 'Subscription plan credits', paymentId);
+    await CreditService.addCredits(userId, credits, 'Subscription plan credits', paymentId, undefined, 'success', 'PURCHASED');
   },
 
   async grantCompleteProfileBonus(userId: string): Promise<{ awarded: boolean; amount: number }> {

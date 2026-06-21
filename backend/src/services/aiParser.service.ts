@@ -24,7 +24,7 @@ export const AiParserService = {
    * Passes raw scraped text into Local AI to structure it into the specific Job Schema.
    */
   async parseJobText(rawText: string): Promise<AIParsedJob> {
-    const prompt = PromptTemplatesService.renderTemplate('job_parsing', {
+    const prompt = await PromptTemplatesService.renderTemplate('job_parsing', {
       rawText,
     });
 

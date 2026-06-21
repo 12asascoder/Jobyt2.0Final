@@ -27,6 +27,8 @@ import { GrokProvider } from './ai/providers/grok.provider';
 import { ClaudeProvider } from './ai/providers/claude.provider';
 import { OllamaProvider } from './ai/providers/ollama.provider';
 import { EmbeddingProviderResolver } from './ai/providers/embedding.provider';
+import { AIResponseCache } from './ai/aiResponseCache.service';
+import { AIUsageTracker } from './ai/aiUsageTracker.service';
 
 const LOG_PREFIX = '[AI]';
 const EMBED_PREFIX = '[Embedding]';
@@ -315,7 +317,7 @@ export const AIService = {
    */
   async generateText(
     prompt: string,
-    options?: { temperature?: number; responseMimeType?: string; provider?: 'grok' | 'groq' | 'claude' | 'ollama' },
+    options?: { temperature?: number; responseMimeType?: string; provider?: 'grok' | 'groq' | 'claude' | 'ollama'; module?: string; userId?: string },
   ): Promise<string | null> {
     const providerChoice = options?.provider;
     const resolvedProvider = resolveProvider(providerChoice);
@@ -329,6 +331,27 @@ export const AIService = {
         : aiConfig.textModel;
     const circuitKey = `text:${resolvedProvider}:${model}`;
     const startMs = Date.now();
+    const moduleName = options?.module || 'system';
+
+    // 1. Check Cache
+    const cacheKey = AIResponseCache.generateKey(moduleName, prompt, model);
+    const cachedResponse = await AIResponseCache.getCache(cacheKey);
+    if (cachedResponse) {
+      console.log(`${LOG_PREFIX} Cache HIT for ${moduleName}:${model}`);
+      
+      // Async log usage for cache hit
+      AIUsageTracker.logUsage({
+        userId: options?.userId,
+        module: moduleName,
+        modelName: model,
+        latencyMs: Date.now() - startMs,
+        isCacheHit: true,
+        promptTokens: Math.ceil(prompt.length / 4),
+        completionTokens: Math.ceil(String(cachedResponse).length / 4)
+      }).catch(() => {});
+
+      return cachedResponse;
+    }
  
     // Allow provider-specific availability
     if (isCircuitOpen(circuitKey)) {
@@ -386,6 +409,21 @@ export const AIService = {
       const elapsed = Date.now() - startMs;
       recordSuccess(circuitKey);
       console.log(`${LOG_PREFIX} Text OK model=${model} len=${text.length} ${elapsed}ms`);
+
+      // 2. Set Cache
+      AIResponseCache.setCache(cacheKey, text).catch(() => {});
+
+      // 3. Log Usage
+      AIUsageTracker.logUsage({
+        userId: options?.userId,
+        module: moduleName,
+        modelName: model,
+        latencyMs: elapsed,
+        isCacheHit: false,
+        promptTokens: Math.ceil(prompt.length / 4),
+        completionTokens: Math.ceil(text.length / 4)
+      }).catch(() => {});
+
       return text;
     } catch (err: any) {
       const elapsed = Date.now() - startMs;
@@ -443,12 +481,14 @@ export const AIService = {
    */
   async generateJSON<T = unknown>(
     prompt: string,
-    options?: { provider?: 'grok' | 'groq' | 'claude' | 'ollama' }
+    options?: { provider?: 'grok' | 'groq' | 'claude' | 'ollama'; module?: string; userId?: string }
   ): Promise<T | null> {
     // Backwards-compatible: default to configured text provider (Groq).
     const raw = await this.generateText(prompt, {
       responseMimeType: 'application/json',
       provider: options?.provider,
+      module: options?.module,
+      userId: options?.userId,
     });
 
     if (!raw) return null;

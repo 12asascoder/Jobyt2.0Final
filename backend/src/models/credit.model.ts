@@ -13,6 +13,8 @@ export interface CreditTransaction {
   balance_after: number;
   description: string;
   reference_id: string | null;
+  credit_category: string;
+  expiry_date: Date | null;
   created_at: Date;
 }
 
@@ -83,13 +85,13 @@ export const CreditModel = {
       balance_after: number;
       description: string;
       reference_id?: string;
+      credit_category?: string;
+      expiry_date?: Date;
     },
   ): Promise<CreditTransaction> {
-    const statusExists = await hasStatusColumn(client);
-    const { rows } = statusExists
-      ? await client.query(
-          `INSERT INTO credit_transactions (user_id, type, amount, status, balance_after, description, reference_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+    const { rows } = await client.query(
+          `INSERT INTO credit_transactions (user_id, type, amount, status, balance_after, description, reference_id, credit_category, expiry_date)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
           [
             data.user_id,
             data.type,
@@ -98,19 +100,8 @@ export const CreditModel = {
             data.balance_after,
             data.description,
             data.reference_id || null,
-          ],
-        )
-      : await client.query(
-          `INSERT INTO credit_transactions (user_id, type, amount, balance_after, description, reference_id)
-           VALUES ($1,$2,$3,$4,$5,$6)
-           RETURNING *, 'success'::varchar AS status`,
-          [
-            data.user_id,
-            data.type,
-            data.amount,
-            data.balance_after,
-            data.description,
-            data.reference_id || null,
+            data.credit_category || 'EARNED',
+            data.expiry_date || null
           ],
         );
 

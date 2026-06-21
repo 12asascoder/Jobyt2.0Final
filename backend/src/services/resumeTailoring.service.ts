@@ -179,7 +179,7 @@ export const ResumeTailoringService = {
       const jobDescriptionStr = String(job.description || '').slice(0, 6000);
 
       // STEP 1: Skill Target Plan
-      const targetPlanPrompt = PromptTemplatesService.renderTemplate('skill_target_plan', {
+      const targetPlanPrompt = await PromptTemplatesService.renderTemplate('skill_target_plan', {
         existingSkills: resumeJson.skills.join(', '),
         jobKeywords: jobSkills,
         jobDescription: jobDescriptionStr,
@@ -198,7 +198,7 @@ export const ResumeTailoringService = {
       else if (mode === 'full') strategyInstruction = "Make targeted adjustments. You may rephrase bullets, add verified JD skills, and add new bullets that elaborate on existing work, but do not invent new responsibilities.";
 
       // STEP 2: Diff-based patching
-      const diffPrompt = PromptTemplatesService.renderTemplate('resume_tailoring', {
+      const diffPrompt = await PromptTemplatesService.renderTemplate('resume_tailoring', {
         strategyInstruction,
         jobKeywords: jobSkills,
         skillTargets,
