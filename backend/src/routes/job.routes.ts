@@ -71,6 +71,9 @@ router.post(
   body('application_questions.*.placeholder').optional().isString(),
   body('application_questions.*.options').optional().isArray(),
   body('application_questions.*.options.*').optional().isString(),
+  body('ai_interview_type').optional({ nullable: true }).isString().trim().isIn(['technical', 'behavioral', 'hybrid']),
+  body('ai_interview_rubric').optional({ nullable: true }).isString().trim(),
+  body('ai_interview_threshold').optional({ nullable: true }).isInt({ min: 0, max: 100 }).toInt(),
   validate,
   JobController.createJob,
 );
@@ -115,6 +118,9 @@ router.put(
   body('application_questions.*.placeholder').optional().isString(),
   body('application_questions.*.options').optional().isArray(),
   body('application_questions.*.options.*').optional().isString(),
+  body('ai_interview_type').optional({ nullable: true }).isString().trim().isIn(['technical', 'behavioral', 'hybrid']),
+  body('ai_interview_rubric').optional({ nullable: true }).isString().trim(),
+  body('ai_interview_threshold').optional({ nullable: true }).isInt({ min: 0, max: 100 }).toInt(),
   validate,
   JobController.updateJob,
 );
