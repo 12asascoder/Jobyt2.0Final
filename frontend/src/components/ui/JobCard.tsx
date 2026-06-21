@@ -21,6 +21,7 @@ export interface BackendJob {
     created_at: string;
     /** Selection Probability: 0–100 (present only for authenticated applicants) */
     selectionProbability?: number;
+    has_ai_interview?: boolean;
 }
 
 type JobLike = Partial<BackendJob> & { _id?: string };
@@ -50,6 +51,7 @@ export function normalizeJob(job: JobLike): BackendJob {
         is_boosted: job.is_boosted || false,
         created_at: job.created_at || new Date().toISOString(),
         selectionProbability: (job as any).selectionProbability ?? undefined,
+        has_ai_interview: (job as any).has_ai_interview || false,
     };
 }
 
@@ -341,6 +343,23 @@ export function JobCard({
                                 }}
                             >
                                 {badgeText}
+                            </span>
+                        )}
+                        {job.has_ai_interview && (
+                            <span
+                                style={{
+                                    background: '#F3E8FF', color: '#6B21A8',
+                                    fontSize: 8, fontWeight: 700,
+                                    padding: '3px 6px', letterSpacing: '0.07em',
+                                    textTransform: 'uppercase', lineHeight: 1.3,
+                                    borderRadius: 2, whiteSpace: 'nowrap',
+                                    display: 'flex', alignItems: 'center', gap: '3px'
+                                }}
+                            >
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+                                </svg>
+                                AI Interview
                             </span>
                         )}
                     </div>
