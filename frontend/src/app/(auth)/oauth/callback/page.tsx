@@ -17,6 +17,8 @@ import {
   OAuthResponseData,
   parseOAuthResponse,
   readOAuthState,
+  getOAuthPurpose,
+  clearOAuthPurpose,
 } from '@/lib/oauth';
 
 const isProvider = (value: string | null): value is 'github' | 'linkedin' =>
@@ -53,6 +55,26 @@ export default function OAuthCallbackPage() {
         const savedState = readOAuthState(provider);
         if (!savedState || savedState !== state) {
           throw new Error('Login failed. Please try again.');
+        }
+
+        const purpose = getOAuthPurpose();
+        if (purpose === 'import_profile') {
+          console.log('[OAuthCallbackPage] Detected profile import purpose. Calling import endpoint.');
+          try {
+            await api.post('/users/me/import/linkedin', {
+              code,
+              state,
+            });
+            clearOAuthPurpose();
+            clearOAuthState(provider);
+            router.replace('/profile?sync=success');
+          } catch (err: any) {
+            clearOAuthPurpose();
+            clearOAuthState(provider);
+            const msg = err.message || 'Synchronization failed.';
+            router.replace(`/profile?sync=failed&error=${encodeURIComponent(msg)}`);
+          }
+          return;
         }
 
         clearOAuthState(provider);

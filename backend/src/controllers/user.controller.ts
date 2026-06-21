@@ -160,4 +160,57 @@ export const UserController = {
       next(err);
     }
   },
+
+  async importLinkedInProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const { code, state } = req.body;
+
+      if (!code) {
+        res.status(400).json({ success: false, message: 'Authorization code is required' });
+        return;
+      }
+
+      // Check if it's a mock import
+      const isMockCode = typeof code === 'string' && code.startsWith('mock_code_');
+      const hasLinkedInSecrets = process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET;
+
+      let importedData: any = null;
+
+      if (isMockCode || !hasLinkedInSecrets) {
+        console.log(`[UserController.importLinkedInProfile] Executing sandbox import. Code: ${code}`);
+        const selectedCode = mockLinkedInProfiles[code] ? code : 'mock_code_swe';
+        importedData = mockLinkedInProfiles[selectedCode];
+      } else {
+        console.log(`[UserController.importLinkedInProfile] Executing production import. Code: ${code}`);
+        const oauthUser = await OAuthService.verifyLinkedinToken(code);
+        
+        // Map available production userinfo properties to candidate profile
+        importedData = {
+          name: oauthUser.name,
+          photo_url: oauthUser.avatar,
+          linkedin_url: oauthUser.email ? `https://www.linkedin.com/in/${oauthUser.providerId}` : null,
+          bio: 'Imported from LinkedIn profile.',
+        };
+      }
+
+      // Update candidate profile fields in DB
+      const result = await UserService.updateApplicantProfile(userId, {
+        name: importedData.name,
+        bio: importedData.bio,
+        skills: importedData.skills || [],
+        experience: importedData.experience || [],
+        education: importedData.education || [],
+        linkedin_url: importedData.linkedin_url,
+        portfolio_url: importedData.portfolio_url || null,
+        github_url: importedData.github_url || null,
+        photo_url: importedData.photo_url || null,
+        phone: importedData.phone || null,
+      });
+
+      sendSuccess(res, result, 'LinkedIn profile synchronized successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
 };

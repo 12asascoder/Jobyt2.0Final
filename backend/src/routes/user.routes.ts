@@ -52,6 +52,12 @@ router.put(
   UserController.updateProfile,
 );
 
+router.post(
+  '/me/import/linkedin',
+  authorize('applicant'),
+  UserController.importLinkedInProfile
+);
+
 router.get('/me/preferences', UserController.getPreferences);
 router.put(
   '/me/preferences',
