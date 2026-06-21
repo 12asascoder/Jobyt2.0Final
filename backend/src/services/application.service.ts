@@ -18,6 +18,7 @@ import { SkillMatchingService } from './matching/skillMatching.service';
 import { WebhookService } from './webhook.service';
 import { WEBHOOK_EVENTS } from './webhook/eventCatalog';
 import redis from '../config/redis';
+import prisma from '../config/prisma';
 
 const LOG_PREFIX = '[ApplicationService]';
 
@@ -541,12 +542,22 @@ export const ApplicationService = {
 
     const skillMatchResult = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
 
+    // Fetch candidate's extended profile data
+    const [applicantProjects, githubRepos, applicantCertifications] = await Promise.all([
+      prisma.applicant_projects.findMany({ where: { user_id: application.applicant_id } }),
+      prisma.github_repos.findMany({ where: { user_id: application.applicant_id } }),
+      prisma.applicant_certifications.findMany({ where: { user_id: application.applicant_id } })
+    ]);
+
     return {
       ...application,
       skill_match: application.override_score !== null && application.override_score !== undefined ? application.override_score : skillMatchResult.matchPercentage,
       matched_skills: skillMatchResult.matchedSkills,
       missing_skills: skillMatchResult.missingSkills,
       fuzzy_matched_skills: skillMatchResult.fuzzyMatchedSkills,
+      projects: applicantProjects,
+      github_repos: githubRepos,
+      certifications: applicantCertifications,
     };
   },
 
