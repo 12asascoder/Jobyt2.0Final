@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Spinner, Avatar } from '@/components/ui';
 import { resolveAssetUrl } from '@/lib/assetUrl';
-import { FaGithub, FaLinkedin, FaGlobe, FaEnvelope, FaPhone, FaArrowLeft, FaFileArrowDown, FaStar } from 'react-icons/fa6';
+import { FaGithub, FaLinkedin, FaGlobe, FaEnvelope, FaPhone, FaArrowLeft, FaFileArrowDown, FaStar, FaAward } from 'react-icons/fa6';
 
 interface PublicProfile {
   id: string;
@@ -40,6 +40,14 @@ interface PublicProfile {
     github_url: string | null;
     demo_url: string | null;
     media_url: string | null;
+  }>;
+  certifications?: Array<{
+    id: string;
+    name: string;
+    issuer: string;
+    issue_date: string | null;
+    credential_url: string | null;
+    file_url: string | null;
   }>;
 }
 
@@ -97,7 +105,7 @@ export default function PublicStudentProfilePage() {
     );
   }
 
-  const { profile, email, githubRepos, projects } = data;
+  const { profile, email, githubRepos, projects, certifications } = data;
   const avatarUrl = resolveAssetUrl(profile.photo_url);
 
   // Normalize URLs to ensure they open in new tabs correctly
@@ -365,6 +373,74 @@ export default function PublicStudentProfilePage() {
                 <p className="text-xs text-slate-500 italic">No public repositories available.</p>
               )}
             </div>
+            
+            {/* Certifications Showcase Card */}
+            <div className="bg-[#1a1a1a]/90 backdrop-blur-md border border-white/5 rounded-3xl p-8 shadow-xl">
+              <h3 className="text-sm font-black uppercase tracking-widest text-lime-400 mb-5 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-lime-300"></span>
+                <span>Certifications & Credentials</span>
+              </h3>
+              {certifications && certifications.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {certifications.map((cert) => (
+                    <div
+                      key={cert.id}
+                      className="bg-[#2d2d2d] rounded-2xl p-5 border border-white/5 flex flex-col justify-between group hover:border-lime-400/30 transition-all duration-300 shadow-lg"
+                    >
+                      <div className="flex gap-4 items-start">
+                        <div className="p-3 bg-lime-400/10 border border-lime-400/20 text-lime-300 rounded-xl text-lg shrink-0">
+                          <FaAward />
+                        </div>
+                        <div className="space-y-1 min-w-0">
+                          <h4 className="font-bold text-white text-sm leading-snug truncate" title={cert.name}>
+                            {cert.name}
+                          </h4>
+                          <p className="text-xs text-lime-300/70 font-semibold truncate">
+                            {cert.issuer}
+                          </p>
+                          {cert.issue_date && (
+                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                              Issued: {new Date(cert.issue_date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 pt-4 mt-4 border-t border-white/5 text-xs">
+                        {cert.credential_url && (
+                          <a
+                            href={formatUrl(cert.credential_url)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-slate-300 hover:text-white font-bold transition-colors"
+                          >
+                            <FaGlobe className="text-sm" />
+                            <span>Verify Link</span>
+                          </a>
+                        )}
+                        {cert.file_url && (
+                          <a
+                            href={formatUrl(cert.file_url)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-lime-400 hover:text-lime-300 font-bold transition-colors ml-auto"
+                          >
+                            <FaFileArrowDown className="text-sm" />
+                            <span>View Document</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 italic">No certifications documented.</p>
+              )}
+            </div>
+
             {/* Experience Card */}
             <div className="bg-[#1a1a1a]/90 backdrop-blur-md border border-white/5 rounded-3xl p-8 shadow-xl">
               <h3 className="text-sm font-black uppercase tracking-widest text-lime-400 mb-6 flex items-center gap-2">
