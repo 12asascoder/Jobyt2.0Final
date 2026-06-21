@@ -15,7 +15,7 @@ export const recommendationWorker = new Worker('recommendationQueue', async (job
     }
   }
 }, { 
-  connection: redisConnection,
+  connection: redisConnection as any,
   concurrency: 5 // Process 5 users concurrently
 });
 

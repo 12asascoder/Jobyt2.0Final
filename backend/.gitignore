@@ -7,3 +7,8 @@ uploads/
 *.log
 
 /src/generated/prisma
+
+# Root-level scratch/debug scripts — never commit these
+/*.ts
+/payload*.json
+/test*.js
