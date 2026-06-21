@@ -162,7 +162,22 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-[1308px] ml-4 sm:ml-6 lg:ml-8 pr-4 pb-8 font-brand">
-      <h1 className="text-[40px] leading-[54px] font-normal mb-3 text-black tracking-tight">My Profile</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+        <h1 className="text-[40px] leading-[54px] font-normal text-black tracking-tight">My Profile</h1>
+        {user?.role === 'applicant' && (
+          <button
+            type="button"
+            onClick={() => {
+              const url = `${window.location.origin}/profile/${user.id}`;
+              navigator.clipboard.writeText(url);
+              toast.success('Public profile link copied to clipboard!');
+            }}
+            className="flex items-center gap-2 bg-black hover:bg-[#1a1a1a] text-lime-400 font-bold px-5 py-2.5 rounded-[12px] text-sm shadow-sm transition-all active:scale-95 shrink-0"
+          >
+            <span>🔗 Share Public Profile</span>
+          </button>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[800px_484px] gap-6 items-start">
         {/* Left Column: Beige Form Container */}

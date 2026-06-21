@@ -9,6 +9,9 @@ import { validate } from '../middleware/validate';
 
 const router = Router();
 
+// Public profile endpoint
+router.get('/public/:userId', UserController.getPublicProfile);
+
 router.use(authenticate);
 
 // ── Own profile ────────────────────────────────────────────────────────────────
@@ -140,6 +143,5 @@ router.get(
 
 // ── Public profile ─────────────────────────────────────────────────────────────
 router.get('/:userId/resumes/:id/secure-url', ResumeController.getSecureUrl);
-router.get('/:userId', UserController.getPublicProfile);
 
 export default router;
