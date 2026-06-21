@@ -8,7 +8,8 @@ const router = Router();
 router.post('/roadmap/generate', authenticate, authorize('applicant'), LearningController.generateRoadmap);
 router.post('/course/start', authenticate, authorize('applicant'), LearningController.startCourse);
 router.post('/course/complete', authenticate, authorize('applicant'), LearningController.completeCourse);
-router.get('/profile/:candidateId?', authenticate, LearningController.getSkillProfile);
+router.get('/profile', authenticate, LearningController.getSkillProfile);
+router.get('/profile/:candidateId', authenticate, LearningController.getSkillProfile);
 
 // Employer Routes
 router.post('/search', authenticate, authorize('recruiter'), LearningController.searchCandidatesBySkills);
