@@ -38,30 +38,31 @@ model applicant_profiles {
 }
 
 model applications {
-  id                        String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  job_id                    String              @db.Uuid
-  applicant_id              String              @db.Uuid
+  id                        String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  job_id                    String                @db.Uuid
+  applicant_id              String                @db.Uuid
   cover_letter              String?
-  resume_snapshot_url       String?             @db.VarChar(500)
-  status                    application_status? @default(applied)
-  status_updated_at         DateTime?           @default(now()) @db.Timestamptz(6)
-  created_at                DateTime?           @default(now()) @db.Timestamptz(6)
-  resume_id                 String?             @db.Uuid
-  application_answers       Json                @default("[]")
+  resume_snapshot_url       String?               @db.VarChar(500)
+  submission_source         String                @default("manual") @db.VarChar(30)
+  status                    application_status?   @default(applied)
+  status_updated_at         DateTime?             @default(now()) @db.Timestamptz(6)
+  created_at                DateTime?             @default(now()) @db.Timestamptz(6)
+  resume_id                 String?               @db.Uuid
+  application_answers       Json                  @default("[]")
   ai_strengths              Json?
   ai_weaknesses             Json?
   ai_summary                String?
-  ai_reasoning_generated_at DateTime?           @db.Timestamptz(6)
-  override_score            Int?
-  override_reason           String?
-  users                     users               @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  jobs                      jobs                @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  ai_reasoning_generated_at DateTime?             @db.Timestamptz(6)
+  users                     users                 @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobs                      jobs                  @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   pipeline_events           pipeline_events[]
-  interviews                interviews[]
+  assessment_sessions       assessment_sessions[]
+  coding_submissions        coding_submissions[]
 
   @@unique([job_id, applicant_id])
   @@index([applicant_id, created_at(sort: Desc)], map: "idx_applications_applicant")
   @@index([job_id, status], map: "idx_applications_job_status")
+  @@index([job_id, applicant_id], map: "idx_applications_job_applicant")
 }
 
 model conversations {
@@ -96,49 +97,62 @@ model credit_transactions {
 }
 
 model jobs {
-  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  recruiter_id           String                   @db.Uuid
-  company_id             String?                  @db.Uuid
-  companyName            String                   @default("Unknown Company") @map("company_name") @db.VarChar(255)
-  company_logo           String?                  @db.VarChar(500)
-  company_website        String?                  @db.VarChar(500)
-  company_location       String?                  @db.VarChar(255)
-  is_external_company    Boolean                  @default(false)
-  source                 String                   @default("recruiter") @db.VarChar(30)
-  created_by             String?                  @db.Uuid
-  title                  String                   @db.VarChar(255)
-  location               String?                  @db.VarChar(255)
-  salary_min             Int?
-  salary_max             Int?
-  type                   job_type                 @default(full_time)
-  skills                 String[]                 @default([])
-  description            String
-  status                 job_status?              @default(draft)
-  is_boosted             Boolean?                 @default(false)
-  views_count            Int?                     @default(0)
-  deleted_at             DateTime?                @db.Timestamptz(6)
-  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
-  external_url           String?                  @db.VarChar(2048)
-  search_vector          Unsupported("tsvector")?
-  application_questions  Json                     @default("[]")
-  job_approval_status    String?                  @default("approved") @db.VarChar(30)
-  approved_by            String?                  @db.Uuid
-  approved_at            DateTime?                @db.Timestamptz(6)
-  ai_interview_type      String?                  @db.VarChar(50)
-  ai_interview_rubric    String?
-  ai_interview_threshold Int?
-  applications           applications[]
-  conversations          conversations[]
-  users                  users                    @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  saved_jobs             saved_jobs[]
-  job_recommendations    job_recommendations[]
-  autoApplyLogs          auto_apply_logs[]
+  id                           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recruiter_id                 String                   @db.Uuid
+  company_id                   String?                  @db.Uuid
+  companyName                  String                   @default("Unknown Company") @map("company_name") @db.VarChar(255)
+  company_logo                 String?                  @db.VarChar(500)
+  company_website              String?                  @db.VarChar(500)
+  company_location             String?                  @db.VarChar(255)
+  is_external_company          Boolean                  @default(false)
+  source                       String                   @default("recruiter") @db.VarChar(30)
+  created_by                   String?                  @db.Uuid
+  title                        String                   @db.VarChar(255)
+  location                     String?                  @db.VarChar(255)
+  salary_min                   Int?
+  salary_max                   Int?
+  type                         job_type                 @default(full_time)
+  skills                       String[]                 @default([])
+  description                  String
+  status                       job_status?              @default(draft)
+  is_boosted                   Boolean?                 @default(false)
+  views_count                  Int?                     @default(0)
+  deleted_at                   DateTime?                @db.Timestamptz(6)
+  created_at                   DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime?                @default(now()) @db.Timestamptz(6)
+  external_url                 String?                  @db.VarChar(2048)
+  search_vector                Unsupported("tsvector")?
+  application_questions        Json                     @default("[]")
+  job_approval_status          String?                  @default("approved") @db.VarChar(30)
+  approved_by                  String?                  @db.Uuid
+  approved_at                  DateTime?                @db.Timestamptz(6)
+  description_embedding        Json?
+  coding_assessment_id         String?                  @db.Uuid
+  active_assessment_version_id String?                  @db.Uuid
+  disallow_auto_apply          Boolean                  @default(false)
+  applications                 applications[]
+  auto_apply_queue_items       auto_apply_queue_items[]
+  auto_apply_events            auto_apply_events[]
+  resume_variants              resume_variants[]
+  conversations                conversations[]
+  users                        users                    @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  saved_jobs                   saved_jobs[]
+  job_recommendations          job_recommendations[]
+  linked_coding_assessment     coding_assessments?      @relation("JobLinkedAssessment", fields: [coding_assessment_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  active_assessment_version    assessment_versions?     @relation("JobActiveAssessmentVersion", fields: [active_assessment_version_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  coding_assessments_on_job    coding_assessments[]     @relation("AssessmentJob")
+  assessment_versions_on_job   assessment_versions[]    @relation("AssessmentVersionJob")
 
   @@index([recruiter_id], map: "idx_jobs_recruiter")
   @@index([job_approval_status], map: "idx_jobs_approval_status")
   @@index([search_vector], map: "idx_jobs_search", type: Gin)
   @@index([skills], map: "idx_jobs_skills", type: Gin)
+  @@index([deleted_at, status], map: "idx_jobs_deleted_status")
+  @@index([job_approval_status, status, deleted_at, type], map: "idx_jobs_discovery")
+  @@index([location], map: "idx_jobs_location")
+  @@index([salary_min, salary_max], map: "idx_jobs_salary_range")
+  @@index([status], map: "idx_jobs_status")
+  @@index([type], map: "idx_jobs_type")
 }
 
 model messages {
@@ -182,27 +196,43 @@ model payments {
 }
 
 model plans {
-  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name       String     @db.VarChar(100)
-  credits    Int
-  price      Decimal    @db.Decimal(10, 2)
-  currency   String?    @default("INR") @db.VarChar(10)
-  is_active  Boolean?   @default(true)
-  created_at DateTime?  @default(now()) @db.Timestamptz(6)
-  payments   payments[]
+  id                   String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String     @db.VarChar(100)
+  credits              Int
+  price                Decimal    @db.Decimal(10, 2)
+  currency             String?    @default("INR") @db.VarChar(10)
+  is_active            Boolean?   @default(true)
+  max_daily_auto_apply Int        @default(0)
+  created_at           DateTime?  @default(now()) @db.Timestamptz(6)
+  payments             payments[]
 }
 
 model pipeline_events {
-  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  application_id  String              @db.Uuid
-  previous_status application_status?
-  new_status      application_status
-  changed_by_id   String?             @db.Uuid
-  notes           String?
-  created_at      DateTime?           @default(now()) @db.Timestamptz(6)
-  applications    applications        @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  application_id    String              @db.Uuid
+  previous_status   application_status?
+  new_status        application_status
+  changed_by_id     String?             @db.Uuid
+  notes             String?
+  calendar_event_id String?             @db.VarChar(255)
+  meet_link         String?             @db.VarChar(500)
+  scheduled_at      DateTime?           @db.Timestamptz(6)
+  duration_minutes  Int?                @default(60)
+  created_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  applications      applications        @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([application_id], map: "idx_pipeline_events_application")
+}
+
+model google_calendar_tokens {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String    @unique @db.Uuid
+  access_token  String
+  refresh_token String
+  token_expiry  DateTime  @db.Timestamptz(6)
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime? @default(now()) @db.Timestamptz(6)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model recruiter_profiles {
@@ -258,71 +288,83 @@ model saved_jobs {
 /// Uploaded resume files (S3/CloudFront URL + metadata). One row per file; use is_default for application default.
 /// DB enforces ≤1 default per user: partial unique index unique_default_resume_per_user (see migration 20260323150000).
 model resumes {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id    String   @db.Uuid
-  file_url   String   @db.VarChar(500)
-  file_name  String   @db.VarChar(255)
-  file_size  Int?
-  mime_type  String?  @db.VarChar(100)
-  is_default Boolean  @default(false)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  updated_at DateTime @updatedAt @db.Timestamptz(6)
-  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                String                   @db.Uuid
+  file_url               String                   @db.VarChar(500)
+  file_name              String                   @db.VarChar(255)
+  file_size              Int?
+  mime_type              String?                  @db.VarChar(100)
+  is_default             Boolean                  @default(false)
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @updatedAt @db.Timestamptz(6)
+  users                  users                    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  auto_apply_preferences auto_apply_preferences[]
+  resume_variants        resume_variants[]
 
   @@index([user_id, is_default], map: "idx_resumes_user_default")
   @@index([user_id, created_at(sort: Desc)], map: "idx_resumes_user_created_at")
 }
 
 model users {
-  id                                              String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                                           String?                    @unique @db.VarChar(255)
-  phone                                           String?                    @unique @db.VarChar(30)
-  phone_verified                                  Boolean                    @default(false)
-  password_hash                                   String?                    @db.VarChar(255)
-  auth_provider                                   auth_provider              @default(local)
-  google_id                                       String?                    @unique @db.VarChar(255)
-  github_id                                       String?                    @unique @db.VarChar(255)
-  linkedin_id                                     String?                    @unique @db.VarChar(255)
+  id                                              String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                           String?                  @unique @db.VarChar(255)
+  phone                                           String?                  @unique @db.VarChar(30)
+  phone_verified                                  Boolean                  @default(false)
+  password_hash                                   String?                  @db.VarChar(255)
+  auth_provider                                   auth_provider            @default(local)
+  google_id                                       String?                  @unique @db.VarChar(255)
+  github_id                                       String?                  @unique @db.VarChar(255)
+  linkedin_id                                     String?                  @unique @db.VarChar(255)
   role                                            user_role
-  is_verified                                     Boolean?                   @default(false)
-  is_email_dummy                                  Boolean                    @default(false)
-  email_verified                                  Boolean                    @default(false)
-  email_verification_token                        String?                    @db.VarChar(255)
-  email_verification_expires                      DateTime?                  @db.Timestamptz(6)
-  verify_token                                    String?                    @db.VarChar(255)
-  reset_token                                     String?                    @db.VarChar(255)
-  reset_token_expires_at                          DateTime?                  @db.Timestamptz(6)
-  referral_code                                   String                     @unique @db.VarChar(20)
-  credit_balance                                  Int                        @default(0)
-  email_alerts_enabled                            Boolean                    @default(true)
-  whatsapp_alerts_enabled                         Boolean                    @default(true)
-  created_at                                      DateTime?                  @default(now()) @db.Timestamptz(6)
-  updated_at                                      DateTime?                  @default(now()) @db.Timestamptz(6)
+  is_verified                                     Boolean?                 @default(false)
+  is_email_dummy                                  Boolean                  @default(false)
+  email_verified                                  Boolean                  @default(false)
+  email_verification_token                        String?                  @db.VarChar(255)
+  email_verification_expires                      DateTime?                @db.Timestamptz(6)
+  verify_token                                    String?                  @db.VarChar(255)
+  reset_token                                     String?                  @db.VarChar(255)
+  reset_token_expires_at                          DateTime?                @db.Timestamptz(6)
+  referral_code                                   String                   @unique @db.VarChar(20)
+  credit_balance                                  Int                      @default(0)
+  email_alerts_enabled                            Boolean                  @default(true)
+  whatsapp_alerts_enabled                         Boolean                  @default(true)
+  push_alerts_enabled                             Boolean                  @default(false)
+  created_at                                      DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at                                      DateTime?                @default(now()) @db.Timestamptz(6)
   admin_audit_log                                 admin_audit_log[]
+  google_calendar_tokens                          google_calendar_tokens?
   applicant_profiles                              applicant_profiles?
   applications                                    applications[]
-  conversations_conversations_applicant_idTousers conversations[]            @relation("conversations_applicant_idTousers")
-  conversations_conversations_recruiter_idTousers conversations[]            @relation("conversations_recruiter_idTousers")
+  conversations_conversations_applicant_idTousers conversations[]          @relation("conversations_applicant_idTousers")
+  conversations_conversations_recruiter_idTousers conversations[]          @relation("conversations_recruiter_idTousers")
   credit_transactions                             credit_transactions[]
+  device_tokens                                   device_tokens[]
   jobs                                            jobs[]
   messages                                        messages[]
   notifications                                   notifications[]
   payments                                        payments[]
   recruiter_profiles                              recruiter_profiles?
-  referral_redemptions_referrer_idTousers         referral_redemptions[]     @relation("referral_redemptions_referrer_idTousers")
-  referral_redemptions_user_idTousers             referral_redemptions?      @relation("referral_redemptions_user_idTousers")
-  referrals_referrals_referred_idTousers          referrals?                 @relation("referrals_referred_idTousers")
-  referrals_referrals_referrer_idTousers          referrals[]                @relation("referrals_referrer_idTousers")
+  referral_redemptions_referrer_idTousers         referral_redemptions[]   @relation("referral_redemptions_referrer_idTousers")
+  referral_redemptions_user_idTousers             referral_redemptions?    @relation("referral_redemptions_user_idTousers")
+  referrals_referrals_referred_idTousers          referrals?               @relation("referrals_referred_idTousers")
+  referrals_referrals_referrer_idTousers          referrals[]              @relation("referrals_referrer_idTousers")
   resumes                                         resumes[]
   saved_jobs                                      saved_jobs[]
   job_recommendations                             job_recommendations[]
-  interviews_as_interviewer                       interviews[]               @relation("interviewer")
-  interviews_as_candidate                         interviews[]               @relation("candidate")
-  github_repos                                    github_repos[]
-  applicant_projects                              applicant_projects[]
-  applicant_certifications                        applicant_certifications[]
+  coding_problems_created                         coding_problems[]        @relation("CodingProblemCreator")
+  problem_versions_published                      problem_versions[]       @relation("ProblemVersionPublisher")
+  problem_collections                             problem_collections[]
+  coding_assessments                              coding_assessments[]
+  assessment_versions_published                   assessment_versions[]    @relation("AssessmentVersionPublisher")
+  assessment_sessions                             assessment_sessions[]
+  practice_sessions                               practice_sessions[]
+  coding_submissions                              coding_submissions[]
+  execution_logs                                  execution_logs[]
   auto_apply_preferences                          auto_apply_preferences?
-  auto_apply_logs                                 auto_apply_logs[]
+  auto_apply_queue_items                          auto_apply_queue_items[]
+  auto_apply_events                               auto_apply_events[]
+  auto_apply_daily_usage                          auto_apply_daily_usage[]
+  resume_variants                                 resume_variants[]
 }
 
 enum auth_provider {
@@ -370,6 +412,143 @@ enum notification_type {
   payment_success
   payment_failed
   application_submitted
+  auto_apply_digest
+}
+
+enum auto_apply_approval_mode {
+  auto
+  manual
+}
+
+enum auto_apply_status {
+  disabled
+  enabled
+  paused
+}
+
+enum auto_apply_queue_status {
+  matched
+  pending_approval
+  tailoring
+  submitting
+  submitted
+  skipped
+  failed
+  cancelled
+  expired
+}
+
+enum auto_apply_event_type {
+  MATCHED
+  APPROVED
+  REJECTED
+  TAILORED
+  SUBMITTED
+  FAILED
+  PAUSED
+  SKIPPED
+  PREVIEWED
+}
+
+enum resume_variant_source {
+  auto_apply_tailor
+  manual_upload
+}
+
+model auto_apply_preferences {
+  user_id              String                   @id @db.Uuid
+  status               auto_apply_status        @default(disabled)
+  approval_mode        auto_apply_approval_mode @default(manual)
+  match_threshold      Int                      @default(70)
+  target_roles         String[]                 @default([])
+  target_locations     String[]                 @default([])
+  target_job_types     job_type[]               @default([])
+  excluded_companies   String[]                 @default([])
+  excluded_keywords    String[]                 @default([])
+  base_resume_id       String?                  @db.Uuid
+  include_cover_letter Boolean                  @default(false)
+  digest_enabled       Boolean                  @default(true)
+  tailoring_mode       String                   @default("keywords")
+  consented_at         DateTime?                @db.Timestamptz(6)
+  preview_ack_at       DateTime?                @db.Timestamptz(6)
+  last_matched_at      DateTime?                @db.Timestamptz(6)
+  created_at           DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime                 @default(now()) @db.Timestamptz(6)
+  users                users                    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  base_resume          resumes?                 @relation(fields: [base_resume_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+}
+
+model resume_variants {
+  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String                  @db.Uuid
+  job_id            String?                 @db.Uuid
+  base_resume_id    String                  @db.Uuid
+  version_label     String                  @default("A") @db.VarChar(10)
+  snapshot_url      String                  @db.VarChar(500)
+  change_log        Json                    @default("[]")
+  fabricated_risk   Boolean                 @default(false)
+  source            resume_variant_source   @default(auto_apply_tailor)
+  queue_item_id     String?                 @db.Uuid
+  created_at        DateTime                @default(now()) @db.Timestamptz(6)
+  users             users                   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobs              jobs?                   @relation(fields: [job_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  base_resume       resumes                 @relation(fields: [base_resume_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  queue_item        auto_apply_queue_items? @relation("VariantQueueItem", fields: [queue_item_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  selected_by_queue auto_apply_queue_items? @relation("QueueItemSelectedVariant")
+
+  @@index([user_id, job_id, created_at(sort: Desc)], map: "idx_resume_variants_user_job")
+}
+
+model auto_apply_queue_items {
+  id                  String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String                  @db.Uuid
+  job_id              String                  @db.Uuid
+  status              auto_apply_queue_status @default(matched)
+  match_score         Int?
+  match_reason        Json                    @default("{}")
+  match_breakdown     Json?
+  resume_variant_id   String?                 @unique @db.Uuid
+  application_id      String?                 @db.Uuid
+  failure_reason      String?
+  failed_at           DateTime?               @db.Timestamptz(6)
+  approval_expires_at DateTime?               @db.Timestamptz(6)
+  processed_at        DateTime?               @db.Timestamptz(6)
+  created_at          DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime                @default(now()) @db.Timestamptz(6)
+  users               users                   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobs                jobs                    @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  resume_variant      resume_variants?        @relation("QueueItemSelectedVariant", fields: [resume_variant_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  variants_for_item   resume_variants[]       @relation("VariantQueueItem")
+  events              auto_apply_events[]
+
+  @@unique([user_id, job_id])
+  @@index([user_id, status, created_at(sort: Desc)], map: "idx_auto_apply_queue_user_status")
+}
+
+model auto_apply_events {
+  id            String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String                  @db.Uuid
+  job_id        String?                 @db.Uuid
+  queue_item_id String?                 @db.Uuid
+  event_type    auto_apply_event_type
+  metadata      Json                    @default("{}")
+  created_at    DateTime                @default(now()) @db.Timestamptz(6)
+  users         users                   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobs          jobs?                   @relation(fields: [job_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  queue_item    auto_apply_queue_items? @relation(fields: [queue_item_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([user_id, created_at(sort: Desc)], map: "idx_auto_apply_events_user_created")
+  @@index([job_id, created_at(sort: Desc)], map: "idx_auto_apply_events_job")
+}
+
+model auto_apply_daily_usage {
+  user_id       String   @db.Uuid
+  usage_date    DateTime @default(dbgenerated("(CURRENT_DATE AT TIME ZONE 'UTC')")) @db.Date
+  applied_count Int      @default(0)
+  matched_count Int      @default(0)
+  users         users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, usage_date])
 }
 
 enum payment_status {
@@ -385,60 +564,16 @@ enum user_role {
   admin
 }
 
-model github_repos {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id          String   @db.Uuid
-  repo_id          Int      @db.Integer
-  name             String   @db.VarChar(255)
-  description      String?  @db.VarChar(500)
-  html_url         String   @db.VarChar(500)
-  language         String?  @db.VarChar(100)
-  stargazers_count Int      @db.Integer
-  created_at       DateTime @default(now()) @db.Timestamptz(6)
-  users            users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+model device_tokens {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String   @db.Uuid
+  token        String   @unique
+  platform     String   @db.VarChar(20) // 'ios' or 'android'
+  last_used_at DateTime @default(now()) @db.Timestamptz(6)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@unique([user_id, repo_id], name: "user_id_repo_id")
-}
-
-model applicant_projects {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id     String   @db.Uuid
-  title       String   @db.VarChar(255)
-  description String?
-  tech_stack  String[] @default([])
-  github_url  String?  @db.VarChar(500)
-  demo_url    String?  @db.VarChar(500)
-  media_url   String?  @db.VarChar(500)
-  created_at  DateTime @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime @updatedAt @db.Timestamptz(6)
-  users       users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
-
-model applicant_certifications {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id        String    @db.Uuid
-  name           String    @db.VarChar(255)
-  issuer         String    @db.VarChar(255)
-  issue_date     DateTime? @db.Date
-  credential_url String?   @db.VarChar(500)
-  file_url       String?   @db.VarChar(500)
-  created_at     DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime  @updatedAt @db.Timestamptz(6)
-  users          users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
-
-model job_recommendations {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id    String    @db.Uuid
-  job_id     String    @db.Uuid
-  score      Int
-  status     String    @default("pending") @db.VarChar(30)
-  created_at DateTime? @default(now()) @db.Timestamptz(6)
-  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  jobs       jobs      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([user_id, job_id], map: "idx_job_recommendations_unique")
-  @@index([user_id, status], map: "idx_job_recommendations_user_status")
+  @@index([user_id])
 }
 
 model scheduler_logs {
@@ -510,4 +645,380 @@ model auto_apply_logs {
   jobs          jobs      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id, status], map: "idx_auto_apply_logs_user_status")
+}
+
+// ── Coding Assessment Module ───────────────────────────────────────────────────
+
+model coding_problems {
+  id                     String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  created_by             String                @db.Uuid
+  title                  String                @db.VarChar(255)
+  slug                   String                @db.VarChar(255)
+  status                 coding_problem_status @default(draft)
+  current_version_number Int                   @default(0)
+  difficulty             coding_difficulty     @default(medium)
+  supported_languages    String[]              @default(["python", "javascript", "java", "cpp"])
+  description            String                @default("")
+  constraints            String?
+  hints                  Json?                 @default("[]")
+  starter_code           Json                  @default("{}")
+  time_limit_sec         Int                   @default(5)
+  memory_limit_kb        Int                   @default(128000)
+  tags                   String[]              @default([])
+  created_at             DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime              @default(now()) @db.Timestamptz(6)
+  deleted_at             DateTime?             @db.Timestamptz(6)
+  users                  users                 @relation("CodingProblemCreator", fields: [created_by], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  coding_test_cases      coding_test_cases[]
+  problem_versions       problem_versions[]
+  collection_problems    collection_problems[]
+  assessment_problems    assessment_problems[]
+
+  @@unique([created_by, slug])
+  @@index([created_by, status], map: "idx_coding_problems_created_by_status")
+  @@index([tags], map: "idx_coding_problems_tags", type: Gin)
+}
+
+model coding_test_cases {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  problem_id      String          @db.Uuid
+  input           String          @default("")
+  expected_output String          @default("")
+  is_hidden       Boolean         @default(false)
+  is_sample       Boolean         @default(false)
+  weight          Int             @default(1)
+  order_index     Int             @default(0)
+  explanation     String?
+  coding_problems coding_problems @relation(fields: [problem_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([problem_id, order_index], map: "idx_coding_test_cases_problem")
+}
+
+model problem_versions {
+  id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  problem_id                  String                        @db.Uuid
+  version_number              Int
+  title                       String                        @db.VarChar(255)
+  description                 String
+  constraints                 String?
+  hints                       Json?                         @default("[]")
+  difficulty                  coding_difficulty
+  supported_languages         String[]
+  starter_code                Json                          @default("{}")
+  time_limit_sec              Int                           @default(5)
+  memory_limit_kb             Int                           @default(128000)
+  published_at                DateTime                      @default(now()) @db.Timestamptz(6)
+  published_by                String                        @db.Uuid
+  snapshot_hash               String                        @db.VarChar(64)
+  coding_problems             coding_problems               @relation(fields: [problem_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                       users                         @relation("ProblemVersionPublisher", fields: [published_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  problem_version_test_cases  problem_version_test_cases[]
+  assessment_version_problems assessment_version_problems[]
+  practice_sessions           practice_sessions[]
+  coding_submissions          coding_submissions[]
+  execution_logs              execution_logs[]
+
+  @@unique([problem_id, version_number])
+}
+
+model problem_version_test_cases {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  problem_version_id String           @db.Uuid
+  input              String           @default("")
+  expected_output    String           @default("")
+  is_hidden          Boolean          @default(false)
+  is_sample          Boolean          @default(false)
+  weight             Int              @default(1)
+  order_index        Int              @default(0)
+  explanation        String?
+  problem_versions   problem_versions @relation(fields: [problem_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([problem_version_id, order_index], map: "idx_pvtc_version")
+}
+
+model problem_collections {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  created_by          String                @db.Uuid
+  name                String                @db.VarChar(255)
+  description         String?
+  is_shared           Boolean               @default(false)
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime              @default(now()) @db.Timestamptz(6)
+  users               users                 @relation(fields: [created_by], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  collection_problems collection_problems[]
+
+  @@index([created_by], map: "idx_problem_collections_created_by")
+}
+
+model collection_problems {
+  collection_id       String              @db.Uuid
+  problem_id          String              @db.Uuid
+  order_index         Int                 @default(0)
+  problem_collections problem_collections @relation(fields: [collection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  coding_problems     coding_problems     @relation(fields: [problem_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([collection_id, problem_id])
+}
+
+model coding_assessments {
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recruiter_id           String                   @db.Uuid
+  job_id                 String?                  @db.Uuid
+  title                  String                   @db.VarChar(255)
+  description            String?
+  status                 coding_assessment_status @default(draft)
+  current_version_number Int                      @default(0)
+  passing_score          Int                      @default(70)
+  time_limit_minutes     Int?
+  max_attempts           Int                      @default(1)
+  assessment_timing      assessment_timing        @default(post_apply)
+  allow_resume           Boolean                  @default(true)
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  users                  users                    @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobs                   jobs?                    @relation("AssessmentJob", fields: [job_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  jobs_linked            jobs[]                   @relation("JobLinkedAssessment")
+  assessment_problems    assessment_problems[]
+  assessment_versions    assessment_versions[]
+
+  @@index([recruiter_id], map: "idx_coding_assessments_recruiter")
+}
+
+model assessment_problems {
+  assessment_id      String             @db.Uuid
+  problem_id         String             @db.Uuid
+  order_index        Int                @default(0)
+  points             Int                @default(100)
+  coding_assessments coding_assessments @relation(fields: [assessment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  coding_problems    coding_problems    @relation(fields: [problem_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([assessment_id, problem_id])
+}
+
+model assessment_versions {
+  id                          String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assessment_id               String                        @db.Uuid
+  version_number              Int
+  title                       String                        @db.VarChar(255)
+  description                 String?
+  passing_score               Int                           @default(70)
+  time_limit_minutes          Int?
+  max_attempts                Int                           @default(1)
+  assessment_timing           assessment_timing
+  allow_resume                Boolean                       @default(true)
+  job_id                      String?                       @db.Uuid
+  job_snapshot                Json?
+  published_at                DateTime                      @default(now()) @db.Timestamptz(6)
+  published_by                String                        @db.Uuid
+  snapshot_hash               String                        @db.VarChar(64)
+  coding_assessments          coding_assessments            @relation(fields: [assessment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobs                        jobs?                         @relation("AssessmentVersionJob", fields: [job_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  jobs_active                 jobs[]                        @relation("JobActiveAssessmentVersion")
+  users                       users                         @relation("AssessmentVersionPublisher", fields: [published_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assessment_version_problems assessment_version_problems[]
+  assessment_sessions         assessment_sessions[]
+  coding_submissions          coding_submissions[]
+
+  @@unique([assessment_id, version_number])
+}
+
+model assessment_version_problems {
+  id                    String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assessment_version_id String              @db.Uuid
+  problem_version_id    String              @db.Uuid
+  order_index           Int                 @default(0)
+  points                Int                 @default(100)
+  problem_snapshot      Json                @default("{}")
+  assessment_versions   assessment_versions @relation(fields: [assessment_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  problem_versions      problem_versions    @relation(fields: [problem_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([assessment_version_id, order_index], map: "idx_avp_version")
+}
+
+model assessment_sessions {
+  id                     String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assessment_version_id  String                    @db.Uuid
+  user_id                String                    @db.Uuid
+  application_id         String?                   @db.Uuid
+  started_at             DateTime                  @default(now()) @db.Timestamptz(6)
+  expires_at             DateTime?                 @db.Timestamptz(6)
+  completed_at           DateTime?                 @db.Timestamptz(6)
+  status                 assessment_session_status @default(pending)
+  remaining_time_seconds Int?
+  attempt_number         Int                       @default(1)
+  last_heartbeat_at      DateTime?                 @db.Timestamptz(6)
+  current_problem_index  Int                       @default(0)
+  metadata               Json?
+  assessment_versions    assessment_versions       @relation(fields: [assessment_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                  users                     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  applications           applications?             @relation(fields: [application_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  coding_submissions     coding_submissions[]
+  execution_logs         execution_logs[]
+
+  @@index([user_id, assessment_version_id], map: "idx_assessment_sessions_user_version")
+  @@index([application_id], map: "idx_assessment_sessions_application")
+  @@index([status, expires_at], map: "idx_assessment_sessions_status_expires")
+}
+
+model practice_sessions {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id            String               @db.Uuid
+  problem_version_id String               @db.Uuid
+  started_at         DateTime             @default(now()) @db.Timestamptz(6)
+  completed_at       DateTime?            @db.Timestamptz(6)
+  best_score         Int?
+  attempts_count     Int                  @default(0)
+  solved             Boolean              @default(false)
+  users              users                @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  problem_versions   problem_versions     @relation(fields: [problem_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  coding_submissions coding_submissions[]
+  execution_logs     execution_logs[]
+
+  @@index([user_id, started_at(sort: Desc)], map: "idx_practice_sessions_user")
+  @@index([user_id, problem_version_id], map: "idx_practice_sessions_user_problem")
+}
+
+model coding_submissions {
+  id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                 String                    @db.Uuid
+  assessment_session_id   String?                   @db.Uuid
+  practice_session_id     String?                   @db.Uuid
+  problem_version_id      String                    @db.Uuid
+  assessment_version_id   String?                   @db.Uuid
+  application_id          String?                   @db.Uuid
+  attempt_number          Int                       @default(1)
+  language                String                    @db.VarChar(20)
+  source_code             String
+  status                  coding_submission_status  @default(pending)
+  test_pass_count         Int                       @default(0)
+  test_total_count        Int                       @default(0)
+  score                   Int?
+  passed                  Boolean?
+  execution_time_ms       Int?
+  memory_kb               Int?
+  assessment_snapshot     Json?
+  problem_snapshot        Json?
+  job_snapshot            Json?
+  judge0_tokens           String[]                  @default([])
+  created_at              DateTime                  @default(now()) @db.Timestamptz(6)
+  users                   users                     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  assessment_sessions     assessment_sessions?      @relation(fields: [assessment_session_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  practice_sessions       practice_sessions?        @relation(fields: [practice_session_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  problem_versions        problem_versions          @relation(fields: [problem_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assessment_versions     assessment_versions?      @relation(fields: [assessment_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  applications            applications?             @relation(fields: [application_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  submission_test_results submission_test_results[]
+  code_evaluations        code_evaluations?
+
+  @@index([user_id, created_at(sort: Desc)], map: "idx_coding_submissions_user_created")
+  @@index([assessment_session_id], map: "idx_coding_submissions_session")
+  @@index([problem_version_id, user_id, attempt_number], map: "idx_coding_submissions_problem_user")
+}
+
+model submission_test_results {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  submission_id      String             @db.Uuid
+  test_case_id       String             @db.Uuid
+  passed             Boolean
+  actual_output      String?
+  stderr             String?
+  time_sec           Float?             @db.DoublePrecision
+  memory_kb          Float?             @db.DoublePrecision
+  status_id          Int?
+  coding_submissions coding_submissions @relation(fields: [submission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([submission_id], map: "idx_submission_test_results_submission")
+}
+
+model code_evaluations {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  submission_id         String             @unique @db.Uuid
+  readability_score     Int?
+  maintainability_score Int?
+  efficiency_score      Int?
+  best_practices_score  Int?
+  optimization_score    Int?
+  overall_quality_score Int?
+  strengths             Json               @default("[]")
+  weaknesses            Json               @default("[]")
+  suggestions           Json               @default("[]")
+  raw_response          Json?
+  created_at            DateTime           @default(now()) @db.Timestamptz(6)
+  coding_submissions    coding_submissions @relation(fields: [submission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model execution_logs {
+  id                    String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id               String               @db.Uuid
+  problem_version_id    String?              @db.Uuid
+  assessment_session_id String?              @db.Uuid
+  practice_session_id   String?              @db.Uuid
+  language              String               @db.VarChar(20)
+  source_code           String
+  stdin                 String?
+  stdout                String?
+  stderr                String?
+  compile_output        String?
+  execution_time_ms     Int?
+  memory_kb             Int?
+  status                String               @default("success") @db.VarChar(50)
+  judge0_token          String?              @db.VarChar(255)
+  created_at            DateTime             @default(now()) @db.Timestamptz(6)
+  users                 users                @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  problem_versions      problem_versions?    @relation(fields: [problem_version_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  assessment_sessions   assessment_sessions? @relation(fields: [assessment_session_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  practice_sessions     practice_sessions?   @relation(fields: [practice_session_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([user_id, created_at(sort: Desc)], map: "idx_execution_logs_user_created")
+}
+
+enum coding_problem_status {
+  draft
+  published
+}
+
+enum coding_difficulty {
+  easy
+  medium
+  hard
+}
+
+enum coding_assessment_status {
+  draft
+  published
+  archived
+}
+
+enum assessment_timing {
+  during_apply
+  post_apply
+}
+
+enum assessment_session_status {
+  pending
+  active
+  submitted
+  expired
+  completed
+}
+
+enum coding_submission_status {
+  pending
+  running
+  completed
+  failed
+}
+
+model job_recommendations {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  job_id     String    @db.Uuid
+  score      Int
+  status     String    @default("pending") @db.VarChar(30)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobs       jobs      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, job_id], map: "idx_job_recommendations_unique")
+  @@index([user_id, status], map: "idx_job_recommendations_user_status")
 }

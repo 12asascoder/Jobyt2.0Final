@@ -1,789 +1,308 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { api } from '@/lib/api';
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { AutoApplyApi, QueueItem } from '@/lib/api/autoApply.api';
+import { ROUTES } from '@/constants';
+import { Spinner } from '@/components/ui';
 import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
-import {
-  FaBolt,
-  FaTrash,
-  FaCircleCheck,
-  FaXmark,
-  FaSpinner,
-  FaGear,
-  FaList,
-  FaClockRotateLeft,
-  FaPlus,
-  FaTriangleExclamation,
-  FaBriefcase,
-  FaLocationDot,
-  FaCircleInfo,
-} from 'react-icons/fa6';
 
-interface Preferences {
-  is_active: boolean;
-  job_titles: string[];
-  locations: string[];
-  job_types: string[];
-  min_salary: number | null;
-  max_applications_per_day: number;
-}
+import { FaGear, FaBuilding, FaRotateRight, FaCheck, FaXmark, FaCircleExclamation } from 'react-icons/fa6';
 
-interface LogEntry {
-  id: string;
-  job_id: string;
-  status: 'pending' | 'applied' | 'failed';
-  error_message: string | null;
-  applied_at: string | null;
-  created_at: string;
-  jobs: {
-    title: string;
-    companyName: string;
-    location: string;
-    type?: string;
-    salary_min?: number;
-    salary_max?: number;
-    application_questions?: any;
-  };
-}
+const TABS = ['pending_approval', 'matched', 'submitted', 'skipped', 'failed'] as const;
+type Tab = typeof TABS[number];
 
-interface DashboardData {
-  preferences: Preferences;
-  logs: LogEntry[];
-  stats: {
-    applied_last_24h: number;
-  };
-}
+const TAB_LABELS: Record<Tab, string> = {
+  pending_approval: 'Pending Approval',
+  matched: 'Matched',
+  submitted: 'Submitted',
+  skipped: 'Skipped',
+  failed: 'Failed',
+};
 
-export default function AutoApplyDashboard() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'preferences' | 'queue' | 'history'>('preferences');
+const STATUS_COLORS: Record<string, string> = {
+  pending_approval: 'bg-amber-100 text-amber-700 border-amber-200',
+  submitted: 'bg-green-100 text-green-700 border-green-200',
+  skipped: 'bg-slate-100 text-slate-500 border-slate-200',
+  failed: 'bg-red-100 text-red-600 border-red-200',
+  tailoring: 'bg-blue-100 text-blue-600 border-blue-200',
+  submitting: 'bg-blue-100 text-blue-600 border-blue-200',
+  matched: 'bg-purple-100 text-purple-600 border-purple-200',
+  expired: 'bg-slate-100 text-slate-400 border-slate-200',
+  cancelled: 'bg-slate-100 text-slate-400 border-slate-200',
+};
+
+export default function AutoApplyDashboardPage() {
+  const [items, setItems] = useState<QueueItem[]>([]);
+  const [stats, setStats] = useState<Record<string, number>>({});
+  const [tab, setTab] = useState<Tab>('pending_approval');
   const [loading, setLoading] = useState(true);
-  const [savingPrefs, setSavingPrefs] = useState(false);
-  const [applyingAll, setApplyingAll] = useState(false);
-  const [processingItems, setProcessingItems] = useState<Record<string, 'applying' | 'dismissing'>>({});
-  
-  // Dashboard data state
-  const [preferences, setPreferences] = useState<Preferences>({
-    is_active: false,
-    job_titles: [],
-    locations: [],
-    job_types: [],
-    min_salary: null,
-    max_applications_per_day: 5,
-  });
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [stats, setStats] = useState({ applied_last_24h: 0 });
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Preferences editing state
-  const [isActiveEdit, setIsActiveEdit] = useState(false);
-  const [jobTitlesEdit, setJobTitlesEdit] = useState<string[]>([]);
-  const [newTitle, setNewTitle] = useState('');
-  const [locationsEdit, setLocationsEdit] = useState<string[]>([]);
-  const [newLocation, setNewLocation] = useState('');
-  const [jobTypesEdit, setJobTypesEdit] = useState<string[]>([]);
-  const [minSalaryEdit, setMinSalaryEdit] = useState<string>('');
-  const [maxAppsEdit, setMaxAppsEdit] = useState(5);
-
-  const fetchDashboardData = useCallback(async (showSkeleton = false) => {
-    if (showSkeleton) setLoading(true);
+  const load = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await api.get<DashboardData>('/auto-apply/dashboard');
-      if (res.data) {
-        setPreferences(res.data.preferences);
-        setLogs(res.data.logs);
-        setStats(res.data.stats);
-
-        // Sync edit states
-        setIsActiveEdit(res.data.preferences.is_active);
-        setJobTitlesEdit(res.data.preferences.job_titles);
-        setLocationsEdit(res.data.preferences.locations);
-        setJobTypesEdit(res.data.preferences.job_types);
-        setMinSalaryEdit(res.data.preferences.min_salary?.toString() || '');
-        setMaxAppsEdit(res.data.preferences.max_applications_per_day);
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to fetch dashboard data');
+      const [queueRes, statsRes] = await Promise.all([
+        AutoApplyApi.listQueue({ status: tab, page: 1 }),
+        AutoApplyApi.getQueueStats(),
+      ]);
+      setItems(Array.isArray(queueRes.data) ? queueRes.data : []);
+      setStats(statsRes.data || {});
+    } catch {
+      toast.error('Failed to load Auto-Apply queue');
     } finally {
-      if (showSkeleton) setLoading(false);
+      setLoading(false);
     }
-  }, []);
+  }, [tab]);
 
   useEffect(() => {
-    fetchDashboardData(true);
-  }, [fetchDashboardData]);
+    void load();
+  }, [load]);
 
-  const handleSavePreferences = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingPrefs(true);
+  const handleApprove = async (id: string) => {
+    setActionLoading(id + '_approve');
     try {
-      const res = await api.put<Preferences>('/auto-apply/preferences', {
-        is_active: isActiveEdit,
-        job_titles: jobTitlesEdit,
-        locations: locationsEdit,
-        job_types: jobTypesEdit,
-        min_salary: minSalaryEdit.trim() === '' ? null : parseInt(minSalaryEdit, 10),
-        max_applications_per_day: maxAppsEdit,
-      });
-
-      toast.success('Auto-Apply preferences saved successfully!');
-      if (res.data) {
-        setPreferences(res.data);
-      }
-      await fetchDashboardData();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to save preferences');
+      await AutoApplyApi.approve(id);
+      toast.success('Approved — submitting application...');
+      void load();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Approval failed';
+      toast.error(msg);
     } finally {
-      setSavingPrefs(false);
+      setActionLoading(null);
     }
   };
 
-  const handleApplySingle = async (logId: string) => {
-    setProcessingItems(prev => ({ ...prev, [logId]: 'applying' }));
+  const handleReject = async (id: string) => {
+    setActionLoading(id + '_reject');
     try {
-      await api.post(`/auto-apply/apply/${logId}`, {});
-      toast.success('Applied successfully!');
-      await fetchDashboardData();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to submit application');
-      await fetchDashboardData(); // Refresh to show error state in logs
+      await AutoApplyApi.reject(id);
+      toast.success('Skipped');
+      void load();
+    } catch {
+      toast.error('Could not skip item');
     } finally {
-      setProcessingItems(prev => {
-        const copy = { ...prev };
-        delete copy[logId];
-        return copy;
-      });
+      setActionLoading(null);
     }
   };
 
-  const handleDismissSingle = async (logId: string) => {
-    setProcessingItems(prev => ({ ...prev, [logId]: 'dismissing' }));
+  const handleRetry = async (id: string) => {
+    setActionLoading(id + '_retry');
     try {
-      await api.delete(`/auto-apply/queue/${logId}`);
-      toast.success('Job dismissed from queue.');
-      await fetchDashboardData();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to dismiss job');
+      await AutoApplyApi.retry(id);
+      toast.success('Retrying application...');
+      void load();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Retry failed';
+      toast.error(msg);
     } finally {
-      setProcessingItems(prev => {
-        const copy = { ...prev };
-        delete copy[logId];
-        return copy;
-      });
+      setActionLoading(null);
     }
   };
 
-  const handleApplyAll = async () => {
-    setApplyingAll(true);
-    try {
-      const res = await api.post<{ appliedCount: number }>('/auto-apply/apply-all', {});
-      const count = res.data?.appliedCount ?? 0;
-      if (count > 0) {
-        toast.success(`Successfully processed queue and submitted ${count} applications!`);
-      } else {
-        toast.error('No applications were processed. Check your daily limit or default resume settings.');
-      }
-      await fetchDashboardData();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to process queue');
-    } finally {
-      setApplyingAll(false);
-    }
-  };
-
-  const handleAddJobTitle = () => {
-    const val = newTitle.trim();
-    if (val && !jobTitlesEdit.includes(val)) {
-      setJobTitlesEdit(prev => [...prev, val]);
-      setNewTitle('');
-    }
-  };
-
-  const handleRemoveJobTitle = (title: string) => {
-    setJobTitlesEdit(prev => prev.filter(t => t !== title));
-  };
-
-  const handleAddLocation = () => {
-    const val = newLocation.trim();
-    if (val && !locationsEdit.includes(val)) {
-      setLocationsEdit(prev => [...prev, val]);
-      setNewLocation('');
-    }
-  };
-
-  const handleRemoveLocation = (loc: string) => {
-    setLocationsEdit(prev => prev.filter(l => l !== loc));
-  };
-
-  const toggleJobType = (type: string) => {
-    setJobTypesEdit(prev =>
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    );
-  };
-
-  const pendingQueue = logs.filter(log => log.status === 'pending');
-  const processedHistory = logs.filter(log => log.status === 'applied' || log.status === 'failed');
-
-  const progressPercentage = Math.min(
-    (stats.applied_last_24h / preferences.max_applications_per_day) * 100,
-    100
-  );
-
-  const formatJobType = (type?: string) => {
-    if (!type) return '';
-    return type.replace('_', '-').toUpperCase();
-  };
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh]">
-        <FaSpinner className="text-[#C3FF3D] animate-spin text-5xl mb-4" />
-        <p className="text-slate-500 font-semibold">Loading Auto-Apply Dashboard...</p>
-      </div>
-    );
-  }
+  const totalPending = stats.pending_approval || 0;
 
   return (
-    <div className="max-w-[1360px] w-full ml-4 sm:ml-6 lg:ml-8 pr-4">
-      {/* Welcome & Overview */}
-      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl lg:text-[52px] font-extrabold text-[#1a1a1a] tracking-tight leading-[1.05]">
-            Auto-Apply Control Center
-          </h1>
-          <p className="text-slate-600 font-medium text-sm md:text-base mt-2">
-            Automate your job applications and monitor matched openings.
-          </p>
+          <h1 className="text-4xl font-display text-[#0b1120] tracking-tight">Auto-Apply Queue</h1>
+          <p className="text-sm text-slate-500 mt-2 font-medium">Review matches and applications Jobyt submits for you.</p>
         </div>
+        <Link
+          href={ROUTES.autoApplySettings}
+          className="px-6 py-2.5 rounded-xl bg-[#0b1120] text-white hover:bg-[#1a2533] shadow-[0_4px_14px_0_rgba(11,17,32,0.15)] hover:shadow-[0_6px_20px_rgba(11,17,32,0.2)] hover:-translate-y-0.5 transition-all duration-200 text-sm font-bold flex items-center gap-2 w-fit"
+        >
+          <FaGear /> Settings
+        </Link>
+      </div>
 
-        {/* Global Auto Apply Toggle Status Indicator */}
-        <div className="flex items-center gap-3 bg-[#141414] border border-white/5 rounded-2xl p-4 shadow-xl">
-          <div className="relative">
-            <span className={`flex h-3.5 w-3.5 rounded-full ${preferences.is_active ? 'bg-lime-400' : 'bg-slate-500'}`}></span>
-            {preferences.is_active && (
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75 left-0 top-0"></span>
+      {/* Stats strip */}
+      <div className="flex flex-wrap gap-3 mb-10">
+        {[
+          { label: 'Pending', key: 'pending_approval', value: stats.pending_approval || 0 },
+          { label: 'Submitted', key: 'submitted', value: stats.submitted || 0 },
+          { label: 'Skipped', key: 'skipped', value: stats.skipped || 0 },
+          { label: 'Failed', key: 'failed', value: stats.failed || 0 },
+        ].map((s) => (
+          <button
+            key={s.key}
+            onClick={() => setTab(s.key as Tab)}
+            className={`bg-[#141414] rounded-xl px-4 py-3 flex items-center gap-4 shadow-sm hover:-translate-y-0.5 transition-all w-[130px] justify-between border-2 ${tab === s.key ? 'border-[#c3ff3d]' : 'border-transparent'}`}
+          >
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{s.label}</span>
+            <span className={`text-xl font-bold ${s.key === 'failed' && s.value > 0 ? 'text-red-400' : 'text-[#c3ff3d]'}`}>{s.value}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-1 mb-10 p-1.5 bg-white/60 backdrop-blur-md rounded-2xl w-fit border border-slate-200/60 shadow-sm">
+        {TABS.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
+              tab === t
+                ? 'bg-[#0b1120] text-white shadow-md'
+                : 'text-slate-500 hover:text-[#0b1120] hover:bg-slate-100/80'
+            }`}
+          >
+            {TAB_LABELS[t]}
+            {t === 'pending_approval' && totalPending > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-400 text-[#0b1120] text-[10px] font-black leading-none">
+                {totalPending}
+              </span>
             )}
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</p>
-            <p className="text-white font-extrabold text-sm">{preferences.is_active ? 'ACTIVE & SCANNING' : 'DISABLED'}</p>
-          </div>
-        </div>
+          </button>
+        ))}
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        {/* Credits usage Card */}
-        <div className="bg-[#141414] rounded-2xl p-5 border border-white/5 shadow-xl">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Daily Applications</span>
-            <span className="text-lime-400 font-extrabold text-sm">
-              {stats.applied_last_24h} / {preferences.max_applications_per_day}
-            </span>
-          </div>
-          <div className="w-full bg-[#2a2a2a] rounded-full h-2.5 overflow-hidden">
-            <div
-              className="bg-lime-400 h-2.5 rounded-full transition-all duration-500"
-              style={{ width: `${progressPercentage}%` }}
-            ></div>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-2">Resets daily based on your limit.</p>
-        </div>
+      {loading ? (
+        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+      ) : items.length === 0 ? (
+        <EmptyState tab={tab} />
+      ) : (
+        <div className="space-y-4">
+          {items.map((item) => (
+            <div key={item.id} className="glass-card p-6 group relative overflow-hidden transition-all duration-300 hover:shadow-lg">
+              {/* Status accent bar */}
+              <div className={`absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl ${
+                item.status === 'submitted' ? 'bg-green-400' :
+                item.status === 'failed' ? 'bg-red-400' :
+                item.status === 'skipped' || item.status === 'cancelled' ? 'bg-slate-300' :
+                'bg-[#c3ff3d]'
+              }`} />
 
-        {/* Queue size Card */}
-        <div className="bg-[#141414] rounded-2xl p-5 border border-white/5 shadow-xl flex items-center justify-between">
-          <div>
-            <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block">Pending Match Queue</span>
-            <span className="text-[36px] font-extrabold text-lime-400 leading-tight block mt-1">{pendingQueue.length}</span>
-          </div>
-          <FaList className="text-slate-600 text-3xl" />
-        </div>
-
-        {/* Total Processed Card */}
-        <div className="bg-[#141414] rounded-2xl p-5 border border-white/5 shadow-xl flex items-center justify-between">
-          <div>
-            <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider block">Completed Audits</span>
-            <span className="text-[36px] font-extrabold text-lime-400 leading-tight block mt-1">
-              {processedHistory.length}
-            </span>
-          </div>
-          <FaClockRotateLeft className="text-slate-600 text-3xl" />
-        </div>
-      </div>
-
-      {/* Tabs Layout */}
-      <div className="mb-8">
-        <div className="flex border-b border-slate-200">
-          <button
-            onClick={() => setActiveTab('preferences')}
-            className={`flex items-center gap-2 py-3 px-6 text-sm font-bold border-b-2 transition-colors focus:outline-none ${
-              activeTab === 'preferences'
-                ? 'border-lime-500 text-lime-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <FaGear className="text-base" />
-            Preferences
-          </button>
-          <button
-            onClick={() => setActiveTab('queue')}
-            className={`flex items-center gap-2 py-3 px-6 text-sm font-bold border-b-2 transition-colors focus:outline-none ${
-              activeTab === 'queue'
-                ? 'border-lime-500 text-lime-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <FaList className="text-base" />
-            Queue ({pendingQueue.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`flex items-center gap-2 py-3 px-6 text-sm font-bold border-b-2 transition-colors focus:outline-none ${
-              activeTab === 'history'
-                ? 'border-lime-500 text-lime-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <FaClockRotateLeft className="text-base" />
-            History ({processedHistory.length})
-          </button>
-        </div>
-      </div>
-
-      {/* Tab Panels */}
-      <div>
-        {activeTab === 'preferences' && (
-          <form onSubmit={handleSavePreferences} className="bg-white rounded-3xl p-6 md:p-8 shadow-md border border-slate-100 max-w-[900px]">
-            <h3 className="text-xl font-extrabold text-[#1a1a1a] mb-6">Auto-Apply Configurations</h3>
-
-            {/* Toggle Status */}
-            <div className="mb-6 flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <div>
-                <h4 className="font-bold text-[#1a1a1a] text-sm md:text-base">Toggle Auto-Apply Engine</h4>
-                <p className="text-slate-500 text-xs md:text-sm mt-0.5">
-                  When enabled, matched jobs will automatically appear in your queue.
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isActiveEdit}
-                  onChange={(e) => setIsActiveEdit(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-6 after:transition-all peer-checked:bg-[#C3FF3D]"></div>
-              </label>
-            </div>
-
-            {/* Job Titles Tag Input */}
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-slate-700 mb-2">Preferred Job Titles</label>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="text"
-                  placeholder="e.g. Frontend Developer"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddJobTitle();
-                    }
-                  }}
-                  className="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-lime-500 transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddJobTitle}
-                  className="bg-[#1a1a1a] text-white hover:bg-black rounded-xl px-4 flex items-center justify-center font-bold transition-colors"
-                >
-                  <FaPlus className="text-sm" />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {jobTitlesEdit.length === 0 ? (
-                  <span className="text-slate-400 text-xs italic">Matches all job titles.</span>
-                ) : (
-                  jobTitlesEdit.map(t => (
-                    <span
-                      key={t}
-                      className="inline-flex items-center gap-1.5 bg-slate-100 text-[#1a1a1a] text-xs font-bold px-3 py-1.5 rounded-full"
-                    >
-                      {t}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveJobTitle(t)}
-                        className="text-slate-400 hover:text-slate-700 font-bold"
-                      >
-                        <FaXmark className="text-xs" />
-                      </button>
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 pl-5">
+                <div className="space-y-2.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className="font-display text-xl text-[#0b1120] truncate">{item.job_title || 'Job'}</h3>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border uppercase tracking-[0.12em] shrink-0 ${STATUS_COLORS[item.status] || STATUS_COLORS.cancelled}`}>
+                      {item.status.replace(/_/g, ' ')}
                     </span>
-                  ))
-                )}
-              </div>
-              <p className="text-[11px] text-slate-400 mt-2">Type a title and press Enter or click plus to add.</p>
-            </div>
+                  </div>
 
-            {/* Locations Tag Input */}
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-slate-700 mb-2">Preferred Locations</label>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="text"
-                  placeholder="e.g. Remote"
-                  value={newLocation}
-                  onChange={(e) => setNewLocation(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddLocation();
-                    }
-                  }}
-                  className="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-lime-500 transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddLocation}
-                  className="bg-[#1a1a1a] text-white hover:bg-black rounded-xl px-4 flex items-center justify-center font-bold transition-colors"
-                >
-                  <FaPlus className="text-sm" />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {locationsEdit.length === 0 ? (
-                  <span className="text-slate-400 text-xs italic">Matches all locations.</span>
-                ) : (
-                  locationsEdit.map(l => (
-                    <span
-                      key={l}
-                      className="inline-flex items-center gap-1.5 bg-slate-100 text-[#1a1a1a] text-xs font-bold px-3 py-1.5 rounded-full"
-                    >
-                      {l}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveLocation(l)}
-                        className="text-slate-400 hover:text-slate-700 font-bold"
-                      >
-                        <FaXmark className="text-xs" />
-                      </button>
+                  <div className="flex items-center gap-4 text-sm font-bold text-slate-500 flex-wrap">
+                    <span className="flex items-center gap-2">
+                      <FaBuilding className="text-slate-400 shrink-0"/>
+                      {item.company_name || 'Unknown Company'}
                     </span>
-                  ))
-                )}
-              </div>
-            </div>
+                    {item.match_score != null && (
+                      <span className="flex items-center gap-2 text-[#0b1120]">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${item.match_score >= 80 ? 'bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]' : item.match_score >= 60 ? 'bg-[#c3ff3d] shadow-[0_0_6px_rgba(195,255,61,0.8)]' : 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]'}`} />
+                        {item.match_score}% Match
+                      </span>
+                    )}
+                  </div>
 
-            {/* Job Types Toggle Pills */}
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-slate-700 mb-3">Preferred Job Types</label>
-              <div className="flex flex-wrap gap-2">
-                {['full-time', 'part-time', 'contract', 'remote', 'internship'].map(type => {
-                  const active = jobTypesEdit.includes(type);
-                  return (
-                    <button
-                      type="button"
-                      key={type}
-                      onClick={() => toggleJobType(type)}
-                      className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${
-                        active
-                          ? 'bg-[#C3FF3D] border-[#C3FF3D] text-black shadow-sm'
-                          : 'bg-transparent border-slate-200 text-slate-600 hover:border-slate-300'
-                      }`}
-                    >
-                      {type.replace('_', '-').toUpperCase()}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-[11px] text-slate-400 mt-2">Leave all toggles off to match any job type.</p>
-            </div>
+                  {item.match_reason?.human_summary && (
+                    <p className="text-sm text-slate-500 max-w-2xl leading-relaxed font-medium">
+                      {item.match_reason.human_summary}
+                    </p>
+                  )}
 
-            {/* Min Salary Input */}
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-slate-700 mb-2">Minimum Annual/Monthly Salary</label>
-              <input
-                type="number"
-                placeholder="e.g. 50000"
-                value={minSalaryEdit}
-                onChange={(e) => setMinSalaryEdit(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-lime-500 transition-colors"
-              />
-              <p className="text-[11px] text-slate-400 mt-2">Specify the minimum salary threshold. Leave blank to match any salary.</p>
-            </div>
+                  {/* Failure reason */}
+                  {item.status === 'failed' && item.failure_reason && (
+                    <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-1">
+                      <FaCircleExclamation className="text-red-400 shrink-0 mt-0.5 text-sm" />
+                      <p className="text-xs font-semibold text-red-600 leading-snug">{item.failure_reason}</p>
+                    </div>
+                  )}
+                </div>
 
-            {/* Slider for Max applications per day */}
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-bold text-slate-700">Max Applications per Day</label>
-                <span className="text-sm font-extrabold text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">
-                  {maxAppsEdit}
-                </span>
-              </div>
-              <input
-                type="range"
-                min="1"
-                max="25"
-                value={maxAppsEdit}
-                onChange={(e) => setMaxAppsEdit(parseInt(e.target.value, 10))}
-                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#C3FF3D]"
-              />
-              <p className="text-[11px] text-slate-400 mt-2">Limits the number of automatic applies executed each day.</p>
-            </div>
-
-            {/* Actions */}
-            <div className="border-t border-slate-100 pt-6">
-              <button
-                type="submit"
-                disabled={savingPrefs}
-                className="bg-[#C3FF3D] text-black font-extrabold text-sm rounded-full px-8 py-3 shadow-md hover:bg-[#aee62d] transition-colors flex items-center justify-center gap-2"
-              >
-                {savingPrefs ? (
-                  <>
-                    <FaSpinner className="animate-spin text-base" />
-                    Saving Changes...
-                  </>
-                ) : (
-                  'Save Auto-Apply Preferences'
-                )}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {activeTab === 'queue' && (
-          <div>
-            {/* Header Control */}
-            <div className="flex items-center justify-between mb-6 flex-wrap gap-4 bg-slate-50 border border-slate-200/50 rounded-2xl p-4">
-              <div>
-                <h3 className="font-extrabold text-[#1a1a1a] text-lg">Matched Opportunities ({pendingQueue.length})</h3>
-                <p className="text-slate-500 text-xs md:text-sm mt-0.5">
-                  Review matched opportunities before they are processed or trigger them instantly.
-                </p>
-              </div>
-              {pendingQueue.length > 0 && (
-                <button
-                  onClick={handleApplyAll}
-                  disabled={applyingAll || stats.applied_last_24h >= preferences.max_applications_per_day}
-                  className="bg-[#1a1a1a] text-white hover:bg-black font-extrabold text-xs md:text-sm rounded-full px-6 py-2.5 shadow-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-                >
-                  {applyingAll ? (
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+                  {item.status === 'pending_approval' && (
                     <>
-                      <FaSpinner className="animate-spin" />
-                      Applying All...
-                    </>
-                  ) : (
-                    <>
-                      <FaBolt className="text-lime-400" />
-                      Apply All Matched ({pendingQueue.length})
+                      <button
+                        onClick={() => void handleReject(item.id)}
+                        disabled={actionLoading === item.id + '_reject'}
+                        className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {actionLoading === item.id + '_reject' ? <Spinner size="sm" /> : <FaXmark />}
+                        Skip
+                      </button>
+                      <button
+                        onClick={() => void handleApprove(item.id)}
+                        disabled={actionLoading === item.id + '_approve'}
+                        className="px-5 py-2.5 rounded-xl bg-[#c3ff3d] hover:bg-[#b0f224] text-[#0b1120] text-sm font-bold transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {actionLoading === item.id + '_approve' ? <Spinner size="sm" /> : <FaCheck />}
+                        Approve & Apply
+                      </button>
                     </>
                   )}
-                </button>
-              )}
-            </div>
 
-            {/* List */}
-            {pendingQueue.length === 0 ? (
-              <div className="w-full flex flex-col items-center justify-center py-20 text-center rounded-3xl border-2 border-dashed border-slate-200 bg-white">
-                <span className="text-5xl mb-4">🚀</span>
-                <h3 className="text-lg font-bold text-slate-800 mb-1">Queue is empty</h3>
-                <p className="text-slate-500 text-sm max-w-[400px]">
-                  No new matches found yet. Make sure your preferences are enabled and update them to expand match parameters.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pendingQueue.map(item => {
-                  const jobQuestions = Array.isArray(item.jobs.application_questions)
-                    ? item.jobs.application_questions
-                    : [];
-                  const requiresQuestions = jobQuestions.some((q: any) => q.required);
-
-                  const processing = processingItems[item.id];
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all"
+                  {item.status === 'failed' && (
+                    <button
+                      onClick={() => void handleRetry(item.id)}
+                      disabled={actionLoading === item.id + '_retry'}
+                      className="px-5 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-sm font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      <div>
-                        {/* Job & Company details */}
-                        <div className="mb-4">
-                          <h4 className="font-extrabold text-[#1a1a1a] text-[16px] line-clamp-1">
-                            {item.jobs.title}
-                          </h4>
-                          <p className="text-slate-500 font-bold text-xs mt-0.5">{item.jobs.companyName}</p>
-                        </div>
+                      {actionLoading === item.id + '_retry' ? <Spinner size="sm" /> : <FaRotateRight />}
+                      Retry
+                    </button>
+                  )}
 
-                        {/* Details Badges */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {item.jobs.type && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold bg-lime-100 text-lime-800 px-2.5 py-1 rounded-full">
-                              <FaBriefcase className="text-[9px]" />
-                              {formatJobType(item.jobs.type)}
-                            </span>
-                          )}
-                          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">
-                            <FaLocationDot className="text-[9px]" />
-                            {item.jobs.location || 'Anywhere'}
-                          </span>
-                          
-                          {/* Required Questions Warning Badge */}
-                          {requiresQuestions && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-full">
-                              <FaTriangleExclamation className="text-[9px]" />
-                              Questions Required
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Warning description */}
-                        {requiresQuestions && (
-                          <div className="flex gap-2 items-start bg-amber-50 border border-amber-200/50 rounded-xl p-3 mb-4 text-[11px] text-amber-800 leading-tight">
-                            <FaCircleInfo className="shrink-0 mt-0.5 text-amber-600" />
-                            <span>
-                              This job has questionnaire forms. Auto-apply cannot answer them. Please apply manually.
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Card Actions */}
-                      <div className="flex gap-3 items-center border-t border-slate-100 pt-4 mt-2">
-                        {requiresQuestions ? (
-                          <button
-                            type="button"
-                            onClick={() => router.push(`/jobs/${item.job_id}`)}
-                            className="flex-1 bg-slate-900 text-white hover:bg-black font-extrabold text-xs rounded-full py-2.5 text-center transition-colors"
-                          >
-                            Apply Manually
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleApplySingle(item.id)}
-                            disabled={!!processing || stats.applied_last_24h >= preferences.max_applications_per_day}
-                            className="flex-1 bg-lime-400 hover:bg-lime-500 disabled:opacity-50 text-black font-extrabold text-xs rounded-full py-2.5 transition-colors flex items-center justify-center gap-1"
-                          >
-                            {processing === 'applying' ? (
-                              <FaSpinner className="animate-spin text-sm" />
-                            ) : (
-                              'Apply Instantly'
-                            )}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleDismissSingle(item.id)}
-                          disabled={!!processing}
-                          className="w-10 h-10 border border-slate-200 hover:bg-red-50 hover:border-red-200 text-slate-400 hover:text-red-500 rounded-full flex items-center justify-center transition-colors"
-                          title="Dismiss opening"
-                        >
-                          {processing === 'dismissing' ? (
-                            <FaSpinner className="animate-spin text-sm" />
-                          ) : (
-                            <FaTrash className="text-xs" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                  <Link
+                    href={ROUTES.autoApplyQueueItem(item.id)}
+                    className="px-5 py-2.5 rounded-xl border-2 border-slate-100 hover:border-slate-300 text-[#0b1120] bg-white text-sm font-bold transition-colors text-center"
+                  >
+                    Details
+                  </Link>
+                </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
-        {activeTab === 'history' && (
-          <div className="bg-white rounded-3xl p-6 md:p-8 shadow-md border border-slate-100">
-            <h3 className="text-xl font-extrabold text-[#1a1a1a] mb-6">Auto-Apply Auditing Logs</h3>
+function EmptyState({ tab }: { tab: Tab }) {
+  const map: Record<Tab, { title: string; desc: string; showBtn: boolean }> = {
+    pending_approval: {
+      title: "Queue is empty",
+      desc: "Jobyt is actively searching for new matches. Enable Auto-Apply and run a preview to populate your queue.",
+      showBtn: true,
+    },
+    submitted: {
+      title: "No applications yet",
+      desc: "Approved matches will appear here once submitted.",
+      showBtn: false,
+    },
+    skipped: {
+      title: "No skipped jobs",
+      desc: "Jobs you choose to pass on will be archived here.",
+      showBtn: false,
+    },
+    failed: {
+      title: "Zero failures",
+      desc: "Everything is running smoothly.",
+      showBtn: false,
+    },
+    matched: {
+      title: "No matched jobs",
+      desc: "Jobs matched by your Auto-Apply settings will appear here.",
+      showBtn: false,
+    },
+  };
 
-            {processedHistory.length === 0 ? (
-              <div className="w-full flex flex-col items-center justify-center py-16 text-center">
-                <span className="text-4xl mb-4">🗓️</span>
-                <h4 className="text-slate-800 font-bold text-base mb-1">No execution logs yet</h4>
-                <p className="text-slate-500 text-sm max-w-[320px]">
-                  Processed queue applications will appear in this audit list.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left">
-                  <thead>
-                    <tr className="border-b border-slate-100 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                      <th className="pb-3 pr-4">Job opening / Company</th>
-                      <th className="pb-3 px-4">Status</th>
-                      <th className="pb-3 px-4">Processed Date</th>
-                      <th className="pb-3 pl-4">Details / Errors</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {processedHistory.map(entry => {
-                      const isSuccess = entry.status === 'applied';
-                      const dateText = entry.applied_at
-                        ? new Date(entry.applied_at).toLocaleDateString() + ' ' + new Date(entry.applied_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : new Date(entry.created_at).toLocaleDateString();
+  const state = map[tab];
 
-                      return (
-                        <tr key={entry.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors text-sm">
-                          {/* Job Details */}
-                          <td className="py-4 pr-4">
-                            <div className="font-extrabold text-[#1a1a1a]">{entry.jobs.title}</div>
-                            <div className="text-slate-400 text-xs mt-0.5">{entry.jobs.companyName}</div>
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-4 px-4">
-                            <span
-                              className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
-                                isSuccess
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
-                              }`}
-                            >
-                              {isSuccess ? (
-                                <>
-                                  <FaCircleCheck className="text-[10px]" />
-                                  APPLIED
-                                </>
-                              ) : (
-                                <>
-                                  <FaXmark className="text-[10px]" />
-                                  FAILED
-                                </>
-                              )}
-                            </span>
-                          </td>
-
-                          {/* Date */}
-                          <td className="py-4 px-4 text-slate-500 text-xs whitespace-nowrap">
-                            {dateText}
-                          </td>
-
-                          {/* Errors / Action */}
-                          <td className="py-4 pl-4 max-w-[280px]">
-                            {isSuccess ? (
-                              <button
-                                onClick={() => router.push('/applications')}
-                                className="text-lime-600 hover:text-lime-700 font-bold text-xs underline"
-                              >
-                                View Application
-                              </button>
-                            ) : (
-                              <div className="text-red-600 text-xs font-medium leading-tight flex items-start gap-1.5 bg-red-50 border border-red-100 rounded-lg p-2.5">
-                                <FaTriangleExclamation className="shrink-0 mt-0.5 text-red-500" />
-                                <span>{entry.error_message || 'Application failed.'}</span>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+  return (
+    <div className="py-24 px-8 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 max-w-3xl mx-auto">
+      <h3 className="text-lg font-bold text-[#0b1120] mb-1">{state.title}</h3>
+      <p className="text-sm text-slate-500 font-medium mb-6">{state.desc}</p>
+      {state.showBtn && (
+        <Link
+          href={ROUTES.autoApplySettings}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2 text-sm font-bold text-[#0b1120] bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+        >
+          <FaGear className="text-xs" /> Configure Match Settings
+        </Link>
+      )}
     </div>
   );
 }

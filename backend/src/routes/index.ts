@@ -16,7 +16,13 @@ import roadmapRoutes from './roadmap.routes';
 import uploadRoutes from './upload.routes';
 import aiRoutes from './ai.routes';
 import interviewRoutes from './interview.routes';
+import apiKeyRoutes from './apiKey.routes';
+import webhookRoutes from './webhook.routes';
+import calendarRoutes from './calendar.routes';
+import codingRoutes from './coding.routes';
 import autoApplyRoutes from './autoApply.routes';
+import interviewRoutes from './interview.routes';
+import coachRoutes from './coach.routes';
 
 const router = Router();
 
@@ -41,7 +47,13 @@ router.use('/roadmaps', roadmapRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/ai', aiRoutes);
 router.use('/interviews', interviewRoutes);
+router.use('/api-keys', apiKeyRoutes);
+router.use('/webhooks', webhookRoutes);
+router.use('/calendar', calendarRoutes);
+router.use('/coding', codingRoutes);
 router.use('/auto-apply', autoApplyRoutes);
+router.use('/interviews', interviewRoutes);
+router.use('/coach', coachRoutes);
 
 export default router;
 

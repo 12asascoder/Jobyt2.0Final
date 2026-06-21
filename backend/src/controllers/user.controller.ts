@@ -2,8 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/user.service';
 import { sendSuccess } from '../utils/response';
 import pool from '../config/database';
-import { OAuthService } from '../services/oauth.service';
-import { mockLinkedInProfiles } from '../utils/mockLinkedInProfiles';
+import { DeviceTokenModel } from '../models/deviceToken.model';
 
 export const UserController = {
   async getMyProfile(req: Request, res: Response, next: NextFunction) {
@@ -18,7 +17,7 @@ export const UserController = {
   async getPreferences(req: Request, res: Response, next: NextFunction) {
     try {
       const { rows } = await pool.query(
-        'SELECT email_alerts_enabled, whatsapp_alerts_enabled FROM users WHERE id = $1',
+        'SELECT email_alerts_enabled, whatsapp_alerts_enabled, push_alerts_enabled FROM users WHERE id = $1',
         [req.user!.userId]
       );
       sendSuccess(res, rows[0]);
@@ -29,19 +28,48 @@ export const UserController = {
 
   async updatePreferences(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email_alerts_enabled, whatsapp_alerts_enabled } = req.body;
+      const { email_alerts_enabled, whatsapp_alerts_enabled, push_alerts_enabled } = req.body;
       const { rows } = await pool.query(
         `UPDATE users 
          SET email_alerts_enabled = COALESCE($1, email_alerts_enabled),
-             whatsapp_alerts_enabled = COALESCE($2, whatsapp_alerts_enabled)
-         WHERE id = $3 RETURNING email_alerts_enabled, whatsapp_alerts_enabled`,
-        [email_alerts_enabled, whatsapp_alerts_enabled, req.user!.userId]
+             whatsapp_alerts_enabled = COALESCE($2, whatsapp_alerts_enabled),
+             push_alerts_enabled = COALESCE($3, push_alerts_enabled)
+         WHERE id = $4 RETURNING email_alerts_enabled, whatsapp_alerts_enabled, push_alerts_enabled`,
+        [email_alerts_enabled, whatsapp_alerts_enabled, push_alerts_enabled, req.user!.userId]
       );
       sendSuccess(res, rows[0], 'Preferences updated successfully');
     } catch (err) {
       next(err);
     }
   },
+
+  async registerDeviceToken(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { token, platform } = req.body;
+      const deviceToken = await DeviceTokenModel.register(req.user!.userId, token, platform);
+      
+      // Automatically enable push alerts when registering device token successfully
+      await pool.query(
+        'UPDATE users SET push_alerts_enabled = TRUE WHERE id = $1',
+        [req.user!.userId]
+      );
+
+      sendSuccess(res, deviceToken, 'Device token registered successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async removeDeviceToken(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { token } = req.body;
+      await DeviceTokenModel.deleteToken(token);
+      sendSuccess(res, null, 'Device token removed successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
 
   async updateProfile(req: Request, res: Response, next: NextFunction) {
     try {
