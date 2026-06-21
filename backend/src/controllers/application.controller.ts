@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApplicationService } from '../services/application.service';
 import { AiReasoningService } from '../services/aiReasoning.service';
+import { ShortlistReportService } from '../services/shortlistReport.service';
 import { sendSuccess, sendPaginated } from '../utils/response';
 
 export const ApplicationController = {
@@ -239,6 +240,16 @@ export const ApplicationController = {
         req.params.id as string,
       );
       sendSuccess(res, result, 'Insights retrieved');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getShortlistReport(req: Request, res: Response, next: NextFunction) {
+    try {
+      const jobId = req.params.jobId as string;
+      const report = await ShortlistReportService.generateReport(jobId, req.user!.userId);
+      sendSuccess(res, report, 'Shortlist report generated successfully');
     } catch (err) {
       next(err);
     }
