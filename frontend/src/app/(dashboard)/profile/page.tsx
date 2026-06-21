@@ -21,6 +21,9 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   
+  // Visibility State
+  const [visibilitySetting, setVisibilitySetting] = useState<'public' | 'private' | 'hidden'>('public');
+
   // Edit States
   const [editBasic, setEditBasic] = useState(false);
   const [editBio, setEditBio] = useState(false);
@@ -264,6 +267,7 @@ export default function ProfilePage() {
       if (r.data?.profile) {
         const p = r.data.profile as ApplicantProfile & RecruiterProfile;
         setPhotoUrl(resolveAssetUrl(p.photo_url || p.logo_url || null));
+        setVisibilitySetting(p.visibility || 'public');
 
         const missing: string[] = [];
         if (user?.role === 'recruiter') {
@@ -299,6 +303,16 @@ export default function ProfilePage() {
       setLoading(false);
     }
   }, [reset, user]);
+
+  const handleVisibilityChange = async (value: 'public' | 'private' | 'hidden') => {
+    try {
+      await api.put('/users/me', { visibility: value });
+      toast.success(`Profile visibility updated to ${value}!`);
+      void loadProfile();
+    } catch (err: any) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to update visibility');
+    }
+  };
 
   useEffect(() => {
     void loadProfile();
@@ -528,6 +542,83 @@ export default function ProfilePage() {
                   className={`w-full bg-transparent border-b border-transparent focus:border-lime-400 focus:outline-none text-gray-700 text-sm leading-relaxed resize-none mt-2 ${!editBio ? 'cursor-pointer' : ''}`}
                   placeholder="Tell us about yourself..."
                 />
+              </div>
+            )}
+
+            {/* Profile Visibility Configurations */}
+            {user?.role === 'applicant' && (
+              <div className="bg-white rounded-[10px] p-6 shadow-sm border border-[#c3ff3d]/60 relative">
+                <h3 className="font-normal text-black mb-1 text-[18px] leading-6">Profile Visibility</h3>
+                <p className="text-xs text-[#525252] mb-6 leading-relaxed">
+                  Control who can see your showcase profile page and search for your credentials. Settings apply instantly.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Public Card */}
+                  <div
+                    onClick={() => handleVisibilityChange('public')}
+                    className={`relative flex flex-col p-5 rounded-xl border cursor-pointer transition-all duration-300 hover:shadow-md select-none ${
+                      visibilitySetting === 'public'
+                        ? 'border-lime-400 bg-lime-400/5 shadow-sm'
+                        : 'border-gray-200 bg-gray-50/50 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-gray-900 text-sm">Public</span>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        visibilitySetting === 'public' ? 'border-lime-500 bg-lime-500' : 'border-gray-300'
+                      }`}>
+                        {visibilitySetting === 'public' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                    <span className="text-[11px] text-gray-500 leading-relaxed">
+                      Anyone can view your public profile. recruiters can search your showcase.
+                    </span>
+                  </div>
+
+                  {/* Private Card */}
+                  <div
+                    onClick={() => handleVisibilityChange('private')}
+                    className={`relative flex flex-col p-5 rounded-xl border cursor-pointer transition-all duration-300 hover:shadow-md select-none ${
+                      visibilitySetting === 'private'
+                        ? 'border-lime-400 bg-lime-400/5 shadow-sm'
+                        : 'border-gray-200 bg-gray-50/50 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-gray-900 text-sm">Private</span>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        visibilitySetting === 'private' ? 'border-lime-500 bg-lime-500' : 'border-gray-300'
+                      }`}>
+                        {visibilitySetting === 'private' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                    <span className="text-[11px] text-gray-500 leading-relaxed">
+                      Only matched recruiters, admins, and you can view. Guests are blocked.
+                    </span>
+                  </div>
+
+                  {/* Hidden Card */}
+                  <div
+                    onClick={() => handleVisibilityChange('hidden')}
+                    className={`relative flex flex-col p-5 rounded-xl border cursor-pointer transition-all duration-300 hover:shadow-md select-none ${
+                      visibilitySetting === 'hidden'
+                        ? 'border-lime-400 bg-lime-400/5 shadow-sm'
+                        : 'border-gray-200 bg-gray-50/50 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-gray-900 text-sm">Hidden</span>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        visibilitySetting === 'hidden' ? 'border-lime-500 bg-lime-500' : 'border-gray-300'
+                      }`}>
+                        {visibilitySetting === 'hidden' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                    <span className="text-[11px] text-gray-500 leading-relaxed">
+                      Only you and admins can view. Access returns a Not Found page for all others.
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
 
