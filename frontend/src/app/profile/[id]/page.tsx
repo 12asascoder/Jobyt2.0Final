@@ -24,6 +24,23 @@ interface PublicProfile {
     bio: string | null;
     resume_url: string | null;
   } | null;
+  githubRepos?: Array<{
+    id: number;
+    name: string;
+    description: string | null;
+    html_url: string;
+    language: string | null;
+    stargazers_count: number;
+  }>;
+  projects?: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    tech_stack: string[];
+    github_url: string | null;
+    demo_url: string | null;
+    media_url: string | null;
+  }>;
 }
 
 export default function PublicStudentProfilePage() {
@@ -80,7 +97,7 @@ export default function PublicStudentProfilePage() {
     );
   }
 
-  const { profile, email } = data;
+  const { profile, email, githubRepos, projects } = data;
   const avatarUrl = resolveAssetUrl(profile.photo_url);
 
   // Normalize URLs to ensure they open in new tabs correctly
@@ -226,6 +243,90 @@ export default function PublicStudentProfilePage() {
                 </div>
               ) : (
                 <p className="text-xs text-slate-500 italic">No skills listed on this profile.</p>
+              )}
+            </div>
+
+            {/* Project Showcase Card */}
+            <div className="bg-[#1a1a1a]/90 backdrop-blur-md border border-white/5 rounded-3xl p-8 shadow-xl">
+              <h3 className="text-sm font-black uppercase tracking-widest text-lime-400 mb-5 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-lime-300"></span>
+                <span>Project Showcase</span>
+              </h3>
+              {projects && projects.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {projects.map((project) => (
+                    <div
+                      key={project.id}
+                      className="bg-[#2d2d2d] rounded-2xl overflow-hidden border border-white/5 flex flex-col group hover:border-lime-400/30 transition-all duration-300 shadow-lg"
+                    >
+                      {/* Media */}
+                      {project.media_url && (
+                        <div className="relative h-44 w-full bg-black/40 overflow-hidden shrink-0">
+                          <img
+                            src={resolveAssetUrl(project.media_url) || undefined}
+                            alt={project.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="p-5 flex-1 flex flex-col justify-between">
+                        <div>
+                          <h4 className="font-bold text-white text-sm mb-2">{project.title}</h4>
+                          {project.description && (
+                            <p className="text-[11px] text-slate-400 mb-4 leading-relaxed line-clamp-3">
+                              {project.description}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          {/* Tech Stack */}
+                          {project.tech_stack && project.tech_stack.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-4">
+                              {project.tech_stack.map((tech, i) => (
+                                <span
+                                  key={i}
+                                  className="px-2 py-0.5 bg-[#1e1e1e] border border-white/5 rounded text-[9px] text-slate-300 font-bold"
+                                >
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Action links */}
+                          <div className="flex items-center gap-4 pt-3 border-t border-white/5">
+                            {project.github_url && (
+                              <a
+                                href={formatUrl(project.github_url)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-white font-bold transition-colors"
+                              >
+                                <FaGithub className="text-sm" />
+                                <span>Codebase</span>
+                              </a>
+                            )}
+                            {project.demo_url && (
+                              <a
+                                href={formatUrl(project.demo_url)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-xs text-lime-400 hover:text-lime-300 font-bold transition-colors ml-auto"
+                              >
+                                <FaGlobe className="text-sm" />
+                                <span>Live Demo</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 italic">No showcase projects listed.</p>
               )}
             </div>
 
