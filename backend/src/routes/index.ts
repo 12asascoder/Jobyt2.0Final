@@ -22,6 +22,7 @@ import calendarRoutes from './calendar.routes';
 import codingRoutes from './coding.routes';
 import autoApplyRoutes from './autoApply.routes';
 import coachRoutes from './coach.routes';
+import learningRoutes from './learning.routes';
 
 const router = Router();
 
@@ -53,6 +54,7 @@ router.use('/coding', codingRoutes);
 router.use('/auto-apply', autoApplyRoutes);
 router.use('/interviews', interviewRoutes);
 router.use('/coach', coachRoutes);
+router.use('/learning', learningRoutes);
 
 export default router;
 
