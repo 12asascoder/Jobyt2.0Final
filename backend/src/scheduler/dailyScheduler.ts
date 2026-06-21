@@ -1,12 +1,13 @@
 import { Queue } from 'bullmq';
-import { redisConnection, recommendationQueue } from '../config/queue';
+import { redisConnection, recommendationQueue, autoApplyQueue } from '../config/queue';
 import pool from '../config/database';
+import { AutoApplyPreferenceModel } from '../models/autoApplyPreference.model';
 
 const LOG_PREFIX = '[DailyScheduler]';
 
 // A generic scheduler queue to manage cron jobs
 export const schedulerQueue = new Queue('schedulerQueue', {
-  connection: redisConnection,
+  connection: redisConnection as any,
 });
 
 export const setupDailyScheduler = async () => {
@@ -27,7 +28,27 @@ export const setupDailyScheduler = async () => {
     }
   );
 
-  console.log(`${LOG_PREFIX} Daily recommendation scheduler setup complete.`);
+  await schedulerQueue.add(
+    'runDailyAutoApply',
+    {},
+    {
+      repeat: {
+        pattern: '0 9 * * *',
+      },
+    },
+  );
+
+  await schedulerQueue.add(
+    'expireAutoApplyApprovals',
+    {},
+    {
+      repeat: {
+        pattern: '0 * * * *',
+      },
+    },
+  );
+
+  console.log(`${LOG_PREFIX} Daily recommendation and Auto-Apply schedulers setup complete.`);
 };
 
 import { Worker, Job } from 'bullmq';
@@ -78,7 +99,38 @@ export const schedulerWorker = new Worker('schedulerQueue', async (job: Job) => 
       );
     }
   }
-}, { connection: redisConnection });
+  if (job.name === 'runDailyAutoApply') {
+    console.log(`${LOG_PREFIX} Starting daily Auto-Apply run...`);
+    try {
+      const userIds = await AutoApplyPreferenceModel.listEnabledUserIds();
+      const today = new Date().toISOString().slice(0, 10);
+      const matchJobs = userIds.map((userId) => ({
+        name: 'matchForUser',
+        data: { userId, trigger: 'scheduled' },
+      }));
+      const digestJobs = userIds.map((userId) => ({
+        name: 'sendDigestForUser',
+        data: { userId, date: today },
+      }));
+
+      const CHUNK_SIZE = 500;
+      for (let i = 0; i < matchJobs.length; i += CHUNK_SIZE) {
+        await autoApplyQueue.addBulk(matchJobs.slice(i, i + CHUNK_SIZE));
+      }
+      for (let i = 0; i < digestJobs.length; i += CHUNK_SIZE) {
+        await autoApplyQueue.addBulk(digestJobs.slice(i, i + CHUNK_SIZE));
+      }
+      console.log(`${LOG_PREFIX} Enqueued Auto-Apply for ${userIds.length} users.`);
+    } catch (error) {
+      console.error(`${LOG_PREFIX} Daily Auto-Apply run failed:`, error);
+      throw error;
+    }
+  }
+
+  if (job.name === 'expireAutoApplyApprovals') {
+    await autoApplyQueue.add('expirePendingApprovals', {});
+  }
+}, { connection: redisConnection as any });
 
 schedulerWorker.on('failed', (job, err) => {
   console.error(`${LOG_PREFIX} Scheduler job ${job?.id} failed:`, err);
