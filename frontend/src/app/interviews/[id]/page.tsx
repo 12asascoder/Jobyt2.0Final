@@ -86,6 +86,7 @@ function InterviewRoomContainer() {
   const [language, setLanguage] = useState('javascript');
   const [notes, setNotes] = useState('');
   const [participants, setParticipants] = useState<string[]>([]);
+  const [proctoringAlerts, setProctoringAlerts] = useState<Array<{ eventType: string; timestamp: string }>>([]);
 
   // Active interaction modes
   const [activeTab, setActiveTab] = useState<'chat' | 'voice'>('chat');
@@ -137,6 +138,15 @@ function InterviewRoomContainer() {
             setCode(data.code_content || '');
             setLanguage(data.code_language || 'javascript');
             setNotes(data.notes || '');
+          }
+          if ((data as any).proctoring_violations) {
+            const parsed = Array.isArray((data as any).proctoring_violations)
+              ? (data as any).proctoring_violations.map((v: any) => ({
+                  eventType: v.event,
+                  timestamp: v.timestamp,
+                }))
+              : [];
+            setProctoringAlerts(parsed);
           }
         }
       } catch {
@@ -231,6 +241,14 @@ function InterviewRoomContainer() {
       setTranscripts((prev) => [...prev, { userId, role, text, timestamp }]);
     });
 
+    s.on('proctoring_alert', ({ eventType, timestamp }: { eventType: string; timestamp: string }) => {
+      setProctoringAlerts((prev) => [...prev, { eventType, timestamp }]);
+      toast.error(`⚠️ Proctoring Alert: Candidate ${eventType === 'tab_switch' ? 'switched tabs/minimised' : 'lost focus'}!`, {
+        duration: 5000,
+        position: 'top-right',
+      });
+    });
+
     return () => {
       s.emit('leave_interview_session', { interviewId: id });
       s.off('interview_session_state');
@@ -241,6 +259,7 @@ function InterviewRoomContainer() {
       s.off('chat_message');
       s.off('followup_question');
       s.off('voice_transcription');
+      s.off('proctoring_alert');
     };
   }, [loading, interview, id, ttsEnabled, playTTS]);
 
@@ -386,6 +405,57 @@ function InterviewRoomContainer() {
       setAudioLevel(0);
     }
   };
+
+  // Trigger local warning for candidate & emit via socket
+  const triggerLocalViolationWarning = useCallback((eventType: 'tab_switch' | 'window_blur') => {
+    toast.error(
+      `⚠️ Proctored Alert: You ${eventType === 'tab_switch' ? 'switched tabs/minimised' : 'lost window focus'}. This incident has been logged and the interviewer has been notified!`,
+      {
+        duration: 6000,
+        position: 'top-center',
+        style: {
+          background: '#ef4444',
+          color: '#fff',
+          fontWeight: 'bold',
+        }
+      }
+    );
+    const nowStr = new Date().toISOString();
+    setProctoringAlerts((prev) => [...prev, { eventType, timestamp: nowStr }]);
+    if (socket) {
+      socket.emit('proctoring_violation', {
+        interviewId: id,
+        eventType,
+        timestamp: nowStr,
+      });
+    }
+  }, [id, socket]);
+
+  // Hook up event listeners for candidates in live rooms
+  useEffect(() => {
+    const isLive = interview?.status === 'live';
+    const isCandidate = interview && user && (interview.candidate_id === user.id || user.role === 'applicant');
+    
+    if (loading || !interview || !isLive || isRecruiter || !isCandidate) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        triggerLocalViolationWarning('tab_switch');
+      }
+    };
+
+    const handleWindowBlur = () => {
+      triggerLocalViolationWarning('window_blur');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, [loading, interview, isRecruiter, user, triggerLocalViolationWarning]);
 
   // End Interview Session
   const handleEndInterview = async () => {
@@ -545,6 +615,38 @@ function InterviewRoomContainer() {
                 placeholder="Write private candidate assessments here. These notes are hidden from the applicant and auto-saved..."
                 className="w-full h-24 bg-[#1e1e1e] border border-white/5 text-xs text-slate-200 placeholder-slate-500 rounded-lg p-2.5 outline-none resize-none focus:border-lime-300 focus:ring-0 leading-relaxed"
               />
+            </div>
+          )}
+
+          {/* Proctoring Monitor Log for Recruiters */}
+          {isRecruiter && (
+            <div className="bg-[#242424] border-b border-white/5 p-4 flex flex-col shrink-0">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                  <span>🛡️ Proctoring Monitor</span>
+                </h3>
+                <span className="text-[10px] font-black uppercase text-rose-500 px-1.5 py-0.5 rounded bg-rose-500/10">
+                  {proctoringAlerts.length} Flagged
+                </span>
+              </div>
+              {proctoringAlerts.length === 0 ? (
+                <p className="text-[11px] text-slate-500 italic p-1 bg-[#1a1a1a] rounded">
+                  No tab switches or focus loss events detected.
+                </p>
+              ) : (
+                <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
+                  {proctoringAlerts.map((alert, idx) => (
+                    <div
+                      key={idx}
+                      className="text-[11px] text-rose-450 font-bold flex justify-between bg-rose-500/10 border border-rose-500/20 rounded-lg p-2 text-rose-400"
+                    >
+                      <span>⚠️ {alert.eventType === 'tab_switch' ? 'Switched Tab/Minimised' : 'Lost Window Focus'}</span>
+                      <span className="text-slate-400 font-semibold">{new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
