@@ -22,3 +22,4 @@ export const stopWorkers = async () => {
   await codingEvaluationWorker.close();
   await autoApplyWorker.close();
 };
+

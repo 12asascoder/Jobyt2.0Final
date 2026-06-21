@@ -35,12 +35,49 @@ export default function JobApplicationsPage() {
   const [selected, setSelected] = useState<ApplicationWithProfile | null>(null);
   const [filter, setFilter] = useState<ApplicationStatus | 'all'>('all');
   const [timelineAppId, setTimelineAppId] = useState<string | null>(null);
+  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
+  const [isDispatching, setIsDispatching] = useState(false);
 
   useEffect(() => {
     fetchJobApplications(jobId);
   }, [jobId, fetchJobApplications]);
 
+  useEffect(() => {
+    setSelectedAppIds([]);
+  }, [filter]);
+
   const filtered = filter === 'all' ? applications : applications.filter((a) => a.status === filter);
+
+  const toggleSelect = (appId: string) => {
+    setSelectedAppIds((prev) =>
+      prev.includes(appId) ? prev.filter((id) => id !== appId) : [...prev, appId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedAppIds.length === filtered.length) {
+      setSelectedAppIds([]);
+    } else {
+      setSelectedAppIds(filtered.map((app) => app.id));
+    }
+  };
+
+  const handleBulkDispatch = async () => {
+    if (selectedAppIds.length === 0) return;
+    setIsDispatching(true);
+    try {
+      const res = await api.post<any>('/interviews/bulk', {
+        applicationIds: selectedAppIds,
+      });
+      toast.success(res.message || `Successfully queued bulk interview dispatch for ${selectedAppIds.length} candidate(s)!`);
+      setSelectedAppIds([]);
+      await fetchJobApplications(jobId);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to dispatch bulk interviews');
+    } finally {
+      setIsDispatching(false);
+    }
+  };
 
   const handleStatusChange = async (appId: string, status: ApplicationStatus) => {
     await updateStatus(appId, status);
@@ -106,16 +143,70 @@ export default function JobApplicationsPage() {
         })}
       </div>
 
+      {selectedAppIds.length > 0 && (
+        <div className="bg-slate-900 border-l-4 border-lime-400 rounded-xl p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-white shadow-md animate-in fade-in slide-in-from-top-4 duration-200">
+          <div className="flex items-center gap-3">
+            <div className="bg-lime-400/20 text-lime-400 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+              {selectedAppIds.length} Selected
+            </div>
+            <p className="text-sm font-semibold text-slate-300">Candidates selected for bulk action</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className="bg-lime-400 hover:bg-lime-300 text-slate-950 font-bold border-none transition-all duration-150 shadow-[0_0_15px_rgba(163,230,53,0.3)] disabled:opacity-50"
+              onClick={handleBulkDispatch}
+              isLoading={isDispatching}
+            >
+              Bulk Dispatch AI Interviews
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-slate-300 border-slate-700 hover:bg-slate-800"
+              onClick={() => setSelectedAppIds([])}
+              disabled={isDispatching}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <p className="py-12 text-center text-gray-400">No applications in this category.</p>
       ) : (
         <div className="space-y-3">
+          <div className="mb-3 flex items-center justify-between px-1">
+            <label className="flex items-center gap-2 cursor-pointer group/check">
+              <div className="relative w-5 h-5 flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={selectedAppIds.length === filtered.length && filtered.length > 0}
+                  onChange={toggleSelectAll}
+                  className="peer appearance-none w-5 h-5 border-2 border-black/10 rounded-md checked:bg-black checked:border-black transition-all cursor-pointer"
+                />
+                <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              </div>
+              <span className="text-xs font-bold text-black/60 uppercase tracking-tight">Select All on Page ({filtered.length})</span>
+            </label>
+          </div>
+
           {filtered.map((app) => (
             (() => {
               const appView = app as ApplicationWithProfile;
               return (
             <div key={app.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center gap-4">
+                <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={selectedAppIds.includes(app.id)}
+                    onChange={() => toggleSelect(app.id)}
+                    className="peer appearance-none w-5 h-5 border-2 border-black/10 rounded-md checked:bg-black checked:border-black transition-all cursor-pointer"
+                  />
+                  <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                </div>
                 <Avatar name={appView.name ?? 'A'} size="md" />
                 <div>
                   <div className="flex items-center gap-2">

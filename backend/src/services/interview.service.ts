@@ -936,4 +936,17 @@ export const InterviewService = {
       throw new BadRequestError('Failed to generate Text-to-Speech audio', 'TTS_FAILED');
     }
   },
+
+  async queueBulkDispatch(
+    applicationIds: string[],
+    interviewerId: string,
+    scheduledAt?: Date,
+  ) {
+    const job = await bulkInterviewQueue.add('dispatchInterviews', {
+      applicationIds,
+      interviewerId,
+      scheduledAt: scheduledAt || new Date(),
+    });
+    return { jobId: job.id, count: applicationIds.length };
+  },
 };

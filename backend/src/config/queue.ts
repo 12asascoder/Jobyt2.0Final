@@ -48,3 +48,4 @@ export const closeQueues = async () => {
   await codingEvaluationQueue.close();
   await autoApplyQueue.close();
 };
+
