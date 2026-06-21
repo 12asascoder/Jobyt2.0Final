@@ -134,7 +134,8 @@ export const AuthController = {
       }
 
       const data = await OAuthAuthService.login('github', normalizedCode, referralCode, role);
-
+      // Sync GitHub repos after successful login
+      await GithubService.syncUserRepos(data.user.id, data.tokens?.accessToken || '');
       // TODO: Move OAuth provider handlers to strategy pattern if more providers are added.
       sendSuccess(res, data, 'Login successful');
     } catch (err) {
