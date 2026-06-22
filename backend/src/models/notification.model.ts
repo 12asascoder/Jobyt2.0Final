@@ -84,4 +84,8 @@ export const NotificationModel = {
   async markAllRead(userId: string): Promise<void> {
     await pool.query(`UPDATE notifications SET read = TRUE WHERE user_id = $1`, [userId]);
   },
+
+  async deleteById(id: string, userId: string): Promise<void> {
+    await pool.query(`DELETE FROM notifications WHERE id = $1 AND user_id = $2`, [id, userId]);
+  },
 };

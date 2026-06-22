@@ -14,6 +14,10 @@ export const NotificationService = {
     await NotificationModel.markAllRead(userId);
   },
 
+  async deleteNotification(userId: string, notificationId: string) {
+    await NotificationModel.deleteById(notificationId, userId);
+  },
+
   async send(
     userId: string,
     type: NotificationType,

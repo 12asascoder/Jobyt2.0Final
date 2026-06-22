@@ -8,5 +8,6 @@ router.use(authenticate);
 router.get('/', NotificationController.getAll);
 router.patch('/read-all', NotificationController.markAllRead);
 router.patch('/:id/read', NotificationController.markRead);
+router.delete('/:id', NotificationController.deleteOne);
 
 export default router;
