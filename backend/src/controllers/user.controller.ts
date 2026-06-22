@@ -3,6 +3,7 @@ import { UserService } from '../services/user.service';
 import { sendSuccess } from '../utils/response';
 import pool from '../config/database';
 import { DeviceTokenModel } from '../models/deviceToken.model';
+import { OAuthService } from '../services/oauth.service';
 
 export const UserController = {
   async getMyProfile(req: Request, res: Response, next: NextFunction) {
@@ -139,7 +140,7 @@ export const UserController = {
 
   async getPublicProfile(req: Request, res: Response, next: NextFunction) {
     try {
-      const data = await UserService.getPublicProfile(req.params.userId as string);
+      const data = await UserService.getPublicProfile(req.params.userId as string, req.user);
       sendSuccess(res, data);
     } catch (err) {
       next(err);
@@ -156,6 +157,53 @@ export const UserController = {
        });
       await UserService.syncParsedResumeToProfile(req.user!.userId, parsed);
       sendSuccess(res, parsed, 'Resume parsed successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async importLinkedInProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.user!;
+      const { code, state } = req.body;
+
+      if (!code) {
+        res.status(400).json({ success: false, message: 'Authorization code is required' });
+        return;
+      }
+
+      // Verify server is configured for LinkedIn OAuth
+      const hasLinkedInSecrets = process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET;
+      if (!hasLinkedInSecrets || process.env.LINKEDIN_CLIENT_ID === 'your_linkedin_client_id') {
+        res.status(400).json({
+          success: false,
+          message: 'LinkedIn OAuth is not configured on the server. Please define LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET in the backend environment.',
+        });
+        return;
+      }
+
+      console.log(`[UserController.importLinkedInProfile] Executing production import. Code: ${code}`);
+      const oauthUser = await OAuthService.verifyLinkedinToken(code);
+
+      // Map production userinfo properties to candidate profile
+      const importedData = {
+        name: oauthUser.name,
+        photo_url: oauthUser.avatar,
+        linkedin_url: oauthUser.email ? `https://www.linkedin.com/in/${oauthUser.providerId}` : null,
+        bio: 'Imported from LinkedIn profile.',
+      };
+
+      // Construct a partial update object, only updating fields if they are defined
+      const updateData: any = {};
+      if (importedData.name) updateData.name = importedData.name;
+      if (importedData.photo_url) updateData.photo_url = importedData.photo_url;
+      if (importedData.linkedin_url) updateData.linkedin_url = importedData.linkedin_url;
+      if (importedData.bio) updateData.bio = importedData.bio;
+
+      // Update candidate profile fields in DB without wiping out existing details
+      const result = await UserService.updateApplicantProfile(userId, updateData);
+
+      sendSuccess(res, result, 'LinkedIn profile synchronized successfully');
     } catch (err) {
       next(err);
     }

@@ -4,6 +4,7 @@ import { PromptTemplatesService } from './promptTemplates.service';
 import { AIService } from './ai.service';
 import { aiConfig } from '../config/ai.config';
 import { AppError } from '../utils/appError';
+import { BiasAuditService } from './ai/biasAudit.service';
 
 export interface AIOrchestratorRequest {
   type: 'ats_analysis' | 'resume_processing' | 'matching_workflow' | 'job_ingestion';
@@ -109,10 +110,19 @@ export const AIOrchestratorService = {
       jobData.description || '',
     );
 
-    return {
+    const finalResult = {
       ...scoreResult,
       llmInsights,
     };
+
+    // Log decision for Bias Auditing
+    BiasAuditService.logDecision({
+      module: 'ats',
+      originalDecision: finalResult,
+      biasFlags: []
+    }).catch(() => {});
+
+    return finalResult;
   },
 
   async handleResumeProcessing(data: any) {
@@ -174,12 +184,12 @@ export const AIOrchestratorService = {
     }
 
     try {
-      const prompt = PromptTemplatesService.renderTemplate('ats_scoring', {
+      const prompt = await PromptTemplatesService.renderTemplate('ats_scoring', {
         resumeText: resumeText.slice(0, 3000),
         jobDescription: jobDescription.slice(0, 1500),
       });
 
-      const parsed = await AIService.generateJSON<AtsScoringPromptResult>(prompt);
+      const parsed = await AIService.generateJSON<AtsScoringPromptResult>(prompt, { module: 'ats' });
       return parsed ?? null;
     } catch (error) {
       console.warn('[AIOrchestrator] ATS enrichment failed:', error);
@@ -190,11 +200,11 @@ export const AIOrchestratorService = {
   async generateSkillGapAnalysis(userSkills: string[], jobSkills: string[]): Promise<SkillGapAnalysisResult> {
     if (aiConfig.isConfigured) {
       try {
-        const prompt = PromptTemplatesService.renderTemplate('skill_gap_analysis', {
+        const prompt = await PromptTemplatesService.renderTemplate('skill_gap_analysis', {
           userSkills: userSkills.join(', '),
           requiredSkills: jobSkills.join(', '),
         });
-        const parsed = await AIService.generateJSON<SkillGapAnalysisResult>(prompt);
+        const parsed = await AIService.generateJSON<SkillGapAnalysisResult>(prompt, { module: 'ats' });
         if (parsed && Array.isArray(parsed.matchedSkills)) {
           return parsed;
         }

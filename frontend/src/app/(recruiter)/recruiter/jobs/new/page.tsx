@@ -25,6 +25,10 @@ export default function PostInternshipPage() {
     type: 'full-time' as JobType,
     salary_min: '',
     salary_max: '',
+    enable_ai_interview: false,
+    ai_interview_type: 'technical',
+    ai_interview_rubric: '',
+    ai_interview_threshold: '70',
   });
 
   const SUGGESTED_SKILLS = [
@@ -75,7 +79,7 @@ export default function PostInternshipPage() {
     setSelectedSkills(selectedSkills.filter(s => s !== skill));
   };
 
-  const set = (field: string, value: string) =>
+  const set = (field: string, value: any) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const addQuestion = () => {
@@ -116,6 +120,9 @@ ${form.description}
         `.trim(),
         skills: selectedSkills,
         application_questions: questions,
+        ai_interview_type: form.enable_ai_interview ? form.ai_interview_type : null,
+        ai_interview_rubric: form.enable_ai_interview ? form.ai_interview_rubric : null,
+        ai_interview_threshold: form.enable_ai_interview ? parseInt(form.ai_interview_threshold, 10) : null,
       };
 
       const res = await api.post<Job>('/jobs', payload);
@@ -448,6 +455,82 @@ ${form.description}
                   ))
                 )}
               </div>
+            </div>
+ 
+            {/* AI Interview Settings Section */}
+            <div className="mt-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-[18px] font-bold text-slate-900 mb-1" style={{ fontFamily: 'Myanmar Sans Pro, sans-serif' }}>
+                    AI Interview Room Settings
+                  </h3>
+                  <p className="text-[14px] text-slate-500 max-w-[480px] leading-snug" style={{ fontFamily: 'Myanmar Sans Pro, sans-serif' }}>
+                    Enable and customize the live AI interviewer mode for this job listing.
+                  </p>
+                </div>
+                
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={form.enable_ai_interview}
+                    onChange={(e) => set('enable_ai_interview', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C3FF3D]" />
+                </label>
+              </div>
+
+              {form.enable_ai_interview && (
+                <div className="space-y-6 pt-6 border-t border-slate-100 animate-in fade-in slide-in-from-top-2">
+                  {/* Interview Type */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[14px] text-black font-semibold" style={{ fontFamily: 'Myanmar Khyay, sans-serif' }}>AI Interview Type *</label>
+                    <select
+                      value={form.ai_interview_type}
+                      onChange={(e) => set('ai_interview_type', e.target.value)}
+                      className="w-full bg-white border-[0.8px] border-[#C3FF3D] rounded-lg p-[15px_12px] text-[14px] text-black outline-none focus:ring-1 focus:ring-[#C3FF3D] appearance-none"
+                      style={{ fontFamily: 'Myanmar Sans Pro, sans-serif' }}
+                    >
+                      <option value="technical">Technical (Coding & Architecture)</option>
+                      <option value="behavioral">Behavioral (Culture & Soft Skills)</option>
+                      <option value="hybrid">Hybrid (Combined Technical & Behavioral)</option>
+                    </select>
+                  </div>
+
+                  {/* Rubric guidelines */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[14px] text-black font-semibold" style={{ fontFamily: 'Myanmar Khyay, sans-serif' }}>Grading Rubric / Evaluation Criteria *</label>
+                    <textarea
+                      required
+                      value={form.ai_interview_rubric}
+                      onChange={(e) => set('ai_interview_rubric', e.target.value)}
+                      placeholder="Specify grading instructions for the AI, e.g. 'Evaluate understanding of JavaScript event loop, clean code principles, and handling of concurrency.'"
+                      rows={4}
+                      className="w-full bg-white border-[0.8px] border-[#C3FF3D] rounded-lg p-[15px_12px] text-[14px] text-black outline-none focus:ring-1 focus:ring-[#C3FF3D] resize-none"
+                      style={{ fontFamily: 'Myanmar Sans Pro, sans-serif' }}
+                    />
+                  </div>
+
+                  {/* Threshold Slider/Input */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[14px] text-black font-semibold" style={{ fontFamily: 'Myanmar Khyay, sans-serif' }}>Passing Threshold Score (%)</label>
+                      <span className="text-[14px] font-bold text-slate-800 bg-slate-100 rounded px-2.5 py-0.5">{form.ai_interview_threshold}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={form.ai_interview_threshold}
+                      onChange={(e) => set('ai_interview_threshold', e.target.value)}
+                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-black"
+                    />
+                    <span className="text-[11px] text-slate-400">
+                      Candidates must achieve a match/interview score equal to or higher than this value to pass.
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-3 pt-4 border-t border-slate-200">

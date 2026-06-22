@@ -5,6 +5,7 @@ import { authenticate, authorize } from '../middleware/auth';
 import { requireEmail } from '../middleware/requireEmail';
 import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
+import { uploadAudio } from '../middleware/upload';
 
 const router = Router();
 
@@ -14,6 +15,7 @@ router.use(authenticate, requireEmail);
 // List all interviews (candidate sees own, recruiter sees own, admin sees all)
 router.get('/', authorize('applicant', 'recruiter', 'admin'), InterviewController.listInterviews);
 
+// Bulk dispatch interviews (recruiter/admin only)
 // Schedule a new interview (recruiter/admin only)
 router.post(
   '/',
@@ -59,6 +61,22 @@ router.post(
   InterviewController.endInterview,
 );
 
+// Transcribe voice audio channel snippets (applicant, recruiter, admin)
+router.post(
+  '/:id/transcribe',
+  authorize('applicant', 'recruiter', 'admin'),
+  uploadAudio.single('file'),
+  InterviewController.transcribeAudio,
+);
+
+// Synthesize text to speech audio output (applicant, recruiter, admin)
+router.post(
+  '/:id/tts',
+  authorize('applicant', 'recruiter', 'admin'),
+  body('text').isString().trim().notEmpty().withMessage('text must be a non-empty string'),
+  validate,
+  InterviewController.generateTTS,
+);
 // Protect all mock interview routes under JWT authentication
 // Note: router.use(authenticate) is not strictly needed because we already have router.use(authenticate, requireEmail) above.
 // However, we'll keep the mock interview routes distinct.
@@ -139,6 +157,15 @@ router.get(
     .withMessage('Invalid session ID'),
   validate,
   InterviewController.getReport
+);
+
+// Synthesize text to speech audio output (applicant, recruiter, admin)
+router.post(
+  '/:id/tts',
+  authorize('applicant', 'recruiter', 'admin'),
+  body('text').isString().trim().notEmpty().withMessage('text must be a non-empty string'),
+  validate,
+  InterviewController.generateTTS,
 );
 
 export default router;

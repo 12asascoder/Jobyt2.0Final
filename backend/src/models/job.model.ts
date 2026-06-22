@@ -48,6 +48,9 @@ export interface Job {
   is_boosted: boolean;
   views_count: number;
   external_url: string | null;
+  ai_interview_type: string | null;
+  ai_interview_rubric: string | null;
+  ai_interview_threshold: number | null;
   deleted_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -152,6 +155,9 @@ const mapJobRow = (row: Record<string, any>): JobRow => {
     created_by: row.created_by ?? null,
     application_questions: questions,
     external_url: row.external_url ?? null,
+    ai_interview_type: row.ai_interview_type ?? null,
+    ai_interview_rubric: row.ai_interview_rubric ?? null,
+    ai_interview_threshold: row.ai_interview_threshold !== undefined && row.ai_interview_threshold !== null ? Number(row.ai_interview_threshold) : null,
   } as JobRow;
 };
 
@@ -214,6 +220,9 @@ export const JobModel = {
     source?: JobSource;
     created_by?: string;
     application_questions?: JobApplicationQuestion[];
+    ai_interview_type?: string | null;
+    ai_interview_rubric?: string | null;
+    ai_interview_threshold?: number | null;
   }): Promise<Job> {
     const hasType = data.type !== undefined;
 
@@ -267,9 +276,12 @@ export const JobModel = {
             is_external_company,
             source,
             created_by,
-            job_approval_status${hasQuestionsColumn ? ', application_questions' : ''}
+            job_approval_status,
+            ai_interview_type,
+            ai_interview_rubric,
+            ai_interview_threshold${hasQuestionsColumn ? ', application_questions' : ''}
           )
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18${hasQuestionsColumn ? ',$19' : ''})
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21${hasQuestionsColumn ? ',$22' : ''})
           RETURNING *`,
         [
           data.recruiter_id,
@@ -290,6 +302,9 @@ export const JobModel = {
           source,
           createdBy,
           approvalStatus,
+          data.ai_interview_type || null,
+          data.ai_interview_rubric || null,
+          data.ai_interview_threshold !== undefined && data.ai_interview_threshold !== null ? Number(data.ai_interview_threshold) : null,
           ...(hasQuestionsColumn ? [JSON.stringify(questions)] : []),
         ],
       )
@@ -311,9 +326,12 @@ export const JobModel = {
             is_external_company,
             source,
             created_by,
-            job_approval_status${hasQuestionsColumn ? ', application_questions' : ''}
+            job_approval_status,
+            ai_interview_type,
+            ai_interview_rubric,
+            ai_interview_threshold${hasQuestionsColumn ? ', application_questions' : ''}
           )
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17${hasQuestionsColumn ? ',$18' : ''})
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20${hasQuestionsColumn ? ',$21' : ''})
           RETURNING *`,
         [
           data.recruiter_id,
@@ -333,6 +351,9 @@ export const JobModel = {
           source,
           createdBy,
           approvalStatus,
+          data.ai_interview_type || null,
+          data.ai_interview_rubric || null,
+          data.ai_interview_threshold !== undefined && data.ai_interview_threshold !== null ? Number(data.ai_interview_threshold) : null,
           ...(hasQuestionsColumn ? [JSON.stringify(questions)] : []),
         ],
       );

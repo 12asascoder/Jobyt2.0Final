@@ -7,6 +7,24 @@ import axios from 'axios';
 
 jest.mock('axios');
 
+const mockCreateTranscription = jest.fn();
+jest.mock('groq-sdk', () => {
+  return {
+    __esModule: true,
+    default: jest.fn().mockImplementation(() => {
+      return {
+        audio: {
+          transcriptions: {
+            create: mockCreateTranscription,
+          },
+        },
+      };
+    }),
+    toFile: jest.fn().mockResolvedValue({}),
+  };
+});
+
+
 jest.mock('../config/database', () => ({
   query: jest.fn(),
   on: jest.fn(),
@@ -259,6 +277,181 @@ describe('InterviewService', () => {
         expect.any(Object),
       );
       expect(question).toBe('Mocked Claude response question?');
+    });
+  });
+
+  describe('transcribeAudio', () => {
+    const originalEnv = { ...process.env };
+
+    beforeEach(() => {
+      (InterviewModel.getById as jest.Mock).mockResolvedValue({
+        id: 'interview-1',
+        candidate_id: 'candidate-1',
+        interviewer_id: 'recruiter-1',
+        status: 'live',
+      });
+    });
+
+    afterEach(() => {
+      process.env = { ...originalEnv };
+      jest.clearAllMocks();
+    });
+
+    it('should throw ForbiddenError if requester is not participant', async () => {
+      const wrongRequester = { userId: 'intruder-1', role: 'applicant' } as JwtPayload;
+      await expect(
+        InterviewService.transcribeAudio('interview-1', Buffer.from([]), 'test.webm', wrongRequester)
+      ).rejects.toThrow('You are not authorized to participate');
+    });
+
+    it('should throw BadRequestError if GROQ_API_KEY is missing', async () => {
+      process.env.GROQ_API_KEY = '';
+      await expect(
+        InterviewService.transcribeAudio('interview-1', Buffer.from([]), 'test.webm', mockRequester)
+      ).rejects.toThrow('Groq API Key is not configured');
+    });
+
+    it('should call groq-sdk and return transcribed text', async () => {
+      process.env.GROQ_API_KEY = 'gsk_mock_key';
+      mockCreateTranscription.mockResolvedValue({ text: 'Hello, this is a test' });
+
+      const text = await InterviewService.transcribeAudio(
+        'interview-1',
+        Buffer.from([1, 2, 3]),
+        'test.webm',
+        mockRequester,
+      );
+
+      expect(mockCreateTranscription).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'whisper-large-v3',
+          temperature: 0,
+        }),
+      );
+      expect(text).toBe('Hello, this is a test');
+    });
+  });
+
+  describe('generateTTS', () => {
+    const originalEnv = { ...process.env };
+
+    beforeEach(() => {
+      (InterviewModel.getById as jest.Mock).mockResolvedValue({
+        id: 'interview-1',
+        candidate_id: 'candidate-1',
+        interviewer_id: 'recruiter-1',
+        status: 'live',
+      });
+    });
+
+    afterEach(() => {
+      process.env = { ...originalEnv };
+      jest.clearAllMocks();
+    });
+
+    it('should throw ForbiddenError if requester is not a participant', async () => {
+      const wrongRequester = { userId: 'intruder-1', role: 'applicant' } as JwtPayload;
+      await expect(
+        InterviewService.generateTTS('interview-1', 'Hello', wrongRequester)
+      ).rejects.toThrow('You are not authorized to participate');
+    });
+
+    it('should throw BadRequestError if text is empty', async () => {
+      await expect(
+        InterviewService.generateTTS('interview-1', '', mockCandidate)
+      ).rejects.toThrow('Text prompt is required for TTS synthesis');
+    });
+
+    it('should use OpenAI TTS when OPENAI_API_KEY is configured', async () => {
+      process.env.OPENAI_API_KEY = 'sk-mock-openai-key';
+      process.env.ELEVENLABS_API_KEY = '';
+
+      const expectedBuffer = Buffer.from('mock-openai-audio');
+      (axios.post as jest.Mock).mockResolvedValueOnce({
+        data: expectedBuffer,
+      });
+
+      const result = await InterviewService.generateTTS('interview-1', 'Hello OpenAI', mockCandidate);
+
+      expect(axios.post).toHaveBeenCalledWith(
+        'https://api.openai.com/v1/audio/speech',
+        {
+          model: 'tts-1',
+          input: 'Hello OpenAI',
+          voice: 'alloy',
+        },
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer sk-mock-openai-key',
+          }),
+          responseType: 'arraybuffer',
+        })
+      );
+      expect(result.toString()).toBe('mock-openai-audio');
+    });
+
+    it('should fallback to ElevenLabs TTS when OpenAI fails but ELEVENLABS_API_KEY is configured', async () => {
+      process.env.OPENAI_API_KEY = 'sk-mock-openai-key';
+      process.env.ELEVENLABS_API_KEY = 'mock-elevenlabs-key';
+      process.env.ELEVENLABS_VOICE_ID = 'voice-123';
+
+      // First call (OpenAI) fails
+      (axios.post as jest.Mock).mockRejectedValueOnce(new Error('OpenAI error'));
+      // Second call (ElevenLabs) succeeds
+      const expectedBuffer = Buffer.from('mock-elevenlabs-audio');
+      (axios.post as jest.Mock).mockResolvedValueOnce({
+        data: expectedBuffer,
+      });
+
+      const result = await InterviewService.generateTTS('interview-1', 'Hello Eleven', mockCandidate);
+
+      expect(axios.post).toHaveBeenCalledTimes(2);
+      expect(axios.post).toHaveBeenLastCalledWith(
+        'https://api.elevenlabs.io/v1/text-to-speech/voice-123',
+        {
+          text: 'Hello Eleven',
+          model_id: 'eleven_monolingual_v1',
+        },
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'xi-api-key': 'mock-elevenlabs-key',
+          }),
+          responseType: 'arraybuffer',
+        })
+      );
+      expect(result.toString()).toBe('mock-elevenlabs-audio');
+    });
+
+    it('should fallback to Google Translate TTS when all other APIs fail or are unconfigured', async () => {
+      process.env.OPENAI_API_KEY = '';
+      process.env.ELEVENLABS_API_KEY = '';
+
+      const expectedBuffer = Buffer.from('mock-google-audio');
+      (axios.get as jest.Mock).mockResolvedValueOnce({
+        data: expectedBuffer,
+      });
+
+      const result = await InterviewService.generateTTS('interview-1', 'Hello Google', mockCandidate);
+
+      expect(axios.get).toHaveBeenCalledWith(
+        'https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=Hello%20Google',
+        expect.objectContaining({
+          responseType: 'arraybuffer',
+          headers: expect.any(Object),
+        })
+      );
+      expect(result.toString()).toBe('mock-google-audio');
+    });
+
+    it('should throw BadRequestError if Google Translate fallback also fails', async () => {
+      process.env.OPENAI_API_KEY = '';
+      process.env.ELEVENLABS_API_KEY = '';
+
+      (axios.get as jest.Mock).mockRejectedValueOnce(new Error('Google Translate failed'));
+
+      await expect(
+        InterviewService.generateTTS('interview-1', 'Hello Fail', mockCandidate)
+      ).rejects.toThrow('Failed to generate Text-to-Speech audio');
     });
   });
 });

@@ -42,6 +42,23 @@ export const autoApplyQueue = new Queue('autoApplyQueue', {
 
 // Queue for Broadcast Messaging
 export const broadcastQueue = new Queue('broadcastQueue', defaultQueueOptions);
+export const videoTranscriptionQueue = new Queue('videoTranscriptionQueue', {
+  ...defaultQueueOptions,
+  defaultJobOptions: {
+    ...defaultQueueOptions.defaultJobOptions,
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 10000 },
+  },
+});
+
+export const videoEvaluationQueue = new Queue('videoEvaluationQueue', {
+  ...defaultQueueOptions,
+  defaultJobOptions: {
+    ...defaultQueueOptions.defaultJobOptions,
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 10000 },
+  },
+});
 
 export const closeQueues = async () => {
   await recommendationQueue.close();
@@ -50,4 +67,7 @@ export const closeQueues = async () => {
   await codingEvaluationQueue.close();
   await autoApplyQueue.close();
   await broadcastQueue.close();
+  await videoTranscriptionQueue.close();
+  await videoEvaluationQueue.close();
 };
+

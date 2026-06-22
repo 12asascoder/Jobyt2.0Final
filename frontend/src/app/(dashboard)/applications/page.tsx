@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApplications } from '@/hooks/useApplications';
+import { api } from '@/lib/api';
 import { APPLICATION_STATUS_LABELS } from '@/constants';
 import { FaArrowUpRightFromSquare, FaChevronLeft, FaChevronRight } from 'react-icons/fa6';
 import { SelectionProbabilityBadge } from '@/components/jobs/SelectionProbability';
@@ -24,6 +25,7 @@ type ApplicationView = {
     improvement_suggestions?: string | null;
     insights_approved?: boolean;
     insights_generated_at?: string | null;
+    interview_status?: 'scheduled' | 'live' | 'completed' | 'cancelled';
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -74,8 +76,22 @@ export default function ApplicationsPage() {
         fetchMyApplications, goToPage,
     } = useApplications();
 
+    const [interviews, setInterviews] = useState<any[]>([]);
+
     useEffect(() => {
         fetchMyApplications(1);
+        const fetchInterviews = async () => {
+            try {
+                const res = await api.get<any[]>('/interviews');
+                const list = (res as any).data || res;
+                if (Array.isArray(list)) {
+                    setInterviews(list);
+                }
+            } catch (err) {
+                console.error('Failed to fetch interviews', err);
+            }
+        };
+        fetchInterviews();
     }, [fetchMyApplications]);
 
     // Generate page numbers for pagination
@@ -145,6 +161,7 @@ export default function ApplicationsPage() {
                         <div className="space-y-2.5">
                             {applications.map((app) => {
                                 const view = app as typeof app & ApplicationView;
+                                const appInterview = interviews.find((i) => i.application_id === app.id);
                                 return (
 
                                 <div key={app.id} className="bg-white border border-[#e8e4dc] rounded-2xl hover:shadow-md transition-shadow flex flex-col">
@@ -160,10 +177,21 @@ export default function ApplicationsPage() {
                                                     {view.job_title || 'Position'}
                                                 </span>
                                             </div>
-                                            <div className="col-span-1 -ml-8">
+                                            <div className="col-span-1 -ml-8 flex flex-col items-start gap-1">
                                                 <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
                                                     {APPLICATION_STATUS_LABELS[app.status] || app.status}
                                                 </span>
+                                                {view.interview_status && (
+                                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                                        view.interview_status === 'completed' ? 'bg-purple-100 text-purple-700' :
+                                                        view.interview_status === 'scheduled' ? 'bg-amber-100 text-amber-700' :
+                                                        view.interview_status === 'live' ? 'bg-rose-100 text-rose-700 animate-pulse' :
+                                                        'bg-slate-100 text-slate-500'
+                                                    }`}>
+                                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></svg>
+                                                        AI {view.interview_status === 'scheduled' ? 'Pending' : view.interview_status}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="col-span-2 -ml-4">
                                                 {(() => {
@@ -217,6 +245,14 @@ export default function ApplicationsPage() {
                                                                     <FaRegLightbulb aria-hidden="true" className="text-[8px]" />
                                                                     Insights
                                                                 </button>
+                                                                {app.status === 'interview' && appInterview && appInterview.status !== 'completed' && (
+                                                                    <button
+                                                                        onClick={() => router.push(`/interviews/${appInterview.id}`)}
+                                                                        className="text-[10px] font-bold flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-2 py-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#1a1a1a]"
+                                                                    >
+                                                                        Join Interview
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     );
@@ -272,6 +308,7 @@ export default function ApplicationsPage() {
                     <div className="md:hidden space-y-3">
                         {applications.map((app) => {
                             const view = app as typeof app & ApplicationView;
+                            const appInterview = interviews.find((i) => i.application_id === app.id);
                             return (
                                 <div
                                     key={app.id}
@@ -293,6 +330,17 @@ export default function ApplicationsPage() {
                                             <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-semibold ${STATUS_STYLES[app.status] || 'bg-slate-100 text-slate-600'}`}>
                                                 {APPLICATION_STATUS_LABELS[app.status] || app.status}
                                             </span>
+                                            {view.interview_status && (
+                                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                                                    view.interview_status === 'completed' ? 'bg-purple-100 text-purple-700' :
+                                                    view.interview_status === 'scheduled' ? 'bg-amber-100 text-amber-700' :
+                                                    view.interview_status === 'live' ? 'bg-rose-100 text-rose-700 animate-pulse' :
+                                                    'bg-slate-100 text-slate-500'
+                                                }`}>
+                                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /></svg>
+                                                    AI {view.interview_status === 'scheduled' ? 'Pending' : view.interview_status}
+                                                </span>
+                                            )}
                                             {view.ats_score != null && (
                                                 <button 
                                                     onClick={() => setExpandedAppId(expandedAppId === app.id ? null : app.id)}
@@ -319,13 +367,23 @@ export default function ApplicationsPage() {
                                         <span className="text-xs text-slate-400">
                                             Applied {formatDate(app.created_at)}
                                         </span>
-                                        <button
-                                            onClick={() => router.push(`/jobs/${app.job_id}`)}
-                                            className="w-8 h-8 rounded-lg bg-[#f4f1ea] flex items-center justify-center hover:bg-[#e8e4dc] transition-colors"
-                                            aria-label="Open job details"
-                                        >
-                                            <FaArrowUpRightFromSquare className="text-[10px] text-[#1a1a1a]" />
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            {app.status === 'interview' && appInterview && appInterview.status !== 'completed' && (
+                                                <button
+                                                    onClick={() => router.push(`/interviews/${appInterview.id}`)}
+                                                    className="px-3 py-1 text-[10px] font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors"
+                                                >
+                                                    Join Interview
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => router.push(`/jobs/${app.job_id}`)}
+                                                className="w-8 h-8 rounded-lg bg-[#f4f1ea] flex items-center justify-center hover:bg-[#e8e4dc] transition-colors"
+                                                aria-label="Open job details"
+                                            >
+                                                <FaArrowUpRightFromSquare className="text-[10px] text-[#1a1a1a]" />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             );

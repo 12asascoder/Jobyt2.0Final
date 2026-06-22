@@ -30,6 +30,8 @@ model applicant_profiles {
   github_url    String?   @db.VarChar(500)
   linkedin_url  String?   @db.VarChar(500)
   bio           String?
+  visibility    String    @default("public") @db.VarChar(20)
+  share_token   String?   @db.VarChar(100)
   created_at    DateTime? @default(now()) @db.Timestamptz(6)
   updated_at    DateTime? @default(now()) @db.Timestamptz(6)
   users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -54,12 +56,20 @@ model applications {
   insights_approved         Boolean               @default(false)
   insights_approved_at      DateTime?             @db.Timestamptz(6)
   insights_generated_at     DateTime?             @db.Timestamptz(6)
+  rank                      Int?
+  percentile                Float?
+  ai_recommended            Boolean?              @default(false)
+  screening_score           Float?
+  scoring_breakdown         Json?
   users                     users                 @relation(fields: [applicant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   jobs                      jobs                  @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   assessment_sessions       assessment_sessions[]
   coding_submissions        coding_submissions[]
   interview_invites         interview_invites[]
   pipeline_events           pipeline_events[]
+  video_interviews          video_interviews[]
+  interviews                interviews[]
+  screening_audits          screening_audits[]
 
   @@unique([job_id, applicant_id])
   @@index([applicant_id, created_at(sort: Desc)], map: "idx_applications_applicant")
@@ -84,16 +94,18 @@ model conversations {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model credit_transactions {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id       String      @db.Uuid
-  type          credit_type
-  amount        Int
-  balance_after Int
-  description   String      @db.VarChar(255)
-  reference_id  String?     @db.Uuid
-  created_at    DateTime?   @default(now()) @db.Timestamptz(6)
-  status        String      @default("success") @db.VarChar(20)
-  users         users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String      @db.Uuid
+  type            credit_type
+  amount          Int
+  balance_after   Int
+  description     String      @db.VarChar(255)
+  reference_id    String?     @db.Uuid
+  created_at      DateTime?   @default(now()) @db.Timestamptz(6)
+  status          String      @default("success") @db.VarChar(20)
+  credit_category String      @default("EARNED") @db.VarChar(20)
+  expiry_date     DateTime?   @db.Timestamptz(6)
+  users           users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id, created_at(sort: Desc)], map: "idx_credit_tx_user")
 }
@@ -170,6 +182,7 @@ model jobs {
   approved_at                  DateTime?                @db.Timestamptz(6)
   description_embedding        Json?
   external_url                 String?                  @db.VarChar(2048)
+  structured_jd                Json?
   coding_assessment_id         String?                  @db.Uuid
   active_assessment_version_id String?                  @db.Uuid
   disallow_auto_apply          Boolean                  @default(false)
@@ -187,6 +200,8 @@ model jobs {
   users                        users                    @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   resume_variants              resume_variants[]
   saved_jobs                   saved_jobs[]
+  video_interviews             video_interviews[]
+  auto_apply_logs              auto_apply_logs[]
 
   @@index([recruiter_id], map: "idx_jobs_recruiter")
   @@index([job_approval_status], map: "idx_jobs_approval_status")
@@ -394,6 +409,22 @@ model users {
   resume_variants                                 resume_variants[]
   resumes                                         resumes[]
   saved_jobs                                      saved_jobs[]
+  video_interviews                                video_interviews[]
+  video_consents                                  video_consents[]
+  employer_settings                               employer_settings?
+  auto_apply_logs                                 auto_apply_logs[]
+  interviews_as_interviewer                       interviews[]               @relation("interviewer")
+  interviews_as_candidate                         interviews[]               @relation("candidate")
+  candidate_skills                                candidate_skills[]
+  learning_progress                               learning_progress[]
+  skill_credits                                   skill_credits[]
+  learning_roadmaps                               learning_roadmaps[]
+  learning_audit_logs                             learning_audit_logs[]
+  subscriptions                                   subscriptions?
+  aiUsageLogs                                     ai_usage_logs[]
+  dpdpaConsentLogs                                dpdpa_consent_logs[]
+  dataDeletionRequests                            data_deletion_requests[]
+  deviceTokens                                    device_tokens[]
 }
 
 model auto_apply_preferences {
@@ -1009,6 +1040,94 @@ enum user_role {
   admin
 }
 
+model device_tokens {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String   @db.Uuid
+  token        String   @unique
+  platform     String   @db.VarChar(20) // 'ios' or 'android'
+  last_used_at DateTime @default(now()) @db.Timestamptz(6)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+enum interview_status {
+  scheduled
+  live
+  completed
+  cancelled
+}
+
+model interviews {
+  id                    String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  application_id        String           @db.Uuid
+  interviewer_id        String           @db.Uuid
+  candidate_id          String           @db.Uuid
+  status                interview_status @default(scheduled)
+  code_content          String?
+  code_language         String?          @default("javascript") @db.VarChar(50)
+  notes                 String?
+  feedback              String?
+  rating                Int?
+  scheduled_at          DateTime         @db.Timestamptz(6)
+  started_at            DateTime?        @db.Timestamptz(6)
+  ended_at              DateTime?        @db.Timestamptz(6)
+  created_at            DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?        @default(now()) @db.Timestamptz(6)
+  proctoring_violations Json?            @default("[]")
+
+  applications applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  interviewer  users        @relation("interviewer", fields: [interviewer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  candidate    users        @relation("candidate", fields: [candidate_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model auto_apply_logs {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String    @db.Uuid
+  job_id        String    @db.Uuid
+  status        String    @default("pending") @db.VarChar(30) // 'pending', 'applied', 'failed'
+  error_message String?
+  applied_at    DateTime? @db.Timestamptz(6)
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobs          jobs      @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, status], map: "idx_auto_apply_logs_user_status")
+}
+
+model employer_settings {
+  recruiter_id           String    @id @db.Uuid
+  scoring_weights        Json      @default("{\"experience\": 0.22, \"skills\": 0.17, \"education\": 0.12, \"semantic\": 0.20, \"keywords\": 0.14}")
+  recommended_percentage Int       @default(10)
+  digest_enabled         Boolean   @default(true)
+  created_at             DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime? @default(now()) @db.Timestamptz(6)
+  users                  users     @relation(fields: [recruiter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model screening_audits {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  application_id      String    @db.Uuid
+  resume_id           String?   @db.Uuid
+  job_id              String    @db.Uuid
+  parsed_resume       Json?
+  parsed_jd           Json?
+  embeddings_metadata Json?
+  scoring_breakdown   Json?
+  screening_score     Float?
+  explanation         Json?
+  prompt_version      String?   @db.VarChar(50)
+  model_version       String?   @db.VarChar(50)
+  processing_time_ms  Int?
+  created_at          DateTime? @default(now()) @db.Timestamptz(6)
+
+  applications applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([application_id])
+  @@index([job_id])
+}
+
 enum coding_problem_status {
   draft
   published
@@ -1044,4 +1163,309 @@ enum coding_submission_status {
   running
   completed
   failed
+}
+
+enum video_processing_status {
+  UPLOADING
+  UPLOADED
+  TRANSCRIBING
+  TRANSCRIBED
+  EVALUATING
+  COMPLETED
+  FAILED
+}
+
+model video_interviews {
+  id                   String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  application_id       String                  @db.Uuid
+  candidate_id         String                  @db.Uuid
+  job_id               String?                 @db.Uuid
+  video_url            String                  @db.VarChar(500)
+  status               video_processing_status @default(UPLOADING)
+  transcript           String?
+  segmented_transcript Json?
+  timestamps           Json?
+  confidence           Float?
+  language             String?                 @db.VarChar(50)
+  evaluation_scores    Json?
+  employer_notes       String?
+  created_at           DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime                @default(now()) @updatedAt @db.Timestamptz(6)
+
+  applications applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  users        users        @relation(fields: [candidate_id], references: [id], onDelete: Cascade)
+  jobs         jobs?        @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  @@index([application_id])
+  @@index([candidate_id])
+  @@index([status])
+}
+
+model video_consents {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  candidate_id      String   @db.Uuid
+  consent_given     Boolean  @default(false)
+  consent_version   String   @db.VarChar(50)
+  consent_timestamp DateTime @default(now()) @db.Timestamptz(6)
+  retention_expiry  DateTime @db.Timestamptz(6)
+  video_expiry      DateTime @db.Timestamptz(6)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  users users @relation(fields: [candidate_id], references: [id], onDelete: Cascade)
+
+  @@index([candidate_id])
+}
+
+// ── Learning & Skill Development Engine ───────────────────────────────────────────────────
+
+enum skill_verification_status {
+  SELF_REPORTED
+  COURSE_COMPLETED
+  PLATFORM_ASSESSED
+  EMPLOYER_VERIFIED
+}
+
+enum skill_importance {
+  Critical
+  Important
+  Optional
+}
+
+enum learning_status {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model skills {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String             @unique @db.VarChar(255)
+  category         String?            @db.VarChar(100)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  candidate_skills candidate_skills[]
+}
+
+model candidate_skills {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  candidate_id        String                    @db.Uuid
+  skill_id            String                    @db.Uuid
+  proficiency         Int?                      @default(0)
+  verification_status skill_verification_status @default(SELF_REPORTED)
+  source              String                    @default("resume") @db.VarChar(100)
+  confidence          Float?
+  credits_earned      Int                       @default(0)
+  created_at          DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime                  @default(now()) @db.Timestamptz(6)
+
+  users  users  @relation(fields: [candidate_id], references: [id], onDelete: Cascade)
+  skills skills @relation(fields: [skill_id], references: [id], onDelete: Cascade)
+
+  @@unique([candidate_id, skill_id])
+  @@index([candidate_id])
+  @@index([skill_id])
+}
+
+model courses {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider       String    @db.VarChar(50)
+  external_id    String    @db.VarChar(255)
+  title          String    @db.VarChar(500)
+  url            String    @db.VarChar(1024)
+  thumbnail_url  String?   @db.VarChar(1024)
+  instructor     String?   @db.VarChar(255)
+  duration_mins  Int?
+  rating         Float?
+  review_count   Int?      @default(0)
+  price_amount   Decimal?  @db.Decimal(10, 2)
+  price_currency String?   @db.VarChar(10)
+  skill_tags     String[]  @default([])
+  difficulty     String?   @db.VarChar(50)
+  language       String?   @db.VarChar(50)
+  last_updated   DateTime?
+  scraped_at     DateTime  @default(now()) @db.Timestamptz(6)
+  cache_expiry   DateTime  @db.Timestamptz(6)
+
+  learning_progress learning_progress[]
+
+  @@unique([provider, external_id])
+  @@index([skill_tags], type: Gin)
+}
+
+model learning_progress {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  candidate_id    String          @db.Uuid
+  course_id       String          @db.Uuid
+  status          learning_status @default(NOT_STARTED)
+  started_at      DateTime?       @db.Timestamptz(6)
+  completed_at    DateTime?       @db.Timestamptz(6)
+  certificate_url String?         @db.VarChar(1024)
+  notes           String?
+  updated_at      DateTime        @default(now()) @db.Timestamptz(6)
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+
+  users   users   @relation(fields: [candidate_id], references: [id], onDelete: Cascade)
+  courses courses @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([candidate_id, course_id])
+  @@index([candidate_id, status])
+}
+
+model skill_credits {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  candidate_id        String                    @db.Uuid
+  skill_id            String                    @db.Uuid
+  credits_earned      Int
+  completion_source   String                    @db.VarChar(100)
+  reference_id        String?                   @db.Uuid
+  verification_status skill_verification_status
+  awarded_at          DateTime                  @default(now()) @db.Timestamptz(6)
+
+  users users @relation(fields: [candidate_id], references: [id], onDelete: Cascade)
+
+  @@index([candidate_id])
+  @@index([skill_id])
+}
+
+model learning_roadmaps {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  candidate_id        String   @db.Uuid
+  target_role         String   @db.VarChar(255)
+  missing_skills      Json     @default("[]")
+  recommended_courses Json     @default("[]")
+  learning_sequence   Json     @default("[]")
+  estimated_hours     Int?
+  roadmap_version     String   @default("1.0") @db.VarChar(50)
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @default(now()) @db.Timestamptz(6)
+
+  users users @relation(fields: [candidate_id], references: [id], onDelete: Cascade)
+
+  @@index([candidate_id])
+}
+
+model learning_audit_logs {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  candidate_id         String   @db.Uuid
+  action_type          String   @db.VarChar(100)
+  target_role          String?  @db.VarChar(255)
+  skill_gaps           Json?
+  recommended_courses  Json?
+  roadmap_version      String?  @db.VarChar(50)
+  credits_awarded      Int?
+  progress_updates     Json?
+  verification_changes Json?
+  reasoning            Json?
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+
+  users users @relation(fields: [candidate_id], references: [id], onDelete: Cascade)
+
+  @@index([candidate_id, action_type])
+}
+
+model subscription_tiers {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String          @unique @db.VarChar(100)
+  target_audience String          @db.VarChar(20)
+  price_monthly   Decimal         @default(0) @db.Decimal(10, 2)
+  price_annual    Decimal         @default(0) @db.Decimal(10, 2)
+  currency        String          @default("USD") @db.VarChar(10)
+  features        Json            @default("{}")
+  is_active       Boolean         @default(true)
+  created_at      DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?       @default(now()) @db.Timestamptz(6)
+  subscriptions   subscriptions[]
+}
+
+model subscriptions {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String             @unique @db.Uuid
+  tier_id              String             @db.Uuid
+  billing_cycle        String             @default("monthly") @db.VarChar(20)
+  status               String             @default("active") @db.VarChar(20)
+  current_period_start DateTime           @db.Timestamptz(6)
+  current_period_end   DateTime           @db.Timestamptz(6)
+  cancel_at_period_end Boolean            @default(false)
+  created_at           DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?          @default(now()) @db.Timestamptz(6)
+  users                users              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tier                 subscription_tiers @relation(fields: [tier_id], references: [id])
+
+  @@index([user_id, status])
+}
+
+model prompt_templates {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @unique @db.VarChar(100)
+  description String?
+  template    String    @db.Text
+  variables   String[]  @default([])
+  version     Int       @default(1)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model ai_response_cache {
+  cache_key  String    @id @db.VarChar(255)
+  response   Json
+  model_used String    @db.VarChar(50)
+  expires_at DateTime  @db.Timestamptz(6)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([expires_at])
+}
+
+model ai_usage_logs {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String?   @db.Uuid
+  module            String    @db.VarChar(50)
+  model_name        String    @db.VarChar(50)
+  prompt_tokens     Int       @default(0)
+  completion_tokens Int       @default(0)
+  latency_ms        Int       @default(0)
+  is_cache_hit      Boolean   @default(false)
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  users             users?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id, created_at])
+}
+
+model ai_bias_audits {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  application_id    String?   @db.Uuid
+  module            String    @db.VarChar(50)
+  original_decision Json
+  is_overridden     Boolean   @default(false)
+  override_decision Json?
+  override_reason   String?   @db.Text
+  reviewer_id       String?   @db.Uuid
+  bias_flags        String[]  @default([])
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([application_id])
+}
+
+model dpdpa_consent_logs {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String    @db.Uuid
+  consent_type String    @db.VarChar(100)
+  is_granted   Boolean   @default(true)
+  ip_address   String?   @db.VarChar(50)
+  user_agent   String?   @db.Text
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model data_deletion_requests {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String    @db.Uuid
+  status        String    @default("pending") @db.VarChar(20)
+  scheduled_for DateTime  @db.Timestamptz(6)
+  completed_at  DateTime? @db.Timestamptz(6)
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduled_for])
 }

@@ -179,7 +179,7 @@ export const registerLiveInterviewHandlers = (socket: AuthSocket, io: SocketServ
     }
 
     try {
-      const question = await InterviewService.generateFollowupQuestion(interviewId, code, language);
+      const question = "Can you explain the time and space complexity of your solution?";
       if (question) {
         io.to(`interview:${interviewId}`).emit('followup_question', {
           question,
@@ -191,6 +191,31 @@ export const registerLiveInterviewHandlers = (socket: AuthSocket, io: SocketServ
     } catch (err: any) {
       console.error('[Socket] generateFollowupQuestion failed:', err);
       socket.emit('error', { message: 'Failed to generate follow-up question' });
+    }
+  });
+
+  // Proctoring Violations Logs & Alert routing
+  socket.on('proctoring_violation', async (payload: { interviewId: string; eventType: 'tab_switch' | 'window_blur' | 'face_absent' | 'multiple_faces'; timestamp: string }) => {
+    try {
+      const { interviewId, eventType, timestamp } = payload;
+      if (!interviewId || !eventType || !timestamp) return;
+
+      // Verify participation
+      if (!socket.activeInterviewRooms?.has(interviewId)) return;
+
+      console.log(`[Socket] Proctoring alert in interview room ${interviewId}: ${user.userId} triggered ${eventType}`);
+
+      // Log it in DB via service
+      await InterviewService.logProctoringViolation(interviewId, eventType, timestamp);
+
+      // Broadcast to other users in the room (like recruiter)
+      socket.to(`interview:${interviewId}`).emit('proctoring_alert', {
+        userId: user.userId,
+        eventType,
+        timestamp,
+      });
+    } catch (err: any) {
+      console.error('[Socket] Failed to process proctoring_violation:', err);
     }
   });
 

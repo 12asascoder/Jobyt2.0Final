@@ -138,6 +138,51 @@ export const InterviewController = {
     }
   },
 
+  async transcribeAudio(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      if (!id) {
+        throw new BadRequestError('Interview ID is required', 'ID_REQUIRED');
+      }
+
+      if (!req.file) {
+        throw new BadRequestError('Audio file is required', 'FILE_REQUIRED');
+      }
+
+      const text = await InterviewService.transcribeAudio(
+        id,
+        req.file.buffer,
+        req.file.originalname,
+        req.user!,
+      );
+
+      sendSuccess(res, { text }, 'Audio transcribed successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async generateTTS(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const { text } = req.body as { text?: string };
+
+      if (!id) {
+        throw new BadRequestError('Interview ID is required', 'ID_REQUIRED');
+      }
+      if (!text) {
+        throw new BadRequestError('Text prompt is required', 'TEXT_REQUIRED');
+      }
+
+      const audioBuffer = await InterviewService.generateTTS(id, text, req.user!);
+      
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.send(audioBuffer);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   /**
    * Start a new mock interview session and generate questions
    */
@@ -279,4 +324,5 @@ export const InterviewController = {
       next(error);
     }
   },
+
 };

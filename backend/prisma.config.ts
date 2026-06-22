@@ -10,6 +10,6 @@ export default defineConfig({
   },
   datasource: {
     url: process.env["DATABASE_URL"],
-    shadowDatabaseUrl: process.env["SHADOW_DATABASE_URL"] || "postgresql://postgres:subhro2004@localhost:5432/hiring_platform_shadow?sslmode=disable",
+    shadowDatabaseUrl: process.env["SHADOW_DATABASE_URL"] || "postgresql://postgres:pass123@localhost:5432/hiring_platform_shadow?sslmode=disable",
   },
 });

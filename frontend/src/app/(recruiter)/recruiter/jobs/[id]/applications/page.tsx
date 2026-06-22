@@ -7,7 +7,7 @@ import { api, ApiError } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Application, ApplicationStatus } from '@/types';
 import { useApplications } from '@/hooks/useApplications';
-import { Button, Spinner, Badge, Avatar } from '@/components/ui';
+import { Button, Spinner, Badge, Avatar, Modal } from '@/components/ui';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, APPLICATION_STATUSES, ROUTES } from '@/constants';
 import { formatDate } from '@/lib/utils';
 import { createConversation } from '@/lib/messages';
@@ -35,6 +35,37 @@ export default function JobApplicationsPage() {
   const [selected, setSelected] = useState<ApplicationWithProfile | null>(null);
   const [filter, setFilter] = useState<ApplicationStatus | 'all'>('all');
   const [timelineAppId, setTimelineAppId] = useState<string | null>(null);
+  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
+  const [isDispatching, setIsDispatching] = useState(false);
+
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [reportData, setReportData] = useState<{
+    jobTitle: string;
+    candidates: Array<{
+      id: string;
+      name: string;
+      email: string;
+      matchScore: number | null;
+      override_score?: number | null;
+      skills: string[];
+    }>;
+    aiSummary: string;
+  } | null>(null);
+
+  const handleOpenReport = async () => {
+    setIsReportOpen(true);
+    setIsReportLoading(true);
+    try {
+      const res = await api.get<any>(`/applications/jobs/${jobId}/shortlist-report`);
+      setReportData(res.data || null);
+    } catch (err) {
+      toast.error('Failed to generate shortlist report');
+      setIsReportOpen(false);
+    } finally {
+      setIsReportLoading(false);
+    }
+  };
 
   // Interview Invite Modal State
   const [inviteAppId, setInviteAppId] = useState<string | null>(null);
@@ -53,7 +84,42 @@ export default function JobApplicationsPage() {
     fetchJobApplications(jobId);
   }, [jobId, fetchJobApplications]);
 
+  useEffect(() => {
+    setSelectedAppIds([]);
+  }, [filter]);
+
   const filtered = filter === 'all' ? applications : applications.filter((a) => a.status === filter);
+
+  const toggleSelect = (appId: string) => {
+    setSelectedAppIds((prev) =>
+      prev.includes(appId) ? prev.filter((id) => id !== appId) : [...prev, appId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedAppIds.length === filtered.length) {
+      setSelectedAppIds([]);
+    } else {
+      setSelectedAppIds(filtered.map((app) => app.id));
+    }
+  };
+
+  const handleBulkDispatch = async () => {
+    if (selectedAppIds.length === 0) return;
+    setIsDispatching(true);
+    try {
+      const res = await api.post<any>('/interviews/bulk', {
+        applicationIds: selectedAppIds,
+      });
+      toast.success(res.message || `Successfully queued bulk interview dispatch for ${selectedAppIds.length} candidate(s)!`);
+      setSelectedAppIds([]);
+      await fetchJobApplications(jobId);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to dispatch bulk interviews');
+    } finally {
+      setIsDispatching(false);
+    }
+  };
 
   const handleStatusChange = async (appId: string, status: ApplicationStatus) => {
     await updateStatus(appId, status);
@@ -136,6 +202,9 @@ export default function JobApplicationsPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setIsBroadcastModalOpen(true)}>Broadcast Message</Button>
+          <Button variant="outline" size="sm" onClick={handleOpenReport}>
+            📊 Shortlist Report
+          </Button>
           <Link href={`/recruiter/jobs/${jobId}`}>
             <Button variant="outline" size="sm">← Back to Job</Button>
           </Link>
@@ -165,24 +234,85 @@ export default function JobApplicationsPage() {
         })}
       </div>
 
+      {selectedAppIds.length > 0 && (
+        <div className="bg-slate-900 border-l-4 border-lime-400 rounded-xl p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-white shadow-md animate-in fade-in slide-in-from-top-4 duration-200">
+          <div className="flex items-center gap-3">
+            <div className="bg-lime-400/20 text-lime-400 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+              {selectedAppIds.length} Selected
+            </div>
+            <p className="text-sm font-semibold text-slate-300">Candidates selected for bulk action</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className="bg-lime-400 hover:bg-lime-300 text-slate-950 font-bold border-none transition-all duration-150 shadow-[0_0_15px_rgba(163,230,53,0.3)] disabled:opacity-50"
+              onClick={handleBulkDispatch}
+              isLoading={isDispatching}
+            >
+              Bulk Dispatch AI Interviews
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-slate-300 border-slate-700 hover:bg-slate-800"
+              onClick={() => setSelectedAppIds([])}
+              disabled={isDispatching}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <p className="py-12 text-center text-gray-400">No applications in this category.</p>
       ) : (
         <div className="space-y-3">
+          <div className="mb-3 flex items-center justify-between px-1">
+            <label className="flex items-center gap-2 cursor-pointer group/check">
+              <div className="relative w-5 h-5 flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={selectedAppIds.length === filtered.length && filtered.length > 0}
+                  onChange={toggleSelectAll}
+                  className="peer appearance-none w-5 h-5 border-2 border-black/10 rounded-md checked:bg-black checked:border-black transition-all cursor-pointer"
+                />
+                <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              </div>
+              <span className="text-xs font-bold text-black/60 uppercase tracking-tight">Select All on Page ({filtered.length})</span>
+            </label>
+          </div>
+
           {filtered.map((app) => (
             (() => {
               const appView = app as ApplicationWithProfile;
               return (
             <div key={app.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center gap-4">
+                <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={selectedAppIds.includes(app.id)}
+                    onChange={() => toggleSelect(app.id)}
+                    className="peer appearance-none w-5 h-5 border-2 border-black/10 rounded-md checked:bg-black checked:border-black transition-all cursor-pointer"
+                  />
+                  <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                </div>
                 <Avatar name={appView.name ?? 'A'} size="md" />
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="font-bold text-gray-900 text-lg">{appView.name ?? 'Applicant'}</p>
                     {appView.matchScore !== undefined && (
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${appView.matchScore >= 80 ? 'bg-green-100 text-green-700' : appView.matchScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                        {appView.matchScore}% Match
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${appView.matchScore >= 80 ? 'bg-green-100 text-green-700' : appView.matchScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                          {appView.matchScore}% Match
+                        </span>
+                        {(appView as any).override_score !== null && (appView as any).override_score !== undefined && (
+                          <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-tight" title={`Original AI Score: ${(appView as any).ats_score || 0}%`}>
+                            ✏️ Override
+                          </span>
+                        )}
+                      </div>
                     )}
                     {app.submission_source === 'auto_apply' && (
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-[#c3ff3d]/20 text-[#0b1120] border border-[#c3ff3d]/30">
@@ -245,7 +375,6 @@ export default function JobApplicationsPage() {
           </div>
         </div>
       )}
-
       {/* Interview Invite Modal */}
       {inviteAppId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 !m-0">
@@ -343,6 +472,92 @@ export default function JobApplicationsPage() {
           </div>
         </div>
       )}
+
+      {/* Shortlist Report Modal */}
+      <Modal
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        title="Shortlist Report"
+        className="max-w-2xl bg-white"
+      >
+        {isReportLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Spinner size="lg" />
+            <p className="text-sm font-semibold text-gray-500 animate-pulse">Analyzing cohort & generating AI summary...</p>
+          </div>
+        ) : reportData ? (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 leading-tight">{reportData.jobTitle}</h3>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Shortlist Cohort Report</p>
+            </div>
+
+            {/* AI Summary Section */}
+            <div className="bg-slate-900 border-l-4 border-lime-400 rounded-2xl p-5 text-white shadow-inner">
+              <h4 className="text-xs font-black uppercase tracking-widest text-lime-400 mb-2">AI Executive Summary</h4>
+              <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
+                {reportData.aiSummary}
+              </div>
+            </div>
+
+            {/* Ranked Candidates Section */}
+            <div>
+              <h4 className="text-sm font-bold text-gray-900 mb-3">Ranked Shortlisted Candidates ({reportData.candidates.length})</h4>
+              {reportData.candidates.length === 0 ? (
+                <p className="text-sm text-gray-500 py-4 text-center">No candidates have been shortlisted yet.</p>
+              ) : (
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {reportData.candidates.map((candidate, idx) => (
+                    <div key={candidate.id} className="flex items-center justify-between border border-gray-100 rounded-xl p-3 bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center justify-center bg-gray-200 text-gray-700 text-xs font-bold w-6 h-6 rounded-full shrink-0">
+                          #{idx + 1}
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">{candidate.name}</p>
+                          <p className="text-xs text-gray-500 font-medium">{candidate.email}</p>
+                          {candidate.skills && candidate.skills.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {candidate.skills.slice(0, 3).map((s) => (
+                                <span key={s} className="bg-gray-200/60 text-gray-700 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                                  {s}
+                                </span>
+                              ))}
+                              {candidate.skills.length > 3 && (
+                                <span className="bg-gray-200/60 text-gray-700 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                                  +{candidate.skills.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right flex flex-col items-end gap-1 shrink-0">
+                        {candidate.matchScore !== null && (
+                          <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider shadow-sm ${candidate.matchScore >= 80 ? 'bg-green-100 text-green-700' : candidate.matchScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                            {candidate.matchScore}% Match
+                          </span>
+                        )}
+                        {candidate.override_score !== null && candidate.override_score !== undefined && (
+                          <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider">
+                            Overridden
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-gray-100">
+              <Button variant="outline" onClick={() => setIsReportOpen(false)}>Close Report</Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-center py-6 text-gray-500">Failed to load report data.</p>
+        )}
+      </Modal>
     </div>
   );
 }

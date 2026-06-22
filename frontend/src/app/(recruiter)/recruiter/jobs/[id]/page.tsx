@@ -132,6 +132,9 @@ export default function RecruiterJobDetailPage() {
               .filter(Boolean),
           }))
           .filter((question) => question.label.length > 0),
+        ai_interview_type: form.enable_ai_interview ? form.ai_interview_type : null,
+        ai_interview_rubric: form.enable_ai_interview ? form.ai_interview_rubric : null,
+        ai_interview_threshold: form.enable_ai_interview ? Number(form.ai_interview_threshold) : null,
       };
       const res = await api.put<Job>(`/jobs/${jobId}`, payload);
       if (res.data) {
@@ -541,6 +544,81 @@ export default function RecruiterJobDetailPage() {
                     </div>
                 ))}
               </div>
+            </div>
+ 
+            {/* AI Interview Settings Section */}
+            <div className="bg-white border border-black/5 rounded-[24px] p-6 sm:p-10 shadow-sm space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-display text-black">AI Interview Room Settings</h2>
+                  <p className="text-sm font-bold text-black/40 mt-1 uppercase tracking-tight">Enable and configure the live AI interviewer mode</p>
+                </div>
+                
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={form.enable_ai_interview}
+                    onChange={(e) => set('enable_ai_interview', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lime-300" />
+                </label>
+              </div>
+
+              {form.enable_ai_interview && (
+                <div className="space-y-6 pt-6 border-t border-black/5 animate-in fade-in slide-in-from-top-2">
+                  {/* Interview Type */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-black text-black/60 uppercase tracking-widest ml-1">AI Interview Type *</label>
+                    <div className="relative">
+                      <select
+                        value={form.ai_interview_type}
+                        onChange={(e) => set('ai_interview_type', e.target.value)}
+                        className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[16px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all appearance-none"
+                      >
+                        <option value="technical">Technical (Coding & Architecture)</option>
+                        <option value="behavioral">Behavioral (Culture & Soft Skills)</option>
+                        <option value="hybrid">Hybrid (Combined Technical & Behavioral)</option>
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-black/20">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rubric guidelines */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-black text-black/60 uppercase tracking-widest ml-1">Grading Rubric / Evaluation Criteria *</label>
+                    <textarea
+                      required
+                      value={form.ai_interview_rubric}
+                      onChange={(e) => set('ai_interview_rubric', e.target.value)}
+                      placeholder="Specify grading instructions for the AI..."
+                      rows={6}
+                      className="w-full bg-white border border-black/5 rounded-2xl p-4 text-[16px] font-bold text-black outline-none focus:ring-2 focus:ring-lime-300 transition-all resize-none"
+                    />
+                  </div>
+
+                  {/* Threshold Slider */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-black text-black/60 uppercase tracking-widest ml-1">Passing Threshold Score (%)</label>
+                      <span className="text-[14px] font-bold text-slate-800 bg-slate-100 rounded px-2.5 py-0.5">{form.ai_interview_threshold}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={form.ai_interview_threshold}
+                      onChange={(e) => set('ai_interview_threshold', e.target.value)}
+                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-black"
+                    />
+                    <span className="text-xs text-black/40">
+                      Candidates must achieve a match/interview score equal to or higher than this value to pass.
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-10">

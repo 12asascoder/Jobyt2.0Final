@@ -218,8 +218,8 @@ describe('Resume Builder AI - Resume Draft & LaTeX Export', () => {
   });
 
   describe('Prompt template registration', () => {
-    it('should have RESUME_GENERATION template registered', () => {
-      const templates = PromptTemplatesService.getAvailableTemplates?.();
+    it('should have RESUME_GENERATION template registered', async () => {
+      const templates = await PromptTemplatesService.getAvailableTemplates?.();
       if (templates) {
         expect(templates).toContain('resume_generation');
       }

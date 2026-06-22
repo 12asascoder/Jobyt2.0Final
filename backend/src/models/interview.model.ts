@@ -18,11 +18,14 @@ export interface Interview {
   ended_at: Date | null;
   created_at: Date;
   updated_at: Date;
-  // Dynamic fields from joins
   company_name?: string;
   job_title?: string;
   candidate_name?: string;
   interviewer_name?: string;
+  ai_interview_type?: string | null;
+  ai_interview_rubric?: string | null;
+  ai_interview_threshold?: number | null;
+  proctoring_violations?: any[] | null;
 }
 
 export const INTERVIEW_SESSION_STATUSES = [
@@ -165,6 +168,9 @@ export const InterviewModel = {
       `SELECT i.*, 
               j.title as job_title, 
               j.company_name,
+              j.ai_interview_type,
+              j.ai_interview_rubric,
+              j.ai_interview_threshold,
               ap.name as candidate_name,
               rp.name as interviewer_name
        FROM interviews i
@@ -209,6 +215,7 @@ export const InterviewModel = {
       'rating',
       'started_at',
       'ended_at',
+      'proctoring_violations',
     ];
 
     for (const key of fieldsToUpdate) {

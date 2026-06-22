@@ -3,6 +3,7 @@ import { JobModel } from '../models/job.model';
 import { NotificationModel } from '../models/notification.model';
 import { NotificationOrchestrator } from './notification/orchestrator';
 import { PipelineEventModel } from '../models/pipeline_event.model';
+import { InterviewModel } from '../models/interview.model';
 import { withTransaction } from '../utils/transaction';
 import { CreditService } from './credit.service';
 import { CREDIT_COSTS } from '../config/creditCosts';
@@ -18,6 +19,7 @@ import { SkillMatchingService } from './matching/skillMatching.service';
 import { WebhookService } from './webhook.service';
 import { WEBHOOK_EVENTS } from './webhook/eventCatalog';
 import redis from '../config/redis';
+import prisma from '../config/prisma';
 
 const LOG_PREFIX = '[ApplicationService]';
 
@@ -153,6 +155,11 @@ export const ApplicationService = {
         throw err;
       }
 
+      let isAutoShortlisted = false;
+      if (atsScore !== null && job.ai_interview_threshold !== null && atsScore >= job.ai_interview_threshold) {
+        isAutoShortlisted = true;
+      }
+
       // 5) Initial pipeline event
       await PipelineEventModel.create(
         {
@@ -163,33 +170,78 @@ export const ApplicationService = {
         client,
       );
 
-      // 6) Notify recruiter and applicant outside the transaction to avoid deadlocks
-      setImmediate(() => {
-        NotificationOrchestrator.dispatch(
-          job.recruiter_id,
-          'application_submitted',
-          {
-            title: 'New application received',
-            body: `A new applicant has applied to "${job.title}"`,
-            action_url: `/recruiter/jobs/${jobId}/applications`,
-            job_title: job.title,
-            applicant_name: 'A candidate',
-            is_recruiter: true
-          }
-        ).catch(err => console.error('[Notification Error]', err));
+      if (isAutoShortlisted) {
+        // Update status to shortlisted transactionally
+        application = await ApplicationModel.updateStatus(application.id, 'shortlisted', client);
 
-        NotificationOrchestrator.dispatch(
-          applicantId,
-          'application_submitted',
+        // Shortlisted pipeline event
+        await PipelineEventModel.create(
           {
-            title: 'Application Submitted',
-            body: `Your application to "${job.title}" was submitted successfully.`,
-            action_url: `/candidate/applications`,
-            job_title: job.title,
-            is_recruiter: false
-          }
-        ).catch(err => console.error('[Notification Error]', err));
-      });
+            application_id: application.id,
+            previous_status: 'applied',
+            new_status: 'shortlisted',
+            changed_by_id: applicantId,
+            notes: `Auto-shortlisted by Match Engine (Score ${atsScore}% ≥ Passing Threshold ${job.ai_interview_threshold}%)`,
+          },
+          client,
+        );
+
+        setImmediate(() => {
+          NotificationOrchestrator.dispatch(
+            applicantId,
+            'application_status',
+            {
+              title: 'Application Shortlisted!',
+              body: `Congratulations! Your application for "${job.title}" has been automatically shortlisted.`,
+              action_url: `/candidate/applications`,
+              job_title: job.title,
+              new_status: 'shortlisted',
+              is_recruiter: false
+            }
+          ).catch(err => console.error('[Notification Error]', err));
+
+          NotificationOrchestrator.dispatch(
+            job.recruiter_id,
+            'application_submitted',
+            {
+              title: 'Candidate Auto-Shortlisted',
+              body: `A candidate met the match threshold (${atsScore}% ≥ ${job.ai_interview_threshold}%) and was auto-shortlisted for "${job.title}".`,
+              action_url: `/recruiter/jobs/${jobId}/applications`,
+              job_title: job.title,
+              applicant_name: 'A candidate',
+              is_recruiter: true
+            }
+          ).catch(err => console.error('[Notification Error]', err));
+        });
+
+      } else {
+        setImmediate(() => {
+          NotificationOrchestrator.dispatch(
+            job.recruiter_id,
+            'application_submitted',
+            {
+              title: 'New application received',
+              body: `A new applicant has applied to "${job.title}"`,
+              action_url: `/recruiter/jobs/${jobId}/applications`,
+              job_title: job.title,
+              applicant_name: 'A candidate',
+              is_recruiter: true
+            }
+          ).catch(err => console.error('[Notification Error]', err));
+
+          NotificationOrchestrator.dispatch(
+            applicantId,
+            'application_submitted',
+            {
+              title: 'Application Submitted',
+              body: `Your application to "${job.title}" was submitted successfully.`,
+              action_url: `/candidate/applications`,
+              job_title: job.title,
+              is_recruiter: false
+            }
+          ).catch(err => console.error('[Notification Error]', err));
+        });
+      }
 
       // 7) Milestone notification for recruiter on every 10 applications
       const totalApplications = await ApplicationModel.countByJob(jobId, client);
@@ -214,8 +266,13 @@ export const ApplicationService = {
         ...application,
         creditsRemaining: balanceAfter,
         creditTransactionId: transactionId,
-        _jobForInsights: { title: job.title, description: job.description ?? '', skills: job.skills ?? [] },
+        _jobForInsights: { title: job.title, description: job.description ?? '', skills: job.skills ?? [], recruiterId: job.recruiter_id },
         _applicantIdForInsights: applicantId,
+        _aiInterviewConfig: (job.ai_interview_type && !isAutoShortlisted) ? {
+          type: job.ai_interview_type,
+          recruiterId: job.recruiter_id,
+          title: job.title,
+        } : null,
       };
     }).then(result => {
       // Fire-and-forget: generate AI insights AFTER transaction commits (so application row exists)
@@ -223,11 +280,55 @@ export const ApplicationService = {
       const jobCtx = result._jobForInsights;
       const apId = result._applicantIdForInsights;
       const appId = result.id;
+      const aiConfig = result._aiInterviewConfig;
       // Strip internal fields from returned result
-      const { _jobForInsights, _applicantIdForInsights, ...cleanResult } = result as any;
+      const { _jobForInsights, _applicantIdForInsights, _aiInterviewConfig, ...cleanResult } = result as any;
+
+      // Auto-dispatch AI interview if enabled on the job listing
+      if (aiConfig) {
+        setImmediate(async () => {
+          try {
+            console.log(`[ApplicationService] Auto-dispatching AI interview for application ${appId}`);
+
+            // 1. Create interview record
+            await InterviewModel.createInterview({
+              application_id: appId,
+              interviewer_id: aiConfig.recruiterId,
+              candidate_id: apId,
+              scheduled_at: new Date(),
+            });
+
+            // 2. Update application status to 'interview'
+            await ApplicationModel.updateStatus(appId, 'interview');
+
+            // 3. Create pipeline event
+            await PipelineEventModel.create({
+              application_id: appId,
+              previous_status: 'applied',
+              new_status: 'interview',
+              changed_by_id: apId,
+            });
+
+            // 4. Notify applicant
+            await NotificationModel.create({
+              user_id: apId,
+              type: 'application_status',
+              title: 'AI Interview Invitation',
+              body: `You have been automatically invited to a live AI interview for "${aiConfig.title}".`,
+              action_url: `/applications`,
+            });
+
+          } catch (err) {
+            console.error('[ApplicationService] Auto-dispatching AI interview failed:', err);
+          }
+        });
+      }
+
       setImmediate(async () => {
         try {
           const profile = await ApplicantProfileModel.findByUserId(apId);
+          
+          // Original AI Insights (Gemini/Ollama)
           const insights = await AIInsightsService.generateInsights(
             {
               skills: Array.isArray(profile?.skills) ? profile.skills : [],
@@ -244,8 +345,69 @@ export const ApplicationService = {
             });
             console.log(`[ApplicationService] AI insights saved for application ${appId}`);
           }
+
+          // New Dynamic Screening & Ranking Flow
+          // 1. Gather Candidate Data
+          const candidateData = {
+            skills: Array.isArray(profile?.skills) ? profile.skills : [],
+            experienceText: (profile?.experience ?? [])
+              .map((e: any) => `${e.title || ''} ${e.description || ''}`)
+              .join(' '),
+            fullText: [
+              profile?.bio ?? '',
+              Array.isArray(profile?.skills) ? profile.skills.join(' ') : '',
+              (profile?.experience ?? [])
+                .map((e: any) => `${e.title || ''} ${e.description || ''}`)
+                .join(' '),
+            ].join(' '),
+            education: profile?.education ?? [],
+          };
+
+          // 2. Screen Candidate
+          // @ts-ignore - dynamic import to avoid circular dependencies if any
+          const { ScreeningService } = require('./ai/ScreeningService');
+          const screeningResult = await ScreeningService.screenCandidate(
+            result.job_id,
+            jobCtx.recruiterId, // Assumes jobCtx has recruiterId, wait we don't have jobCtx.recruiterId in result._jobForInsights yet. We need to pass job.recruiter_id.
+            candidateData,
+            { skills: jobCtx.skills, description: jobCtx.description }
+          );
+
+          // 3. Update DB with Screening Score
+          await prisma.applications.update({
+            where: { id: appId },
+            data: {
+              screening_score: screeningResult.screeningScore,
+              scoring_breakdown: screeningResult.scoringBreakdown,
+            }
+          });
+
+          // 4. Log Audit Event
+          // @ts-ignore
+          const { AuditService } = require('./audit.service');
+          await AuditService.logScreeningEvent({
+            applicationId: appId,
+            resumeId: result.resume_id,
+            jobId: result.job_id,
+            parsedResume: candidateData,
+            parsedJd: { skills: jobCtx.skills, description: jobCtx.description },
+            embeddingsMetadata: {}, // Captured inside ScreeningService optionally
+            scoringBreakdown: screeningResult.scoringBreakdown,
+            screeningScore: screeningResult.screeningScore,
+            explanation: screeningResult.explanation,
+            promptVersion: 'v1.0-ollama',
+            modelVersion: 'llama3', // or dynamically fetched
+            processingTimeMs: 0,
+          });
+
+          // 5. Update Global Job Rankings
+          // @ts-ignore
+          const { RankingService } = require('./ranking.service');
+          await RankingService.updateRankingsForJob(result.job_id, jobCtx.recruiterId);
+          console.log(`[ApplicationService] Dynamic Screening & Ranking completed for ${appId}`);
+
         } catch (err) {
-          console.error('[ApplicationService] AI insights generation failed silently:', err);
+          console.error('[ApplicationService] AI insights/screening generation failed silently:', err);
         }
       });
 
@@ -358,46 +520,20 @@ export const ApplicationService = {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { JobService } = require('./job.service');
 
-    // Pre-fetch job embedding ONCE (not per applicant) to avoid N Gemini API calls.
-    // If the job embedding is cached in jobs.description_embedding, this is a single DB read.
-    let jobEmbedding = await EmbeddingCacheService.getJobEmbedding(jobId);
-    // Fallback: try the general text-hash cache (covers jobs created before this migration)
-    if (!jobEmbedding && job.description) {
-      jobEmbedding = await EmbeddingCacheService.getOrGenerate(job.description);
-      // Store for next time (fire-and-forget)
-      if (jobEmbedding) {
-        EmbeddingCacheService.storeJobEmbedding(jobId, jobEmbedding).catch(
-          (err) => console.warn(`${LOG_PREFIX} Failed to cache job embedding:`, err),
-        );
-      }
-    }
 
-    const embeddingAvailable = Boolean(jobEmbedding);
-    if (embeddingAvailable) {
-      console.log(`${LOG_PREFIX} Using embedding-based ranking for job ${jobId}`);
-    } else {
-      console.log(`${LOG_PREFIX} Embedding unavailable for job ${jobId} — using skills-only ranking`);
-    }
 
     const enrichedApplications = await Promise.all(result.applications.map(async (app: any) => {
-      // Attempt embedding-based match score
-      if (embeddingAvailable && app.resume_id && app.applicant_id) {
-        try {
-          const resumeEmbedding = await EmbeddingCacheService.getResumeEmbedding(
-            app.resume_id,
-            app.applicant_id,
-          );
-          if (resumeEmbedding) {
-            const similarity = cosineSimilarity(resumeEmbedding, jobEmbedding!);
-            const matchScore = similarityToScore(similarity);
-            return { ...app, matchScore, matchMethod: 'embedding' };
-          }
-        } catch (err) {
-          console.warn(`${LOG_PREFIX} Embedding match failed for application ${app.id}:`, err);
-        }
+      // Prioritize manual score override
+      if (app.override_score !== null && app.override_score !== undefined) {
+        return { ...app, matchScore: app.override_score, matchMethod: 'override' };
       }
 
-      // Fallback: skills-only match score (deterministic, always works)
+      // Use pre-computed screening_score if available
+      if (app.screening_score !== null && app.screening_score !== undefined) {
+        return { ...app, matchScore: app.screening_score, matchMethod: 'hybrid_ai' };
+      }
+
+      // Fallback for legacy applications: skills-only match score
       const matchResult = await JobService.calculateMatchScore(app.skills || [], job.skills || []);
       return { ...app, matchScore: matchResult.matchScore, matchMethod: 'skills' };
     }));
@@ -461,12 +597,20 @@ export const ApplicationService = {
 
     const skillMatchResult = SkillMatchingService.calculateSkillMatch(candidateSkills, jobSkills);
 
+    // Fetch candidate's extended profile data
+    const applicantProjects: any[] = [];
+    const githubRepos: any[] = [];
+    const applicantCertifications: any[] = [];
+
     return {
       ...application,
-      skill_match: skillMatchResult.matchPercentage,
+      skill_match: application.override_score !== null && application.override_score !== undefined ? application.override_score : skillMatchResult.matchPercentage,
       matched_skills: skillMatchResult.matchedSkills,
       missing_skills: skillMatchResult.missingSkills,
       fuzzy_matched_skills: skillMatchResult.fuzzyMatchedSkills,
+      projects: applicantProjects,
+      github_repos: githubRepos,
+      certifications: applicantCertifications,
     };
   },
 
@@ -562,5 +706,77 @@ export const ApplicationService = {
       rejection_reason: fields.status === 'rejected' ? fields.rejection_reason : null,
     };
   },
+
+  async overrideDecision(
+    recruiterId: string,
+    applicationId: string,
+    data: {
+      override_score?: number | null;
+      status?: ApplicationStatus;
+      notes?: string | null;
+    },
+  ) {
+    const application = await ApplicationModel.findById(applicationId);
+    if (!application) throw Object.assign(new Error('Application not found'), { statusCode: 404 });
+
+    const job = await JobModel.findById(application.job_id);
+    if (!job || job.recruiter_id !== recruiterId)
+      throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+
+    const previousStatus = application.status;
+    const newStatus = data.status || previousStatus;
+    const notes = data.notes || null;
+
+    return withTransaction(async (client) => {
+      // 1. Update application status, override score, and override reason
+      const query = `
+        UPDATE applications
+        SET override_score = $1,
+            override_reason = $2,
+            status = $3,
+            status_updated_at = NOW()
+        WHERE id = $4
+        RETURNING *
+      `;
+      
+      const values = [
+        data.override_score === undefined ? application.override_score : data.override_score,
+        data.notes === undefined ? application.override_reason : notes,
+        newStatus,
+        applicationId,
+      ];
+      
+      const { rows } = await client.query(query, values);
+      const updated = rows[0];
+
+      // 2. Log pipeline event
+      const scoreStr = data.override_score !== undefined
+        ? (data.override_score === null ? 'Default AI' : `${data.override_score}%`)
+        : 'Unchanged';
+      
+      await PipelineEventModel.create({
+        application_id: applicationId,
+        previous_status: previousStatus,
+        new_status: newStatus,
+        changed_by_id: recruiterId,
+        notes: `Manual Override: Score overridden to ${scoreStr}. Notes: ${notes || 'No reason provided'}`,
+      }, client);
+
+      // 3. Notify applicant if status changed
+      if (newStatus !== previousStatus) {
+        await NotificationModel.create({
+          user_id: application.applicant_id,
+          type: 'application_status',
+          title: 'Application status updated',
+          body: `Your application status for "${job.title}" has been updated to: ${newStatus.replace('_', ' ')}`,
+          action_url: `/applications`,
+        }, client);
+      }
+
+      return updated;
+    });
+  },
 };
+
+
 

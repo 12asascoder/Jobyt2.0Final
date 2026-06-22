@@ -287,7 +287,7 @@ export const CoachService = {
       .map(m => `${m.sender === 'user' ? 'User' : 'Coach'}: ${m.message_text}`)
       .join('\n');
 
-    const prompt = PromptTemplatesService.renderTemplate('coach_chat', {
+    const prompt = await PromptTemplatesService.renderTemplate('coach_chat', {
       studentContext,
       mode: session.mode,
       modeInstruction,

@@ -25,6 +25,8 @@ export interface Application {
   resume_snapshot_url: string | null;
   ats_score: number | null;
   ats_breakdown: object | null;
+  override_score: number | null;
+  override_reason: string | null;
   // AI Insights fields (TRACK-U3/U4/U5)
   fit_insights: string | null;
   rejection_reason: string | null;
@@ -211,8 +213,9 @@ export const ApplicationModel = {
     return rows[0];
   },
 
-  async updateStatus(id: string, status: ApplicationStatus): Promise<Application> {
-    const { rows } = await pool.query(
+  async updateStatus(id: string, status: ApplicationStatus, client?: PoolClient): Promise<Application> {
+    const db = client ?? pool;
+    const { rows } = await db.query(
       `UPDATE applications SET status = $1, status_updated_at = NOW() WHERE id = $2 RETURNING *`,
       [status, id],
     );
@@ -279,7 +282,8 @@ export const ApplicationModel = {
       pool.query('SELECT COUNT(*) FROM applications WHERE applicant_id = $1', [applicantId]),
       pool.query(
         `SELECT a.*, j.title as job_title, j.location, j.skills as job_skills,
-                COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS "companyName"
+                COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS "companyName",
+                (SELECT status FROM interviews i WHERE i.application_id = a.id ORDER BY created_at DESC LIMIT 1) as interview_status
          FROM applications a
          JOIN jobs j ON j.id = a.job_id
          LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
@@ -349,7 +353,8 @@ export const ApplicationModel = {
     let query = `
       SELECT a.*, j.title as job_title, j.location, j.type, j.salary_min, j.salary_max, j.skills as job_skills,
              COALESCE(NULLIF(j.company_name, ''), rp.company_name, 'Unknown Company') AS "companyName",
-             rp.industry
+             rp.industry,
+             (SELECT status FROM interviews i WHERE i.application_id = a.id ORDER BY created_at DESC LIMIT 1) as interview_status
       FROM applications a
       JOIN jobs j ON j.id = a.job_id
       LEFT JOIN recruiter_profiles rp ON rp.user_id = j.recruiter_id
@@ -618,5 +623,19 @@ export const ApplicationModel = {
       hired: Number.parseInt(rows[0].hired || 0),
       rejected: Number.parseInt(rows[0].rejected || 0),
     };
+  },
+
+  async findShortlistedByJob(jobId: string, client?: PoolClient): Promise<any[]> {
+    const db = client ?? pool;
+    const { rows } = await db.query(
+      `SELECT a.*, ap.name, u.email, ap.skills, ap.experience
+       FROM applications a
+       JOIN users u ON u.id = a.applicant_id
+       JOIN applicant_profiles ap ON ap.user_id = a.applicant_id
+       WHERE a.job_id = $1 AND a.status = 'shortlisted'
+       ORDER BY COALESCE(a.override_score, a.ats_score) DESC NULLS LAST`,
+      [jobId],
+    );
+    return rows;
   },
 };

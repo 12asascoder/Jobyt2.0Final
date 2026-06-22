@@ -26,6 +26,7 @@ import notificationPreferenceRoutes from './notificationPreference.routes';
 import broadcastRoutes from './broadcast.routes';
 import pushRoutes from './push.routes';
 import coachRoutes from './coach.routes';
+import learningRoutes from './learning.routes';
 
 const router = Router();
 
@@ -60,5 +61,6 @@ router.use('/', interviewInviteRoutes);
 router.use('/notification-preferences', notificationPreferenceRoutes);
 router.use('/', broadcastRoutes);
 router.use('/push', pushRoutes);
+router.use('/learning', learningRoutes);
 
 export default router;
