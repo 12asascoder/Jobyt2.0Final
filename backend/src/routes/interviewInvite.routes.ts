@@ -8,7 +8,7 @@ const router = Router();
 router.post('/jobs/:jobId/applications/:applicationId/interview-invite', authenticate, authorize('recruiter', 'admin'), async (req, res) => {
   try {
     const recruiterId = req.user!.userId;
-    const { applicationId } = req.params;
+    const applicationId = req.params.applicationId as string;
     const { scheduledAt, locationOrLink, notes } = req.body;
 
     const invite = await InterviewInviteService.createInvite(recruiterId, applicationId, {
@@ -27,7 +27,7 @@ router.post('/jobs/:jobId/applications/:applicationId/interview-invite', authent
 router.get('/jobs/:jobId/applications/:applicationId/interview-invite', authenticate, async (req, res) => {
   try {
     // Ideally check if recruiter owns the job, but for simplicity:
-    const { applicationId } = req.params;
+    const applicationId = req.params.applicationId as string;
     const invites = await InterviewInviteService.listInvites(applicationId);
     res.json(invites);
   } catch (error: any) {
@@ -39,7 +39,7 @@ router.get('/jobs/:jobId/applications/:applicationId/interview-invite', authenti
 router.patch('/interview-invite/:inviteId/cancel', authenticate, authorize('recruiter', 'admin'), async (req, res) => {
   try {
     const recruiterId = req.user!.userId;
-    const { inviteId } = req.params;
+    const inviteId = req.params.inviteId as string;
 
     const invite = await InterviewInviteService.cancelInvite(recruiterId, inviteId);
     res.json(invite);

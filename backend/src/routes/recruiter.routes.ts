@@ -5,15 +5,43 @@ import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/auth';
 import { employerGuard } from '../middleware/employerGuard';
 import { validate } from '../middleware/validate';
+import pool from '../config/database';
 
 const router = Router();
 
 /**
+ * GET /api/v1/recruiter/broadcasts
+ * Returns paginated broadcast history for the authenticated recruiter
+ */
+router.get(
+  '/broadcasts',
+  authenticate,
+  authorize('recruiter', 'admin'),
+  async (req, res) => {
+    try {
+      const recruiterId = req.user!.userId;
+      const { rows } = await pool.query(
+        `SELECT bm.id, bm.job_id, j.title as job_title, bm.message_body, bm.channels,
+                bm.created_at,
+                (SELECT COUNT(*)::int FROM applications WHERE job_id = bm.job_id) as recipient_count
+         FROM broadcast_messages bm
+         LEFT JOIN jobs j ON j.id = bm.job_id
+         WHERE bm.recruiter_id = $1
+         ORDER BY bm.created_at DESC
+         LIMIT 50`,
+        [recruiterId]
+      );
+      res.json({ success: true, data: rows });
+    } catch (err) {
+      console.error('[RecruiterRoutes] Error fetching broadcasts:', err);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  }
+);
+
+/**
  * GET /api/v1/recruiter/profile
  * Fetch authenticated recruiter's profile
- * 
- * Middleware: authenticate → authorize('recruiter') → employerGuard
- * Note: employerGuard pre-loads profile into req.employer, no DB query in controller
  */
 router.get(
   '/profile',
@@ -26,23 +54,6 @@ router.get(
 /**
  * PUT /api/v1/recruiter/profile
  * Update recruiter profile (partial update allowed)
- * 
- * Middleware: authenticate → authorize('recruiter') → employerGuard → validate
- * Validation: all fields optional, but if provided must be valid
- * 
- * Updatable fields:
- * {
- *   "companyName": "string (optional)",
- *   "company_email": "string (optional, valid email)",
- *   "industry": "string (optional)",
- *   "description": "string (optional)",
- *   "company_size": "string (optional)",
- *   "website": "string (optional)",
- *   "location": "string (optional)",
- *   "logo_url": "string (optional)"
- * }
- * 
- * Non-updatable fields: id, user_id, is_verified, created_at, updated_at
  */
 router.put(
   '/profile',
@@ -68,20 +79,6 @@ router.put(
 /**
  * POST /api/v1/recruiter/profile
  * Create recruiter profile (first-time registration)
- * 
- * Middleware: authenticate → authorize('recruiter') → validate
- * Validation: companyName (required), company_email (optional, valid email)
- * 
- * Request body:
- * {
- *   "companyName": "string (required)",
- *   "company_email": "string (optional, valid email)",
- *   "industry": "string (optional)",
- *   "description": "string (optional)",
- *   "company_size": "string (optional)",
- *   "website": "string (optional)",
- *   "location": "string (optional)"
- * }
  */
 router.post(
   '/profile',

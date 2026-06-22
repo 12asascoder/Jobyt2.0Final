@@ -1,18 +1,18 @@
 import cron from 'node-cron';
 import { InterviewInviteModel } from '../models/interviewInvite.model';
 import { NotificationOrchestrator } from '../services/notification/orchestrator';
+import { DigestService } from '../services/digest.service';
 import pool from '../config/database';
 
 const LOG_PREFIX = '[NotificationScheduler]';
 
 export function setupNotificationScheduler() {
-  console.log(`${LOG_PREFIX} Initializing interview reminder cron jobs...`);
+  console.log(`${LOG_PREFIX} Initializing notification cron jobs...`);
 
-  // 1. Check for 24h reminders every 15 minutes
+  // 1. Check for 24h interview reminders every 15 minutes
   cron.schedule('*/15 * * * *', async () => {
     try {
       const now = new Date();
-      // Look for interviews scheduled between 23h45m and 24h15m from now
       const windowStart = new Date(now.getTime() + (23 * 60 + 45) * 60000);
       const windowEnd = new Date(now.getTime() + (24 * 60 + 15) * 60000);
 
@@ -31,7 +31,7 @@ export function setupNotificationScheduler() {
             scheduled_at: invite.scheduled_at,
             location_or_link: invite.location_or_link
           },
-          `reminder_24h:${invite.id}` // Guaranteed idempotency
+          `reminder_24h:${invite.id}`
         );
       }
     } catch (error) {
@@ -39,12 +39,12 @@ export function setupNotificationScheduler() {
     }
   });
 
-  // 2. Check for 2h reminders every 5 minutes
+  // 2. Check for 2h interview reminders every 5 minutes
   cron.schedule('*/5 * * * *', async () => {
     try {
       const now = new Date();
-      const windowStart = new Date(now.getTime() + (1 * 60 + 45) * 60000); // 1h45m
-      const windowEnd = new Date(now.getTime() + (2 * 60 + 15) * 60000); // 2h15m
+      const windowStart = new Date(now.getTime() + (1 * 60 + 45) * 60000);
+      const windowEnd = new Date(now.getTime() + (2 * 60 + 15) * 60000);
 
       const upcoming = await InterviewInviteModel.findUpcoming(windowStart, windowEnd);
 
@@ -69,7 +69,7 @@ export function setupNotificationScheduler() {
     }
   });
 
-  // 3. Check for Application Deadlines (Daily at 9:00 AM)
+  // 3. Application Deadlines alert — Daily at 9:00 AM
   cron.schedule('0 9 * * *', async () => {
     try {
       const { rows } = await pool.query(`
@@ -97,30 +97,56 @@ export function setupNotificationScheduler() {
     }
   });
 
-  // 4. Check for Subscription Expiries (Daily at 10:00 AM)
+  // 4. Recruiter daily digest — 9:00 AM (staggered 1 minute after deadline check)
+  cron.schedule('1 9 * * *', async () => {
+    try {
+      await DigestService.sendDailyDigests();
+    } catch (error) {
+      console.error(`${LOG_PREFIX} Error sending daily digests:`, error);
+    }
+  });
+
+  // 5. Auto-apply summary for candidates — 8:55 PM nightly
+  cron.schedule('55 20 * * *', async () => {
+    try {
+      await DigestService.scheduleAutoApplySummaries();
+    } catch (error) {
+      console.error(`${LOG_PREFIX} Error scheduling auto-apply summaries:`, error);
+    }
+  });
+
+  // 6. Subscription Expiry reminders — Daily at 10:00 AM
+  // Uses the subscriptions table (current_period_end), not users.subscription_expires_at
   cron.schedule('0 10 * * *', async () => {
     try {
       const { rows } = await pool.query(`
-        SELECT id, COALESCE((SELECT full_name FROM applicant_profiles WHERE user_id = users.id), (SELECT full_name FROM recruiter_profiles WHERE user_id = users.id)) as first_name, subscription_expires_at, 
-               DATE_PART('day', subscription_expires_at - CURRENT_DATE) as days_left
-        FROM users 
-        WHERE subscription_expires_at IS NOT NULL
-          AND DATE_PART('day', subscription_expires_at - CURRENT_DATE) IN (7, 3, 1)
+        SELECT
+          s.user_id,
+          COALESCE(ap.full_name, rp.first_name, '') as first_name,
+          s.current_period_end,
+          EXTRACT(DAY FROM s.current_period_end - NOW()) as days_left
+        FROM subscriptions s
+        LEFT JOIN applicant_profiles ap ON ap.user_id = s.user_id
+        LEFT JOIN recruiter_profiles rp ON rp.user_id = s.user_id
+        WHERE s.status = 'active'
+          AND s.cancel_at_period_end = true
+          AND ROUND(EXTRACT(DAY FROM s.current_period_end - NOW())) IN (7, 3, 1)
       `);
 
       for (const user of rows) {
-        const days = Math.floor(user.days_left);
+        const days = Math.round(user.days_left);
         const eventType = `subscription_expiry_${days}d` as 'subscription_expiry_7d' | 'subscription_expiry_3d' | 'subscription_expiry_1d';
+        const today = new Date().toISOString().split('T')[0];
         await NotificationOrchestrator.dispatch(
-          user.id,
+          user.user_id,
           eventType,
           {
-            title: `Your subscription expires in ${days} day(s)`,
+            title: `Your subscription expires in ${days} day${days !== 1 ? 's' : ''}`,
             body: `Renew now to keep your premium features active!`,
             action_url: `/settings/billing`,
             userName: user.first_name
           },
-          `sub_expiry_${days}d:${user.id}:${new Date().toISOString().split('T')[0]}`
+          `sub_expiry_${days}d:${user.user_id}:${today}`
         );
       }
     } catch (error) {
@@ -128,3 +154,4 @@ export function setupNotificationScheduler() {
     }
   });
 }
+
