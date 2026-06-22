@@ -67,7 +67,6 @@ export const ROUTES = {
   resumeDetail: (id: string) => `/resumes/${id}`,
   messageThread: (id: string) => `/messages/${id}`,
   resumeBuilder: '/resume-builder',
-  autoApply: '/auto-apply',
   autoApplySettings: '/auto-apply/settings',
   autoApplyQueueItem: (id: string) => `/auto-apply/queue/${id}`,
   coach: '/coach',
@@ -95,6 +94,7 @@ export const ROUTES = {
   recruiterProblemNew: '/recruiter/problems/new',
   recruiterProblemDetail: (id: string) => `/recruiter/problems/${id}`,
   recruiterCollections: '/recruiter/collections',
+  recruiterBroadcasts: '/recruiter/broadcasts',
   // Admin
   adminDashboard: '/admin/dashboard',
   adminUsers: '/admin/users',

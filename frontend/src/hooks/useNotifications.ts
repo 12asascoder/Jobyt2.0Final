@@ -57,5 +57,17 @@ export const useNotifications = () => {
     setUnread(0);
   }, []);
 
-  return { notifications, unread, isLoading, pagination, fetchNotifications, markRead, markAllRead };
+  const deleteNotification = useCallback(async (id: string) => {
+    await api.delete(`/notifications/${id}`);
+    setNotifications((prev) => {
+      const deleted = prev.find((n) => n.id === id);
+      if (deleted && !deleted.read) {
+        setUnread((c) => Math.max(0, c - 1));
+      }
+      return prev.filter((n) => n.id !== id);
+    });
+  }, []);
+
+  return { notifications, unread, isLoading, pagination, fetchNotifications, markRead, markAllRead, deleteNotification };
 };
+
