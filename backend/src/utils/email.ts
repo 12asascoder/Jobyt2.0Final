@@ -1,6 +1,6 @@
-import emailjs from '@emailjs/nodejs';
+import nodemailer from 'nodemailer';
 
-// Email utility — EmailJS integration
+// Email utility — Nodemailer integration
 
 interface EmailOptions {
   to: string;
@@ -11,13 +11,14 @@ interface EmailOptions {
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
   if (process.env.NODE_ENV === 'test') return;
 
-  const serviceId = process.env.EMAILJS_SERVICE_ID;
-  const templateId = process.env.EMAILJS_TEMPLATE_ID;
-  const publicKey = process.env.EMAILJS_PUBLIC_KEY;
-  const privateKey = process.env.EMAILJS_PRIVATE_KEY;
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const emailFrom = process.env.EMAIL_FROM || 'Jobyt <no-reply@jobyt.in>';
 
-  if (!serviceId || !templateId || !publicKey || !privateKey) {
-    console.log(`\n📧 [DEV EMAIL] EmailJS config missing. Email not sent.`);
+  if (!smtpHost || !smtpUser || !smtpPass) {
+    console.log(`\n📧 [DEV EMAIL] SMTP config missing or incomplete. Email not sent.`);
     console.log(`   To:      ${options.to}`);
     console.log(`   Subject: ${options.subject}`);
     
@@ -40,30 +41,33 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
   }
 
   try {
-    const templateParams = {
-      to_email: options.to,
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465, // true for 465, false for other ports
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+
+    const info = await transporter.sendMail({
+      from: emailFrom,
+      to: options.to,
       subject: options.subject,
-      html_content: options.html,
-    };
+      html: options.html,
+    });
 
-    await emailjs.send(
-      serviceId,
-      templateId,
-      templateParams,
-      {
-        publicKey: publicKey,
-        privateKey: privateKey,
-      }
-    );
-
-    console.log(`\n📧 [EMAILJS] ─────────────────────────────────`);
+    console.log(`\n📧 [NODEMAILER] ──────────────────────────────`);
     console.log(`   To:      ${options.to}`);
     console.log(`   Subject: ${options.subject}`);
-    const links = options.html.match(/href="([^"]+)"/g);
-    if (links) links.forEach((l) => console.log(`   Link:    ${l.replace(/href="|"/g, '')}`));
+    console.log(`   MessageId: ${info.messageId}`);
+    if (nodemailer.getTestMessageUrl(info)) {
+      console.log(`   Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
+    }
     console.log(`────────────────────────────────────────────────\n`);
   } catch (err) {
-    console.error('\n📧 [EMAILJS ERROR] Email delivery failed');
+    console.error('\n📧 [NODEMAILER ERROR] Email delivery failed');
     console.error(err);
   }
 };
@@ -143,3 +147,65 @@ export const dailyRecommendationEmailHtml = (name: string, jobs: any[]): string 
   </div>
 `;
 
+export const applicationSubmittedApplicantEmailHtml = (name: string, jobTitle: string) => `
+  <div style="font-family: Arial, sans-serif; padding: 20px;">
+    <h2>Application Submitted</h2>
+    <p>Hi ${name},</p>
+    <p>Your application for the position of <strong>${jobTitle}</strong> has been successfully submitted!</p>
+    <p>We will notify you when there is an update on your application status.</p>
+    <br/>
+    <p>Best regards,</p>
+    <p>The Jobyt Team</p>
+  </div>
+`;
+
+export const applicationSubmittedRecruiterEmailHtml = (jobTitle: string, applicantName: string) => `
+  <div style="font-family: Arial, sans-serif; padding: 20px;">
+    <h2>New Application Received</h2>
+    <p>A new candidate, <strong>${applicantName}</strong>, has applied for the position of <strong>${jobTitle}</strong>.</p>
+    <p>Log in to your dashboard to review their application.</p>
+    <br/>
+    <p>Best regards,</p>
+    <p>The Jobyt Team</p>
+  </div>
+`;
+
+export const statusUpdatedEmailHtml = (name: string, jobTitle: string, newStatus: string) => `
+  <div style="font-family: Arial, sans-serif; padding: 20px;">
+    <h2>Application Status Update</h2>
+    <p>Hi ${name},</p>
+    <p>The status of your application for <strong>${jobTitle}</strong> has been updated to: <strong style="text-transform: capitalize;">${newStatus.replace('_', ' ')}</strong>.</p>
+    <p>Log in to your Jobyt dashboard for more details.</p>
+    <br/>
+    <p>Best regards,</p>
+    <p>The Jobyt Team</p>
+  </div>
+`;
+
+export const interviewInviteEmailHtml = (name: string, jobTitle: string, scheduledAt: string, locationOrLink: string, notes?: string) => `
+  <div style="font-family: Arial, sans-serif; padding: 20px;">
+    <h2>Interview Invitation: ${jobTitle}</h2>
+    <p>Hi ${name},</p>
+    <p>You have been invited to an interview for the <strong>${jobTitle}</strong> position.</p>
+    <p><strong>Date & Time:</strong> ${new Date(scheduledAt).toLocaleString()}</p>
+    <p><strong>Location / Link:</strong> ${locationOrLink}</p>
+    ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ''}
+    <p>Please log in to your dashboard to confirm or view more details.</p>
+    <br/>
+    <p>Best regards,</p>
+    <p>The Jobyt Team</p>
+  </div>
+`;
+
+export const interviewReminderEmailHtml = (name: string, jobTitle: string, scheduledAt: string, locationOrLink: string) => `
+  <div style="font-family: Arial, sans-serif; padding: 20px;">
+    <h2>Interview Reminder: ${jobTitle}</h2>
+    <p>Hi ${name},</p>
+    <p>This is a reminder for your upcoming interview for the <strong>${jobTitle}</strong> position.</p>
+    <p><strong>Date & Time:</strong> ${new Date(scheduledAt).toLocaleString()}</p>
+    <p><strong>Location / Link:</strong> ${locationOrLink}</p>
+    <br/>
+    <p>Good luck!</p>
+    <p>The Jobyt Team</p>
+  </div>
+`;

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
+import { useSocket } from '@/hooks/useSocket';
 import { UserRole } from '@/types';
 import { Spinner } from '@/components/ui';
 import { ROUTES } from '@/constants';
@@ -14,6 +15,7 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
   const { user, isAuthenticated, loading } = useAuthStore();
+  useSocket();
   const router = useRouter();
   const pathname = usePathname();
   const isEmployerArea = pathname.startsWith('/recruiter') || pathname.startsWith('/admin');

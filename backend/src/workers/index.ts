@@ -3,6 +3,7 @@ import { recommendationWorker } from './recommendationWorker';
 import { webhookWorker } from './webhookWorker';
 import { codingEvaluationWorker } from './codingEvaluationWorker';
 import { autoApplyWorker } from './autoApplyWorker';
+import { broadcastWorker } from './broadcastWorker';
 import { videoTranscriptionWorker } from './videoTranscriptionWorker';
 import { videoEvaluationWorker } from './videoEvaluationWorker';
 
@@ -14,6 +15,7 @@ export const startWorkers = () => {
     webhookWorker,
     codingEvaluationWorker,
     autoApplyWorker,
+    broadcastWorker,
     videoTranscriptionWorker,
     videoEvaluationWorker,
   };
@@ -25,6 +27,7 @@ export const stopWorkers = async () => {
   await webhookWorker.close();
   await codingEvaluationWorker.close();
   await autoApplyWorker.close();
+  await broadcastWorker.close();
   await videoTranscriptionWorker.close();
   await videoEvaluationWorker.close();
 };

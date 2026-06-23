@@ -1,25 +1,36 @@
 import { io, Socket } from 'socket.io-client';
 import { API_BASE } from '@/constants';
-import { authStorage } from './auth';
 
 let socket: Socket | null = null;
 
 const SERVER_URL = API_BASE.replace('/api/v1', '');
 
-export const connectSocket = (): Socket => {
+export const connectSocket = (token?: string | null): Socket | null => {
+  // Don't connect if no auth token — backend will reject anyway
+  const authToken = token;
+  if (!authToken) return null;
+
+  // Reuse existing connection if already connected with same token
   if (socket?.connected) return socket;
 
-  const token = authStorage.getAccessToken();
+  // Disconnect stale socket before creating a new one
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+
   socket = io(SERVER_URL, {
-    auth: { token },
+    auth: { token: authToken },
     transports: ['websocket', 'polling'],
     reconnection: true,
-    reconnectionDelay: 1000,
+    reconnectionDelay: 2000,
+    reconnectionAttempts: 5,
   });
 
   socket.on('connect', () => console.log('[Socket] Connected'));
   socket.on('disconnect', () => console.log('[Socket] Disconnected'));
-  socket.on('connect_error', (err) => console.error('[Socket] Error:', err.message));
+  // Only warn — not an error — so the console stays clean
+  socket.on('connect_error', (err) => console.warn('[Socket] Connection failed:', err.message));
 
   return socket;
 };

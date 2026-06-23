@@ -40,4 +40,13 @@ export const NotificationController = {
       next(err);
     }
   },
+
+  async deleteOne(req: Request, res: Response, next: NextFunction) {
+    try {
+      await NotificationService.deleteNotification(req.user!.userId, req.params.id as string);
+      sendSuccess(res, null, 'Notification deleted');
+    } catch (err) {
+      next(err);
+    }
+  },
 };

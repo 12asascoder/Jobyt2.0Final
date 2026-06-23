@@ -9,7 +9,19 @@ export type NotificationType =
   | 'low_credit'
   | 'payment_success'
   | 'payment_failed'
-  | 'application_submitted';
+  | 'application_submitted'
+  | 'interview_invited'
+  | 'interview_cancelled'
+  | 'interview_reminder_24h'
+  | 'interview_reminder_2h'
+  | 'credits_exhausted'
+  | 'subscription_expiry_7d'
+  | 'subscription_expiry_3d'
+  | 'subscription_expiry_1d'
+  | 'employer_broadcast'
+  | 'deadline_alert'
+  | 'daily_recommendation'
+  | 'auto_apply_digest';
 
 export interface Notification {
   id: string;
@@ -71,5 +83,9 @@ export const NotificationModel = {
 
   async markAllRead(userId: string): Promise<void> {
     await pool.query(`UPDATE notifications SET read = TRUE WHERE user_id = $1`, [userId]);
+  },
+
+  async deleteById(id: string, userId: string): Promise<void> {
+    await pool.query(`DELETE FROM notifications WHERE id = $1 AND user_id = $2`, [id, userId]);
   },
 };

@@ -23,6 +23,7 @@ import {
   FaArrowRightFromBracket,
   FaXmark,
   FaCode,
+  FaBullhorn,
 } from 'react-icons/fa6';
 
 type RecruiterSearchJob = {
@@ -68,7 +69,9 @@ const recruiterNav: RecruiterNavItem[] = [
   { label: 'Assessments', href: ROUTES.recruiterAssessments, icon: FaCode },
   { label: 'Problems', href: ROUTES.recruiterProblems, icon: FaCode },
   { label: 'Collections', href: ROUTES.recruiterCollections, icon: FaCode },
+  { label: 'Broadcasts', href: ROUTES.recruiterBroadcasts, icon: FaBullhorn },
 ];
+
 
 function RecruiterFloatingSidebar() {
   const pathname = usePathname();

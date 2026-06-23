@@ -451,8 +451,10 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[800px_484px] gap-6 items-start">
-        {/* Left Column: Beige Form Container */}
-        <div className="bg-[#F4F1EA] rounded-[20px] p-6 shadow-sm border border-[#e8e4db] relative">
+        {/* Left Column */}
+        <div className="space-y-6">
+          {/* Beige Form Container */}
+          <div className="bg-[#F4F1EA] rounded-[20px] p-6 shadow-sm border border-[#e8e4db] relative">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-6">
             
             {/* Avatar Row */}
@@ -882,8 +884,12 @@ export default function ProfilePage() {
             </div>
           </form>
         </div>
+        
+        {/* Notification Preferences */}
+        <NotificationPreferences />
+      </div>
 
-        {/* Right Column: Dark Sidebar Cards */}
+      {/* Right Column: Dark Sidebar Cards */}
         <div className="space-y-4">
           {/* Complete Profile Card */}
           <div className="bg-[#0b0b0b] rounded-[20px] p-6 shadow-xl border border-gray-900 min-h-[383px]">
@@ -979,7 +985,6 @@ export default function ProfilePage() {
                 }}
               />
               <ResumeListCard refreshKey={resumeRefreshKey} />
-              <NotificationPreferences />
             </div>
           )}
         </div>

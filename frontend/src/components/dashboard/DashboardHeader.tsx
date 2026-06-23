@@ -39,6 +39,8 @@ export function DashboardHeader({
         router.replace(ROUTES.login);
     };
 
+    const { notifications, unread, isLoading, fetchNotifications, markRead, markAllRead } = useNotifications();
+
     // Auto-close search and notifications when navigating to a new page
     useEffect(() => {
         onSearchToggle(false);
@@ -46,6 +48,10 @@ export function DashboardHeader({
         setBellActive(false);
         setMobileMenuOpen(false);
     }, [pathname, onSearchToggle, onSearchChange]);
+
+    useEffect(() => {
+        void fetchNotifications(1);
+    }, [fetchNotifications]);
 
     useEffect(() => {
         lastScrollY.current = window.scrollY;
@@ -92,7 +98,7 @@ export function DashboardHeader({
                             /* STATE: Search active — black pill wrapping lime search + black bell */
                             <div className="flex items-center bg-[#1a1a1a] rounded-full h-14 p-1.5 gap-0 min-w-[300px]">
                                 {/* Lime search area */}
-                                <div className="flex items-center flex-1 bg-lime-400 rounded-full h-full px-4 gap-2.5">
+                                <div className="flex items-center flex-1 bg-[#c3ff3d] rounded-full h-full px-4 gap-2.5">
                                     <FaMagnifyingGlass className="text-black/70 text-sm shrink-0" />
                                     <input
                                         type="text"
@@ -117,13 +123,18 @@ export function DashboardHeader({
                                             setBellActive(nextActive);
                                             if (nextActive) onSearchToggle(false);
                                         }}
-                                        className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                                            bellActive ? 'bg-lime-400 text-black' : 'text-white/80 hover:text-white'
+                                        className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors relative ${
+                                            bellActive ? 'bg-[#c3ff3d] text-black' : 'text-white/80 hover:text-white'
                                         }`}
                                     >
                                         <FaBell className="text-lg" />
+                                        {unread > 0 && (
+                                            <span className="absolute -top-0.5 -right-0.5 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-[#c3ff3d] px-1 text-[10px] font-bold text-[#0b1120]">
+                                                {unread > 99 ? '99+' : unread}
+                                            </span>
+                                        )}
                                     </button>
-                                    {bellActive && <NotificationPopover />}
+                                    {bellActive && <NotificationPopover notifications={notifications} unread={unread} isLoading={isLoading} markRead={markRead} markAllRead={markAllRead} />}
                                 </div>
                             </div>
                         ) : (
@@ -140,15 +151,20 @@ export function DashboardHeader({
                                 </button>
                                 <button
                                     onClick={() => setBellActive(!bellActive)}
-                                    className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors ${
+                                    className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors relative ${
                                         bellActive
-                                            ? 'bg-lime-400 text-black'
+                                            ? 'bg-[#c3ff3d] text-black'
                                             : 'text-white/80 hover:text-white'
                                     }`}
                                 >
                                     <FaBell className="text-lg" />
+                                    {unread > 0 && (
+                                        <span className="absolute -top-0.5 -right-0.5 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-[#c3ff3d] px-1 text-[10px] font-bold text-[#0b1120]">
+                                            {unread > 99 ? '99+' : unread}
+                                        </span>
+                                    )}
                                 </button>
-                                {bellActive && <NotificationPopover />}
+                                {bellActive && <NotificationPopover notifications={notifications} unread={unread} isLoading={isLoading} markRead={markRead} markAllRead={markAllRead} />}
                             </div>
                         )}
                     </div>
@@ -192,12 +208,17 @@ export function DashboardHeader({
                                     </div>
                                     <button
                                         onClick={() => setBellActive(!bellActive)}
-                                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                                            bellActive ? 'bg-lime-400 text-black' : 'text-white/80 hover:text-white'
+                                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors relative ${
+                                            bellActive ? 'bg-[#c3ff3d] text-black' : 'text-white/80 hover:text-white'
                                         }`}
                                         aria-label="Toggle notifications"
                                     >
                                         <FaBell className="text-base" />
+                                        {unread > 0 && (
+                                            <span className="absolute -top-0.5 -right-0.5 flex min-w-[16px] h-[16px] items-center justify-center rounded-full bg-[#c3ff3d] px-1 text-[9px] font-bold text-[#0b1120]">
+                                                {unread > 99 ? '99+' : unread}
+                                            </span>
+                                        )}
                                     </button>
                                 </div>
 
@@ -231,7 +252,7 @@ export function DashboardHeader({
                                     </button>
                                 </div>
 
-                                {bellActive && <NotificationPopover />}
+                                {bellActive && <NotificationPopover notifications={notifications} unread={unread} isLoading={isLoading} markRead={markRead} markAllRead={markAllRead} />}
                             </div>
                         )}
                     </div>
@@ -243,13 +264,16 @@ export function DashboardHeader({
     );
 }
 
-const NotificationPopover = () => {
-    const { notifications, unread, isLoading, fetchNotifications, markRead, markAllRead } = useNotifications();
-    const [activeTab, setActiveTab] = useState('Today');
+interface NotificationPopoverProps {
+    notifications: any[];
+    unread: number;
+    isLoading: boolean;
+    markRead: (id: string) => Promise<void>;
+    markAllRead: () => Promise<void>;
+}
 
-    useEffect(() => {
-        void fetchNotifications(1);
-    }, [fetchNotifications]);
+const NotificationPopover = ({ notifications, unread, isLoading, markRead, markAllRead }: NotificationPopoverProps) => {
+    const [activeTab, setActiveTab] = useState('Today');
 
     const handleNotificationClick = async (id: string, actionUrl?: string | null, read?: boolean) => {
         if (!read) {
@@ -259,7 +283,18 @@ const NotificationPopover = () => {
             window.location.assign(actionUrl);
         }
     };
-    
+
+    const filteredNotifications = notifications.filter((notif) => {
+        const created = new Date(notif.created_at);
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfWeek = new Date(startOfToday);
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
+        if (activeTab === 'Today') return created >= startOfToday;
+        if (activeTab === 'This Week') return created >= startOfWeek && created < startOfToday;
+        return created < startOfWeek;
+    });
     return (
         <div 
             onClick={(e) => e.stopPropagation()} 
@@ -292,10 +327,10 @@ const NotificationPopover = () => {
             <div className="space-y-[10px] overflow-y-auto pr-1 flex-1">
                 {isLoading ? (
                     <p className="text-sm text-slate-500 py-4 text-center">Loading notifications...</p>
-                ) : notifications.length === 0 ? (
-                    <p className="text-sm text-slate-500 py-4 text-center">No notifications yet.</p>
+                ) : filteredNotifications.length === 0 ? (
+                    <p className="text-sm text-slate-500 py-4 text-center">No notifications in this period.</p>
                 ) : (
-                    notifications.map((notif) => (
+                    filteredNotifications.map((notif) => (
                         <button
                             key={notif.id}
                             type="button"

@@ -1,6 +1,7 @@
 import { ApplicationModel, ApplicationStatus } from '../models/application.model';
 import { JobModel } from '../models/job.model';
 import { NotificationModel } from '../models/notification.model';
+import { NotificationOrchestrator } from './notification/orchestrator';
 import { PipelineEventModel } from '../models/pipeline_event.model';
 import { InterviewModel } from '../models/interview.model';
 import { withTransaction } from '../utils/transaction';
@@ -185,62 +186,80 @@ export const ApplicationService = {
           client,
         );
 
-        // Notify applicant of auto-shortlist
-        await NotificationModel.create(
-          {
-            user_id: applicantId,
-            type: 'application_status',
-            title: 'Application Shortlisted!',
-            body: `Congratulations! Your application for "${job.title}" has been automatically shortlisted.`,
-            action_url: `/applications`,
-          },
-          client,
-        );
+        setImmediate(() => {
+          NotificationOrchestrator.dispatch(
+            applicantId,
+            'application_status',
+            {
+              title: 'Application Shortlisted!',
+              body: `Congratulations! Your application for "${job.title}" has been automatically shortlisted.`,
+              action_url: `/candidate/applications`,
+              job_title: job.title,
+              new_status: 'shortlisted',
+              is_recruiter: false
+            }
+          ).catch(err => console.error('[Notification Error]', err));
 
-        // Notify recruiter of auto-shortlist
-        let applicantName = 'A candidate';
-        try {
-          const profile = await ApplicantProfileModel.findByUserId(applicantId);
-          if (profile?.name) applicantName = profile.name;
-        } catch {}
+          NotificationOrchestrator.dispatch(
+            job.recruiter_id,
+            'application_submitted',
+            {
+              title: 'Candidate Auto-Shortlisted',
+              body: `A candidate met the match threshold (${atsScore}% ≥ ${job.ai_interview_threshold}%) and was auto-shortlisted for "${job.title}".`,
+              action_url: `/recruiter/jobs/${jobId}/applications`,
+              job_title: job.title,
+              applicant_name: 'A candidate',
+              is_recruiter: true
+            }
+          ).catch(err => console.error('[Notification Error]', err));
+        });
 
-        await NotificationModel.create(
-          {
-            user_id: job.recruiter_id,
-            type: 'application_submitted',
-            title: 'Candidate Auto-Shortlisted',
-            body: `${applicantName} met the match threshold (${atsScore}% ≥ ${job.ai_interview_threshold}%) and was auto-shortlisted for "${job.title}".`,
-            action_url: `/recruiter/jobs/${jobId}/applications`,
-          },
-          client,
-        );
       } else {
-        // 6) Notify recruiter of normal application (transaction-scoped for consistent state)
-        await NotificationModel.create(
-          {
-            user_id: job.recruiter_id,
-            type: 'application_submitted',
-            title: 'New application received',
-            body: `A new applicant has applied to "${job.title}"`,
-            action_url: `/recruiter/jobs/${jobId}/applications`,
-          },
-          client,
-        );
+        setImmediate(() => {
+          NotificationOrchestrator.dispatch(
+            job.recruiter_id,
+            'application_submitted',
+            {
+              title: 'New application received',
+              body: `A new applicant has applied to "${job.title}"`,
+              action_url: `/recruiter/jobs/${jobId}/applications`,
+              job_title: job.title,
+              applicant_name: 'A candidate',
+              is_recruiter: true
+            }
+          ).catch(err => console.error('[Notification Error]', err));
+
+          NotificationOrchestrator.dispatch(
+            applicantId,
+            'application_submitted',
+            {
+              title: 'Application Submitted',
+              body: `Your application to "${job.title}" was submitted successfully.`,
+              action_url: `/candidate/applications`,
+              job_title: job.title,
+              is_recruiter: false
+            }
+          ).catch(err => console.error('[Notification Error]', err));
+        });
       }
 
       // 7) Milestone notification for recruiter on every 10 applications
       const totalApplications = await ApplicationModel.countByJob(jobId, client);
       if (totalApplications > 0 && totalApplications % 10 === 0) {
-        await NotificationModel.create(
-          {
-            user_id: job.recruiter_id,
-            type: 'application_submitted',
-            title: 'Application milestone reached',
-            body: `"${job.title}" has now reached ${totalApplications} applications.`,
-            action_url: `/recruiter/jobs/${jobId}/applications`,
-          },
-          client,
-        );
+        setImmediate(() => {
+          NotificationOrchestrator.dispatch(
+            job.recruiter_id,
+            'application_submitted',
+            {
+              title: 'Application milestone reached',
+              body: `"${job.title}" has now reached ${totalApplications} applications.`,
+              action_url: `/recruiter/jobs/${jobId}/applications`,
+              job_title: job.title,
+              applicant_name: `Candidate #${totalApplications}`,
+              is_recruiter: true
+            }
+          ).catch(err => console.error('[Notification Error]', err));
+        });
       }
 
       return {
@@ -435,13 +454,17 @@ export const ApplicationService = {
     });
 
     // Notify applicant
-    await NotificationModel.create({
-      user_id: application.applicant_id,
-      type: 'application_status',
-      title: 'Application status updated',
-      body: `Your application for "${job.title}" is now: ${status.replace('_', ' ')}`,
-      action_url: `/applications`,
-    });
+    await NotificationOrchestrator.dispatch(
+      application.applicant_id,
+      'application_status',
+      {
+        title: 'Application status updated',
+        body: `Your application for "${job.title}" is now: ${status.replace('_', ' ')}`,
+        action_url: `/applications`,
+        job_title: job.title,
+        new_status: status
+      }
+    );
 
     // Fire webhook: application.status_changed
     setImmediate(async () => {

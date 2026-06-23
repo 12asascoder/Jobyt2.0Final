@@ -67,6 +67,19 @@ export default function JobApplicationsPage() {
     }
   };
 
+  // Interview Invite Modal State
+  const [inviteAppId, setInviteAppId] = useState<string | null>(null);
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [locationOrLink, setLocationOrLink] = useState('');
+  const [notes, setNotes] = useState('');
+  const [isInviting, setIsInviting] = useState(false);
+
+  // Broadcast Modal State
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastChannels, setBroadcastChannels] = useState<string[]>(['in_app', 'email']);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
   useEffect(() => {
     fetchJobApplications(jobId);
   }, [jobId, fetchJobApplications]);
@@ -135,6 +148,49 @@ export default function JobApplicationsPage() {
     }
   };
 
+  const handleSendInvite = async () => {
+    if (!inviteAppId || !scheduledAt || !locationOrLink) {
+      return toast.error('Please fill in required fields');
+    }
+    setIsInviting(true);
+    try {
+      await api.post(`/jobs/${jobId}/applications/${inviteAppId}/interview-invite`, {
+        scheduledAt,
+        locationOrLink,
+        notes
+      });
+      toast.success('Interview invitation sent!');
+      setInviteAppId(null);
+      setScheduledAt('');
+      setLocationOrLink('');
+      setNotes('');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to send invite');
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastMessage.trim()) return toast.error('Message body is required');
+    if (broadcastChannels.length === 0) return toast.error('Select at least one delivery channel');
+    
+    setIsBroadcasting(true);
+    try {
+      await api.post(`/jobs/${jobId}/broadcast`, {
+        messageBody: broadcastMessage,
+        channels: broadcastChannels
+      });
+      toast.success('Broadcast sent to active applicants successfully!');
+      setIsBroadcastModalOpen(false);
+      setBroadcastMessage('');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to send broadcast');
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
   if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
 
   return (
@@ -145,6 +201,7 @@ export default function JobApplicationsPage() {
           <p className="text-sm text-gray-400">Drag and drop candidates to update their stage.</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setIsBroadcastModalOpen(true)}>Broadcast Message</Button>
           <Button variant="outline" size="sm" onClick={handleOpenReport}>
             📊 Shortlist Report
           </Button>
@@ -280,6 +337,7 @@ export default function JobApplicationsPage() {
                   ))}
                 </select>
                 <Button size="sm" variant="outline" onClick={() => setTimelineAppId(app.id)}>Timeline</Button>
+                <Button size="sm" variant="outline" className="text-lime-600 border-lime-200 bg-lime-50 hover:bg-lime-100" onClick={() => setInviteAppId(app.id)}>Invite</Button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -317,6 +375,104 @@ export default function JobApplicationsPage() {
           </div>
         </div>
       )}
+      {/* Interview Invite Modal */}
+      {inviteAppId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 !m-0">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="text-lg font-semibold text-gray-900">Schedule Interview</h3>
+              <button onClick={() => setInviteAppId(null)} className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100 focus:outline-none">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={e => setScheduledAt(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location or Meeting Link</label>
+                <input
+                  type="text"
+                  value={locationOrLink}
+                  onChange={e => setLocationOrLink(e.target.value)}
+                  placeholder="e.g. Google Meet link or office address"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                <textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Instructions for the candidate..."
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 resize-none"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setInviteAppId(null)}>Cancel</Button>
+              <Button onClick={handleSendInvite} isLoading={isInviting} className="bg-[#c3ff3d] text-black hover:bg-[#aee62d]">
+                Send Invite
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Broadcast Modal */}
+      {isBroadcastModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="mb-4 text-xl font-bold">Broadcast to Active Applicants</h2>
+            <p className="mb-4 text-sm text-gray-500">Send a message to all applicants who are not rejected, hired, or withdrawn.</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Message Body</label>
+                <textarea
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  className="w-full rounded-xl border p-3 focus:border-blue-500 focus:outline-none"
+                  rows={4}
+                  placeholder="Hello applicants, we have an update regarding the hiring process..."
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">Channels</label>
+                <div className="flex gap-4">
+                  {['in_app', 'email', 'whatsapp'].map(ch => (
+                    <label key={ch} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={broadcastChannels.includes(ch)}
+                        onChange={(e) => {
+                          if (e.target.checked) setBroadcastChannels([...broadcastChannels, ch]);
+                          else setBroadcastChannels(broadcastChannels.filter(c => c !== ch));
+                        }}
+                      />
+                      <span className="text-sm">{ch.replace('_', ' ').toUpperCase()}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setIsBroadcastModalOpen(false)}>Cancel</Button>
+                <Button onClick={() => void handleSendBroadcast()} disabled={isBroadcasting}>
+                  {isBroadcasting ? 'Sending...' : 'Send Broadcast'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Shortlist Report Modal */}
       <Modal
         isOpen={isReportOpen}

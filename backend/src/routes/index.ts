@@ -21,6 +21,10 @@ import webhookRoutes from './webhook.routes';
 import calendarRoutes from './calendar.routes';
 import codingRoutes from './coding.routes';
 import autoApplyRoutes from './autoApply.routes';
+import interviewInviteRoutes from './interviewInvite.routes';
+import notificationPreferenceRoutes from './notificationPreference.routes';
+import broadcastRoutes from './broadcast.routes';
+import pushRoutes from './push.routes';
 import coachRoutes from './coach.routes';
 import learningRoutes from './learning.routes';
 
@@ -52,9 +56,11 @@ router.use('/webhooks', webhookRoutes);
 router.use('/calendar', calendarRoutes);
 router.use('/coding', codingRoutes);
 router.use('/auto-apply', autoApplyRoutes);
-router.use('/interviews', interviewRoutes);
 router.use('/coach', coachRoutes);
+router.use('/', interviewInviteRoutes);
+router.use('/notification-preferences', notificationPreferenceRoutes);
+router.use('/', broadcastRoutes);
+router.use('/push', pushRoutes);
 router.use('/learning', learningRoutes);
 
 export default router;
-

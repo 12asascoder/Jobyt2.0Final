@@ -237,7 +237,12 @@ export interface Message {
 // ── Notifications ─────────────────────────────────────────────────────────────
 export type NotificationType =
   | 'job_match' | 'application_status' | 'new_message'
-  | 'referral_joined' | 'low_credit' | 'payment_success' | 'payment_failed' | 'application_submitted';
+  | 'referral_joined' | 'low_credit' | 'payment_success' | 'payment_failed'
+  | 'application_submitted' | 'employer_broadcast' | 'interview_invited'
+  | 'interview_cancelled' | 'interview_reminder_24h' | 'interview_reminder_2h'
+  | 'deadline_alert' | 'auto_apply_digest' | 'daily_recommendation'
+  | 'credits_exhausted'
+  | 'subscription_expiry_7d' | 'subscription_expiry_3d' | 'subscription_expiry_1d';
 
 export interface Notification {
   id: string;
@@ -281,6 +286,7 @@ export interface ApiResponse<T = unknown> {
 }
 
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+  unread?: number;
   pagination: {
     total: number;
     page: number;

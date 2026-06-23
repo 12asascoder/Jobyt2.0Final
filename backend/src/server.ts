@@ -8,6 +8,7 @@ import { initFirebase } from './config/firebase';
 import { InsightsCronService } from './services/insightsCron.service';
 import { startWorkers } from './workers';
 import { setupDailyScheduler } from './scheduler/dailyScheduler';
+import { setupNotificationScheduler } from './scheduler/notificationScheduler';
 
 const PORT = parseInt(process.env.PORT || '5001', 10);
 
@@ -44,6 +45,7 @@ async function startServer() {
       try {
         startWorkers();
         await setupDailyScheduler();
+        setupNotificationScheduler();
       } catch (err) {
         console.error('Failed to initialize workers or scheduler:', err);
       }

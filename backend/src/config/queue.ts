@@ -31,7 +31,6 @@ export const webhookQueue = new Queue('webhookQueue', defaultQueueOptions);
 // Queue for coding submission evaluation
 export const codingEvaluationQueue = new Queue('codingEvaluationQueue', defaultQueueOptions);
 
-// Queue for Auto-Apply matching and submission
 export const autoApplyQueue = new Queue('autoApplyQueue', {
   ...defaultQueueOptions,
   defaultJobOptions: {
@@ -41,6 +40,8 @@ export const autoApplyQueue = new Queue('autoApplyQueue', {
   },
 });
 
+// Queue for Broadcast Messaging
+export const broadcastQueue = new Queue('broadcastQueue', defaultQueueOptions);
 export const videoTranscriptionQueue = new Queue('videoTranscriptionQueue', {
   ...defaultQueueOptions,
   defaultJobOptions: {
@@ -65,6 +66,7 @@ export const closeQueues = async () => {
   await webhookQueue.close();
   await codingEvaluationQueue.close();
   await autoApplyQueue.close();
+  await broadcastQueue.close();
   await videoTranscriptionQueue.close();
   await videoEvaluationQueue.close();
 };

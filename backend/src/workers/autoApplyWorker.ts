@@ -1,5 +1,6 @@
 import { Worker, Job } from 'bullmq';
-import { redisConnection, notificationQueue } from '../config/queue';
+import { redisConnection } from '../config/queue';
+import { NotificationOrchestrator } from '../services/notification/orchestrator';
 import { AutoApplyQueueService } from '../services/autoApplyQueue.service';
 import { AutoApplyQueueModel } from '../models/autoApplyQueue.model';
 import pool from '../config/database';
@@ -43,7 +44,16 @@ export const autoApplyWorker = new Worker(
       const summary: Record<string, number> = {};
       for (const row of stats) summary[String(row.status)] = Number(row.count);
 
-      await notificationQueue.add('sendAutoApplyDigest', { userId, date, summary });
+      const title = 'Auto-Apply Daily Summary';
+      const body = `Your daily auto-apply summary is ready. Approved: ${summary.approved || 0}, Rejected: ${summary.rejected || 0}`;
+
+      await NotificationOrchestrator.dispatch(userId, 'auto_apply_digest', {
+        title,
+        body,
+        action_url: '/dashboard',
+        date,
+        summary
+      }, `auto_apply_digest_${userId}_${date}`);
       return;
     }
   },

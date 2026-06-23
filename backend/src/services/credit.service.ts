@@ -2,6 +2,7 @@ import pool from '../config/database';
 import { PoolClient } from 'pg';
 import { CreditModel } from '../models/credit.model';
 import { CreditStatus } from '../models/credit.model';
+import { NotificationOrchestrator } from './notification/orchestrator';
 
 const REGISTRATION_CREDITS = parseInt(process.env.REGISTRATION_CREDIT_AMOUNT || '50');
 const JOB_POST_COST = parseInt(process.env.JOB_POSTING_CREDIT_COST || '10');
@@ -95,6 +96,38 @@ async function deductCreditsTx(
   });
   // Invalidate cache after credit change
   creditBalanceCache.delete(userId);
+
+  // Trigger Notifications
+  const today = new Date().toISOString().split('T')[0];
+  if (newBalance === 0) {
+    setImmediate(() => {
+      NotificationOrchestrator.dispatch(
+        userId,
+        'credits_exhausted',
+        {
+          title: 'Credits Exhausted',
+          body: 'You have run out of credits. Please recharge your account to continue using premium features.',
+          action_url: '/settings/billing'
+        },
+        `credits_exhausted_${userId}_${today}`
+      ).catch(e => console.error('Failed to dispatch credits_exhausted', e));
+    });
+  } else if (newBalance <= LOW_CREDIT_THRESHOLD && balance > LOW_CREDIT_THRESHOLD) {
+    setImmediate(() => {
+      NotificationOrchestrator.dispatch(
+        userId,
+        'low_credit',
+        {
+          title: 'Low Credit Balance',
+          body: `Your credit balance is low (${newBalance} credits remaining).`,
+          action_url: '/settings/billing',
+          current_balance: newBalance
+        },
+        `low_credit_${userId}_${today}`
+      ).catch(e => console.error('Failed to dispatch low_credit', e));
+    });
+  }
+
   return { transactionId: recorded.id, balanceAfter: recorded.balance_after };
 }
 

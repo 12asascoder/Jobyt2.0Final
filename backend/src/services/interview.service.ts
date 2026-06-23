@@ -16,6 +16,7 @@ import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors'
 import { forbidden, notFound, badRequest, AppError } from '../utils/appError';
 import axios from 'axios';
 import { Queue } from 'bullmq';
+import { NotificationOrchestrator } from './notification/orchestrator';
 
 // We just typecast to avoid importing the actual queue if it's missing in this file
 const bulkInterviewQueue = new Queue('bulkInterviewQueue');
@@ -212,6 +213,23 @@ export const InterviewService = {
 
     // Clean up active session
     activeSessions.delete(interviewId);
+
+    // Notify candidate that their interview result / feedback is available
+    if (data.feedback || data.rating !== undefined) {
+      setImmediate(() => {
+        NotificationOrchestrator.dispatch(
+          interview.candidate_id,
+          'application_status',
+          {
+            title: 'Interview Feedback Available',
+            body: `Your interviewer has submitted feedback for your recent interview. Check your results.`,
+            action_url: `/interviews-history`,
+            is_recruiter: false,
+          },
+          `interview_result:${interviewId}`
+        ).catch(err => console.error('[InterviewService] Failed to dispatch interview_result:', err));
+      });
+    }
 
     return updated;
   },
